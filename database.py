@@ -76,10 +76,45 @@ def init_db():
             user_id INTEGER PRIMARY KEY,
             victoires_pvp INTEGER NOT NULL DEFAULT 0,
             explorations_terminees INTEGER NOT NULL DEFAULT 0,
-            victoires_pve INTEGER NOT NULL DEFAULT 0
+            victoires_pve INTEGER NOT NULL DEFAULT 0,
+            captures_totales INTEGER NOT NULL DEFAULT 0,
+            shiny_totaux INTEGER NOT NULL DEFAULT 0
         )
         """
     )
+
+    # Migration pour les joueurs déjà en base avant l'ajout des compteurs de captures à vie
+    # (classements "Plus de captures"/"Plus de shiny" comptaient auparavant les lignes ENCORE
+    # en base, donc relâcher des doublons faisait artificiellement baisser le classement).
+    for colonne in ("captures_totales", "shiny_totaux"):
+        try:
+            cur.execute(f"ALTER TABLE stats_lifetime ADD COLUMN {colonne} INTEGER NOT NULL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # la colonne existe déjà
+
+    # Rattrapage ponctuel (une seule fois) : initialise captures_totales/shiny_totaux à partir
+    # des captures ENCORE en base au moment de la migration, pour ne pas remettre tout le monde
+    # à zéro sur les classements concernés. Les captures relâchées avant cette migration restent
+    # malheureusement perdues pour ce compteur (elles n'existent plus nulle part pour les compter).
+    cur.execute("SELECT valeur FROM settings WHERE cle = 'backfill_captures_totales_fait'")
+    if cur.fetchone() is None:
+        cur.execute(
+            """
+            INSERT INTO stats_lifetime (user_id, captures_totales)
+            SELECT user_id, COUNT(*) FROM captures GROUP BY user_id
+            ON CONFLICT(user_id) DO UPDATE SET captures_totales = excluded.captures_totales
+            """
+        )
+        cur.execute(
+            """
+            INSERT INTO stats_lifetime (user_id, shiny_totaux)
+            SELECT user_id, COUNT(*) FROM captures WHERE shiny = 1 GROUP BY user_id
+            ON CONFLICT(user_id) DO UPDATE SET shiny_totaux = excluded.shiny_totaux
+            """
+        )
+        cur.execute(
+            "INSERT INTO settings (cle, valeur) VALUES ('backfill_captures_totales_fait', '1')"
+        )
 
     cur.execute(
         """
@@ -797,16 +832,24 @@ def obtenir_equipe(user_id: int):
 
 
 def classement_equipes():
-    """Retourne un score par équipe : nombre de captures + somme des PC des membres."""
+    """Retourne un score par équipe : nombre de captures À VIE (jamais réduit par un
+    relâcher de doublon) + somme des PC des membres (celle-ci reste "en direct", cohérent
+    puisque c'est une mesure de la force ACTUELLE de l'équipe, pas d'un cumul historique)."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         """
-        SELECT u.team AS equipe,
-               COUNT(c.id) AS total_captures,
-               COALESCE(SUM(c.pc), 0) AS total_pc
+        SELECT
+            u.team AS equipe,
+            COALESCE((
+                SELECT SUM(s.captures_totales) FROM stats_lifetime s
+                JOIN users u2 ON u2.user_id = s.user_id WHERE u2.team = u.team
+            ), 0) AS total_captures,
+            COALESCE((
+                SELECT SUM(c.pc) FROM captures c
+                JOIN users u3 ON u3.user_id = c.user_id WHERE u3.team = u.team
+            ), 0) AS total_pc
         FROM users u
-        LEFT JOIN captures c ON c.user_id = u.user_id
         WHERE u.team IS NOT NULL
         GROUP BY u.team
         """
@@ -817,14 +860,15 @@ def classement_equipes():
 
 
 def classement_captures_individuelles(limite: int = 5):
-    """Top joueurs par nombre total de captures."""
+    """Top joueurs par nombre total de captures À VIE (jamais réduit par un relâcher de
+    doublon, contrairement à un simple COUNT sur les captures encore en base)."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         """
-        SELECT user_id, COUNT(*) AS total_captures
-        FROM captures
-        GROUP BY user_id
+        SELECT user_id, captures_totales AS total_captures
+        FROM stats_lifetime
+        WHERE captures_totales > 0
         ORDER BY total_captures DESC
         LIMIT ?
         """,
@@ -1023,6 +1067,19 @@ def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False
         VALUES (?, ?, ?, ?, ?)
         """,
         (user_id, pokemon_nom, pc, int(time.time()), int(shiny)),
+    )
+    # Compteurs à VIE (jamais décrémentés, même si la capture est relâchée plus tard) —
+    # utilisés par les classements "Plus de captures"/"Plus de shiny", qui comptaient
+    # auparavant les lignes encore en base et baissaient donc quand on relâchait des doublons.
+    cur.execute(
+        """
+        INSERT INTO stats_lifetime (user_id, captures_totales, shiny_totaux)
+        VALUES (?, 1, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            captures_totales = captures_totales + 1,
+            shiny_totaux = shiny_totaux + excluded.shiny_totaux
+        """,
+        (user_id, int(shiny)),
     )
     conn.commit()
     conn.close()
@@ -3022,15 +3079,15 @@ def classement_explorations(limite: int = 10):
 
 
 def classement_shiny(limite: int = 10):
-    """Top joueurs par nombre de Pokémon shiny capturés."""
+    """Top joueurs par nombre de Pokémon shiny capturés À VIE (jamais réduit par un
+    relâcher, contrairement à un simple COUNT sur les captures encore en base)."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         """
-        SELECT user_id, COUNT(*) AS total_shiny
-        FROM captures
-        WHERE shiny = 1
-        GROUP BY user_id
+        SELECT user_id, shiny_totaux AS total_shiny
+        FROM stats_lifetime
+        WHERE shiny_totaux > 0
         ORDER BY total_shiny DESC
         LIMIT ?
         """,
