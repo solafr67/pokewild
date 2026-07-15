@@ -1,0 +1,9778 @@
+{
+  "Vole-Vie": {
+    "type": "plante",
+    "puissance": 20,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Vif Roc": {
+    "type": "roche",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Acide": {
+    "type": "poison",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Acidarmure": {
+    "type": "poison",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Bombe Acide": {
+    "type": "poison",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Acrobatie": {
+    "type": "vol",
+    "puissance": 55,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Acupression": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Aéropique": {
+    "type": "vol",
+    "puissance": 60,
+    "precision": null,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Aéroblast": {
+    "type": "vol",
+    "puissance": 100,
+    "precision": 95,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Après Vous": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Hâte": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "vit",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Tranch’Air": {
+    "type": "vol",
+    "puissance": 60,
+    "precision": 95,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Lame d’Air": {
+    "type": "vol",
+    "puissance": 75,
+    "precision": 95,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Voix Envoûtante": {
+    "type": "fee",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Interversion": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Amnésie": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Ancrage": {
+    "type": "acier",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Pouvoir Antique": {
+    "type": "roche",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ],
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ],
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Acide Malique": {
+    "type": "plante",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Tranch'Aqua": {
+    "type": "eau",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Aqua-Jet": {
+    "type": "eau",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Anneau Hydro": {
+    "type": "eau",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Danse Aquatique": {
+    "type": "eau",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Hydro-Queue": {
+    "type": "eau",
+    "puissance": 90,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Cogne": {
+    "type": "combat",
+    "puissance": 15,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Canon Blindé": {
+    "type": "feu",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ],
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Aromathérapie": {
+    "type": "plante",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Brume Capiteuse": {
+    "type": "fee",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Assistance": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Assurance": {
+    "type": "tenebres",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Étonnement": {
+    "type": "spectre",
+    "puissance": 30,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Appel Attaque": {
+    "type": "insecte",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Attraction": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Aurasphère": {
+    "type": "combat",
+    "puissance": 80,
+    "precision": null,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Roue Libre": {
+    "type": "electrik",
+    "puissance": 110,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Onde Boréale": {
+    "type": "glace",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Voile Aurore": {
+    "type": "glace",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Allègement": {
+    "type": "acier",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "vit",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Avalanche": {
+    "type": "glace",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Talon-Marteau": {
+    "type": "combat",
+    "puissance": 120,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Regard Touchant": {
+    "type": "fee",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Blockhaus": {
+    "type": "poison",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Multitoxik": {
+    "type": "poison",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Pilonnage": {
+    "type": "normal",
+    "puissance": 15,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Bouclier": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Relais": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Bec-Canon": {
+    "type": "vol",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Baston": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Éructation": {
+    "type": "poison",
+    "puissance": 120,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Cognobidon": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Passe-Cadeau": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Patience": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Étreinte": {
+    "type": "normal",
+    "puissance": 15,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Morsure": {
+    "type": "tenebres",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Lame en Peine": {
+    "type": "feu",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Rafale Feu": {
+    "type": "feu",
+    "puissance": 150,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Pied Brûleur": {
+    "type": "feu",
+    "puissance": 85,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 10,
+    "pp": 10
+  },
+  "Typhon Hivernal": {
+    "type": "vol",
+    "puissance": 100,
+    "precision": 80,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Blizzard": {
+    "type": "glace",
+    "puissance": 110,
+    "precision": 70,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "freeze",
+    "ailment_chance": 10,
+    "pp": 5
+  },
+  "Barrage": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Flamme Bleue": {
+    "type": "feu",
+    "puissance": 130,
+    "precision": 85,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 20,
+    "pp": 5
+  },
+  "Big Splash": {
+    "type": "combat",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Plaquage": {
+    "type": "normal",
+    "puissance": 85,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 30,
+    "pp": 15
+  },
+  "Prise de Bec": {
+    "type": "electrik",
+    "puissance": 85,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Charge Foudre": {
+    "type": "electrik",
+    "puissance": 130,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 20,
+    "pp": 5
+  },
+  "Massd’Os": {
+    "type": "sol",
+    "puissance": 65,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Charge Os": {
+    "type": "sol",
+    "puissance": 25,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Osmerang": {
+    "type": "sol",
+    "puissance": 50,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Bang Sonique": {
+    "type": "normal",
+    "puissance": 140,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Rebond": {
+    "type": "vol",
+    "puissance": 85,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 30,
+    "pp": 5
+  },
+  "Tapotige": {
+    "type": "plante",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Rapace": {
+    "type": "vol",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Abattage": {
+    "type": "dragon",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Casse-Brique": {
+    "type": "combat",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Saumure": {
+    "type": "eau",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Centrifugifle": {
+    "type": "tenebres",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Écume": {
+    "type": "eau",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Bulles d’O": {
+    "type": "eau",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Piqûre": {
+    "type": "insecte",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Bourdon": {
+    "type": "insecte",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Gonflette": {
+    "type": "combat",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Piétisol": {
+    "type": "sol",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Pisto-Poing": {
+    "type": "acier",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Balle Graine": {
+    "type": "plante",
+    "puissance": 25,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Flamme Ultime": {
+    "type": "feu",
+    "puissance": 130,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Rempart Brûlant": {
+    "type": "feu",
+    "puissance": 0,
+    "precision": 0,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Feu Envieux": {
+    "type": "feu",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 100,
+    "pp": 5
+  },
+  "Plénitude": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Camouflage": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Séduction": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Chargeur": {
+    "type": "electrik",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Rayon Chargé": {
+    "type": "electrik",
+    "puissance": 50,
+    "precision": 90,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Charme": {
+    "type": "fee",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Babil": {
+    "type": "vol",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 100,
+    "pp": 20
+  },
+  "Douche Froide": {
+    "type": "eau",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Neigeux de Mots": {
+    "type": "glace",
+    "puissance": 0,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Attrition": {
+    "type": "normal",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Projection": {
+    "type": "combat",
+    "puissance": 60,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Claquoir": {
+    "type": "eau",
+    "puissance": 35,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Vibrécaille": {
+    "type": "dragon",
+    "puissance": 110,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Dracacophonie": {
+    "type": "dragon",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ],
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ],
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Bain de Smog": {
+    "type": "poison",
+    "puissance": 50,
+    "precision": null,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Close Combat": {
+    "type": "combat",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        -1
+      ],
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Coaching": {
+    "type": "combat",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Enroulement": {
+    "type": "poison",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Nitro Crash": {
+    "type": "combat",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Poing Comète": {
+    "type": "normal",
+    "puissance": 18,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Vindicte": {
+    "type": "tenebres",
+    "puissance": 1,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Confidence": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Onde Folie": {
+    "type": "spectre",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Choc Mental": {
+    "type": "psy",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 10,
+    "pp": 25
+  },
+  "Constriction": {
+    "type": "normal",
+    "puissance": 10,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 35
+  },
+  "Conversion": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Conversion 2": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Photocopie": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Sanction Suprême": {
+    "type": "dragon",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Gaz Corrosif": {
+    "type": "poison",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Force Cosmique": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        1
+      ],
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Cotogarde": {
+    "type": "plante",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        3
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Spore Coton": {
+    "type": "plante",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "vit",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Riposte": {
+    "type": "combat",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Change-Côté": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Implore": {
+    "type": "normal",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Pince-Masse": {
+    "type": "eau",
+    "puissance": 100,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vigilance": {
+    "type": "fee",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Coup Croix": {
+    "type": "combat",
+    "puissance": 100,
+    "precision": 80,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Poison Croix": {
+    "type": "poison",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 10,
+    "pp": 20
+  },
+  "Mâchouille": {
+    "type": "tenebres",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Éclate Griffe": {
+    "type": "normal",
+    "puissance": 75,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Presse": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Malédiction": {
+    "type": "spectre",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Coupe": {
+    "type": "normal",
+    "puissance": 50,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Vibrobscur": {
+    "type": "tenebres",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Trou Noir": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 50,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "sleep",
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Dark Lariat": {
+    "type": "tenebres",
+    "puissance": 85,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Éclat Magique": {
+    "type": "fee",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Nappage": {
+    "type": "fee",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        2
+      ],
+      [
+        "atk",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Appel Défense": {
+    "type": "insecte",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        1
+      ],
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Boul’Armure": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Anti-Brume": {
+    "type": "vol",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Lien du Destin": {
+    "type": "spectre",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Détection": {
+    "type": "combat",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Orage Adamantin": {
+    "type": "roche",
+    "puissance": 100,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Tunnel": {
+    "type": "sol",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Griffes Funestes": {
+    "type": "poison",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Entrave": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Voix Enjôleuse": {
+    "type": "fee",
+    "puissance": 40,
+    "precision": null,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Coup d’Jus": {
+    "type": "electrik",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 30,
+    "pp": 15
+  },
+  "Plongée": {
+    "type": "eau",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Uppercut": {
+    "type": "normal",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 20,
+    "pp": 10
+  },
+  "Décalquage": {
+    "type": "normal",
+    "puissance": 0,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vœu Destructeur": {
+    "type": "acier",
+    "puissance": 140,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Damoclès": {
+    "type": "normal",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Coup Double": {
+    "type": "normal",
+    "puissance": 35,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Écrous d’Poing": {
+    "type": "acier",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Double Pied": {
+    "type": "combat",
+    "puissance": 30,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Double Décharge": {
+    "type": "electrik",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Torgnoles": {
+    "type": "normal",
+    "puissance": 15,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Reflet": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Draco-Météore": {
+    "type": "dragon",
+    "puissance": 130,
+    "precision": 90,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Draco-Ascension": {
+    "type": "vol",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        -1
+      ],
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Draco-Souffle": {
+    "type": "dragon",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 30,
+    "pp": 20
+  },
+  "Cri Draconique": {
+    "type": "dragon",
+    "puissance": 0,
+    "precision": 0,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Draco-Griffe": {
+    "type": "dragon",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Danse Draco": {
+    "type": "dragon",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Draco-Flèches": {
+    "type": "dragon",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Draco-Énergie": {
+    "type": "dragon",
+    "puissance": 150,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Draco-Marteau": {
+    "type": "dragon",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Draco-Choc": {
+    "type": "dragon",
+    "puissance": 85,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Draco-Rage": {
+    "type": "dragon",
+    "puissance": null,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Draco-Charge": {
+    "type": "dragon",
+    "puissance": 100,
+    "precision": 75,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Draco-Queue": {
+    "type": "dragon",
+    "puissance": 60,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vampi-Poing": {
+    "type": "combat",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vampibaiser": {
+    "type": "fee",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Dévorêve": {
+    "type": "psy",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Bec Vrille": {
+    "type": "vol",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Tunnelier": {
+    "type": "sol",
+    "puissance": 80,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Tambour Battant": {
+    "type": "plante",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Double Baffe": {
+    "type": "dragon",
+    "puissance": 40,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Double Volée": {
+    "type": "vol",
+    "puissance": 40,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Canon Dynamax": {
+    "type": "dragon",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Dynamo-Poing": {
+    "type": "combat",
+    "puissance": 100,
+    "precision": 50,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 100,
+    "pp": 5
+  },
+  "Telluriforce": {
+    "type": "sol",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Séisme": {
+    "type": "sol",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Écho": {
+    "type": "normal",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Ondes Étranges": {
+    "type": "electrik",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Bombe Œuf": {
+    "type": "normal",
+    "puissance": 100,
+    "precision": 75,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Champ Électrifié": {
+    "type": "electrik",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Électrisation": {
+    "type": "electrik",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Boule Élek": {
+    "type": "electrik",
+    "puissance": null,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Turbo Volt": {
+    "type": "electrik",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Fulgurayon": {
+    "type": "electrik",
+    "puissance": 130,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Toile Élek": {
+    "type": "electrik",
+    "puissance": 55,
+    "precision": 95,
+    "classe": "special",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Embargo": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Flammèche": {
+    "type": "feu",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 10,
+    "pp": 25
+  },
+  "Encore": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Effort": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Ténacité": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Éco-Sphère": {
+    "type": "plante",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Ten-Danse": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Éruption": {
+    "type": "feu",
+    "puissance": 150,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Laser Infinimax": {
+    "type": "dragon",
+    "puissance": 160,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Vaste Pouvoir": {
+    "type": "psy",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Explosion": {
+    "type": "normal",
+    "puissance": 250,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Extrasenseur": {
+    "type": "psy",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Vitesse Extrême": {
+    "type": "normal",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Façade": {
+    "type": "normal",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Verrou Enchanté": {
+    "type": "fee",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vent Féérique": {
+    "type": "fee",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Bluff": {
+    "type": "normal",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Croco Larme": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Fourbette": {
+    "type": "tenebres",
+    "puissance": 80,
+    "precision": null,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Faux-Chage": {
+    "type": "normal",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Danse Plumes": {
+    "type": "vol",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Ruse": {
+    "type": "normal",
+    "puissance": 30,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Feinte": {
+    "type": "tenebres",
+    "puissance": 60,
+    "precision": null,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Dard Mortel": {
+    "type": "insecte",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Laser Hasard": {
+    "type": "dragon",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Danse du Feu": {
+    "type": "feu",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Décharnement": {
+    "type": "normal",
+    "puissance": 0,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        2
+      ],
+      [
+        "atk",
+        2
+      ],
+      [
+        "vit",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Tout ou Rien": {
+    "type": "combat",
+    "puissance": null,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Déflagration": {
+    "type": "feu",
+    "puissance": 110,
+    "precision": 85,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 10,
+    "pp": 5
+  },
+  "Crocs Feu": {
+    "type": "feu",
+    "puissance": 65,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 10,
+    "pp": 15
+  },
+  "Fouet de Feu": {
+    "type": "feu",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Aire de Feu": {
+    "type": "feu",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Poing Feu": {
+    "type": "feu",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 10,
+    "pp": 15
+  },
+  "Danse Flammes": {
+    "type": "feu",
+    "puissance": 35,
+    "precision": 85,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Escarmouche": {
+    "type": "insecte",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Branchicrok": {
+    "type": "eau",
+    "puissance": 85,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Abîme": {
+    "type": "sol",
+    "puissance": null,
+    "precision": 30,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Gigotage": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Rebondifeu": {
+    "type": "feu",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Nitrocharge": {
+    "type": "feu",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Roue de Feu": {
+    "type": "feu",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 10,
+    "pp": 25
+  },
+  "Lance-Flammes": {
+    "type": "feu",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 10,
+    "pp": 15
+  },
+  "Boutefeu": {
+    "type": "feu",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 10,
+    "pp": 15
+  },
+  "Flash": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Luminocanon": {
+    "type": "acier",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Flatterie": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": "confusion",
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Canon Floral": {
+    "type": "fee",
+    "puissance": 130,
+    "precision": 90,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Dégommage": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Eau Revoir": {
+    "type": "eau",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Soin Floral": {
+    "type": "fee",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Garde Florale": {
+    "type": "fee",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Magie Florale": {
+    "type": "plante",
+    "puissance": 70,
+    "precision": null,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vol": {
+    "type": "vol",
+    "puissance": 90,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Flying Press": {
+    "type": "combat",
+    "puissance": 100,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Exploforce": {
+    "type": "combat",
+    "puissance": 120,
+    "precision": 70,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Puissance": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Mitra-Poing": {
+    "type": "combat",
+    "puissance": 150,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Par Ici": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Forte-Paume": {
+    "type": "combat",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 30,
+    "pp": 10
+  },
+  "Clairvoyance": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Maléfice Sylvain": {
+    "type": "plante",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Tricherie": {
+    "type": "tenebres",
+    "puissance": 95,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Lyophilisation": {
+    "type": "glace",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "freeze",
+    "ailment_chance": 10,
+    "pp": 20
+  },
+  "Végé-Attaque": {
+    "type": "plante",
+    "puissance": 150,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Souffle Glacé": {
+    "type": "glace",
+    "puissance": 60,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Frustration": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Furie": {
+    "type": "normal",
+    "puissance": 15,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Taillade": {
+    "type": "insecte",
+    "puissance": 40,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Combo-Griffe": {
+    "type": "normal",
+    "puissance": 18,
+    "precision": 80,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Éclair Croix": {
+    "type": "electrik",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Flamme Croix": {
+    "type": "feu",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Prescience": {
+    "type": "psy",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Suc Digestif": {
+    "type": "poison",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Lancécrou": {
+    "type": "acier",
+    "puissance": 50,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Engrenage": {
+    "type": "acier",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Géo-Contrôle": {
+    "type": "fee",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        2
+      ],
+      [
+        "def",
+        2
+      ],
+      [
+        "vit",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Giga-Sangsue": {
+    "type": "plante",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Giga Impact": {
+    "type": "normal",
+    "puissance": 150,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Marteau Mastoc": {
+    "type": "acier",
+    "puissance": 160,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Ère Glaciaire": {
+    "type": "glace",
+    "puissance": 65,
+    "precision": 95,
+    "classe": "special",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Charge Glaive": {
+    "type": "dragon",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Regard Médusant": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Nœud Herbe": {
+    "type": "plante",
+    "puissance": null,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Aire d’Herbe": {
+    "type": "plante",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Siffl’Herbe": {
+    "type": "plante",
+    "puissance": null,
+    "precision": 55,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "sleep",
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Gliss’Herbe": {
+    "type": "plante",
+    "puissance": 55,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Champ Herbu": {
+    "type": "plante",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Force G": {
+    "type": "plante",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Gravité": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Rugissement": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Croissance": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Rancune": {
+    "type": "spectre",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Partage Garde": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Permugarde": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Guillotine": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 30,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Détricanon": {
+    "type": "poison",
+    "puissance": 120,
+    "precision": 80,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 30,
+    "pp": 5
+  },
+  "Tornade": {
+    "type": "vol",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 35
+  },
+  "Gyroballe": {
+    "type": "acier",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Grêle": {
+    "type": "glace",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Marto-Poing": {
+    "type": "combat",
+    "puissance": 100,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Pression Extrême": {
+    "type": "acier",
+    "puissance": 0,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Armure": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Buée Noire": {
+    "type": "glace",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Peignée": {
+    "type": "normal",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Fracass’Tête": {
+    "type": "roche",
+    "puissance": 150,
+    "precision": 80,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Coup d’Boule": {
+    "type": "normal",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Assaut Frontal": {
+    "type": "sol",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Glas de Soin": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Anti-Soin": {
+    "type": "psy",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Appel Soins": {
+    "type": "insecte",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vibra Soin": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vœu Soin": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Crève-Cœur": {
+    "type": "psy",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Permucœur": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Tacle Feu": {
+    "type": "feu",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Canicule": {
+    "type": "feu",
+    "puissance": 95,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 10,
+    "pp": 10
+  },
+  "Tacle Lourd": {
+    "type": "acier",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Coup d’Main": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Châtiment": {
+    "type": "spectre",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Puissance Cachée": {
+    "type": "normal",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Cavalerie Lourde": {
+    "type": "sol",
+    "puissance": 95,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Pied Voltige": {
+    "type": "combat",
+    "puissance": 130,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Aiguisage": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Koud’Korne": {
+    "type": "normal",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Empal’Korne": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 30,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Encornebois": {
+    "type": "plante",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Grondement": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Vent Violent": {
+    "type": "vol",
+    "puissance": 110,
+    "precision": 70,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 30,
+    "pp": 10
+  },
+  "Hydroblast": {
+    "type": "eau",
+    "puissance": 150,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Hydrocanon": {
+    "type": "eau",
+    "puissance": 110,
+    "precision": 80,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Hydrovapeur": {
+    "type": "eau",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Ultralaser": {
+    "type": "normal",
+    "puissance": 150,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Hyperceuse": {
+    "type": "normal",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Croc de Mort": {
+    "type": "normal",
+    "puissance": 80,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Mégaphone": {
+    "type": "normal",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "TrouDimensionnel": {
+    "type": "psy",
+    "puissance": 80,
+    "precision": null,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Hypnose": {
+    "type": "psy",
+    "puissance": null,
+    "precision": 60,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "sleep",
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Ball’Glace": {
+    "type": "glace",
+    "puissance": 30,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Laser Glace": {
+    "type": "glace",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "freeze",
+    "ailment_chance": 10,
+    "pp": 10
+  },
+  "Crocs Givre": {
+    "type": "glace",
+    "puissance": 65,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "freeze",
+    "ailment_chance": 10,
+    "pp": 15
+  },
+  "Marteau de Glace": {
+    "type": "glace",
+    "puissance": 100,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Poing Glace": {
+    "type": "glace",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "freeze",
+    "ailment_chance": 10,
+    "pp": 15
+  },
+  "Éclats Glace": {
+    "type": "glace",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Cryo-Pirouette": {
+    "type": "glace",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Chute Glace": {
+    "type": "glace",
+    "puissance": 85,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Stalactite": {
+    "type": "glace",
+    "puissance": 25,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Vent Glace": {
+    "type": "glace",
+    "puissance": 55,
+    "precision": 95,
+    "classe": "special",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Possessif": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Calcination": {
+    "type": "feu",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Feu d’Enfer": {
+    "type": "feu",
+    "puissance": 100,
+    "precision": 50,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 100,
+    "pp": 5
+  },
+  "Harcèlement": {
+    "type": "insecte",
+    "puissance": 20,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Racines": {
+    "type": "plante",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Sommation": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Déluge Plasmique": {
+    "type": "electrik",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Mur de Fer": {
+    "type": "acier",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Tête de Fer": {
+    "type": "acier",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Queue de Fer": {
+    "type": "acier",
+    "puissance": 100,
+    "precision": 75,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Massue Liane": {
+    "type": "plante",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Croque Fort": {
+    "type": "tenebres",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Poing Sonique": {
+    "type": "eau",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Jugement": {
+    "type": "normal",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Pied Sauté": {
+    "type": "combat",
+    "puissance": 100,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Selve Salvatrice": {
+    "type": "plante",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Poing Karaté": {
+    "type": "combat",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Télékinésie": {
+    "type": "psy",
+    "puissance": null,
+    "precision": 80,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Bouclier Royal": {
+    "type": "acier",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Sabotage": {
+    "type": "tenebres",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Génusection": {
+    "type": "tenebres",
+    "puissance": 85,
+    "precision": null,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Force Chtonienne": {
+    "type": "sol",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Affilage": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Cent Rancunes": {
+    "type": "tenebres",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Dernier Recours": {
+    "type": "normal",
+    "puissance": 140,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Hommage Posthume": {
+    "type": "spectre",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Ébullilave": {
+    "type": "feu",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 30,
+    "pp": 15
+  },
+  "Lame Feuille": {
+    "type": "plante",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Tempête Verte": {
+    "type": "plante",
+    "puissance": 130,
+    "precision": 90,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Phytomixeur": {
+    "type": "plante",
+    "puissance": 65,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Feuillage": {
+    "type": "plante",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Vampirisme": {
+    "type": "insecte",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vampigraine": {
+    "type": "plante",
+    "puissance": null,
+    "precision": 90,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Groz’Yeux": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Léchouille": {
+    "type": "spectre",
+    "puissance": 30,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 30,
+    "pp": 30
+  },
+  "Fontaine de Vie": {
+    "type": "eau",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Mur Lumière": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Aqua-Brèche": {
+    "type": "eau",
+    "puissance": 85,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Verrouillage": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Grobisou": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 75,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "sleep",
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Balayage": {
+    "type": "combat",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Balayette": {
+    "type": "combat",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Air Veinard": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Lumino-Impact": {
+    "type": "psy",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Prière Lunaire": {
+    "type": "psy",
+    "puissance": 0,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Danse Lune": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Furie-Bond": {
+    "type": "insecte",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Lumi-Éclat": {
+    "type": "psy",
+    "puissance": 95,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Mach Punch": {
+    "type": "combat",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Reflet Magik": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Poudre Magique": {
+    "type": "psy",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Zone Magique": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Feuille Magik": {
+    "type": "plante",
+    "puissance": 60,
+    "precision": null,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Vortex Magma": {
+    "type": "feu",
+    "puissance": 100,
+    "precision": 75,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Bombe Aimant": {
+    "type": "acier",
+    "puissance": 60,
+    "precision": null,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Vol Magnétik": {
+    "type": "electrik",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Magné-Contrôle": {
+    "type": "electrik",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        1
+      ],
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Ampleur": {
+    "type": "sol",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Ruée d'Or": {
+    "type": "acier",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Chaîne Malsaine": {
+    "type": "poison",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Tatamigaeshi": {
+    "type": "combat",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Mortier Matcha": {
+    "type": "plante",
+    "puissance": 80,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Moi d’Abord": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Regard Noir": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Yoga": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Méga-Sangsue": {
+    "type": "plante",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Ultimawashi": {
+    "type": "normal",
+    "puissance": 120,
+    "precision": 75,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Ultimapoing": {
+    "type": "normal",
+    "puissance": 80,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Mégacorne": {
+    "type": "insecte",
+    "puissance": 120,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Souvenir": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -2
+      ],
+      [
+        "atk",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Fulmifer": {
+    "type": "acier",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Griffe Acier": {
+    "type": "acier",
+    "puissance": 50,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 35
+  },
+  "Strido-Son": {
+    "type": "acier",
+    "puissance": null,
+    "precision": 85,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Joute Astrale": {
+    "type": "combat",
+    "puissance": 150,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Laser Météore": {
+    "type": "roche",
+    "puissance": 120,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Poing Météore": {
+    "type": "acier",
+    "puissance": 90,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Métronome": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Lame Puissante": {
+    "type": "roche",
+    "puissance": 95,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Lait à Boire": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Copie": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Caboche-Kaboum": {
+    "type": "feu",
+    "puissance": 150,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Lire-Esprit": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Lilliput": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Œil Miracle": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Voile Miroir": {
+    "type": "psy",
+    "puissance": null,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Mimique": {
+    "type": "vol",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Miroi-Tir": {
+    "type": "acier",
+    "puissance": 65,
+    "precision": 85,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Brume": {
+    "type": "glace",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Ball’Brume": {
+    "type": "psy",
+    "puissance": 95,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Explo-Brume": {
+    "type": "fee",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Champ Brumeux": {
+    "type": "fee",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Pouvoir Lunaire": {
+    "type": "fee",
+    "puissance": 95,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Rayon Spectral": {
+    "type": "spectre",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Rayon Lune": {
+    "type": "fee",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Aurore": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Toupie Éclat": {
+    "type": "poison",
+    "puissance": 30,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Boue-Bombe": {
+    "type": "sol",
+    "puissance": 65,
+    "precision": 85,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Tir de Boue": {
+    "type": "sol",
+    "puissance": 55,
+    "precision": 95,
+    "classe": "special",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Coud’Boue": {
+    "type": "sol",
+    "puissance": 20,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Lance-Boue": {
+    "type": "sol",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Ocroupi": {
+    "type": "eau",
+    "puissance": 90,
+    "precision": 85,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Coup Varia-Type": {
+    "type": "normal",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Feu Ensorcelé": {
+    "type": "feu",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Force Mystique": {
+    "type": "psy",
+    "puissance": 70,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Machination": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Don Naturel": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Force Nature": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Ire de la Nature": {
+    "type": "fee",
+    "puissance": null,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Poing Dard": {
+    "type": "plante",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Explonuit": {
+    "type": "tenebres",
+    "puissance": 85,
+    "precision": 95,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Ombre Nocturne": {
+    "type": "spectre",
+    "puissance": null,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Tranche-Nuit": {
+    "type": "tenebres",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Cauchemar": {
+    "type": "spectre",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Ultime Bastion": {
+    "type": "combat",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ],
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ],
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Râle Mâle": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -1
+      ],
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Frotte-Frimousse": {
+    "type": "electrik",
+    "puissance": 20,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 100,
+    "pp": 20
+  },
+  "Mort’Ailes": {
+    "type": "vol",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Blocage": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Octazooka": {
+    "type": "eau",
+    "puissance": 65,
+    "precision": 85,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Octoprise": {
+    "type": "combat",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Flair": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Vent Mauvais": {
+    "type": "spectre",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ],
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ],
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Plat du Jour": {
+    "type": "dragon",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Onde Originelle": {
+    "type": "eau",
+    "puissance": 110,
+    "precision": 85,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Colère": {
+    "type": "dragon",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Overdrive": {
+    "type": "electrik",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Surchauffe": {
+    "type": "feu",
+    "puissance": 130,
+    "precision": 90,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Balance": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Parabocharge": {
+    "type": "electrik",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Dernier Mot": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -1
+      ],
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Jackpot": {
+    "type": "normal",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Représailles": {
+    "type": "tenebres",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Picpic": {
+    "type": "vol",
+    "puissance": 35,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 35
+  },
+  "Requiem": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Tempête Florale": {
+    "type": "plante",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Danse Fleurs": {
+    "type": "plante",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Hantise": {
+    "type": "spectre",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Photo-Geyser": {
+    "type": "psy",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Dard-Nuée": {
+    "type": "insecte",
+    "puissance": 25,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Plasma Punch": {
+    "type": "electrik",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Camaraderie": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Câlinerie": {
+    "type": "fee",
+    "puissance": 90,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Picore": {
+    "type": "vol",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Crochet Venin": {
+    "type": "poison",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 50,
+    "pp": 15
+  },
+  "Gaz Toxik": {
+    "type": "poison",
+    "puissance": null,
+    "precision": 90,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Direct Toxik": {
+    "type": "poison",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 30,
+    "pp": 20
+  },
+  "Poudre Toxik": {
+    "type": "poison",
+    "puissance": null,
+    "precision": 75,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 0,
+    "pp": 35
+  },
+  "Dard-Venin": {
+    "type": "poison",
+    "puissance": 15,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 30,
+    "pp": 35
+  },
+  "Queue-Poison": {
+    "type": "poison",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 10,
+    "pp": 25
+  },
+  "Boule Pollen": {
+    "type": "insecte",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Esprit Frappeur": {
+    "type": "spectre",
+    "puissance": 110,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Prolifération": {
+    "type": "normal",
+    "puissance": 20,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Bond": {
+    "type": "insecte",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Écras’Face": {
+    "type": "normal",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 35
+  },
+  "Nuée de Poudre": {
+    "type": "insecte",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Poudreuse": {
+    "type": "glace",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "freeze",
+    "ailment_chance": 10,
+    "pp": 25
+  },
+  "Rayon Gemme": {
+    "type": "roche",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Partage Force": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Permuforce": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Astuce Force": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Arrogance": {
+    "type": "tenebres",
+    "puissance": 20,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Poing Boost": {
+    "type": "combat",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Mégafouet": {
+    "type": "plante",
+    "puissance": 120,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Lame Pangéenne": {
+    "type": "sol",
+    "puissance": 120,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Cadeau": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Laser Prisme": {
+    "type": "psy",
+    "puissance": 160,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Abri": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Rafale Psy": {
+    "type": "psy",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 10,
+    "pp": 20
+  },
+  "Lame Psychique": {
+    "type": "psy",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Boost": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Psyko": {
+    "type": "psy",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Psycho-Croc": {
+    "type": "psy",
+    "puissance": 85,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Dissonance Psy": {
+    "type": "psy",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Champ Psychique": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Psycho-Boost": {
+    "type": "psy",
+    "puissance": 140,
+    "precision": 90,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Coupe Psycho": {
+    "type": "psy",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Échange Psy": {
+    "type": "psy",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Sprint Bouclier": {
+    "type": "psy",
+    "puissance": 70,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Choc Psy": {
+    "type": "psy",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Frappe Psy": {
+    "type": "psy",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vague Psy": {
+    "type": "psy",
+    "puissance": null,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Punition": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Purification": {
+    "type": "poison",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Poursuite": {
+    "type": "tenebres",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Ballon Brûlant": {
+    "type": "feu",
+    "puissance": 120,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 10,
+    "pp": 5
+  },
+  "À la Queue": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Vive-Attaque": {
+    "type": "normal",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Prévention": {
+    "type": "combat",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Papillodanse": {
+    "type": "insecte",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ],
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Frénésie": {
+    "type": "normal",
+    "puissance": 20,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Poing de Colère": {
+    "type": "spectre",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Poudre Fureur": {
+    "type": "insecte",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Taurogne": {
+    "type": "normal",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Grand Courroux": {
+    "type": "feu",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Danse Pluie": {
+    "type": "eau",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Tour Rapide": {
+    "type": "normal",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Tranch’Herbe": {
+    "type": "plante",
+    "puissance": 55,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Coqui-Lame": {
+    "type": "eau",
+    "puissance": 75,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Coupe-Vent": {
+    "type": "normal",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Soin": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Recyclage": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Protection": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Copie-Type": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Régénération": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Chant Antique": {
+    "type": "normal",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "sleep",
+    "ailment_chance": 10,
+    "pp": 10
+  },
+  "Repos": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Vengeance": {
+    "type": "normal",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Retour": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Danse Éveil": {
+    "type": "normal",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Vendetta": {
+    "type": "combat",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Contre": {
+    "type": "combat",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Second Souffle": {
+    "type": "normal",
+    "puissance": 0,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 1
+  },
+  "Monte-Tension": {
+    "type": "electrik",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Hurlement": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Hurle-Temps": {
+    "type": "dragon",
+    "puissance": 150,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Boule Roc": {
+    "type": "roche",
+    "puissance": 25,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Escalade": {
+    "type": "normal",
+    "puissance": 90,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 20,
+    "pp": 20
+  },
+  "Poliroche": {
+    "type": "roche",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "vit",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Éboulement": {
+    "type": "roche",
+    "puissance": 75,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Éclate-Roc": {
+    "type": "combat",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Jet-Pierres": {
+    "type": "roche",
+    "puissance": 50,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Tomberoche": {
+    "type": "roche",
+    "puissance": 60,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Roc-Boulet": {
+    "type": "roche",
+    "puissance": 150,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Imitation": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Mawashi Geri": {
+    "type": "combat",
+    "puissance": 60,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Roulade": {
+    "type": "roche",
+    "puissance": 30,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Atterrissage": {
+    "type": "vol",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Fertilisation": {
+    "type": "sol",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Chant Canon": {
+    "type": "normal",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Cataclysme": {
+    "type": "tenebres",
+    "puissance": 1,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Feu Sacré": {
+    "type": "feu",
+    "puissance": 100,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 50,
+    "pp": 5
+  },
+  "Lame Sainte": {
+    "type": "combat",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Rune Protect": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Salaison": {
+    "type": "roche",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Jet de Sable": {
+    "type": "sol",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Tourbi-Sable": {
+    "type": "sol",
+    "puissance": 35,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Typhon Pyrosable": {
+    "type": "sol",
+    "puissance": 100,
+    "precision": 80,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Tempête de Sable": {
+    "type": "roche",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Ébullition": {
+    "type": "eau",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 30,
+    "pp": 15
+  },
+  "Rafale Écailles": {
+    "type": "dragon",
+    "puissance": 25,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Grimace": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "vit",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Sable Ardent": {
+    "type": "sol",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 30,
+    "pp": 10
+  },
+  "Griffe": {
+    "type": "normal",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 35
+  },
+  "Grincement": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 85,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Incendie": {
+    "type": "feu",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 30,
+    "pp": 5
+  },
+  "Force Cachée": {
+    "type": "normal",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Lame Ointe": {
+    "type": "combat",
+    "puissance": 85,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Canon Graine": {
+    "type": "plante",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Fulmigraine": {
+    "type": "plante",
+    "puissance": 120,
+    "precision": 85,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Frappe Atlas": {
+    "type": "combat",
+    "puissance": null,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Destruction": {
+    "type": "normal",
+    "puissance": 200,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Ball’Ombre": {
+    "type": "spectre",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Griffe Ombre": {
+    "type": "spectre",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Revenant": {
+    "type": "spectre",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Poing Ombre": {
+    "type": "spectre",
+    "puissance": 60,
+    "precision": null,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Ombre Portée": {
+    "type": "spectre",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Affûtage": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Queulonage": {
+    "type": "normal",
+    "puissance": 0,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Glaciation": {
+    "type": "glace",
+    "puissance": null,
+    "precision": 30,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Exuviation": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        -1
+      ],
+      [
+        "def",
+        -1
+      ],
+      [
+        "atk",
+        2
+      ],
+      [
+        "atk",
+        2
+      ],
+      [
+        "vit",
+        2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Carapiège": {
+    "type": "feu",
+    "puissance": 150,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Mur Fumigène": {
+    "type": "acier",
+    "puissance": 0,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Chgt Vitesse": {
+    "type": "acier",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "vit",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Onde de Choc": {
+    "type": "electrik",
+    "puissance": 60,
+    "precision": null,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Amass’Sable": {
+    "type": "sol",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Rayon Signal": {
+    "type": "insecte",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 10,
+    "pp": 15
+  },
+  "Piège de Fil": {
+    "type": "insecte",
+    "puissance": 0,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vent Argenté": {
+    "type": "insecte",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ],
+      [
+        "atk",
+        1
+      ],
+      [
+        "def",
+        1
+      ],
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Rayon Simple": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Berceuse": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 55,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "sleep",
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Gribouille": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 1
+  },
+  "Échange": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Ravage Rampant": {
+    "type": "insecte",
+    "puissance": 70,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Coud’Krâne": {
+    "type": "normal",
+    "puissance": 130,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Piqué": {
+    "type": "vol",
+    "puissance": 140,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Chute Libre": {
+    "type": "vol",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Stratopercut": {
+    "type": "combat",
+    "puissance": 85,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Paresse": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Souplesse": {
+    "type": "normal",
+    "puissance": 80,
+    "precision": 75,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Tranche": {
+    "type": "normal",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Poudre Dodo": {
+    "type": "plante",
+    "puissance": null,
+    "precision": 75,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "sleep",
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Blabla Dodo": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Détritus": {
+    "type": "poison",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 30,
+    "pp": 20
+  },
+  "Bombe Beurk": {
+    "type": "poison",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 30,
+    "pp": 10
+  },
+  "Cradovague": {
+    "type": "poison",
+    "puissance": 95,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 10,
+    "pp": 10
+  },
+  "Anti-Air": {
+    "type": "roche",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Estocorne": {
+    "type": "acier",
+    "puissance": 70,
+    "precision": null,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Stimulant": {
+    "type": "normal",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Purédpois": {
+    "type": "poison",
+    "puissance": 30,
+    "precision": 70,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 40,
+    "pp": 20
+  },
+  "Brouillard": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Aboiement": {
+    "type": "tenebres",
+    "puissance": 55,
+    "precision": 95,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Saisie": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Tir de Précision": {
+    "type": "eau",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Ronflement": {
+    "type": "normal",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Chute de Neige": {
+    "type": "glace",
+    "puissance": 0,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Détrempage": {
+    "type": "eau",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "E-Coque": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Lance-Soleil": {
+    "type": "plante",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Lame Solaire": {
+    "type": "plante",
+    "puissance": 125,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Sonic Boom": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Spatio-Rift": {
+    "type": "dragon",
+    "puissance": 100,
+    "precision": 95,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Étincelle": {
+    "type": "electrik",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 30,
+    "pp": 20
+  },
+  "Aria de l’Écume": {
+    "type": "eau",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Clepto-Mânes": {
+    "type": "spectre",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Permuvitesse": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Habanerage": {
+    "type": "plante",
+    "puissance": 0,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        2
+      ],
+      [
+        "def",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Toile": {
+    "type": "insecte",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Picanon": {
+    "type": "normal",
+    "puissance": 20,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Picots": {
+    "type": "sol",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Pico-Défense": {
+    "type": "plante",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Dérapage": {
+    "type": "acier",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Choc Émotionnel": {
+    "type": "fee",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Tisse Ombre": {
+    "type": "spectre",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Relâche": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Dépit": {
+    "type": "spectre",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Trempette": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Spore": {
+    "type": "plante",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "sleep",
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Projecteur": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Typhon Passionné": {
+    "type": "fee",
+    "puissance": 100,
+    "precision": 80,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Piège de Roc": {
+    "type": "roche",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Jet de Vapeur": {
+    "type": "eau",
+    "puissance": 110,
+    "precision": 95,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 30,
+    "pp": 5
+  },
+  "Bulldoboule": {
+    "type": "insecte",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Métalaser": {
+    "type": "acier",
+    "puissance": 140,
+    "precision": 95,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Métalliroue": {
+    "type": "acier",
+    "puissance": 130,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Ailes d’Acier": {
+    "type": "acier",
+    "puissance": 70,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Toile Gluante": {
+    "type": "insecte",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Stockage": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        1
+      ],
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Écrasement": {
+    "type": "normal",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Trépignement": {
+    "type": "sol",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Hache de Pierre": {
+    "type": "roche",
+    "puissance": 65,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Lame de Roc": {
+    "type": "roche",
+    "puissance": 100,
+    "precision": 80,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Force Ajoutée": {
+    "type": "psy",
+    "puissance": 20,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Yama Arashi": {
+    "type": "combat",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Force": {
+    "type": "normal",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Vole-Force": {
+    "type": "plante",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Sécrétion": {
+    "type": "insecte",
+    "puissance": null,
+    "precision": 95,
+    "classe": "status",
+    "stats": [
+      [
+        "vit",
+        -2
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Survinsecte": {
+    "type": "insecte",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Garde-à-Joues": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Para-Spore": {
+    "type": "plante",
+    "puissance": null,
+    "precision": 75,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Sacrifice": {
+    "type": "combat",
+    "puissance": 80,
+    "precision": 80,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Clonage": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Coup Bas": {
+    "type": "tenebres",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Zénith": {
+    "type": "feu",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Choc Météore": {
+    "type": "acier",
+    "puissance": 100,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Croc Fatal": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Volt Assaut": {
+    "type": "electrik",
+    "puissance": 100,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Surpuissance": {
+    "type": "combat",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "atk",
+        -1
+      ],
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Ultrason": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 55,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Surf": {
+    "type": "eau",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Vantardise": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 85,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": "confusion",
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Avale": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Doux Baiser": {
+    "type": "fee",
+    "puissance": null,
+    "precision": 75,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Doux Parfum": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Météores": {
+    "type": "normal",
+    "puissance": 60,
+    "precision": null,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Passe-Passe": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Danse Lames": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        2
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Synchropeine": {
+    "type": "psy",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Synthèse": {
+    "type": "plante",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Bombe au Sirop": {
+    "type": "plante",
+    "puissance": 60,
+    "precision": 85,
+    "classe": "special",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Lame Tachyonique": {
+    "type": "acier",
+    "puissance": 50,
+    "precision": 0,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Charge": {
+    "type": "normal",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 35
+  },
+  "Lumi-Queue": {
+    "type": "insecte",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        3
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Plumo-Queue": {
+    "type": "normal",
+    "puissance": 25,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Mimi-Queue": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Vent Arrière": {
+    "type": "vol",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Bélier": {
+    "type": "normal",
+    "puissance": 90,
+    "precision": 85,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Extravaillance": {
+    "type": "psy",
+    "puissance": 0,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Goudronnage": {
+    "type": "roche",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Provoc": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Larme à l’Œil": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -1
+      ],
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Thérémonie": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Techno-Buster": {
+    "type": "normal",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Danse Folle": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Lévikinésie": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Téléport": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Indignition": {
+    "type": "feu",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Téra Explosion": {
+    "type": "normal",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        -1
+      ],
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Pluie Térastrale": {
+    "type": "normal",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Champlification": {
+    "type": "normal",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Larcin": {
+    "type": "tenebres",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Myria-Flèches": {
+    "type": "sol",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Myria-Vagues": {
+    "type": "sol",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Mania": {
+    "type": "normal",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Exécu-Son": {
+    "type": "tenebres",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Fatal-Foudre": {
+    "type": "electrik",
+    "puissance": 110,
+    "precision": 70,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 30,
+    "pp": 10
+  },
+  "Voltageôle": {
+    "type": "electrik",
+    "puissance": 80,
+    "precision": 90,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Crocs Éclair": {
+    "type": "electrik",
+    "puissance": 65,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 10,
+    "pp": 15
+  },
+  "Poing Éclair": {
+    "type": "electrik",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 10,
+    "pp": 15
+  },
+  "Éclair": {
+    "type": "electrik",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 10,
+    "pp": 30
+  },
+  "Cage Éclair": {
+    "type": "electrik",
+    "puissance": null,
+    "precision": 90,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Tonnerre": {
+    "type": "electrik",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 10,
+    "pp": 15
+  },
+  "Vif Éclair": {
+    "type": "electrik",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Chatouille": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -1
+      ],
+      [
+        "def",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Grand Nettoyage": {
+    "type": "normal",
+    "puissance": 0,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Renversement": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Chant Flamboyant": {
+    "type": "feu",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Tourmente": {
+    "type": "tenebres",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Toxik": {
+    "type": "poison",
+    "puissance": null,
+    "precision": 90,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Pics Toxik": {
+    "type": "poison",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Fil Toxique": {
+    "type": "poison",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 100,
+    "pp": 20
+  },
+  "Désherbaffe": {
+    "type": "plante",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "vit",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Morphing": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Triplattaque": {
+    "type": "normal",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Tour de Magie": {
+    "type": "psy",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Halloween": {
+    "type": "spectre",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Distorsion": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Triple Axel": {
+    "type": "glace",
+    "puissance": 20,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Triple Plongeon": {
+    "type": "eau",
+    "puissance": 30,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Triple Pied": {
+    "type": "combat",
+    "puissance": 10,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Botte Sucrette": {
+    "type": "plante",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [
+      [
+        "atk",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Atout": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Double Laser": {
+    "type": "psy",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Double Dard": {
+    "type": "insecte",
+    "puissance": 25,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "poison",
+    "ailment_chance": 20,
+    "pp": 20
+  },
+  "Ouragan": {
+    "type": "dragon",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Demi-Tour": {
+    "type": "insecte",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Prio-Parade": {
+    "type": "combat",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Brouhaha": {
+    "type": "normal",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Coup Victoire": {
+    "type": "feu",
+    "puissance": 180,
+    "precision": 95,
+    "classe": "physical",
+    "stats": [
+      [
+        "def",
+        -1
+      ],
+      [
+        "def",
+        -1
+      ],
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Onde Vide": {
+    "type": "combat",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Piège de Venin": {
+    "type": "poison",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        -1
+      ],
+      [
+        "atk",
+        -1
+      ],
+      [
+        "vit",
+        -1
+      ]
+    ],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Choc Venin": {
+    "type": "poison",
+    "puissance": 65,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Force Poigne": {
+    "type": "normal",
+    "puissance": 55,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Fouet Lianes": {
+    "type": "plante",
+    "puissance": 45,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Corps Perdu": {
+    "type": "combat",
+    "puissance": 70,
+    "precision": null,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Change Éclair": {
+    "type": "electrik",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Électacle": {
+    "type": "electrik",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 10,
+    "pp": 15
+  },
+  "Réveil Forcé": {
+    "type": "combat",
+    "puissance": 70,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Pistolet à O": {
+    "type": "eau",
+    "puissance": 40,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 25
+  },
+  "Aire d’Eau": {
+    "type": "eau",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Vibraqua": {
+    "type": "eau",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "confusion",
+    "ailment_chance": 20,
+    "pp": 20
+  },
+  "Sheauriken": {
+    "type": "eau",
+    "puissance": 15,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Tourniquet": {
+    "type": "eau",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Giclédo": {
+    "type": "eau",
+    "puissance": 150,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Cascade": {
+    "type": "eau",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Aquatacle": {
+    "type": "eau",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Ball’Météo": {
+    "type": "normal",
+    "puissance": 50,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Siphon": {
+    "type": "eau",
+    "puissance": 35,
+    "precision": 85,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Cyclone": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Poing Obscur": {
+    "type": "tenebres",
+    "puissance": 75,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Garde Large": {
+    "type": "roche",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Éclair Fou": {
+    "type": "electrik",
+    "puissance": 90,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Typhon Fulgurant": {
+    "type": "electrik",
+    "puissance": 100,
+    "precision": 80,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Feu Follet": {
+    "type": "feu",
+    "puissance": null,
+    "precision": 85,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "burn",
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Cru-Ailes": {
+    "type": "vol",
+    "puissance": 60,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 35
+  },
+  "Vœu": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Repli": {
+    "type": "eau",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "def",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 40
+  },
+  "Zone Étrange": {
+    "type": "psy",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Martobois": {
+    "type": "plante",
+    "puissance": 120,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Rengorgement": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [
+      [
+        "atk",
+        1
+      ],
+      [
+        "atk",
+        1
+      ]
+    ],
+    "cible": "soi",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 30
+  },
+  "Soucigraine": {
+    "type": "plante",
+    "puissance": null,
+    "precision": 100,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Ligotage": {
+    "type": "normal",
+    "puissance": 15,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 20
+  },
+  "Essorage": {
+    "type": "normal",
+    "puissance": null,
+    "precision": 100,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 5
+  },
+  "Plaie Croix": {
+    "type": "insecte",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Bâillement": {
+    "type": "normal",
+    "puissance": null,
+    "precision": null,
+    "classe": "status",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  },
+  "Élecanon": {
+    "type": "electrik",
+    "puissance": 120,
+    "precision": 50,
+    "classe": "special",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": "paralysis",
+    "ailment_chance": 100,
+    "pp": 5
+  },
+  "Psykoud’Boul": {
+    "type": "psy",
+    "puissance": 80,
+    "precision": 90,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 15
+  },
+  "Électrikipik": {
+    "type": "electrik",
+    "puissance": 80,
+    "precision": 100,
+    "classe": "physical",
+    "stats": [],
+    "cible": "adversaire",
+    "ailment": null,
+    "ailment_chance": 0,
+    "pp": 10
+  }
+}
