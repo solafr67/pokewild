@@ -685,7 +685,17 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
         if not combat or not combat["actif"]:
             return
 
-        deux_joueurs_prets = combat["action1"] is not None and combat["action2"] is not None
+        # Un joueur en pleine charge/recharge (attaque à deux tours) n'a rien à choisir ce
+        # tour-ci — son action reste NULL à raison, mais ça ne doit pas forcer à attendre le
+        # timer complet si l'adversaire, lui, a déjà joué.
+        charge1 = database.obtenir_charge(combat_id, combat["joueur1_id"], combat["actif1_nom"])
+        charge2 = database.obtenir_charge(combat_id, combat["joueur2_id"], combat["actif2_nom"])
+        j1_verrouille = bool(charge1["attaque_en_charge"]) or charge1["doit_recharger"]
+        j2_verrouille = bool(charge2["attaque_en_charge"]) or charge2["doit_recharger"]
+
+        action1_prete = combat["action1"] is not None or j1_verrouille
+        action2_prete = combat["action2"] is not None or j2_verrouille
+        deux_joueurs_prets = action1_prete and action2_prete
         timer_expire = int(time.time()) >= combat["date_limite_tour"]
 
         if not deux_joueurs_prets and not timer_expire:
