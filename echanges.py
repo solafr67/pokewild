@@ -2,10 +2,19 @@ import discord
 
 import database
 import journal
-from pokemon_data import EMOJI_POKEDOLLAR
+from pokedex import ORDRE_RARETE
+from pokemon_data import EMOJI_POKEDOLLAR, cle_tri_alphabetique_fr, obtenir_pokemon_par_nom, sprite_pokemon
 
 CAPTURES_PAR_PAGE = 25
 DELAI_SUPPRESSION_FIL = 120
+MAX_CARTES_PAR_JOUEUR = 4  # limite Discord de 10 embeds/message (1 résumé + jusqu'à 8 cartes)
+
+OPTIONS_TRI = [
+    ("alphabetique", "Alphabétique"),
+    ("rarete", "Rareté"),
+    ("pc_desc", "PC : fort → faible"),
+    ("pc_asc", "PC : faible → fort"),
+]
 
 
 def _ligne_offre(captures: list, pd: int) -> str:
@@ -22,10 +31,37 @@ def _ligne_offre(captures: list, pd: int) -> str:
     return "\n".join(lignes) if lignes else "*Rien proposé pour l'instant*"
 
 
-def construire_embed_echange(echange_id: int, noms: dict) -> discord.Embed:
+def _cartes_pokemon(captures: list) -> list:
+    """Une mini-carte par Pokémon proposé : sprite animé en vignette, PC dans le titre.
+    Plafonné à MAX_CARTES_PAR_JOUEUR pour rester sous la limite Discord de 10 embeds/message."""
+    cartes = []
+    for row in captures[:MAX_CARTES_PAR_JOUEUR]:
+        pokemon = obtenir_pokemon_par_nom(row["pokemon_nom"])
+        shiny_txt = "✨ " if row["shiny"] else ""
+        carte = discord.Embed(
+            title=f"{shiny_txt}{row['pokemon_nom']} — {row['pc']} PC",
+            color=discord.Color.gold() if row["shiny"] else discord.Color.blurple(),
+        )
+        if pokemon:
+            sprite_url = sprite_pokemon(pokemon, shiny=bool(row["shiny"]))
+            if sprite_url:
+                carte.set_thumbnail(url=sprite_url)
+        cartes.append(carte)
+    if len(captures) > MAX_CARTES_PAR_JOUEUR:
+        carte_reste = discord.Embed(
+            description=f"*+ {len(captures) - MAX_CARTES_PAR_JOUEUR} autre(s) Pokémon proposé(s) — voir le résumé ci-dessus.*",
+            color=discord.Color.blurple(),
+        )
+        cartes.append(carte_reste)
+    return cartes
+
+
+def construire_embeds_echange(echange_id: int, noms: dict) -> list:
+    """Retourne une LISTE d'embeds : le résumé principal, puis une mini-carte visuelle
+    (sprite + PC) par Pokémon proposé de chaque côté."""
     echange = database.obtenir_echange(echange_id)
     if echange is None:
-        return discord.Embed(description="Échange introuvable.", color=discord.Color.red())
+        return [discord.Embed(description="Échange introuvable.", color=discord.Color.red())]
 
     offre_j1 = database.obtenir_offre_echange(echange_id, echange["joueur1_id"])
     offre_j2 = database.obtenir_offre_echange(echange_id, echange["joueur2_id"])
@@ -47,7 +83,7 @@ def construire_embed_echange(echange_id: int, noms: dict) -> discord.Embed:
     )
     embed.set_footer(text="Modifier son offre annule les deux validations — il faut revalider après tout changement.")
 
-    return embed
+    return [embed, *_cartes_pokemon(offre_j1), *_cartes_pokemon(offre_j2)]
 
 
 class VueEchange(discord.ui.View):
@@ -118,8 +154,8 @@ class VueEchange(discord.ui.View):
                     item.disabled = True
                 await interaction.response.edit_message(embed=embed, view=self)
         else:
-            embed = construire_embed_echange(self.echange_id, await _obtenir_noms_depuis_echange(interaction.client, self.echange_id))
-            await interaction.response.edit_message(embed=embed, view=self)
+            embeds = construire_embeds_echange(self.echange_id, await _obtenir_noms_depuis_echange(interaction.client, self.echange_id))
+            await interaction.response.edit_message(embeds=embeds, view=self)
             await interaction.followup.send("✅ Ton offre est validée, en attente de l'autre joueur.", ephemeral=True)
 
     @discord.ui.button(label="Annuler l'échange", emoji="❌", style=discord.ButtonStyle.danger, row=0)
@@ -160,8 +196,8 @@ async def _rafraichir_message_principal(bot, echange_id: int):
             return
         message = await thread.fetch_message(int(echange["message_id"]))
         noms = await _obtenir_noms_depuis_echange(bot, echange_id)
-        embed = construire_embed_echange(echange_id, noms)
-        await message.edit(embed=embed)
+        embeds = construire_embeds_echange(echange_id, noms)
+        await message.edit(embeds=embeds)
     except discord.HTTPException:
         pass
 
@@ -174,11 +210,27 @@ class VueChoixOffre(discord.ui.View):
         self.echange_id = echange_id
         self.user_id = user_id
         self.page = page
+        self.tri = "alphabetique"
 
         captures_actuelles = {row["id"] for row in database.obtenir_offre_echange(echange_id, user_id)}
         self.selection = captures_actuelles
         self.toutes_captures = database.obtenir_toutes_captures_detaillees(user_id)
+        self._trier_captures()
         self._construire_composants()
+
+    def _trier_captures(self):
+        if self.tri == "rarete":
+            def cle_rarete(row):
+                p = obtenir_pokemon_par_nom(row["pokemon_nom"])
+                return (ORDRE_RARETE.get(p["rarete"], 99) if p else 99, cle_tri_alphabetique_fr(row["pokemon_nom"]))
+
+            self.toutes_captures.sort(key=cle_rarete)
+        elif self.tri == "pc_desc":
+            self.toutes_captures.sort(key=lambda row: -row["pc"])
+        elif self.tri == "pc_asc":
+            self.toutes_captures.sort(key=lambda row: row["pc"])
+        else:
+            self.toutes_captures.sort(key=lambda row: cle_tri_alphabetique_fr(row["pokemon_nom"]))
 
     def _construire_composants(self):
         self.clear_items()
@@ -207,20 +259,31 @@ class VueChoixOffre(discord.ui.View):
             select.callback = self._on_select
             self.add_item(select)
 
+        select_tri = discord.ui.Select(
+            placeholder="Trier par...",
+            options=[
+                discord.SelectOption(label=libelle, value=valeur, default=(valeur == self.tri))
+                for valeur, libelle in OPTIONS_TRI
+            ],
+            row=1,
+        )
+        select_tri.callback = self._on_select_tri
+        self.add_item(select_tri)
+
         nb_pages = max(1, (len(self.toutes_captures) + CAPTURES_PAR_PAGE - 1) // CAPTURES_PAR_PAGE)
         if nb_pages > 1:
-            bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=1, disabled=self.page == 0)
+            bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=2, disabled=self.page == 0)
             bouton_prec.callback = self._page_prec
             self.add_item(bouton_prec)
-            bouton_suiv = discord.ui.Button(label="▶", style=discord.ButtonStyle.secondary, row=1, disabled=self.page >= nb_pages - 1)
+            bouton_suiv = discord.ui.Button(label="▶", style=discord.ButtonStyle.secondary, row=2, disabled=self.page >= nb_pages - 1)
             bouton_suiv.callback = self._page_suiv
             self.add_item(bouton_suiv)
 
-        bouton_pd = discord.ui.Button(label="Définir les Poké Dollars", emoji="💰", style=discord.ButtonStyle.secondary, row=2)
+        bouton_pd = discord.ui.Button(label="Définir les Poké Dollars", emoji="💰", style=discord.ButtonStyle.secondary, row=3)
         bouton_pd.callback = self._on_definir_pd
         self.add_item(bouton_pd)
 
-        bouton_confirmer = discord.ui.Button(label="Confirmer cette offre", emoji="✅", style=discord.ButtonStyle.success, row=2)
+        bouton_confirmer = discord.ui.Button(label="Confirmer cette offre", emoji="✅", style=discord.ButtonStyle.success, row=3)
         bouton_confirmer.callback = self._on_confirmer
         self.add_item(bouton_confirmer)
 
@@ -237,6 +300,15 @@ class VueChoixOffre(discord.ui.View):
         ids_page = {row["id"] for row in self.toutes_captures[debut : debut + CAPTURES_PAR_PAGE]}
         nouvelle_selection_page = {int(v) for v in interaction.data["values"]}
         self.selection = (self.selection - ids_page) | nouvelle_selection_page
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+    async def _on_select_tri(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.tri = interaction.data["values"][0]
+        self.page = 0
+        self._trier_captures()
         self._construire_composants()
         await interaction.response.edit_message(view=self)
 

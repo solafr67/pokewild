@@ -827,6 +827,20 @@ async def boucle_dresseurs():
 # ----------------------------------------------------------------------------
 
 @bot.event
+async def on_guild_join(guild: discord.Guild):
+    """Le bot est pensé pour un seul serveur — s'il est ajouté ailleurs (lien d'invitation
+    qui a fuité, ajout par erreur...), il quitte automatiquement plutôt que de tourner à
+    moitié cassé (spawns/salons introuvables) sur un serveur non prévu."""
+    if config.GUILD_ID and guild.id != config.GUILD_ID:
+        print(f"⚠️ Bot ajouté à un serveur non autorisé ({guild.name}, {guild.id}) — départ automatique.")
+        journal.logger(f"🚪 Bot ajouté au serveur non autorisé **{guild.name}** ({guild.id}) — départ automatique.")
+        try:
+            await guild.leave()
+        except discord.HTTPException:
+            pass
+
+
+@bot.event
 async def on_ready():
     database.init_db()
     bot.add_view(VuePokestop())  # réenregistre la vue persistante après un redémarrage
@@ -2391,11 +2405,11 @@ async def demarrer_echange(proposeur: discord.Member, cible: discord.Member, cha
     conn.close()
 
     noms = {proposeur.id: proposeur.display_name, cible.id: cible.display_name}
-    embed = echanges_module.construire_embed_echange(echange_id, noms)
+    embeds = echanges_module.construire_embeds_echange(echange_id, noms)
     vue = echanges_module.VueEchange(echange_id)
     msg = await thread.send(
         content=f"{proposeur.mention} {cible.mention} — construisez vos offres puis validez chacun votre tour !",
-        embed=embed,
+        embeds=embeds,
         view=vue,
     )
     conn = database.get_connexion()
