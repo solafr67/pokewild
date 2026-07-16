@@ -67,7 +67,15 @@ async def construire_message_echange(echange_id: int, noms: dict):
     embed.add_field(name=f"{nom_j2} — {statut_j2}", value=_ligne_offre(offre_j2, echange["joueur2_pd"]), inline=True)
     embed.set_footer(text="Modifier son offre annule les deux validations — il faut revalider après tout changement.")
 
-    fichier = await construire_fichier_grille([(nom_j1, list(offre_j1)), (nom_j2, list(offre_j2))])
+    fichier = None
+    try:
+        fichier = await construire_fichier_grille([(nom_j1, list(offre_j1)), (nom_j2, list(offre_j2))])
+    except Exception as e:
+        # Une grille ratée (Pillow manquant, sprite injoignable, etc.) ne doit jamais
+        # empêcher la mise à jour du résumé texte — on continue sans image plutôt que
+        # de laisser planter tout l'affichage de l'échange.
+        journal.logger(f"🔴 Échec de génération de la grille d'échange {echange_id} : {e}")
+        fichier = None
     if fichier is not None:
         embed.set_image(url="attachment://offre.png")
 
@@ -203,6 +211,8 @@ async def _rafraichir_message_principal(bot, echange_id: int):
             await message.edit(embed=embed)
     except discord.HTTPException:
         pass
+    except Exception as e:
+        journal.logger(f"🔴 Erreur inattendue dans _rafraichir_message_principal (échange {echange_id}) : {e}")
 
 
 TAILLE_CELLULE_GRILLE = 96
@@ -246,16 +256,37 @@ async def _telecharger_sprites_statiques(captures: list) -> dict:
 HAUTEUR_ENTETE_SECTION = 24
 
 
+def _charger_police(taille: int, gras: bool = False):
+    """Essaie une vraie police TTF (nette, lisible) avant de retomber sur la police par
+    défaut de PIL (minuscule et non-antialiasée — dernier recours seulement)."""
+    from PIL import ImageFont
+
+    chemins_candidats = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if gras else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf" if gras else "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    ]
+    for chemin in chemins_candidats:
+        try:
+            return ImageFont.truetype(chemin, taille)
+        except OSError:
+            continue
+    try:
+        return ImageFont.load_default(size=taille)  # Pillow >= 10.1
+    except TypeError:
+        return ImageFont.load_default()  # anciennes versions de Pillow, sans paramètre size
+
+
 def _composer_grille(sections: list, sprites: dict) -> bytes:
     """sections = [(nom_joueur, captures), ...]. Colle les sprites + PC dans une grille
     statique, une section par joueur avec un en-tête et une ligne de séparation — pour
     qu'on sache toujours quel Pokémon appartient à l'offre de qui. Fonction SYNCHRONE et
     CPU-bound — doit être lancée via asyncio.to_thread pour ne jamais bloquer la boucle
     d'événements du bot pendant qu'elle dessine."""
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw
 
     colonnes = COLONNES_GRILLE
-    police = ImageFont.load_default()
+    police_entete = _charger_police(18, gras=True)
+    police_texte = _charger_police(14)
     largeur = colonnes * (TAILLE_CELLULE_GRILLE + MARGE_GRILLE) + MARGE_GRILLE
 
     hauteurs_sections = []
@@ -267,14 +298,20 @@ def _composer_grille(sections: list, sprites: dict) -> bytes:
         )
 
     hauteur_totale = sum(hauteurs_sections) + MARGE_GRILLE
-    grille = Image.new("RGBA", (largeur, hauteur_totale), (47, 49, 54, 255))  # fond façon Discord (mode sombre)
+    # Génère en 2x puis réduit à la fin (supersampling) — beaucoup plus net que de dessiner
+    # directement à la taille finale, surtout pour le texte.
+    echelle = 2
+    grille = Image.new("RGBA", (largeur * echelle, hauteur_totale * echelle), (47, 49, 54, 255))
     dessin = ImageDraw.Draw(grille)
 
     y_section = MARGE_GRILLE
     for (nom_joueur, captures), hauteur_section in zip(sections, hauteurs_sections):
-        dessin.text((MARGE_GRILLE, y_section), f"\U0001F464 {nom_joueur}", font=police, fill=(255, 255, 255, 255))
+        dessin.text((MARGE_GRILLE * echelle, y_section * echelle), f"Offre de {nom_joueur}", font=police_entete, fill=(255, 255, 255, 255))
         y_ligne = y_section + HAUTEUR_ENTETE_SECTION - 6
-        dessin.line([(MARGE_GRILLE, y_ligne), (largeur - MARGE_GRILLE, y_ligne)], fill=(90, 90, 95, 255), width=1)
+        dessin.line(
+            [(MARGE_GRILLE * echelle, y_ligne * echelle), ((largeur - MARGE_GRILLE) * echelle, y_ligne * echelle)],
+            fill=(90, 90, 95, 255), width=2,
+        )
 
         y_grille = y_section + HAUTEUR_ENTETE_SECTION
         for i, row in enumerate(captures):
@@ -286,21 +323,28 @@ def _composer_grille(sections: list, sprites: dict) -> bytes:
             if donnees:
                 try:
                     sprite_img = Image.open(io.BytesIO(donnees)).convert("RGBA")
-                    sprite_img.thumbnail((TAILLE_CELLULE_GRILLE, TAILLE_CELLULE_GRILLE))
-                    offset_x = x + (TAILLE_CELLULE_GRILLE - sprite_img.width) // 2
-                    offset_y = y + (TAILLE_CELLULE_GRILLE - sprite_img.height) // 2
+                    taille_cible = TAILLE_CELLULE_GRILLE * echelle
+                    ratio = min(taille_cible / sprite_img.width, taille_cible / sprite_img.height)
+                    nouvelle_taille = (max(1, round(sprite_img.width * ratio)), max(1, round(sprite_img.height * ratio)))
+                    sprite_img = sprite_img.resize(nouvelle_taille, Image.LANCZOS)
+                    offset_x = x * echelle + (taille_cible - sprite_img.width) // 2
+                    offset_y = y * echelle + (taille_cible - sprite_img.height) // 2
                     grille.paste(sprite_img, (offset_x, offset_y), sprite_img)
                 except Exception:
                     pass  # sprite corrompu/illisible — la cellule reste vide, pas bloquant
 
-            shiny_txt = "✨" if row["shiny"] else ""
+            # "★" plutôt que l'emoji ✨ : rendu fiable dans une police TTF classique,
+            # contrairement aux emoji couleur qui demandent une police spécifique.
+            shiny_txt = "★ " if row["shiny"] else ""
             texte = f"{shiny_txt}{row['pokemon_nom']}\n{row['pc']} PC"
             dessin.multiline_text(
-                (x + TAILLE_CELLULE_GRILLE // 2, y + TAILLE_CELLULE_GRILLE + 2),
-                texte, font=police, fill=(255, 255, 255, 255), anchor="ma", align="center",
+                ((x + TAILLE_CELLULE_GRILLE // 2) * echelle, (y + TAILLE_CELLULE_GRILLE + 2) * echelle),
+                texte, font=police_texte, fill=(255, 255, 255, 255), anchor="ma", align="center",
             )
 
         y_section += hauteur_section
+
+    grille = grille.resize((largeur, hauteur_totale), Image.LANCZOS)  # réduction finale = anti-aliasing gratuit
 
     tampon = io.BytesIO()
     grille.save(tampon, format="PNG")
