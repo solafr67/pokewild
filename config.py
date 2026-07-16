@@ -2,7 +2,8 @@
 # ⚠️ Ne partage JAMAIS ton token publiquement (GitHub, Discord, etc.)
 # En production, préfère charger ça depuis un fichier .env (voir python-dotenv)
 
-TOKEN = "MTUyNDA1NjgwNzg1MTY5MjA3Mg.GMU0bi.WhGVtqJmtlxhKUBmgYAFzfeNcwUR9P_HlHEcik"
+import os
+TOKEN = os.environ["DISCORD_TOKEN"]
 
 # --- IDs des channels (à remplir avec les vrais IDs de ton serveur) ---
 CHANNEL_SPAWN_CLASSIQUE_ID = 1524432178694455346
