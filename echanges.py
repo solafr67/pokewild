@@ -222,11 +222,16 @@ HAUTEUR_TEXTE_GRILLE = 28
 MAX_POKEMON_GRILLE = 30  # garde-fou : au-delà, l'image deviendrait énorme et lente à générer
 
 
+URL_ARTWORK_OFFICIEL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{prefixe}{numero}.png"
+
+
 async def _telecharger_sprites_statiques(captures: list) -> dict:
-    """Télécharge en parallèle les sprites STATIQUES (pas les GIF animés — une seule
-    image par Pokémon suffit pour la grille, et c'est bien plus rapide/léger à traiter
-    que de décoder des animations). Retourne {(nom, shiny): bytes}, silencieusement
-    incomplet si un téléchargement échoue plutôt que de tout faire planter."""
+    """Télécharge en parallèle l'artwork officiel (grand format, ~475×475) de chaque
+    Pokémon — pas le petit sprite de combat (souvent 96×96 ou moins) qu'on aurait dû
+    AGRANDIR pour remplir les cases, ce qui donnait un rendu flou. Réduire une grande
+    image donne un résultat net ; l'agrandir ne le peut jamais. Retourne
+    {(nom, shiny): bytes}, silencieusement incomplet si un téléchargement échoue plutôt
+    que de tout faire planter."""
     import aiohttp
 
     urls = {}
@@ -234,7 +239,13 @@ async def _telecharger_sprites_statiques(captures: list) -> dict:
         pokemon = obtenir_pokemon_par_nom(row["pokemon_nom"])
         if not pokemon:
             continue
-        url = pokemon.get("sprite_shiny") if row["shiny"] else pokemon.get("sprite")
+        numero = pokemon.get("numero")
+        if numero:
+            prefixe = "shiny/" if row["shiny"] else ""
+            url = URL_ARTWORK_OFFICIEL.format(prefixe=prefixe, numero=numero)
+        else:
+            # Repli sur le petit sprite si jamais le numéro manque (ne devrait pas arriver)
+            url = pokemon.get("sprite_shiny") if row["shiny"] else pokemon.get("sprite")
         if url:
             urls[(row["pokemon_nom"], bool(row["shiny"]))] = url
 
@@ -276,6 +287,20 @@ def _charger_police(taille: int, gras: bool = False):
         return ImageFont.load_default()  # anciennes versions de Pillow, sans paramètre size
 
 
+def _nom_affichable(nom: str) -> str:
+    """Nettoie un pseudo pour l'écriture dans l'image : beaucoup de pseudos Discord
+    utilisent des caractères Unicode "stylisés" (gras/italique/script mathématique...)
+    qui ressemblent à du texte normal mais ne sont pas couverts par une police TTF
+    classique comme DejaVu Sans — sans ça, ils s'afficheraient en carrés illisibles.
+    NFKC les ramène à leur équivalent Latin standard (en gardant les accents français,
+    contrairement à NFKD qui les aurait décomposés puis fait filtrer par erreur)."""
+    import unicodedata
+
+    normalise = unicodedata.normalize("NFKC", nom)
+    filtre = "".join(c for c in normalise if 32 <= ord(c) < 127 or 0xC0 <= ord(c) <= 0x17F).strip()
+    return filtre or "Joueur"
+
+
 def _composer_grille(sections: list, sprites: dict) -> bytes:
     """sections = [(nom_joueur, captures), ...]. Colle les sprites + PC dans une grille
     statique, une section par joueur avec un en-tête et une ligne de séparation — pour
@@ -306,7 +331,7 @@ def _composer_grille(sections: list, sprites: dict) -> bytes:
 
     y_section = MARGE_GRILLE
     for (nom_joueur, captures), hauteur_section in zip(sections, hauteurs_sections):
-        dessin.text((MARGE_GRILLE * echelle, y_section * echelle), f"Offre de {nom_joueur}", font=police_entete, fill=(255, 255, 255, 255))
+        dessin.text((MARGE_GRILLE * echelle, y_section * echelle), f"Offre de {_nom_affichable(nom_joueur)}", font=police_entete, fill=(255, 255, 255, 255))
         y_ligne = y_section + HAUTEUR_ENTETE_SECTION - 6
         dessin.line(
             [(MARGE_GRILLE * echelle, y_ligne * echelle), ((largeur - MARGE_GRILLE) * echelle, y_ligne * echelle)],
