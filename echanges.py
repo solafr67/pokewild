@@ -7,7 +7,7 @@ from pokemon_data import EMOJI_POKEDOLLAR, cle_tri_alphabetique_fr, obtenir_poke
 
 CAPTURES_PAR_PAGE = 25
 DELAI_SUPPRESSION_FIL = 120
-MAX_CARTES_PAR_JOUEUR = 4  # limite Discord de 10 embeds/message (1 résumé + jusqu'à 8 cartes)
+MAX_CARTES_PAR_JOUEUR = 2  # aperçu rapide dans le message principal — le reste est dans la galerie paginée
 
 OPTIONS_TRI = [
     ("alphabetique", "Alphabétique"),
@@ -49,7 +49,10 @@ def _cartes_pokemon(captures: list) -> list:
         cartes.append(carte)
     if len(captures) > MAX_CARTES_PAR_JOUEUR:
         carte_reste = discord.Embed(
-            description=f"*+ {len(captures) - MAX_CARTES_PAR_JOUEUR} autre(s) Pokémon proposé(s) — voir le résumé ci-dessus.*",
+            description=(
+                f"*+ {len(captures) - MAX_CARTES_PAR_JOUEUR} autre(s) Pokémon proposé(s) — "
+                f"clique sur \"🖼️ Voir toutes les cartes\" pour tout voir avec sprites.*"
+            ),
             color=discord.Color.blurple(),
         )
         cartes.append(carte_reste)
@@ -111,6 +114,17 @@ class VueEchange(discord.ui.View):
         await interaction.response.send_message(
             "Choisis les Pokémon à proposer (tu pourras ajouter des Poké Dollars ensuite) :",
             view=vue,
+            ephemeral=True,
+        )
+
+    @discord.ui.button(label="Voir toutes les cartes", emoji="🖼️", style=discord.ButtonStyle.secondary, row=0)
+    async def galerie(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier_participant(interaction):
+            return
+        vue = VueGalerieEchange(self.echange_id)
+        await interaction.response.send_message(
+            embeds=vue.embeds_page(),
+            view=vue if vue.nb_pages > 1 else None,
             ephemeral=True,
         )
 
@@ -200,6 +214,72 @@ async def _rafraichir_message_principal(bot, echange_id: int):
         await message.edit(embeds=embeds)
     except discord.HTTPException:
         pass
+
+
+CARTES_PAR_PAGE_GALERIE = 8  # sous la limite Discord de 10 embeds/message
+
+
+class VueGalerieEchange(discord.ui.View):
+    """Galerie paginée (éphémère) montrant TOUTES les cartes sprite+PC des deux offres,
+    sans la limite de 2/joueur imposée dans le message principal du fil."""
+
+    def __init__(self, echange_id: int, page: int = 0):
+        super().__init__(timeout=120)
+        self.echange_id = echange_id
+
+        echange = database.obtenir_echange(echange_id)
+        offre_j1 = database.obtenir_offre_echange(echange_id, echange["joueur1_id"]) if echange else []
+        offre_j2 = database.obtenir_offre_echange(echange_id, echange["joueur2_id"]) if echange else []
+        self.toutes_captures = list(offre_j1) + list(offre_j2)
+
+        self.nb_pages = max(1, (len(self.toutes_captures) + CARTES_PAR_PAGE_GALERIE - 1) // CARTES_PAR_PAGE_GALERIE)
+        self.page = max(0, min(page, self.nb_pages - 1))
+        self._construire_composants()
+
+    def _construire_composants(self):
+        self.clear_items()
+        if self.nb_pages <= 1:
+            return
+        bouton_prec = discord.ui.Button(label="◀ Page précédente", style=discord.ButtonStyle.secondary, disabled=self.page == 0)
+        bouton_prec.callback = self._page_prec
+        self.add_item(bouton_prec)
+        bouton_suiv = discord.ui.Button(label="Page suivante ▶", style=discord.ButtonStyle.secondary, disabled=self.page >= self.nb_pages - 1)
+        bouton_suiv.callback = self._page_suiv
+        self.add_item(bouton_suiv)
+
+    def embeds_page(self) -> list:
+        debut = self.page * CARTES_PAR_PAGE_GALERIE
+        page_captures = self.toutes_captures[debut : debut + CARTES_PAR_PAGE_GALERIE]
+        if not page_captures:
+            return [discord.Embed(description="Aucun Pokémon proposé pour l'instant.", color=discord.Color.blurple())]
+
+        cartes = []
+        for row in page_captures:
+            pokemon = obtenir_pokemon_par_nom(row["pokemon_nom"])
+            shiny_txt = "✨ " if row["shiny"] else ""
+            carte = discord.Embed(
+                title=f"{shiny_txt}{row['pokemon_nom']} — {row['pc']} PC",
+                color=discord.Color.gold() if row["shiny"] else discord.Color.blurple(),
+            )
+            if pokemon:
+                sprite_url = sprite_pokemon(pokemon, shiny=bool(row["shiny"]))
+                if sprite_url:
+                    carte.set_thumbnail(url=sprite_url)
+            cartes.append(carte)
+
+        if self.nb_pages > 1:
+            cartes[0].set_footer(text=f"Page {self.page + 1}/{self.nb_pages}")
+        return cartes
+
+    async def _page_prec(self, interaction: discord.Interaction):
+        self.page -= 1
+        self._construire_composants()
+        await interaction.response.edit_message(embeds=self.embeds_page(), view=self)
+
+    async def _page_suiv(self, interaction: discord.Interaction):
+        self.page += 1
+        self._construire_composants()
+        await interaction.response.edit_message(embeds=self.embeds_page(), view=self)
 
 
 class VueChoixOffre(discord.ui.View):
