@@ -2405,12 +2405,14 @@ async def demarrer_echange(proposeur: discord.Member, cible: discord.Member, cha
     conn.close()
 
     noms = {proposeur.id: proposeur.display_name, cible.id: cible.display_name}
-    embeds = echanges_module.construire_embeds_echange(echange_id, noms)
+    embed, fichier = await echanges_module.construire_message_echange(echange_id, noms)
     vue = echanges_module.VueEchange(echange_id)
+    envoi_kwargs = {"embed": embed, "view": vue}
+    if fichier is not None:
+        envoi_kwargs["file"] = fichier
     msg = await thread.send(
         content=f"{proposeur.mention} {cible.mention} — construisez vos offres puis validez chacun votre tour !",
-        embeds=embeds,
-        view=vue,
+        **envoi_kwargs,
     )
     conn = database.get_connexion()
     cur = conn.cursor()

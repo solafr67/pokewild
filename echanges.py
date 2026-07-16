@@ -6,11 +6,10 @@ import discord
 import database
 import journal
 from pokedex import ORDRE_RARETE
-from pokemon_data import EMOJI_POKEDOLLAR, cle_tri_alphabetique_fr, obtenir_pokemon_par_nom, sprite_pokemon
+from pokemon_data import EMOJI_POKEDOLLAR, cle_tri_alphabetique_fr, obtenir_pokemon_par_nom
 
 CAPTURES_PAR_PAGE = 25
 DELAI_SUPPRESSION_FIL = 120
-MAX_CARTES_PAR_JOUEUR = 2  # aperçu rapide dans le message principal — le reste est dans la galerie paginée
 
 OPTIONS_TRI = [
     ("alphabetique", "Alphabétique"),
@@ -18,6 +17,18 @@ OPTIONS_TRI = [
     ("pc_desc", "PC : fort → faible"),
     ("pc_asc", "PC : faible → fort"),
 ]
+
+
+async def _programmer_suppression_fil(channel):
+    """Supprime le fil DELAI_SUPPRESSION_FIL secondes après la fin d'un échange (conclu OU
+    annulé) — même logique que pour les fils de combat."""
+    if channel is None:
+        return
+    await asyncio.sleep(DELAI_SUPPRESSION_FIL)
+    try:
+        await channel.delete()
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+        pass
 
 
 def _ligne_offre(captures: list, pd: int) -> str:
@@ -34,40 +45,12 @@ def _ligne_offre(captures: list, pd: int) -> str:
     return "\n".join(lignes) if lignes else "*Rien proposé pour l'instant*"
 
 
-def _cartes_pokemon(captures: list) -> list:
-    """Une mini-carte par Pokémon proposé : sprite animé en vignette, PC dans le titre.
-    Plafonné à MAX_CARTES_PAR_JOUEUR pour rester sous la limite Discord de 10 embeds/message."""
-    cartes = []
-    for row in captures[:MAX_CARTES_PAR_JOUEUR]:
-        pokemon = obtenir_pokemon_par_nom(row["pokemon_nom"])
-        shiny_txt = "✨ " if row["shiny"] else ""
-        carte = discord.Embed(
-            title=f"{shiny_txt}{row['pokemon_nom']} — {row['pc']} PC",
-            color=discord.Color.gold() if row["shiny"] else discord.Color.blurple(),
-        )
-        if pokemon:
-            sprite_url = sprite_pokemon(pokemon, shiny=bool(row["shiny"]))
-            if sprite_url:
-                carte.set_thumbnail(url=sprite_url)
-        cartes.append(carte)
-    if len(captures) > MAX_CARTES_PAR_JOUEUR:
-        carte_reste = discord.Embed(
-            description=(
-                f"*+ {len(captures) - MAX_CARTES_PAR_JOUEUR} autre(s) Pokémon proposé(s) — "
-                f"clique sur \"🖼️ Voir toutes les cartes\" pour tout voir avec sprites.*"
-            ),
-            color=discord.Color.blurple(),
-        )
-        cartes.append(carte_reste)
-    return cartes
-
-
-def construire_embeds_echange(echange_id: int, noms: dict) -> list:
-    """Retourne une LISTE d'embeds : le résumé principal, puis une mini-carte visuelle
-    (sprite + PC) par Pokémon proposé de chaque côté."""
+async def construire_message_echange(echange_id: int, noms: dict):
+    """Retourne (embed, fichier) — UN SEUL embed avec le résumé texte + la grille de
+    sprites (image jointe) directement intégrée, plus de bouton à cliquer pour la voir."""
     echange = database.obtenir_echange(echange_id)
     if echange is None:
-        return [discord.Embed(description="Échange introuvable.", color=discord.Color.red())]
+        return discord.Embed(description="Échange introuvable.", color=discord.Color.red()), None
 
     offre_j1 = database.obtenir_offre_echange(echange_id, echange["joueur1_id"])
     offre_j2 = database.obtenir_offre_echange(echange_id, echange["joueur2_id"])
@@ -77,19 +60,18 @@ def construire_embeds_echange(echange_id: int, noms: dict) -> list:
     statut_j1 = "✅ Offre validée" if echange["joueur1_valide"] else "⏳ En cours de construction..."
     statut_j2 = "✅ Offre validée" if echange["joueur2_valide"] else "⏳ En cours de construction..."
 
-    embed.add_field(
-        name=f"{noms.get(echange['joueur1_id'], 'Joueur 1')} — {statut_j1}",
-        value=_ligne_offre(offre_j1, echange["joueur1_pd"]),
-        inline=True,
-    )
-    embed.add_field(
-        name=f"{noms.get(echange['joueur2_id'], 'Joueur 2')} — {statut_j2}",
-        value=_ligne_offre(offre_j2, echange["joueur2_pd"]),
-        inline=True,
-    )
+    nom_j1 = noms.get(echange["joueur1_id"], "Joueur 1")
+    nom_j2 = noms.get(echange["joueur2_id"], "Joueur 2")
+
+    embed.add_field(name=f"{nom_j1} — {statut_j1}", value=_ligne_offre(offre_j1, echange["joueur1_pd"]), inline=True)
+    embed.add_field(name=f"{nom_j2} — {statut_j2}", value=_ligne_offre(offre_j2, echange["joueur2_pd"]), inline=True)
     embed.set_footer(text="Modifier son offre annule les deux validations — il faut revalider après tout changement.")
 
-    return [embed, *_cartes_pokemon(offre_j1), *_cartes_pokemon(offre_j2)]
+    fichier = await construire_fichier_grille([(nom_j1, list(offre_j1)), (nom_j2, list(offre_j2))])
+    if fichier is not None:
+        embed.set_image(url="attachment://offre.png")
+
+    return embed, fichier
 
 
 class VueEchange(discord.ui.View):
@@ -120,30 +102,6 @@ class VueEchange(discord.ui.View):
             ephemeral=True,
         )
 
-    @discord.ui.button(label="Voir toutes les cartes", emoji="🖼️", style=discord.ButtonStyle.secondary, row=0)
-    async def galerie(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not await self._verifier_participant(interaction):
-            return
-        # La composition de l'image peut dépasser les 3 secondes accordées par Discord
-        # (téléchargement des sprites + traitement) — on defer d'abord pour avoir le temps.
-        await interaction.response.defer(ephemeral=True)
-
-        echange = database.obtenir_echange(self.echange_id)
-        offre_j1 = database.obtenir_offre_echange(self.echange_id, echange["joueur1_id"])
-        offre_j2 = database.obtenir_offre_echange(self.echange_id, echange["joueur2_id"])
-        toutes_captures = list(offre_j1) + list(offre_j2)
-
-        if not toutes_captures:
-            await interaction.followup.send("Aucun Pokémon proposé pour l'instant.", ephemeral=True)
-            return
-
-        fichier = await construire_fichier_grille(toutes_captures)
-        embed = discord.Embed(title="🖼️ Toutes les cartes proposées", color=discord.Color.blurple())
-        embed.set_image(url="attachment://offre.png")
-        if len(toutes_captures) > MAX_POKEMON_GRILLE:
-            embed.set_footer(text=f"Affichage limité aux {MAX_POKEMON_GRILLE} premiers ({len(toutes_captures)} au total).")
-        await interaction.followup.send(embed=embed, file=fichier, ephemeral=True)
-
     @discord.ui.button(label="Valider mon offre", emoji="✅", style=discord.ButtonStyle.success, row=0)
     async def valider(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not await self._verifier_participant(interaction):
@@ -161,18 +119,12 @@ class VueEchange(discord.ui.View):
                     description="Les Pokémon et Poké Dollars ont changé de propriétaire.",
                     color=discord.Color.green(),
                 )
+                embed.set_footer(text=f"🗑️ Ce fil sera supprimé automatiquement dans {DELAI_SUPPRESSION_FIL // 60} minutes.")
                 for item in self.children:
                     item.disabled = True
                 await interaction.response.edit_message(embed=embed, view=self)
                 if interaction.channel:
-                    import asyncio
-                    async def _supprimer():
-                        await asyncio.sleep(DELAI_SUPPRESSION_FIL)
-                        try:
-                            await interaction.channel.delete()
-                        except Exception:
-                            pass
-                    interaction.client.loop.create_task(_supprimer())
+                    interaction.client.loop.create_task(_programmer_suppression_fil(interaction.channel))
             else:
                 database.annuler_echange(self.echange_id)
                 embed = discord.Embed(
@@ -180,12 +132,21 @@ class VueEchange(discord.ui.View):
                     description=f"Impossible de finaliser l'échange : {erreur}",
                     color=discord.Color.red(),
                 )
+                embed.set_footer(text=f"🗑️ Ce fil sera supprimé automatiquement dans {DELAI_SUPPRESSION_FIL // 60} minutes.")
                 for item in self.children:
                     item.disabled = True
                 await interaction.response.edit_message(embed=embed, view=self)
+                if interaction.channel:
+                    interaction.client.loop.create_task(_programmer_suppression_fil(interaction.channel))
         else:
-            embeds = construire_embeds_echange(self.echange_id, await _obtenir_noms_depuis_echange(interaction.client, self.echange_id))
-            await interaction.response.edit_message(embeds=embeds, view=self)
+            # La composition de la grille peut dépasser les 3 secondes accordées par
+            # Discord (téléchargement des sprites + traitement) — on defer d'abord.
+            await interaction.response.defer()
+            embed, fichier = await construire_message_echange(self.echange_id, await _obtenir_noms_depuis_echange(interaction.client, self.echange_id))
+            if fichier is not None:
+                await interaction.edit_original_response(embed=embed, attachments=[fichier], view=self)
+            else:
+                await interaction.edit_original_response(embed=embed, view=self)
             await interaction.followup.send("✅ Ton offre est validée, en attente de l'autre joueur.", ephemeral=True)
 
     @discord.ui.button(label="Annuler l'échange", emoji="❌", style=discord.ButtonStyle.danger, row=0)
@@ -197,16 +158,25 @@ class VueEchange(discord.ui.View):
             description=f"❌ Échange annulé par {interaction.user.mention}.",
             color=discord.Color.dark_grey(),
         )
+        embed.set_footer(text=f"🗑️ Ce fil sera supprimé automatiquement dans {DELAI_SUPPRESSION_FIL // 60} minutes.")
         for item in self.children:
             item.disabled = True
         await interaction.response.edit_message(embed=embed, view=self)
+        if interaction.channel:
+            interaction.client.loop.create_task(_programmer_suppression_fil(interaction.channel))
 
 
 async def _obtenir_noms(bot, j1: int, j2: int) -> dict:
-    def nom(uid):
+    async def nom(uid):
         u = bot.get_user(uid)
-        return u.display_name if u else f"Joueur {str(uid)[-4:]}"
-    return {j1: nom(j1), j2: nom(j2)}
+        if u is None:
+            try:
+                u = await bot.fetch_user(uid)
+            except discord.HTTPException:
+                u = None
+        return u.display_name if u else f"Joueur…{str(uid)[-4:]}"
+
+    return {j1: await nom(j1), j2: await nom(j2)}
 
 
 async def _obtenir_noms_depuis_echange(bot, echange_id: int) -> dict:
@@ -226,8 +196,11 @@ async def _rafraichir_message_principal(bot, echange_id: int):
             return
         message = await thread.fetch_message(int(echange["message_id"]))
         noms = await _obtenir_noms_depuis_echange(bot, echange_id)
-        embeds = construire_embeds_echange(echange_id, noms)
-        await message.edit(embeds=embeds)
+        embed, fichier = await construire_message_echange(echange_id, noms)
+        if fichier is not None:
+            await message.edit(embed=embed, attachments=[fichier])
+        else:
+            await message.edit(embed=embed)
     except discord.HTTPException:
         pass
 
@@ -270,44 +243,64 @@ async def _telecharger_sprites_statiques(captures: list) -> dict:
     return resultats
 
 
-def _composer_grille(captures: list, sprites: dict) -> bytes:
-    """Colle les sprites + PC dans une grille statique. Fonction SYNCHRONE et CPU-bound —
-    doit être lancée via asyncio.to_thread pour ne jamais bloquer la boucle d'événements
-    du bot pendant qu'elle dessine."""
+HAUTEUR_ENTETE_SECTION = 24
+
+
+def _composer_grille(sections: list, sprites: dict) -> bytes:
+    """sections = [(nom_joueur, captures), ...]. Colle les sprites + PC dans une grille
+    statique, une section par joueur avec un en-tête et une ligne de séparation — pour
+    qu'on sache toujours quel Pokémon appartient à l'offre de qui. Fonction SYNCHRONE et
+    CPU-bound — doit être lancée via asyncio.to_thread pour ne jamais bloquer la boucle
+    d'événements du bot pendant qu'elle dessine."""
     from PIL import Image, ImageDraw, ImageFont
 
-    n = len(captures)
-    colonnes = min(COLONNES_GRILLE, max(1, n))
-    lignes = (n + colonnes - 1) // colonnes
-    largeur = colonnes * (TAILLE_CELLULE_GRILLE + MARGE_GRILLE) + MARGE_GRILLE
-    hauteur = lignes * (TAILLE_CELLULE_GRILLE + HAUTEUR_TEXTE_GRILLE + MARGE_GRILLE) + MARGE_GRILLE
-
-    grille = Image.new("RGBA", (largeur, hauteur), (47, 49, 54, 255))  # fond façon Discord (mode sombre)
-    dessin = ImageDraw.Draw(grille)
+    colonnes = COLONNES_GRILLE
     police = ImageFont.load_default()
+    largeur = colonnes * (TAILLE_CELLULE_GRILLE + MARGE_GRILLE) + MARGE_GRILLE
 
-    for i, row in enumerate(captures):
-        col, lig = i % colonnes, i // colonnes
-        x = MARGE_GRILLE + col * (TAILLE_CELLULE_GRILLE + MARGE_GRILLE)
-        y = MARGE_GRILLE + lig * (TAILLE_CELLULE_GRILLE + HAUTEUR_TEXTE_GRILLE + MARGE_GRILLE)
-
-        donnees = sprites.get((row["pokemon_nom"], bool(row["shiny"])))
-        if donnees:
-            try:
-                sprite_img = Image.open(io.BytesIO(donnees)).convert("RGBA")
-                sprite_img.thumbnail((TAILLE_CELLULE_GRILLE, TAILLE_CELLULE_GRILLE))
-                offset_x = x + (TAILLE_CELLULE_GRILLE - sprite_img.width) // 2
-                offset_y = y + (TAILLE_CELLULE_GRILLE - sprite_img.height) // 2
-                grille.paste(sprite_img, (offset_x, offset_y), sprite_img)
-            except Exception:
-                pass  # sprite corrompu/illisible — la cellule reste vide, pas bloquant
-
-        shiny_txt = "✨" if row["shiny"] else ""
-        texte = f"{shiny_txt}{row['pokemon_nom']}\n{row['pc']} PC"
-        dessin.multiline_text(
-            (x + TAILLE_CELLULE_GRILLE // 2, y + TAILLE_CELLULE_GRILLE + 2),
-            texte, font=police, fill=(255, 255, 255, 255), anchor="ma", align="center",
+    hauteurs_sections = []
+    for _, captures in sections:
+        n = len(captures)
+        lignes = (n + colonnes - 1) // colonnes if n else 0
+        hauteurs_sections.append(
+            HAUTEUR_ENTETE_SECTION + lignes * (TAILLE_CELLULE_GRILLE + HAUTEUR_TEXTE_GRILLE + MARGE_GRILLE) + MARGE_GRILLE
         )
+
+    hauteur_totale = sum(hauteurs_sections) + MARGE_GRILLE
+    grille = Image.new("RGBA", (largeur, hauteur_totale), (47, 49, 54, 255))  # fond façon Discord (mode sombre)
+    dessin = ImageDraw.Draw(grille)
+
+    y_section = MARGE_GRILLE
+    for (nom_joueur, captures), hauteur_section in zip(sections, hauteurs_sections):
+        dessin.text((MARGE_GRILLE, y_section), f"\U0001F464 {nom_joueur}", font=police, fill=(255, 255, 255, 255))
+        y_ligne = y_section + HAUTEUR_ENTETE_SECTION - 6
+        dessin.line([(MARGE_GRILLE, y_ligne), (largeur - MARGE_GRILLE, y_ligne)], fill=(90, 90, 95, 255), width=1)
+
+        y_grille = y_section + HAUTEUR_ENTETE_SECTION
+        for i, row in enumerate(captures):
+            col, lig = i % colonnes, i // colonnes
+            x = MARGE_GRILLE + col * (TAILLE_CELLULE_GRILLE + MARGE_GRILLE)
+            y = y_grille + lig * (TAILLE_CELLULE_GRILLE + HAUTEUR_TEXTE_GRILLE + MARGE_GRILLE)
+
+            donnees = sprites.get((row["pokemon_nom"], bool(row["shiny"])))
+            if donnees:
+                try:
+                    sprite_img = Image.open(io.BytesIO(donnees)).convert("RGBA")
+                    sprite_img.thumbnail((TAILLE_CELLULE_GRILLE, TAILLE_CELLULE_GRILLE))
+                    offset_x = x + (TAILLE_CELLULE_GRILLE - sprite_img.width) // 2
+                    offset_y = y + (TAILLE_CELLULE_GRILLE - sprite_img.height) // 2
+                    grille.paste(sprite_img, (offset_x, offset_y), sprite_img)
+                except Exception:
+                    pass  # sprite corrompu/illisible — la cellule reste vide, pas bloquant
+
+            shiny_txt = "✨" if row["shiny"] else ""
+            texte = f"{shiny_txt}{row['pokemon_nom']}\n{row['pc']} PC"
+            dessin.multiline_text(
+                (x + TAILLE_CELLULE_GRILLE // 2, y + TAILLE_CELLULE_GRILLE + 2),
+                texte, font=police, fill=(255, 255, 255, 255), anchor="ma", align="center",
+            )
+
+        y_section += hauteur_section
 
     tampon = io.BytesIO()
     grille.save(tampon, format="PNG")
@@ -315,15 +308,16 @@ def _composer_grille(captures: list, sprites: dict) -> bytes:
     return tampon.getvalue()
 
 
-async def construire_fichier_grille(captures: list):
-    """Point d'entrée : télécharge les sprites (async, en parallèle) puis compose la
-    grille dans un thread séparé (CPU-bound), retourne un discord.File prêt à envoyer.
-    Retourne None si la liste est vide."""
-    if not captures:
+async def construire_fichier_grille(sections: list):
+    """sections = [(nom_joueur, captures), ...]. Télécharge les sprites (async, en
+    parallèle) puis compose la grille dans un thread séparé (CPU-bound), retourne un
+    discord.File prêt à envoyer. Retourne None si personne n'a rien proposé."""
+    sections = [(nom, captures[:MAX_POKEMON_GRILLE]) for nom, captures in sections]
+    toutes_captures = [c for _, captures in sections for c in captures]
+    if not toutes_captures:
         return None
-    captures = captures[:MAX_POKEMON_GRILLE]
-    sprites = await _telecharger_sprites_statiques(captures)
-    donnees_png = await asyncio.to_thread(_composer_grille, captures, sprites)
+    sprites = await _telecharger_sprites_statiques(toutes_captures)
+    donnees_png = await asyncio.to_thread(_composer_grille, sections, sprites)
     return discord.File(io.BytesIO(donnees_png), filename="offre.png")
 
 
