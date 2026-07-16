@@ -1,3 +1,6 @@
+import asyncio
+import io
+
 import discord
 
 import database
@@ -121,12 +124,25 @@ class VueEchange(discord.ui.View):
     async def galerie(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not await self._verifier_participant(interaction):
             return
-        vue = VueGalerieEchange(self.echange_id)
-        await interaction.response.send_message(
-            embeds=vue.embeds_page(),
-            view=vue if vue.nb_pages > 1 else None,
-            ephemeral=True,
-        )
+        # La composition de l'image peut dépasser les 3 secondes accordées par Discord
+        # (téléchargement des sprites + traitement) — on defer d'abord pour avoir le temps.
+        await interaction.response.defer(ephemeral=True)
+
+        echange = database.obtenir_echange(self.echange_id)
+        offre_j1 = database.obtenir_offre_echange(self.echange_id, echange["joueur1_id"])
+        offre_j2 = database.obtenir_offre_echange(self.echange_id, echange["joueur2_id"])
+        toutes_captures = list(offre_j1) + list(offre_j2)
+
+        if not toutes_captures:
+            await interaction.followup.send("Aucun Pokémon proposé pour l'instant.", ephemeral=True)
+            return
+
+        fichier = await construire_fichier_grille(toutes_captures)
+        embed = discord.Embed(title="🖼️ Toutes les cartes proposées", color=discord.Color.blurple())
+        embed.set_image(url="attachment://offre.png")
+        if len(toutes_captures) > MAX_POKEMON_GRILLE:
+            embed.set_footer(text=f"Affichage limité aux {MAX_POKEMON_GRILLE} premiers ({len(toutes_captures)} au total).")
+        await interaction.followup.send(embed=embed, file=fichier, ephemeral=True)
 
     @discord.ui.button(label="Valider mon offre", emoji="✅", style=discord.ButtonStyle.success, row=0)
     async def valider(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -216,70 +232,99 @@ async def _rafraichir_message_principal(bot, echange_id: int):
         pass
 
 
-CARTES_PAR_PAGE_GALERIE = 8  # sous la limite Discord de 10 embeds/message
+TAILLE_CELLULE_GRILLE = 96
+COLONNES_GRILLE = 5
+MARGE_GRILLE = 8
+HAUTEUR_TEXTE_GRILLE = 28
+MAX_POKEMON_GRILLE = 30  # garde-fou : au-delà, l'image deviendrait énorme et lente à générer
 
 
-class VueGalerieEchange(discord.ui.View):
-    """Galerie paginée (éphémère) montrant TOUTES les cartes sprite+PC des deux offres,
-    sans la limite de 2/joueur imposée dans le message principal du fil."""
+async def _telecharger_sprites_statiques(captures: list) -> dict:
+    """Télécharge en parallèle les sprites STATIQUES (pas les GIF animés — une seule
+    image par Pokémon suffit pour la grille, et c'est bien plus rapide/léger à traiter
+    que de décoder des animations). Retourne {(nom, shiny): bytes}, silencieusement
+    incomplet si un téléchargement échoue plutôt que de tout faire planter."""
+    import aiohttp
 
-    def __init__(self, echange_id: int, page: int = 0):
-        super().__init__(timeout=120)
-        self.echange_id = echange_id
+    urls = {}
+    for row in captures:
+        pokemon = obtenir_pokemon_par_nom(row["pokemon_nom"])
+        if not pokemon:
+            continue
+        url = pokemon.get("sprite_shiny") if row["shiny"] else pokemon.get("sprite")
+        if url:
+            urls[(row["pokemon_nom"], bool(row["shiny"]))] = url
 
-        echange = database.obtenir_echange(echange_id)
-        offre_j1 = database.obtenir_offre_echange(echange_id, echange["joueur1_id"]) if echange else []
-        offre_j2 = database.obtenir_offre_echange(echange_id, echange["joueur2_id"]) if echange else []
-        self.toutes_captures = list(offre_j1) + list(offre_j2)
+    resultats = {}
 
-        self.nb_pages = max(1, (len(self.toutes_captures) + CARTES_PAR_PAGE_GALERIE - 1) // CARTES_PAR_PAGE_GALERIE)
-        self.page = max(0, min(page, self.nb_pages - 1))
-        self._construire_composants()
+    async def _fetch(session, cle, url):
+        try:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as reponse:
+                if reponse.status == 200:
+                    resultats[cle] = await reponse.read()
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            pass  # ce sprite manquera juste dans la grille, pas grave
 
-    def _construire_composants(self):
-        self.clear_items()
-        if self.nb_pages <= 1:
-            return
-        bouton_prec = discord.ui.Button(label="◀ Page précédente", style=discord.ButtonStyle.secondary, disabled=self.page == 0)
-        bouton_prec.callback = self._page_prec
-        self.add_item(bouton_prec)
-        bouton_suiv = discord.ui.Button(label="Page suivante ▶", style=discord.ButtonStyle.secondary, disabled=self.page >= self.nb_pages - 1)
-        bouton_suiv.callback = self._page_suiv
-        self.add_item(bouton_suiv)
+    async with aiohttp.ClientSession() as session:
+        await asyncio.gather(*(_fetch(session, cle, url) for cle, url in urls.items()))
+    return resultats
 
-    def embeds_page(self) -> list:
-        debut = self.page * CARTES_PAR_PAGE_GALERIE
-        page_captures = self.toutes_captures[debut : debut + CARTES_PAR_PAGE_GALERIE]
-        if not page_captures:
-            return [discord.Embed(description="Aucun Pokémon proposé pour l'instant.", color=discord.Color.blurple())]
 
-        cartes = []
-        for row in page_captures:
-            pokemon = obtenir_pokemon_par_nom(row["pokemon_nom"])
-            shiny_txt = "✨ " if row["shiny"] else ""
-            carte = discord.Embed(
-                title=f"{shiny_txt}{row['pokemon_nom']} — {row['pc']} PC",
-                color=discord.Color.gold() if row["shiny"] else discord.Color.blurple(),
-            )
-            if pokemon:
-                sprite_url = sprite_pokemon(pokemon, shiny=bool(row["shiny"]))
-                if sprite_url:
-                    carte.set_thumbnail(url=sprite_url)
-            cartes.append(carte)
+def _composer_grille(captures: list, sprites: dict) -> bytes:
+    """Colle les sprites + PC dans une grille statique. Fonction SYNCHRONE et CPU-bound —
+    doit être lancée via asyncio.to_thread pour ne jamais bloquer la boucle d'événements
+    du bot pendant qu'elle dessine."""
+    from PIL import Image, ImageDraw, ImageFont
 
-        if self.nb_pages > 1:
-            cartes[0].set_footer(text=f"Page {self.page + 1}/{self.nb_pages}")
-        return cartes
+    n = len(captures)
+    colonnes = min(COLONNES_GRILLE, max(1, n))
+    lignes = (n + colonnes - 1) // colonnes
+    largeur = colonnes * (TAILLE_CELLULE_GRILLE + MARGE_GRILLE) + MARGE_GRILLE
+    hauteur = lignes * (TAILLE_CELLULE_GRILLE + HAUTEUR_TEXTE_GRILLE + MARGE_GRILLE) + MARGE_GRILLE
 
-    async def _page_prec(self, interaction: discord.Interaction):
-        self.page -= 1
-        self._construire_composants()
-        await interaction.response.edit_message(embeds=self.embeds_page(), view=self)
+    grille = Image.new("RGBA", (largeur, hauteur), (47, 49, 54, 255))  # fond façon Discord (mode sombre)
+    dessin = ImageDraw.Draw(grille)
+    police = ImageFont.load_default()
 
-    async def _page_suiv(self, interaction: discord.Interaction):
-        self.page += 1
-        self._construire_composants()
-        await interaction.response.edit_message(embeds=self.embeds_page(), view=self)
+    for i, row in enumerate(captures):
+        col, lig = i % colonnes, i // colonnes
+        x = MARGE_GRILLE + col * (TAILLE_CELLULE_GRILLE + MARGE_GRILLE)
+        y = MARGE_GRILLE + lig * (TAILLE_CELLULE_GRILLE + HAUTEUR_TEXTE_GRILLE + MARGE_GRILLE)
+
+        donnees = sprites.get((row["pokemon_nom"], bool(row["shiny"])))
+        if donnees:
+            try:
+                sprite_img = Image.open(io.BytesIO(donnees)).convert("RGBA")
+                sprite_img.thumbnail((TAILLE_CELLULE_GRILLE, TAILLE_CELLULE_GRILLE))
+                offset_x = x + (TAILLE_CELLULE_GRILLE - sprite_img.width) // 2
+                offset_y = y + (TAILLE_CELLULE_GRILLE - sprite_img.height) // 2
+                grille.paste(sprite_img, (offset_x, offset_y), sprite_img)
+            except Exception:
+                pass  # sprite corrompu/illisible — la cellule reste vide, pas bloquant
+
+        shiny_txt = "✨" if row["shiny"] else ""
+        texte = f"{shiny_txt}{row['pokemon_nom']}\n{row['pc']} PC"
+        dessin.multiline_text(
+            (x + TAILLE_CELLULE_GRILLE // 2, y + TAILLE_CELLULE_GRILLE + 2),
+            texte, font=police, fill=(255, 255, 255, 255), anchor="ma", align="center",
+        )
+
+    tampon = io.BytesIO()
+    grille.save(tampon, format="PNG")
+    tampon.seek(0)
+    return tampon.getvalue()
+
+
+async def construire_fichier_grille(captures: list):
+    """Point d'entrée : télécharge les sprites (async, en parallèle) puis compose la
+    grille dans un thread séparé (CPU-bound), retourne un discord.File prêt à envoyer.
+    Retourne None si la liste est vide."""
+    if not captures:
+        return None
+    captures = captures[:MAX_POKEMON_GRILLE]
+    sprites = await _telecharger_sprites_statiques(captures)
+    donnees_png = await asyncio.to_thread(_composer_grille, captures, sprites)
+    return discord.File(io.BytesIO(donnees_png), filename="offre.png")
 
 
 class VueChoixOffre(discord.ui.View):
