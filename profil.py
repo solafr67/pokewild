@@ -4,6 +4,7 @@ import config
 import database
 import equipe_combat as equipe_combat_module
 import inventaire as inventaire_module
+import journal
 import leveling
 import pokedex as pokedex_module
 import quetes as quetes_module
@@ -479,6 +480,7 @@ class VueChoixClan(discord.ui.View):
 
         ancienne_equipe = equipe_actuelle
         database.changer_equipe(self.user_id, nom_equipe)
+        journal.logger(f"🛡️ <@{self.user_id}> a rejoint le clan **{nom_equipe}** (venait de : {ancienne_equipe or 'aucun'}).")
 
         verbe = "rejoint" if ancienne_equipe is None else "rejoint à nouveau"
         message = (

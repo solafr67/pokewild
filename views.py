@@ -5,6 +5,7 @@ import discord
 import config
 import database
 import etat_jeu
+import journal
 import leveling
 import quetes_ui as quetes_ui_module
 from pokemon_data import (
@@ -100,6 +101,12 @@ class SelectionBallView(discord.ui.View):
             dollars_gagnes = round(10 * database.multiplicateur_boost(user_id, "argent"))
             database.ajouter_poke_dollars(user_id, dollars_gagnes)
             quetes_completees = database.incrementer_progression_quete(user_id, "capture", {"rarete": self.pokemon["rarete"]})
+
+            shiny_txt = " ✨SHINY✨" if est_shiny else ""
+            journal.logger(
+                f"🎯 <@{user_id}> a capturé **{self.pokemon['nom']}**{shiny_txt} ({self.pc} PC) "
+                f"avec une {ball_type}."
+            )
 
             # "Le Pokémon tenait quelque chose dans ses mains" — petite chance de Cristal de
             # Mutation ou d'Œuf, bien plus basse qu'au PokéStop (voir commentaire config.py :

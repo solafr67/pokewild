@@ -5,6 +5,7 @@ import discord
 
 import config
 import database
+import journal
 import leveling
 import quetes_ui
 from pokemon_data import (
@@ -642,8 +643,11 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
 
     vainqueur = bot.get_user(vainqueur_id)
     perdant = bot.get_user(perdant_id)
-    nom_vainqueur = vainqueur.display_name if vainqueur else f"Joueur {vainqueur_id}"
-    nom_perdant = perdant.display_name if perdant else f"Joueur {perdant_id}"
+    # Les titres d'embed ne peuvent pas afficher de mention Discord cliquable (<@id>), donc on
+    # y met le pseudo si connu en cache, sinon un repli court — mais la description, elle,
+    # utilise toujours la mention native, fiable même si le joueur n'est pas en cache.
+    nom_vainqueur = vainqueur.display_name if vainqueur else f"Joueur…{str(vainqueur_id)[-4:]}"
+    nom_perdant = perdant.display_name if perdant else f"Joueur…{str(perdant_id)[-4:]}"
 
     dollars_reels = round(DOLLARS_VICTOIRE * mult_repetition * database.multiplicateur_boost(vainqueur_id, "argent"))
     # xp_reels = XP réellement créditée (boost de Race/temporaire inclus) — gagner_xp() applique
@@ -652,12 +656,14 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
     xp_defaite_reelle = round(XP_DEFAITE * database.multiplicateur_boost(perdant_id, "xp"))
     note_reduction = "\n*(récompense réduite : déjà battu cet adversaire aujourd'hui)*" if mult_repetition < 1.0 else ""
 
+    journal.logger(f"🏳️ <@{perdant_id}> a abandonné son combat PvP contre <@{vainqueur_id}> (victoire par forfait).")
+
     embed = discord.Embed(
         title=f"🏳️ {nom_perdant} a abandonné !",
         description=(
-            f"**{nom_vainqueur}** remporte le combat par forfait.\n\n"
+            f"<@{vainqueur_id}> remporte le combat par forfait.\n\n"
             f"🎖️ +{dollars_reels} Poké Dollars & +{xp_reels} XP au vainqueur.{note_reduction}\n"
-            f"+{xp_defaite_reelle} XP de consolation pour {nom_perdant}."
+            f"+{xp_defaite_reelle} XP de consolation pour <@{perdant_id}>."
             f"{quetes_ui.texte_notifications_completion(quetes_completees)}"
         ),
         color=discord.Color.orange(),
@@ -713,6 +719,7 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
         if vainqueur_id is not None:
             database.terminer_combat_pvp(combat_id)
             perdant_id = combat["joueur2_id"] if vainqueur_id == combat["joueur1_id"] else combat["joueur1_id"]
+            journal.logger(f"🥊 <@{vainqueur_id}> a battu <@{perdant_id}> en combat PvP.")
             mult_repetition = database.enregistrer_victoire_pvp_repetition(vainqueur_id, perdant_id)
             database.ajouter_poke_dollars(vainqueur_id, round(DOLLARS_VICTOIRE * mult_repetition * database.multiplicateur_boost(vainqueur_id, "argent")))
             quetes_completees = database.incrementer_progression_quete(vainqueur_id, "pvp_victoire")
@@ -721,7 +728,7 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
             leveling.gagner_xp(perdant_id, XP_DEFAITE)
 
             vainqueur = bot.get_user(vainqueur_id)
-            nom_vainqueur = vainqueur.display_name if vainqueur else f"<@{vainqueur_id}>"
+            nom_vainqueur = vainqueur.display_name if vainqueur else f"Joueur…{str(vainqueur_id)[-4:]}"
             dollars_reels = round(DOLLARS_VICTOIRE * mult_repetition * database.multiplicateur_boost(vainqueur_id, "argent"))
             # XP réellement créditée (boost de Race/temporaire inclus) — gagner_xp() applique
             # son propre multiplicateur en interne, on le reproduit ici pour le texte affiché.

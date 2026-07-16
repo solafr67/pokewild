@@ -1,6 +1,7 @@
 import discord
 
 import database
+import journal
 import races
 from pokemon_data import COULEUR_RARETE, EMOJI_RARETE
 
@@ -59,6 +60,10 @@ class VueRace(discord.ui.View):
         _, pity_actuel = database.obtenir_race(self.user_id)
         nouvelle_race, nouveau_pity = races.tirer_race(pity_actuel)
         database.definir_race(self.user_id, nouvelle_race["nom"], nouveau_pity)
+        journal.logger(
+            f"🔮 <@{self.user_id}> a utilisé un Cristal de Mutation — nouvelle Race : "
+            f"**{nouvelle_race['nom']}** ({nouvelle_race['palier']})."
+        )
 
         emoji = EMOJI_RARETE[nouvelle_race["palier"]]
         embed = discord.Embed(

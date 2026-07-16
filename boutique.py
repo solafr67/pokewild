@@ -2,6 +2,7 @@ import discord
 
 import config
 import database
+import journal
 from pokemon_data import EMOJI_BALLS, EMOJI_POKEDOLLAR, EMOJI_SOINS, NOM_BALL_AFFICHAGE, NOM_SOIN_AFFICHAGE
 
 
@@ -115,6 +116,10 @@ class ModalQuantiteAchat(discord.ui.Modal):
         database.ajouter_poke_dollars(user_id, -cout_total)
         database.ajouter_balls(user_id, self.ball_type, quantite)
         nouveau_solde = database.obtenir_poke_dollars(user_id)
+        journal.logger(
+            f"🛒 <@{user_id}> a acheté {quantite}× {NOM_BALL_AFFICHAGE[self.ball_type]} "
+            f"pour {cout_total} PD."
+        )
 
         await interaction.response.send_message(
             f"✅ Achat réussi : **{quantite}× {NOM_BALL_AFFICHAGE[self.ball_type]}** "
@@ -217,6 +222,10 @@ class ModalAchatSoin(discord.ui.Modal):
         database.ajouter_poke_dollars(user_id, -cout_total)
         database.ajouter_balls(user_id, self.soin_type, quantite)
         nouveau_solde = database.obtenir_poke_dollars(user_id)
+        journal.logger(
+            f"🛒 <@{user_id}> a acheté {quantite}× {NOM_SOIN_AFFICHAGE[self.soin_type]} "
+            f"pour {cout_total} PD."
+        )
 
         await interaction.response.send_message(
             f"✅ Achat réussi : **{quantite}× {NOM_SOIN_AFFICHAGE[self.soin_type]}** "
@@ -345,6 +354,10 @@ class ModalAchatExtension(discord.ui.Modal):
         else:
             database.acheter_extension_stockage_objets(user_id, quantite_paliers)
             nouvelle_limite = database.limite_stockage_objets(user_id)
+        journal.logger(
+            f"🛒 <@{user_id}> a acheté {quantite_paliers} palier(s) d'extension "
+            f"({self.type_extension}) pour {cout_total} PD."
+        )
 
         await interaction.response.send_message(
             f"✅ Stockage étendu de **{gain_total}** places pour {cout_total} {EMOJI_POKEDOLLAR} ! "

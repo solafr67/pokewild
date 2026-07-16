@@ -2,8 +2,7 @@
 # ⚠️ Ne partage JAMAIS ton token publiquement (GitHub, Discord, etc.)
 # En production, préfère charger ça depuis un fichier .env (voir python-dotenv)
 
-import os
-TOKEN = os.environ["DISCORD_TOKEN"]
+TOKEN = "MTUyNDA1NjgwNzg1MTY5MjA3Mg.GMU0bi.WhGVtqJmtlxhKUBmgYAFzfeNcwUR9P_HlHEcik"
 
 # --- IDs des channels (à remplir avec les vrais IDs de ton serveur) ---
 CHANNEL_SPAWN_CLASSIQUE_ID = 1524432178694455346
@@ -15,6 +14,7 @@ CHANNEL_EXPLORATION_ID = 1525908138203807926
 CHANNEL_QUETES_ID = 1525970082264514730
 CHANNEL_AVENTURE_ID = 1526201523867226192
 CHANNEL_LABORATOIRE_ID = 1526365279855054952  # Incubateur + Race, regroupés dans un seul channel
+CHANNEL_LOGS_ID = 1527415638371598526  # channel dédié aux logs bot + joueurs
 
 # --- Dresseurs PvE (combat contre une IA, PV liés au même pool persistant que les raids) ---
 INTERVALLE_DRESSEUR = 20 * 60  # 20 min entre deux spawns (plus rare qu'un raid pour limiter le farming solo)

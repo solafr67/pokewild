@@ -1,6 +1,7 @@
 import discord
 
 import database
+import journal
 from pokemon_data import EMOJI_POKEDOLLAR
 
 CAPTURES_PAR_PAGE = 25
@@ -88,6 +89,7 @@ class VueEchange(discord.ui.View):
             echange = database.obtenir_echange(self.echange_id)
             noms = await _obtenir_noms(interaction.client, echange["joueur1_id"], echange["joueur2_id"])
             if succes:
+                journal.logger(f"🔄 Échange conclu entre <@{echange['joueur1_id']}> et <@{echange['joueur2_id']}>.")
                 embed = discord.Embed(
                     title="✅ Échange conclu !",
                     description="Les Pokémon et Poké Dollars ont changé de propriétaire.",

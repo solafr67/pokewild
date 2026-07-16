@@ -6,6 +6,7 @@ import discord
 import combat as combat_module
 import config
 import database
+import journal
 import leveling
 import quetes_ui
 from pokemon_data import (
@@ -345,6 +346,7 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
                 # Dégression progressive tous dresseurs confondus (voir config) — appliquée
                 # AVANT le bonus de Race, comme pour l'anti-collusion PvP.
                 mult_repetition = database.enregistrer_victoire_dresseur_repetition(joueur_id)
+                journal.logger(f"🥾 <@{joueur_id}> a battu le dresseur **{archetype['nom']}**.")
                 dollars = round(
                     pc_cible * config.DRESSEUR_FACTEUR_DOLLARS * mult_repetition
                     * database.multiplicateur_boost(joueur_id, "argent")

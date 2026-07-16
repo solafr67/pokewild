@@ -19,6 +19,7 @@ import quetes as quetes_module
 import quetes_ui as quetes_ui_module
 import dresseurs as dresseurs_module
 import elevage as elevage_module
+import journal
 import database
 import etat_jeu
 import leveling
@@ -328,6 +329,7 @@ async def boucle_spawn_classique():
         # (piège classique de discord.py) — on log et on continue plutôt que de perdre
         # le spawn classique en silence jusqu'au prochain redémarrage du bot.
         print(f"⚠️ Erreur dans boucle_spawn_classique (spawn ignoré, la boucle continue) : {e}")
+        journal.logger(f"🔴 Erreur dans `boucle_spawn_classique` : {e}")
 
 
 @tasks.loop(seconds=config.INTERVALLE_SPAWN_VIP)
@@ -337,6 +339,7 @@ async def boucle_spawn_vip():
         await envoyer_spawn(config.CHANNEL_SPAWN_VIP_ID, POIDS_RARETE_VIP, "VIP")
     except Exception as e:
         print(f"⚠️ Erreur dans boucle_spawn_vip (spawn ignoré, la boucle continue) : {e}")
+        journal.logger(f"🔴 Erreur dans `boucle_spawn_vip` : {e}")
 
 
 # ----------------------------------------------------------------------------
@@ -346,9 +349,17 @@ async def boucle_spawn_vip():
 async def annoncer_meteo(channel_id: int, texte: str, couleur: discord.Color):
     channel = bot.get_channel(channel_id)
     if channel is None:
-        return
+        return None
     embed = discord.Embed(description=texte, color=couleur)
-    await channel.send(embed=embed)
+    return await channel.send(embed=embed)
+
+
+async def _supprimer_message_apres_delai(message, delai: int):
+    await asyncio.sleep(delai)
+    try:
+        await message.delete()
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+        pass
 
 
 # ----------------------------------------------------------------------------
@@ -388,6 +399,7 @@ async def boucle_classement():
         await rafraichir_classement()
     except Exception as e:
         print(f"⚠️ Erreur dans boucle_classement (la boucle continue) : {e}")
+        journal.logger(f"🔴 Erreur dans `boucle_classement` : {e}")
 
 
 @tasks.loop(hours=24)
@@ -399,6 +411,7 @@ async def boucle_snapshot_economie():
         database.enregistrer_snapshot_economie()
     except Exception as e:
         print(f"⚠️ Erreur dans boucle_snapshot_economie (la boucle continue) : {e}")
+        journal.logger(f"🔴 Erreur dans `boucle_snapshot_economie` : {e}")
 
 
 async def declencher_meteo(meteo_tiree: dict, duree_minutes: int = None):
@@ -416,16 +429,25 @@ async def declencher_meteo(meteo_tiree: dict, duree_minutes: int = None):
         texte_debut += f"— Pokémon de type {types_str} plus fréquents "
     texte_debut += f"pendant {duree_minutes} minutes !"
 
+    messages_debut = []
     for channel_id in (config.CHANNEL_SPAWN_CLASSIQUE_ID, config.CHANNEL_SPAWN_VIP_ID):
-        await annoncer_meteo(channel_id, texte_debut, discord.Color.blue())
+        message = await annoncer_meteo(channel_id, texte_debut, discord.Color.blue())
+        if message is not None:
+            messages_debut.append(message)
 
     await asyncio.sleep(duree_minutes * 60)
 
     etat_jeu.meteo_actuelle = None
     for channel_id in (config.CHANNEL_SPAWN_CLASSIQUE_ID, config.CHANNEL_SPAWN_VIP_ID):
-        await annoncer_meteo(
+        message = await annoncer_meteo(
             channel_id, "☀️ Le temps redevient calme.", discord.Color.light_grey()
         )
+        if message is not None:
+            bot.loop.create_task(_supprimer_message_apres_delai(message, 5 * 60))
+    # Les messages d'annonce du DÉBUT de la météo sont nettoyés en même temps que celui de
+    # fin — sinon ils resteraient indéfiniment dans le channel, comme signalé.
+    for message in messages_debut:
+        bot.loop.create_task(_supprimer_message_apres_delai(message, 5 * 60))
 
 
 async def boucle_meteo():
@@ -448,6 +470,7 @@ async def boucle_meteo():
 
             print("⚠️ Erreur dans boucle_meteo (le cycle suivant sera quand même tenté) :")
             traceback.print_exc()
+            journal.logger("🔴 Erreur dans `boucle_meteo` — voir les logs serveur pour le détail complet.")
 
 
 async def boucle_notifications_completion():
@@ -488,6 +511,7 @@ async def boucle_notifications_completion():
 
             print("⚠️ Erreur dans boucle_notifications_completion (le cycle suivant sera quand même tenté) :")
             traceback.print_exc()
+            journal.logger("🔴 Erreur dans `boucle_notifications_completion` — voir les logs serveur pour le détail complet.")
 
 
 # ----------------------------------------------------------------------------
@@ -544,6 +568,7 @@ async def demarrer_nouveau_raid(channel_id: int, etoiles: int = None, boss_force
 
         print(f"⚠️ Erreur dans demarrer_nouveau_raid (channel_id={channel_id}) :")
         traceback.print_exc()
+        journal.logger(f"🔴 Erreur dans `demarrer_nouveau_raid` (channel {channel_id}) — voir les logs serveur.")
         return False
 
     bot.loop.create_task(
@@ -599,6 +624,7 @@ async def activer_combat_raid(raid_id: int, channel_id: int, message_id: int, bo
 
         print(f"⚠️ Erreur dans activer_combat_raid (raid_id={raid_id}) — le combat n'a pas pu démarrer :")
         traceback.print_exc()
+        journal.logger(f"🔴 Erreur dans `activer_combat_raid` (raid {raid_id}) — le combat n'a pas démarré, voir les logs serveur.")
 
 
 async def boucle_combat_raid(raid_id: int, channel_id: int, message_id: int, boss: dict, etoiles: int):
@@ -663,6 +689,7 @@ async def boucle_combat_raid(raid_id: int, channel_id: int, message_id: int, bos
 
             print(f"⚠️ Erreur dans boucle_combat_raid (raid_id={raid_id}), tick suivant quand même tenté :")
             traceback.print_exc()
+            journal.logger(f"🔴 Erreur dans `boucle_combat_raid` (raid {raid_id}) — voir les logs serveur.")
             continue
 
 
@@ -731,6 +758,7 @@ async def boucle_raid():
 
             print("⚠️ Erreur dans boucle_raid (le cycle suivant sera quand même tenté) :")
             traceback.print_exc()
+            journal.logger("🔴 Erreur dans `boucle_raid` — voir les logs serveur pour le détail complet.")
 
 
 async def demarrer_nouveau_dresseur(channel_id: int, ignorer_verification: bool = False, archetype_force: str | None = None) -> bool:
@@ -791,6 +819,7 @@ async def boucle_dresseurs():
 
             print("⚠️ Erreur dans boucle_dresseurs (le cycle suivant sera quand même tenté) :")
             traceback.print_exc()
+            journal.logger("🔴 Erreur dans `boucle_dresseurs` — voir les logs serveur pour le détail complet.")
 
 
 # ----------------------------------------------------------------------------
@@ -843,6 +872,10 @@ async def on_ready():
     if not getattr(bot, "boucle_notifications_lancee", False):
         bot.loop.create_task(boucle_notifications_completion())
         bot.boucle_notifications_lancee = True
+
+    if not getattr(bot, "boucle_logs_lancee", False) and config.CHANNEL_LOGS_ID:
+        bot.loop.create_task(journal.boucle_envoi_logs(bot, config.CHANNEL_LOGS_ID, DERNIERE_ACTIVITE_BOUCLES))
+        bot.boucle_logs_lancee = True
 
     if not getattr(bot, "boucle_raid_lancee", False):
         bot.loop.create_task(boucle_raid())
@@ -1317,6 +1350,7 @@ async def give_objet(
     noms_objets = {**NOM_BALL_AFFICHAGE, **NOM_SOIN_AFFICHAGE, **NOM_OBJETS_DIVERS}
     emojis_objets = {**EMOJI_BALLS, **EMOJI_SOINS, **EMOJI_OBJETS_DIVERS}
     database.ajouter_balls(membre.id, objet.value, quantite)
+    journal.logger(f"🛠️ <@{interaction.user.id}> a donné {quantite}× {objet.value} à <@{membre.id}> (/give-objet).")
     await interaction.response.send_message(
         f"✅ **{quantite}× {emojis_objets.get(objet.value, '')} {noms_objets.get(objet.value, objet.value)}** donné(es) à {membre.mention}."
     )
@@ -1326,6 +1360,7 @@ async def give_objet(
 @app_commands.checks.has_permissions(administrator=True)
 async def give_dollars(interaction: discord.Interaction, membre: discord.Member, montant: int):
     database.ajouter_poke_dollars(membre.id, montant)
+    journal.logger(f"🛠️ <@{interaction.user.id}> a donné {montant} PD à <@{membre.id}> (/give-dollars).")
     await interaction.response.send_message(f"✅ **{montant} {EMOJI_POKEDOLLAR} Poké Dollars** donnés à {membre.mention}.")
 
 
@@ -1333,6 +1368,7 @@ async def give_dollars(interaction: discord.Interaction, membre: discord.Member,
 @app_commands.checks.has_permissions(administrator=True)
 async def give_xp(interaction: discord.Interaction, membre: discord.Member, montant: int):
     niveau_avant, niveau_apres, recompenses_paliers = leveling.gagner_xp(membre.id, montant)
+    journal.logger(f"🛠️ <@{interaction.user.id}> a donné {montant} XP à <@{membre.id}> (/give-xp).")
     texte = f"✅ **{montant} XP** donnés à {membre.mention}."
     if niveau_apres > niveau_avant:
         texte += f" (niveau {niveau_avant} → {niveau_apres})"
@@ -1414,6 +1450,7 @@ async def creer_code(
     texte = f"✅ Code **{code.strip().upper()}** créé — donne : {', '.join(recap)}."
     texte += f"\nLimite d'utilisations : {max_utilisations if max_utilisations else 'illimitée'}."
     texte += f"\nExpiration : {'jamais' if not duree_jours else f'dans {duree_jours} jour(s)'}."
+    journal.logger(f"🛠️ <@{interaction.user.id}> a créé le code promo **{code.strip().upper()}** ({', '.join(recap)}).")
     await interaction.response.send_message(texte, ephemeral=True)
 
 
@@ -1422,6 +1459,7 @@ async def creer_code(
 async def desactiver_code(interaction: discord.Interaction, code: str):
     succes = database.desactiver_code_promo(code)
     if succes:
+        journal.logger(f"🛠️ <@{interaction.user.id}> a désactivé le code promo **{code.strip().upper()}**.")
         await interaction.response.send_message(f"✅ Code **{code.strip().upper()}** désactivé.", ephemeral=True)
     else:
         await interaction.response.send_message(f"❌ Le code **{code.strip().upper()}** n'existe pas.", ephemeral=True)
@@ -1487,6 +1525,7 @@ async def utiliser_code(interaction: discord.Interaction, code: str):
         noms_objets = {**NOM_BALL_AFFICHAGE, **NOM_SOIN_AFFICHAGE, **NOM_OBJETS_DIVERS}
         recap.append(f"{ligne['quantite_objet']}× {noms_objets.get(ligne['objet'], ligne['objet'])}")
 
+    journal.logger(f"🎟️ <@{interaction.user.id}> a utilisé le code **{ligne['code']}** ({', '.join(recap)}).")
     await interaction.response.send_message(
         f"🎉 Code **{ligne['code']}** utilisé avec succès ! Tu as reçu : {', '.join(recap)}.",
         ephemeral=True,
@@ -1515,6 +1554,7 @@ async def give_boost(
 ):
     duree_secondes = config.DUREES_BOOST[duree.value]
     expiration = database.activer_boost(membre.id, type_boost.value, duree_secondes)
+    journal.logger(f"🛠️ <@{interaction.user.id}> a offert un boost {type_boost.value} ({duree.value}) à <@{membre.id}>.")
     await interaction.response.send_message(
         f"✅ Boost **{type_boost.name} ({duree.name})** offert à {membre.mention} — expire <t:{expiration}:R>."
     )
@@ -1559,6 +1599,7 @@ async def status_bot(interaction: discord.Interaction):
         _ligne_boucle("Classement", "classement", config.INTERVALLE_CLASSEMENT),
         _ligne_boucle("Météo", "meteo", 30 * 60),
         _ligne_boucle("Notifications MP", "notifications", 30),
+        _ligne_boucle("Envoi des logs", "logs", 5),
         _ligne_boucle("Snapshot économie", "snapshot_economie", 24 * 3600),
     ]
 
@@ -2013,6 +2054,7 @@ async def give_pokemon(
 
     database.ajouter_capture(membre.id, pokemon["nom"], pc, shiny=shiny)
     prefixe = "✨ " if shiny else ""
+    journal.logger(f"🛠️ <@{interaction.user.id}> a donné {prefixe}**{pokemon['nom']}** ({pc} PC) à <@{membre.id}> (/give-pokemon).")
     await interaction.response.send_message(
         f"✅ {prefixe}**{pokemon['nom']}** ({pc} PC) donné à {membre.mention}."
     )
