@@ -10,6 +10,7 @@ Utilisation :
 Ça prend quelques minutes (environ 1300 Pokémon, 2 requêtes chacun).
 """
 
+import io
 import json
 import time
 
@@ -83,14 +84,48 @@ def determiner_rarete(pokedex_id: int, est_legendaire: bool, est_mythique: bool,
 SHOWDOWN_SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{numero}.gif"
 
 
-def verifier_sprite_showdown_existe(pokedex_id: int) -> bool:
-    """Vérifie que le sprite animé style Showdown existe vraiment pour ce numéro, plutôt
-    que de supposer que oui — ce pack n'a jamais été dessiné pour une bonne partie des
-    Pokémon Gen 9 récents (base + DLC), et une URL construite dans le vide ne s'affiche
-    simplement pas côté Discord, sans erreur visible."""
+def _sprite_est_correctement_colore(donnees: bytes) -> bool:
+    """Heuristique : ouvre la première image du GIF et regarde si elle a une vraie
+    diversité de teintes (pas juste du gris/blanc/noir) — les sprites Showdown cassés ou
+    placeholders (bug documenté du projet communautaire Smogon/Showdown sur certaines
+    espèces) ressemblent à un simple contour monochrome plutôt qu'à un vrai sprite coloré."""
     try:
-        reponse = requests.head(SHOWDOWN_SPRITE_URL.format(numero=pokedex_id), timeout=5, allow_redirects=True)
-        return reponse.status_code == 200
+        from PIL import Image
+
+        img = Image.open(io.BytesIO(donnees)).convert("RGBA")
+        teintes_vues = set()
+        for r, g, b, a in img.getdata():
+            if a < 20:
+                continue  # pixel transparent, ignoré
+            # Un pixel "coloré" a un vrai écart entre ses canaux R/G/B — un pixel gris/
+            # blanc/noir a ses 3 canaux quasi identiques entre eux.
+            if max(r, g, b) - min(r, g, b) > 25:
+                teintes_vues.add((r // 32, g // 32, b // 32))  # quantifié, pour limiter le bruit
+            if len(teintes_vues) >= 3:
+                return True  # assez de teintes distinctes trouvées, sprite considéré valide
+        return False  # quasiment aucune couleur détectée -> probablement un sprite cassé/gris
+    except Exception:
+        return True  # en cas de doute (format inattendu, Pillow absent...), on ne bloque pas —
+        # mieux vaut un faux positif occasionnel qu'écarter des sprites valides par erreur
+
+
+def verifier_sprite_showdown_existe(pokedex_id: int) -> bool:
+    """Vérifie que le sprite animé style Showdown existe VRAIMENT et est correctement
+    colorié pour ce numéro, plutôt que de supposer que oui. Deux soucis rencontrés en
+    pratique avec ce pack communautaire :
+    1. Il n'a jamais été dessiné pour une bonne partie des Pokémon Gen 9 récents (base +
+       DLC) — l'URL renvoie une 404.
+    2. Certaines espèces plus anciennes ont un sprite communautaire connu pour être
+       incomplet ou mal colorié (bug documenté du projet Smogon/Showdown) — le fichier
+       EXISTE (200 OK) mais s'affiche en gris/blanc plutôt qu'en couleur.
+    Le deuxième cas ne se détecte pas avec une simple requête HEAD (qui ne vérifie que
+    l'existence) — il faut télécharger l'image et l'analyser."""
+    url = SHOWDOWN_SPRITE_URL.format(numero=pokedex_id)
+    try:
+        reponse = requests.get(url, timeout=8)
+        if reponse.status_code != 200:
+            return False
+        return _sprite_est_correctement_colore(reponse.content)
     except requests.RequestException:
         return False  # en cas de doute (timeout, etc.), on retombe sur le sprite statique
 
