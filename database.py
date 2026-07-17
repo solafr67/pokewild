@@ -555,6 +555,16 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS spawns_actifs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id TEXT NOT NULL,
+            message_id TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS raid_actuel (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             boss_nom TEXT NOT NULL,
@@ -1616,6 +1626,55 @@ def terminer_raid(raid_id: int):
     cur.execute("UPDATE raid_actuel SET actif = 0 WHERE id = ?", (raid_id,))
     conn.commit()
     conn.close()
+
+
+def obtenir_raids_actifs() -> list:
+    """Retourne tous les raids marqués actifs, tous channels confondus — utilisé
+    uniquement par le nettoyage des messages orphelins au démarrage du bot."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM raid_actuel WHERE actif = 1")
+    resultats = cur.fetchall()
+    conn.close()
+    return resultats
+
+
+def enregistrer_spawn_actif(channel_id: int, message_id: int) -> int:
+    """Note un spawn Pokémon (classique/VIP) en base le temps qu'il est affiché, pour
+    pouvoir supprimer son message s'il traîne encore après un redémarrage du bot (sa vue
+    n'est pas persistante d'un process à l'autre, donc son bouton Capturer ne fonctionne
+    de toute façon plus). Retourne l'id de l'entrée créée."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO spawns_actifs (channel_id, message_id) VALUES (?, ?)",
+        (str(channel_id), str(message_id)),
+    )
+    spawn_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return spawn_id
+
+
+def retirer_spawn_actif(spawn_id: int):
+    """À appeler une fois le message de spawn supprimé normalement (fin du timer), pour
+    ne pas le considérer comme orphelin au prochain démarrage."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM spawns_actifs WHERE id = ?", (spawn_id,))
+    conn.commit()
+    conn.close()
+
+
+def obtenir_spawns_actifs() -> list:
+    """Retourne tous les spawns actuellement suivis — utilisé uniquement par le
+    nettoyage des messages orphelins au démarrage du bot."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM spawns_actifs")
+    resultats = cur.fetchall()
+    conn.close()
+    return resultats
 
 
 def inscrire_participant_raid(raid_id: int, user_id: int):
@@ -3400,6 +3459,17 @@ def terminer_dresseur(dresseur_id: int):
     cur.execute("UPDATE dresseurs_actifs SET actif = 0 WHERE id = ?", (dresseur_id,))
     conn.commit()
     conn.close()
+
+
+def obtenir_dresseurs_actifs_toutes() -> list:
+    """Retourne tous les dresseurs marqués actifs, tous channels confondus — utilisé
+    uniquement par le nettoyage des messages orphelins au démarrage du bot."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM dresseurs_actifs WHERE actif = 1")
+    resultats = cur.fetchall()
+    conn.close()
+    return resultats
 
 
 def incrementer_victoires_pve(user_id: int):

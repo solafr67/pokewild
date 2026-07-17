@@ -270,11 +270,12 @@ class VuePokestop(discord.ui.View):
 # Tâches de spawn
 # ----------------------------------------------------------------------------
 
-async def faire_disparaitre_apres_delai(message: discord.Message, vue: VueSpawn, delai: int):
+async def faire_disparaitre_apres_delai(message: discord.Message, vue: VueSpawn, delai: int, spawn_id: int):
     """Attend `delai` secondes, puis supprime le message du spawn s'il n'a pas déjà disparu."""
     await asyncio.sleep(delai)
 
     if vue.is_finished():
+        database.retirer_spawn_actif(spawn_id)
         return  # la vue a déjà été arrêtée pour une autre raison
 
     vue.stop()
@@ -285,6 +286,8 @@ async def faire_disparaitre_apres_delai(message: discord.Message, vue: VueSpawn,
         pass  # le message a déjà été supprimé entre-temps
     except discord.Forbidden:
         print("⚠️ Le bot n'a pas la permission de supprimer des messages dans ce channel.")
+    finally:
+        database.retirer_spawn_actif(spawn_id)
 
 
 async def envoyer_spawn(
@@ -314,9 +317,15 @@ async def envoyer_spawn(
     vue = VueSpawn(pokemon, pc, force_shiny=force_shiny)
     message = await channel.send(embed=embed, view=vue)
 
+    # Suivi en base le temps que le spawn est affiché : sa vue n'étant pas persistante
+    # d'un process à l'autre, un redémarrage du bot pendant qu'il est affiché le laisserait
+    # sinon en place indéfiniment, avec un bouton Capturer mort — voir
+    # nettoyer_etats_orphelins_au_demarrage().
+    spawn_id = database.enregistrer_spawn_actif(channel_id, message.id)
+
     # Planifie la disparition automatique sans bloquer la boucle de spawn
     bot.loop.create_task(
-        faire_disparaitre_apres_delai(message, vue, config.DUREE_AVANT_DISPARITION)
+        faire_disparaitre_apres_delai(message, vue, config.DUREE_AVANT_DISPARITION, spawn_id)
     )
 
 
@@ -896,9 +905,56 @@ async def on_guild_join(guild: discord.Guild):
             pass
 
 
+async def _supprimer_message_orphelin(channel_id, message_id) -> bool:
+    """Tente de supprimer un message laissé par un précédent redémarrage. Best-effort :
+    toute erreur (channel/message introuvable, permissions...) est simplement ignorée."""
+    try:
+        channel = bot.get_channel(int(channel_id))
+    except (TypeError, ValueError):
+        return False
+    if channel is None:
+        return False
+
+    try:
+        message = await channel.fetch_message(int(message_id))
+        await message.delete()
+        return True
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException, TypeError, ValueError):
+        return False
+
+
+async def nettoyer_etats_orphelins_au_demarrage():
+    """Supprime les messages de spawns/raids/dresseurs encore affichés d'avant un
+    précédent redémarrage. Leurs vues ne sont pas persistantes d'un process à l'autre
+    (VueSpawn, VueSalleAttente/VueRaid, VueDefiDresseur ont besoin d'un état précis en
+    mémoire), donc leurs boutons ne fonctionnent plus de toute façon — sans ce nettoyage,
+    il fallait les supprimer à la main après chaque redémarrage."""
+    compte = 0
+
+    for row in database.obtenir_spawns_actifs():
+        if await _supprimer_message_orphelin(row["channel_id"], row["message_id"]):
+            compte += 1
+        database.retirer_spawn_actif(row["id"])
+
+    for row in database.obtenir_raids_actifs():
+        if row["message_id"] and await _supprimer_message_orphelin(row["channel_id"], row["message_id"]):
+            compte += 1
+        database.terminer_raid(row["id"])
+
+    for row in database.obtenir_dresseurs_actifs_toutes():
+        if row["message_id"] and await _supprimer_message_orphelin(row["channel_id"], row["message_id"]):
+            compte += 1
+        database.terminer_dresseur(row["id"])
+
+    if compte:
+        print(f"🧹 {compte} message(s) orphelin(s) (spawn/raid/dresseur) nettoyé(s) après redémarrage.")
+        journal.logger(f"🧹 {compte} message(s) orphelin(s) nettoyé(s) après redémarrage.")
+
+
 @bot.event
 async def on_ready():
     database.init_db()
+    await nettoyer_etats_orphelins_au_demarrage()
     bot.add_view(VuePokestop())  # réenregistre la vue persistante après un redémarrage
     bot.add_view(VueBoutique())  # idem pour la boutique
     bot.add_view(VueProfil())  # idem pour le profil
