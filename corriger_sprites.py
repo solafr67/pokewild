@@ -39,7 +39,8 @@ SHOWDOWN_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites
 DOSSIER_SORTIE = "sprites_corriges"
 
 
-DUREE_MIN_FRAME_MS = 80  # en dessous, l'animation clignote au lieu de sembler fluide
+DUREE_MIN_FRAME_MS = 40  # en dessous (~20ms), l'animation clignote ; au-dessus, ça ralentit
+                          # inutilement les sprites à beaucoup de frames rapides
 DUREE_PAR_DEFAUT_MS = 120
 
 
@@ -96,10 +97,13 @@ def corriger_gif(donnees: bytes):
         palette_img = planche.quantize(colors=255)
 
         # Index de la couleur-clé dans cette palette commune
-        pixel_clef = Image.new("RGB", (1, 1), COULEUR_CLE).quantize(palette=palette_img)
+        # dither=NONE : mapping exact vers la palette, sans diffusion d'erreur — sinon le
+        # dithering pouvait légèrement dévier des pixels de fond loin du magenta pur et
+        # les faire retomber sur le mauvais index (même bug par un autre chemin).
+        pixel_clef = Image.new("RGB", (1, 1), COULEUR_CLE).quantize(palette=palette_img, dither=Image.Dither.NONE)
         index_transparent = pixel_clef.getpixel((0, 0))
 
-        frames_finales = [f.quantize(palette=palette_img) for f in frames_composees]
+        frames_finales = [f.quantize(palette=palette_img, dither=Image.Dither.NONE) for f in frames_composees]
 
         tampon = io.BytesIO()
         if len(frames_finales) == 1:
@@ -158,11 +162,15 @@ def main():
     numeros = sorted({p["numero"] for p in dex if p.get("numero")})
     total = len(numeros)
     compteurs = {"ok": 0, "deja_fait": 0, "absent": 0}
+    echecs = []  # numéros pour lesquels normal ET/OU shiny a échoué (utile pour cibler un retry)
 
     for i, numero in enumerate(numeros, 1):
         resultat_normal = corriger_pokemon(numero, shiny=False, forcer=forcer)
         resultat_shiny = corriger_pokemon(numero, shiny=True, forcer=forcer)
         compteurs[resultat_normal] = compteurs.get(resultat_normal, 0) + 1
+
+        if resultat_normal == "absent" or resultat_shiny == "absent":
+            echecs.append((numero, resultat_normal, resultat_shiny))
 
         if i % 25 == 0 or i == total:
             print(f"[{i}/{total}] traités... (dernier : #{numero} — normal={resultat_normal}, shiny={resultat_shiny})")
@@ -173,6 +181,13 @@ def main():
     print(f"✅ Corrigés avec succès : {compteurs['ok']}")
     print(f"⏭️  Déjà faits (relance) : {compteurs['deja_fait']}")
     print(f"❌ Introuvables/absents : {compteurs['absent']}")
+
+    if echecs:
+        print(f"\n⚠️  Pokémon en échec (fichier existant NON régénéré si déjà présent) :")
+        for numero, r_normal, r_shiny in echecs:
+            print(f"   #{numero} — normal={r_normal}, shiny={r_shiny}")
+        print("   -> relance juste ces numéros (ou --forcer) pour retenter, réseau instable probable.")
+
     print(f"\nFichiers dans {DOSSIER_SORTIE}/ — reste à les committer sur GitHub (git add, commit, push).")
 
 
