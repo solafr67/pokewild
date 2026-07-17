@@ -10,7 +10,6 @@ Utilisation :
 Ça prend quelques minutes (environ 1300 Pokémon, 2 requêtes chacun).
 """
 
-import io
 import json
 import time
 
@@ -84,103 +83,6 @@ def determiner_rarete(pokedex_id: int, est_legendaire: bool, est_mythique: bool,
 SHOWDOWN_SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{numero}.gif"
 
 
-def _couleur_moyenne(donnees: bytes):
-    """Couleur RGB moyenne des pixels non-transparents de la première image, ou None
-    si le fichier est illisible."""
-    try:
-        from PIL import Image
-
-        img = Image.open(io.BytesIO(donnees)).convert("RGBA")
-        total_r = total_g = total_b = n = 0
-        for r, g, b, a in img.getdata():
-            if a < 20:
-                continue
-            total_r += r
-            total_g += g
-            total_b += b
-            n += 1
-        if n == 0:
-            return None
-        return (total_r / n, total_g / n, total_b / n)
-    except Exception:
-        return None
-
-
-def _a_une_vraie_diversite_de_teintes(donnees: bytes) -> bool:
-    """Filet de secours quand on n'a pas de sprite statique pour comparer : au moins
-    vérifier que ce n'est pas juste un contour gris/blanc/noir uniforme."""
-    try:
-        from PIL import Image
-
-        img = Image.open(io.BytesIO(donnees)).convert("RGBA")
-        teintes_vues = set()
-        for r, g, b, a in img.getdata():
-            if a < 20:
-                continue
-            if max(r, g, b) - min(r, g, b) > 25:
-                teintes_vues.add((r // 32, g // 32, b // 32))
-            if len(teintes_vues) >= 3:
-                return True
-        return False
-    except Exception:
-        return True
-
-
-def verifier_sprite_showdown_existe(pokedex_id: int, url_sprite_statique: str | None) -> bool:
-    """Vérifie que le sprite animé style Showdown existe VRAIMENT et est correctement
-    colorié pour ce numéro, plutôt que de supposer que oui. Trois soucis rencontrés en
-    pratique avec ce pack communautaire :
-    1. Il n'a jamais été dessiné pour une bonne partie des Pokémon Gen 9 récents (base +
-       DLC) — l'URL renvoie une 404.
-    2. Certaines espèces ont un sprite communautaire connu pour être gris/quasi
-       monochrome (bug documenté du projet Smogon/Showdown).
-    3. Plus sournois : certaines espèces ont un sprite avec de VRAIES couleurs, mais les
-       MAUVAISES (ex. Passimian, censé être bleu/beige, rendu blanc/gris/noir) — un simple
-       test "y a-t-il de la couleur" ne suffit pas à l'attraper, il faut comparer avec une
-       référence fiable (le sprite statique de la PokéAPI, toujours correct).
-    """
-    url = SHOWDOWN_SPRITE_URL.format(numero=pokedex_id)
-    try:
-        reponse = requests.get(url, timeout=8)
-        if reponse.status_code != 200:
-            return False
-    except requests.RequestException:
-        return False  # en cas de doute (timeout, etc.), on retombe sur le sprite statique
-
-    couleur_showdown = _couleur_moyenne(reponse.content)
-    if couleur_showdown is None:
-        return False  # image illisible, mieux vaut ne pas prendre de risque
-
-    if not url_sprite_statique:
-        return _a_une_vraie_diversite_de_teintes(reponse.content)
-
-    try:
-        reponse_statique = requests.get(url_sprite_statique, timeout=8)
-        couleur_statique = _couleur_moyenne(reponse_statique.content) if reponse_statique.status_code == 200 else None
-    except requests.RequestException:
-        couleur_statique = None
-
-    if couleur_statique is None:
-        return _a_une_vraie_diversite_de_teintes(reponse.content)
-
-    # Distance euclidienne entre les deux couleurs moyennes — si le sprite animé est très
-    # éloigné de la référence statique fiable, ses couleurs sont probablement fausses.
-    ecart = sum((a - b) ** 2 for a, b in zip(couleur_showdown, couleur_statique)) ** 0.5
-    return ecart < 70  # seuil empirique — à resserrer si de faux positifs subsistent
-
-
-def _url_repond(url: str) -> bool:
-    """Vérifie qu'une URL renvoie bien 200 — la PokéAPI construit certains champs de
-    sprite comme un simple motif d'URL sans vérifier côté serveur que le fichier existe
-    vraiment (typiquement pour le sprite animé "génération V", absent pour tout Pokémon
-    plus récent que cette génération-là)."""
-    try:
-        reponse = requests.head(url, timeout=5, allow_redirects=True)
-        return reponse.status_code == 200
-    except requests.RequestException:
-        return False
-
-
 def recuperer_pokemon(pokedex_id: int):
     """Récupère types + stats depuis /pokemon/{id}, et le statut légendaire depuis /pokemon-species/{id}."""
     reponse_pokemon = requests.get(f"{BASE_URL}/pokemon/{pokedex_id}")
@@ -202,16 +104,13 @@ def recuperer_pokemon(pokedex_id: int):
         pokedex_id, data_espece["is_legendary"], data_espece["is_mythical"], total_stats
     )
 
-    # Sprite animé (disponible jusqu'à la génération 5 SEULEMENT) avec repli sur le sprite
-    # fixe — la PokéAPI renvoie une URL bien formée pour ce champ même quand le fichier
-    # n'existe pas vraiment pour les Pokémon plus récents (elle ne vérifie pas côté serveur),
-    # donc on doit tester nous-mêmes que ça répond avant de faire confiance à cette URL.
+    # Sprite animé (disponible jusqu'à la génération 5) avec repli sur le sprite fixe
     sprite_url = data_pokemon["sprites"]["front_default"]
     try:
         sprite_anime = (
             data_pokemon["sprites"]["versions"]["generation-v"]["black-white"]["animated"]["front_default"]
         )
-        if sprite_anime and _url_repond(sprite_anime):
+        if sprite_anime:
             sprite_url = sprite_anime
     except (KeyError, TypeError):
         pass
@@ -221,17 +120,10 @@ def recuperer_pokemon(pokedex_id: int):
         sprite_shiny_anime = (
             data_pokemon["sprites"]["versions"]["generation-v"]["black-white"]["animated"]["front_shiny"]
         )
-        if sprite_shiny_anime and _url_repond(sprite_shiny_anime):
+        if sprite_shiny_anime:
             sprite_shiny_url = sprite_shiny_anime
     except (KeyError, TypeError):
         pass
-
-    # Le bot préfère le sprite ANIMÉ style Showdown (toutes générations) à celui-ci, mais ce
-    # pack communautaire n'a jamais été dessiné pour une bonne partie des Pokémon Gen 9
-    # récents (base + DLC) — sans vérification, l'URL construite à partir du numéro pointe
-    # dans le vide et l'image ne s'affiche tout simplement pas. On vérifie une fois ici, à la
-    # génération, pour ne pas avoir à le refaire à chaque affichage en jeu.
-    sprite_anime_disponible = verifier_sprite_showdown_existe(pokedex_id, sprite_url)
 
     generation = GENERATION_MAP.get(data_espece["generation"]["name"], 0)
 
@@ -250,7 +142,6 @@ def recuperer_pokemon(pokedex_id: int):
         "base_pc": total_stats,  # utilisé directement comme base pour le calcul de PC en jeu
         "sprite": sprite_url,
         "sprite_shiny": sprite_shiny_url,
-        "sprite_anime_disponible": sprite_anime_disponible,
         "generation": generation,
         "_moves_anglais": noms_moves_anglais,  # temporaire, remplacé par "attaques" (noms FR) en fin de script
     }
