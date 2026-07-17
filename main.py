@@ -666,10 +666,10 @@ async def boucle_combat_raid(raid_id: int, channel_id: int, message_id: int, bos
                 completions_par_joueur = raid_module.distribuer_recompenses_victoire(raid_id, etoiles)
                 database.terminer_raid(raid_id)
 
-                embed_victoire = raid_module.construire_embed_victoire(boss, etoiles, participants, completions_par_joueur)
+                embeds_victoire = raid_module.construire_embed_victoire(boss, etoiles, participants, completions_par_joueur)
                 vue_capture = raid_module.VueCaptureRaid(raid_id, boss, etoiles)
                 try:
-                    await message.edit(embed=embed_victoire, view=vue_capture)
+                    await message.edit(embeds=embeds_victoire, view=vue_capture)
                     bot.loop.create_task(
                         supprimer_message_apres_delai(message, config.DUREE_AFFICHAGE_VICTOIRE_RAID)
                     )

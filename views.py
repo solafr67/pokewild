@@ -7,6 +7,7 @@ import database
 import etat_jeu
 import journal
 import leveling
+import pnj
 import quetes_ui as quetes_ui_module
 from pokemon_data import (
     ASTUCE_RARETE,
@@ -184,6 +185,13 @@ class SelectionBallView(discord.ui.View):
                     inline=False,
                 )
 
+            # Gladio ne commente que les captures marquantes (shiny/légendaire), et pas à
+            # chaque fois — pour que ça reste un petit événement plutôt qu'un bruit de fond.
+            situation_rivale = "capture_shiny" if est_shiny else ("capture_legendaire" if self.pokemon["rarete"] == "legendaire" else None)
+            embed_rival = None
+            if situation_rivale and random.random() < 0.5:
+                embed_rival = pnj.construire_embed_reaction(situation_rivale, joueur=interaction.user.display_name, pokemon=self.pokemon["nom"])
+
             if sprite_url:
                 embed.set_thumbnail(url=sprite_url)
         else:
@@ -192,18 +200,20 @@ class SelectionBallView(discord.ui.View):
                 description=f"**{self.pokemon['nom']}** a fui malgré ta {NOM_BALL_AFFICHAGE[ball_type]}.",
                 color=discord.Color.red(),
             )
+            embed_rival = None
 
         for item in self.children:
             item.disabled = True
 
+        embeds_a_envoyer = [embed, embed_rival] if embed_rival else [embed]
         try:
-            await interaction.response.edit_message(embed=embed, content=None, view=self)
+            await interaction.response.edit_message(embeds=embeds_a_envoyer, content=None, view=self)
         except (discord.NotFound, discord.HTTPException):
             # L'interaction a expiré (ex: clic trop tardif) — le résultat est déjà
             # appliqué en base (capture/ball déjà traitées), on tente juste de prévenir
             # le joueur autrement, sans planter le bot.
             try:
-                await interaction.followup.send(embed=embed, ephemeral=True)
+                await interaction.followup.send(embeds=embeds_a_envoyer, ephemeral=True)
             except (discord.NotFound, discord.HTTPException):
                 print(
                     f"⚠️ Interaction expirée : impossible de notifier {user_id} du résultat "

@@ -8,6 +8,7 @@ import database
 import equipe_combat
 import etat_jeu
 import leveling
+import pnj
 import quetes_ui as quetes_ui_module
 from pokemon_data import (
     COULEUR_RARETE,
@@ -251,7 +252,7 @@ def appliquer_riposte_boss(user_id: int, etoiles: int):
 # Victoire / capture
 # ----------------------------------------------------------------------------
 
-def construire_embed_victoire(boss: dict, etoiles: int, participants: list, completions_par_joueur: dict = None) -> discord.Embed:
+def construire_embed_victoire(boss: dict, etoiles: int, participants: list, completions_par_joueur: dict = None) -> list:
     dollars = config.DOLLARS_RAID_PAR_ETOILE.get(etoiles, 50)
     xp = config.XP_RAID_PAR_ETOILE.get(etoiles, 50)
 
@@ -296,7 +297,13 @@ def construire_embed_victoire(boss: dict, etoiles: int, participants: list, comp
         ),
         inline=False,
     )
-    return embed
+
+    if participants:
+        embed_rival = pnj.construire_embed_reaction("victoire_raid", joueur=f"<@{participants[0]['user_id']}>", pokemon=boss["nom"])
+        if embed_rival:
+            return [embed, embed_rival]
+
+    return [embed]
 
 
 def distribuer_recompenses_victoire(raid_id: int, etoiles: int) -> dict:
