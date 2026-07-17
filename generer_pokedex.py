@@ -169,6 +169,18 @@ def verifier_sprite_showdown_existe(pokedex_id: int, url_sprite_statique: str | 
     return ecart < 70  # seuil empirique — à resserrer si de faux positifs subsistent
 
 
+def _url_repond(url: str) -> bool:
+    """Vérifie qu'une URL renvoie bien 200 — la PokéAPI construit certains champs de
+    sprite comme un simple motif d'URL sans vérifier côté serveur que le fichier existe
+    vraiment (typiquement pour le sprite animé "génération V", absent pour tout Pokémon
+    plus récent que cette génération-là)."""
+    try:
+        reponse = requests.head(url, timeout=5, allow_redirects=True)
+        return reponse.status_code == 200
+    except requests.RequestException:
+        return False
+
+
 def recuperer_pokemon(pokedex_id: int):
     """Récupère types + stats depuis /pokemon/{id}, et le statut légendaire depuis /pokemon-species/{id}."""
     reponse_pokemon = requests.get(f"{BASE_URL}/pokemon/{pokedex_id}")
@@ -190,13 +202,16 @@ def recuperer_pokemon(pokedex_id: int):
         pokedex_id, data_espece["is_legendary"], data_espece["is_mythical"], total_stats
     )
 
-    # Sprite animé (disponible jusqu'à la génération 5) avec repli sur le sprite fixe
+    # Sprite animé (disponible jusqu'à la génération 5 SEULEMENT) avec repli sur le sprite
+    # fixe — la PokéAPI renvoie une URL bien formée pour ce champ même quand le fichier
+    # n'existe pas vraiment pour les Pokémon plus récents (elle ne vérifie pas côté serveur),
+    # donc on doit tester nous-mêmes que ça répond avant de faire confiance à cette URL.
     sprite_url = data_pokemon["sprites"]["front_default"]
     try:
         sprite_anime = (
             data_pokemon["sprites"]["versions"]["generation-v"]["black-white"]["animated"]["front_default"]
         )
-        if sprite_anime:
+        if sprite_anime and _url_repond(sprite_anime):
             sprite_url = sprite_anime
     except (KeyError, TypeError):
         pass
@@ -206,7 +221,7 @@ def recuperer_pokemon(pokedex_id: int):
         sprite_shiny_anime = (
             data_pokemon["sprites"]["versions"]["generation-v"]["black-white"]["animated"]["front_shiny"]
         )
-        if sprite_shiny_anime:
+        if sprite_shiny_anime and _url_repond(sprite_shiny_anime):
             sprite_shiny_url = sprite_shiny_anime
     except (KeyError, TypeError):
         pass
