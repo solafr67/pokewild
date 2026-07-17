@@ -8,6 +8,7 @@ import config
 import database
 import journal
 import leveling
+import pnj
 import quetes_ui
 from pokemon_data import (
     POKEDEX,
@@ -381,11 +382,16 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
                     color=discord.Color.red(),
                 )
 
+            embed_rival = None
+            if vainqueur_id != joueur_id and random.random() < 0.3:
+                embed_rival = pnj.construire_embed_reaction("defaite_dresseur", user_id=joueur_id, joueur=f"<@{joueur_id}>")
+
             try:
                 msg = await thread.fetch_message(message_id)
-                await msg.edit(embed=embed, view=None)
+                embeds_a_envoyer = [embed, embed_rival] if embed_rival else [embed]
+                await msg.edit(embeds=embeds_a_envoyer, view=None)
             except discord.NotFound:
-                await thread.send(embed=embed)
+                await thread.send(embeds=embeds_a_envoyer)
 
             bot.loop.create_task(_supprimer_fil_apres_delai(thread, combat_module.DELAI_SUPPRESSION_FIL))
             return

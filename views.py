@@ -16,6 +16,7 @@ from pokemon_data import (
     EMOJI_POKEDOLLAR,
     NOM_BALL_AFFICHAGE,
     NOM_OBJETS_DIVERS,
+    POKEDEX,
     TAUX_CAPTURE,
     sprite_pokemon,
 )
@@ -190,7 +191,23 @@ class SelectionBallView(discord.ui.View):
             situation_rivale = "capture_shiny" if est_shiny else ("capture_legendaire" if self.pokemon["rarete"] == "legendaire" else None)
             embed_rival = None
             if situation_rivale and random.random() < 0.5:
-                embed_rival = pnj.construire_embed_reaction(situation_rivale, joueur=interaction.user.display_name, pokemon=self.pokemon["nom"])
+                embed_rival = pnj.construire_embed_reaction(
+                    situation_rivale, user_id=user_id, joueur=interaction.user.display_name, pokemon=self.pokemon["nom"]
+                )
+
+            # Bienvenue au tout premier joueur qui vient de faire sa toute première capture.
+            if embed_rival is None and database.obtenir_captures_totales(user_id) == 1:
+                embed_rival = pnj.construire_embed_reaction(
+                    "bienvenue_nouveau_joueur", user_id=user_id, joueur=interaction.user.display_name
+                )
+
+            # Pokédex 100% complet grâce à cette capture (nouvelle entrée + plus aucune manquante).
+            if embed_rival is None and nouvelle_entree:
+                nb_especes_possedees = len(database.obtenir_pokedex_joueur(user_id))
+                if nb_especes_possedees >= len(POKEDEX):
+                    embed_rival = pnj.construire_embed_reaction(
+                        "pokedex_complet", user_id=user_id, joueur=interaction.user.display_name
+                    )
 
             if sprite_url:
                 embed.set_thumbnail(url=sprite_url)

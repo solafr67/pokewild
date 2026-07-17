@@ -83,6 +83,28 @@ def init_db():
         """
     )
 
+    # Compteur d'interactions avec Gladio (le rival) — détermine le palier de familiarité
+    # utilisé pour choisir le ton de ses répliques (distant -> familier -> respect bourru).
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS gladio_relation (
+            user_id INTEGER PRIMARY KEY,
+            compteur INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+
+    # Série de victoires PvP consécutives (remise à zéro à la première défaite) — sert de
+    # déclencheur pour un commentaire de Gladio, indépendant du suivi anti-collusion existant.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS pvp_serie_victoires (
+            user_id INTEGER PRIMARY KEY,
+            serie INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+
     # Migration pour les joueurs déjà en base avant l'ajout des compteurs de captures à vie
     # (classements "Plus de captures"/"Plus de shiny" comptaient auparavant les lignes ENCORE
     # en base, donc relâcher des doublons faisait artificiellement baisser le classement).
@@ -3076,6 +3098,77 @@ def classement_explorations(limite: int = 10):
     resultats = cur.fetchall()
     conn.close()
     return resultats
+
+
+def obtenir_captures_totales(user_id: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT captures_totales FROM stats_lifetime WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row["captures_totales"] if row else 0
+
+
+def obtenir_relation_gladio(user_id: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT compteur FROM gladio_relation WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row["compteur"] if row else 0
+
+
+def incrementer_relation_gladio(user_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO gladio_relation (user_id, compteur) VALUES (?, 1)
+        ON CONFLICT(user_id) DO UPDATE SET compteur = compteur + 1
+        """,
+        (user_id,),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_serie_victoires_pvp(user_id: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT serie FROM pvp_serie_victoires WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row["serie"] if row else 0
+
+
+def incrementer_serie_victoires_pvp(user_id: int) -> int:
+    """Incrémente la série de victoires PvP consécutives et retourne la nouvelle valeur."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO pvp_serie_victoires (user_id, serie) VALUES (?, 1)
+        ON CONFLICT(user_id) DO UPDATE SET serie = serie + 1
+        """,
+        (user_id,),
+    )
+    cur.execute("SELECT serie FROM pvp_serie_victoires WHERE user_id = ?", (user_id,))
+    nouvelle_serie = cur.fetchone()["serie"]
+    conn.commit()
+    conn.close()
+    return nouvelle_serie
+
+
+def reinitialiser_serie_victoires_pvp(user_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO pvp_serie_victoires (user_id, serie) VALUES (?, 0) "
+        "ON CONFLICT(user_id) DO UPDATE SET serie = 0",
+        (user_id,),
+    )
+    conn.commit()
+    conn.close()
 
 
 def classement_shiny(limite: int = 10):

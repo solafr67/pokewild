@@ -20,6 +20,7 @@ import quetes_ui as quetes_ui_module
 import dresseurs as dresseurs_module
 import elevage as elevage_module
 import journal
+import pnj
 import database
 import etat_jeu
 import leveling
@@ -376,6 +377,8 @@ async def rafraichir_classement():
         )
         return
 
+    await _verifier_changement_leader()
+
     embed = classement_module.construire_embed_apercu()
     vue = classement_module.VueClassements()
     message_id = database.obtenir_parametre("classement_message_id")
@@ -390,6 +393,34 @@ async def rafraichir_classement():
 
     message = await channel.send(embed=embed, view=vue)
     database.definir_parametre("classement_message_id", str(message.id))
+
+
+async def _verifier_changement_leader():
+    """Compare le meneur actuel du classement des captures avec le dernier connu — si ça a
+    changé, Gladio commente dans le channel de classement. Best-effort : n'importe quel
+    souci ici ne doit jamais empêcher le classement lui-même de se rafraîchir."""
+    try:
+        top = database.classement_captures_individuelles(limite=1)
+        if not top:
+            return
+        nouveau_leader_id = top[0]["user_id"]
+
+        ancien_leader_id_str = database.obtenir_parametre("classement_leader_captures")
+        database.definir_parametre("classement_leader_captures", str(nouveau_leader_id))
+
+        if ancien_leader_id_str is None or int(ancien_leader_id_str) == nouveau_leader_id:
+            return  # premier suivi, ou pas de changement — rien à commenter
+
+        channel = bot.get_channel(config.CHANNEL_CLASSEMENT_ID)
+        if channel is None:
+            return
+        embed_rival = pnj.construire_embed_reaction(
+            "changement_leader_classement", user_id=nouveau_leader_id, joueur=f"<@{nouveau_leader_id}>"
+        )
+        if embed_rival:
+            await channel.send(embed=embed_rival)
+    except Exception as e:
+        journal.logger(f"🔴 Erreur dans _verifier_changement_leader (non bloquant) : {e}")
 
 
 @tasks.loop(seconds=config.INTERVALLE_CLASSEMENT)
@@ -471,6 +502,31 @@ async def boucle_meteo():
             print("⚠️ Erreur dans boucle_meteo (le cycle suivant sera quand même tenté) :")
             traceback.print_exc()
             journal.logger("🔴 Erreur dans `boucle_meteo` — voir les logs serveur pour le détail complet.")
+
+
+async def boucle_gladio_spontane():
+    """Petite chance, toutes les quelques heures, que Gladio balance une réflexion sur
+    l'état général du serveur — pas liée à un événement précis, juste pour donner
+    l'impression qu'il traîne dans le coin de temps en temps."""
+    await bot.wait_until_ready()
+
+    while not bot.is_closed():
+        await asyncio.sleep(random.randint(3 * 3600, 6 * 3600))
+        DERNIERE_ACTIVITE_BOUCLES["gladio"] = time.time()
+
+        try:
+            if random.random() >= 0.25:
+                continue  # rien cette fois-ci, on continue d'attendre
+
+            channel_id = getattr(config, "CHANNEL_LOGS_ID", None) or config.CHANNEL_CLASSEMENT_ID
+            channel = bot.get_channel(channel_id)
+            if channel is None:
+                continue
+            embed_rival = pnj.construire_embed_reaction("spontane")
+            if embed_rival:
+                await channel.send(embed=embed_rival)
+        except Exception as e:
+            journal.logger(f"🔴 Erreur dans `boucle_gladio_spontane` (le cycle suivant sera quand même tenté) : {e}")
 
 
 async def boucle_notifications_completion():
@@ -882,6 +938,10 @@ async def on_ready():
     if not getattr(bot, "boucle_meteo_lancee", False):
         bot.loop.create_task(boucle_meteo())
         bot.boucle_meteo_lancee = True
+
+    if not getattr(bot, "boucle_gladio_lancee", False):
+        bot.loop.create_task(boucle_gladio_spontane())
+        bot.boucle_gladio_lancee = True
 
     if not getattr(bot, "boucle_notifications_lancee", False):
         bot.loop.create_task(boucle_notifications_completion())
@@ -1612,6 +1672,7 @@ async def status_bot(interaction: discord.Interaction):
         _ligne_boucle("Dresseurs", "dresseurs", 60),
         _ligne_boucle("Classement", "classement", config.INTERVALLE_CLASSEMENT),
         _ligne_boucle("Météo", "meteo", 30 * 60),
+        _ligne_boucle("Gladio (spontané)", "gladio", 3 * 3600),
         _ligne_boucle("Notifications MP", "notifications", 30),
         _ligne_boucle("Envoi des logs", "logs", 5),
         _ligne_boucle("Snapshot économie", "snapshot_economie", 24 * 3600),

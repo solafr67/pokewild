@@ -641,6 +641,14 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
     leveling.gagner_xp(vainqueur_id, round(XP_VICTOIRE * mult_repetition))
     leveling.gagner_xp(perdant_id, XP_DEFAITE)
 
+    serie = database.incrementer_serie_victoires_pvp(vainqueur_id)
+    database.reinitialiser_serie_victoires_pvp(perdant_id)
+    embed_rival = None
+    if serie >= 3 and serie % 3 == 0:  # tous les 3 (3, 6, 9...) pour ne pas spammer à chaque victoire
+        embed_rival = pnj.construire_embed_reaction(
+            "serie_victoires_pvp", user_id=vainqueur_id, joueur=f"<@{vainqueur_id}>"
+        )
+
     vainqueur = bot.get_user(vainqueur_id)
     perdant = bot.get_user(perdant_id)
     # Les titres d'embed ne peuvent pas afficher de mention Discord cliquable (<@id>), donc on
@@ -673,7 +681,8 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
         try:
             thread = bot.get_channel(int(combat["thread_id"]))
             if thread:
-                await thread.send(embed=embed)
+                embeds_a_envoyer = [embed, embed_rival] if embed_rival else [embed]
+                await thread.send(embeds=embeds_a_envoyer)
                 await thread.send(f"🗑️ Ce fil sera supprimé automatiquement dans {DELAI_SUPPRESSION_FIL // 60} minutes.")
                 bot.loop.create_task(supprimer_fil_apres_delai(thread, DELAI_SUPPRESSION_FIL))
         except Exception:
@@ -727,6 +736,14 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
             leveling.gagner_xp(vainqueur_id, round(XP_VICTOIRE * mult_repetition))
             leveling.gagner_xp(perdant_id, XP_DEFAITE)
 
+            serie = database.incrementer_serie_victoires_pvp(vainqueur_id)
+            database.reinitialiser_serie_victoires_pvp(perdant_id)
+            embed_rival = None
+            if serie >= 3 and serie % 3 == 0:
+                embed_rival = pnj.construire_embed_reaction(
+                    "serie_victoires_pvp", user_id=vainqueur_id, joueur=f"<@{vainqueur_id}>"
+                )
+
             vainqueur = bot.get_user(vainqueur_id)
             nom_vainqueur = vainqueur.display_name if vainqueur else f"Joueur…{str(vainqueur_id)[-4:]}"
             dollars_reels = round(DOLLARS_VICTOIRE * mult_repetition * database.multiplicateur_boost(vainqueur_id, "argent"))
@@ -747,7 +764,8 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
             )
             try:
                 msg = await thread.fetch_message(message_id)
-                await msg.edit(embed=embed, view=None)
+                embeds_a_envoyer = [embed, embed_rival] if embed_rival else [embed]
+                await msg.edit(embeds=embeds_a_envoyer, view=None)
             except discord.NotFound:
                 await thread.send(embed=embed)
             try:

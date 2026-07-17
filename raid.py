@@ -299,7 +299,9 @@ def construire_embed_victoire(boss: dict, etoiles: int, participants: list, comp
     )
 
     if participants:
-        embed_rival = pnj.construire_embed_reaction("victoire_raid", joueur=f"<@{participants[0]['user_id']}>", pokemon=boss["nom"])
+        embed_rival = pnj.construire_embed_reaction(
+            "victoire_raid", user_id=participants[0]["user_id"], joueur=f"<@{participants[0]['user_id']}>", pokemon=boss["nom"]
+        )
         if embed_rival:
             return [embed, embed_rival]
 

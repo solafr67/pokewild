@@ -140,15 +140,17 @@ EFFICACITE_TYPES = {
 
 
 def sprite_pokemon(pokemon: dict, shiny: bool = False) -> str | None:
-    """URL de sprite ANIMÉ (style Pokémon Showdown), qui couvre TOUTES les générations —
-    contrairement au sprite animé natif de la PokéAPI, limité aux générations 1 à 5.
+    """URL de sprite ANIMÉ, hébergé sur notre propre dépôt GitHub — ce sont les sprites
+    Showdown originaux, mais reencodés avec un disposal de frame correct (voir
+    corriger_sprites.py) pour éliminer le bug de "ghosting" (traînée floue) que certains
+    fichiers du pack communautaire original provoquaient sur le lecteur GIF de Discord.
     Repli sur le sprite statique stocké si jamais le numéro du Pokédex est indisponible."""
     if not pokemon:
         return None
     numero = pokemon.get("numero")
     if numero:
         sous_dossier = "shiny/" if shiny else ""
-        return f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{sous_dossier}{numero}.gif"
+        return f"https://raw.githubusercontent.com/solafr67/pokewild/main/sprites_corriges/{sous_dossier}{numero}.gif"
     return pokemon.get("sprite_shiny") if shiny else pokemon.get("sprite")
 
 
