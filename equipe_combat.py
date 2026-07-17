@@ -41,6 +41,23 @@ def equiper_meilleure_equipe(user_id: int) -> list:
     return noms_selectionnes
 
 
+def charger_preset_combat(user_id: int, nom_preset: str) -> tuple:
+    """Remplace l'équipe de combat active par une équipe pré-configurée sauvegardée.
+    Les Pokémon que le joueur ne possède plus (relâchés, échangés depuis la sauvegarde...)
+    sont ignorés. Retourne (noms_charges, noms_manquants)."""
+    stats = _stats_par_espece(user_id)
+    preset = database.obtenir_preset_equipe(user_id, nom_preset)
+
+    noms_charges = [n for n in preset if n in stats][:TAILLE_MAX_EQUIPE]
+    noms_manquants = [n for n in preset if n not in stats]
+
+    database.vider_equipe_combat(user_id)
+    for nom in noms_charges:
+        database.ajouter_a_equipe_combat(user_id, nom)
+
+    return noms_charges, noms_manquants
+
+
 def construire_embed_equipe(user: discord.abc.User) -> discord.Embed:
     noms_equipe = database.obtenir_equipe_combat(user.id)
     stats = _stats_par_espece(user.id)
@@ -236,6 +253,12 @@ class VueEquipeCombat(discord.ui.View):
             bouton_reorganiser.callback = self._on_reorganiser
             self.add_item(bouton_reorganiser)
 
+        bouton_presets = discord.ui.Button(
+            label="Équipes sauvegardées", emoji="💾", style=discord.ButtonStyle.secondary, row=4
+        )
+        bouton_presets.callback = self._on_presets
+        self.add_item(bouton_presets)
+
         if self.recherche:
             bouton_effacer = discord.ui.Button(
                 label="Effacer la recherche", emoji="❌", style=discord.ButtonStyle.secondary, row=3
@@ -381,6 +404,17 @@ class VueEquipeCombat(discord.ui.View):
         await interaction.response.send_message(
             "Choisis un Pokémon puis utilise ⬆️/⬇️ pour changer sa place :",
             embed=construire_embed_equipe(interaction.user),
+            view=vue,
+            ephemeral=True,
+        )
+
+    async def _on_presets(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        vue = VuePresetsEquipe(self.user_id)
+        await interaction.response.send_message(
+            "Gère tes équipes de combat pré-configurées — pratique pour changer de "
+            "tactique sans reconstruire ton équipe à chaque fois :",
             view=vue,
             ephemeral=True,
         )
@@ -573,3 +607,171 @@ class VueReorganiserEquipe(discord.ui.View):
 
     async def _on_descendre(self, interaction: discord.Interaction):
         await self._deplacer(interaction, 1)
+
+
+class ModalNommerPreset(discord.ui.Modal):
+    """Fenêtre de saisie pour nommer l'équipe actuelle avant de la sauvegarder comme
+    équipe pré-configurée."""
+
+    def __init__(self, vue_parente: "VuePresetsEquipe"):
+        super().__init__(title="Sauvegarder l'équipe actuelle")
+        self.vue_parente = vue_parente
+        self.nom_input = discord.ui.TextInput(
+            label="Nom de l'équipe",
+            placeholder="Ex : Anti-Eau, Vitesse, Raid...",
+            max_length=40,
+        )
+        self.add_item(self.nom_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        nom = self.nom_input.value.strip()
+        if not nom:
+            await interaction.response.send_message("Le nom ne peut pas être vide.", ephemeral=True)
+            return
+
+        equipe_actuelle = database.obtenir_equipe_combat(self.vue_parente.user_id)
+        if not equipe_actuelle:
+            await interaction.response.send_message(
+                "Ton équipe de combat actuelle est vide, il n'y a rien à sauvegarder — "
+                "compose d'abord une équipe avec /equipe.",
+                ephemeral=True,
+            )
+            return
+
+        deja_existant = nom in database.obtenir_noms_presets_equipe(self.vue_parente.user_id)
+        ok = database.sauvegarder_preset_equipe(self.vue_parente.user_id, nom, equipe_actuelle)
+        if not ok:
+            await interaction.response.send_message(
+                f"Tu as déjà {database.TAILLE_MAX_PRESETS_EQUIPE} équipes sauvegardées — "
+                f"supprimes-en une avant d'en ajouter une nouvelle.",
+                ephemeral=True,
+            )
+            return
+
+        self.vue_parente.preset_selectionne = nom
+        self.vue_parente._construire_composants()
+        verbe = "mise à jour" if deja_existant else "sauvegardée"
+        await interaction.response.edit_message(
+            content=f"💾 Équipe actuelle {verbe} sous le nom **{nom}** ({len(equipe_actuelle)} Pokémon).",
+            view=self.vue_parente,
+        )
+
+
+class VuePresetsEquipe(discord.ui.View):
+    """Vue éphémère pour gérer les équipes de combat pré-configurées : sauvegarder la
+    composition actuelle sous un nom, en charger une autre pour changer de tactique
+    rapidement, ou en supprimer une."""
+
+    def __init__(self, user_id: int):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        self.preset_selectionne = None
+        self._construire_composants()
+
+    @staticmethod
+    def _resume_court(noms: list) -> str:
+        texte = ", ".join(noms) if noms else "(vide)"
+        return texte if len(texte) <= 100 else texte[:97] + "..."
+
+    def _construire_composants(self):
+        self.clear_items()
+        noms_presets = database.obtenir_noms_presets_equipe(self.user_id)
+
+        if noms_presets:
+            options = [
+                discord.SelectOption(
+                    label=nom,
+                    value=nom,
+                    description=self._resume_court(database.obtenir_preset_equipe(self.user_id, nom)),
+                    default=(nom == self.preset_selectionne),
+                )
+                for nom in noms_presets
+            ]
+            placeholder = "Choisir une équipe sauvegardée..."
+        else:
+            options = [discord.SelectOption(label="Aucune équipe sauvegardée", value="none")]
+            placeholder = "Aucune équipe sauvegardée pour l'instant"
+
+        select = discord.ui.Select(placeholder=placeholder, options=options, disabled=not noms_presets, row=0)
+        select.callback = self._on_select
+        self.add_item(select)
+
+        bouton_charger = discord.ui.Button(
+            label="Charger",
+            emoji="📥",
+            style=discord.ButtonStyle.primary,
+            disabled=(self.preset_selectionne is None),
+            row=1,
+        )
+        bouton_charger.callback = self._on_charger
+        self.add_item(bouton_charger)
+
+        bouton_supprimer = discord.ui.Button(
+            label="Supprimer",
+            emoji="🗑️",
+            style=discord.ButtonStyle.danger,
+            disabled=(self.preset_selectionne is None),
+            row=1,
+        )
+        bouton_supprimer.callback = self._on_supprimer
+        self.add_item(bouton_supprimer)
+
+        bouton_sauvegarder = discord.ui.Button(
+            label="Sauvegarder l'équipe actuelle",
+            emoji="💾",
+            style=discord.ButtonStyle.success,
+            row=2,
+        )
+        bouton_sauvegarder.callback = self._on_sauvegarder
+        self.add_item(bouton_sauvegarder)
+
+    async def _verifier_proprietaire(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ton équipe !", ephemeral=True)
+            return False
+        return True
+
+    async def _on_select(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        self.preset_selectionne = interaction.data["values"][0]
+        self._construire_composants()
+        noms = database.obtenir_preset_equipe(self.user_id, self.preset_selectionne)
+        await interaction.response.edit_message(
+            content=f"**{self.preset_selectionne}** : {self._resume_court(noms)}",
+            view=self,
+        )
+
+    async def _on_charger(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        if self.preset_selectionne is None:
+            return
+
+        noms_charges, noms_manquants = charger_preset_combat(self.user_id, self.preset_selectionne)
+
+        message = f"📥 Équipe **{self.preset_selectionne}** chargée ({len(noms_charges)} Pokémon)."
+        if noms_manquants:
+            message += (
+                f"\n⚠️ Non chargés car plus en ta possession : {', '.join(noms_manquants)}"
+            )
+
+        await interaction.response.edit_message(content=message, view=self)
+
+    async def _on_supprimer(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        if self.preset_selectionne is None:
+            return
+        database.supprimer_preset_equipe(self.user_id, self.preset_selectionne)
+        nom_supprime = self.preset_selectionne
+        self.preset_selectionne = None
+        self._construire_composants()
+        await interaction.response.edit_message(
+            content=f"🗑️ Équipe **{nom_supprime}** supprimée.", view=self
+        )
+
+    async def _on_sauvegarder(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        await interaction.response.send_modal(ModalNommerPreset(self))

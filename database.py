@@ -382,6 +382,18 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS equipe_presets_combat (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            nom_preset TEXT NOT NULL,
+            pokemon_nom TEXT NOT NULL,
+            UNIQUE(user_id, nom_preset, pokemon_nom)
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS etat_combat_pokemon (
             user_id INTEGER NOT NULL,
             pokemon_nom TEXT NOT NULL,
@@ -736,6 +748,73 @@ def vider_equipe_combat(user_id: int):
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute("DELETE FROM equipe_combat WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+
+TAILLE_MAX_PRESETS_EQUIPE = 5
+
+
+def obtenir_noms_presets_equipe(user_id: int) -> list:
+    """Retourne les noms des équipes pré-configurées du joueur, dans l'ordre de création."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT nom_preset, MIN(id) AS premier_id FROM equipe_presets_combat "
+        "WHERE user_id = ? GROUP BY nom_preset ORDER BY premier_id",
+        (user_id,),
+    )
+    resultats = [row["nom_preset"] for row in cur.fetchall()]
+    conn.close()
+    return resultats
+
+
+def obtenir_preset_equipe(user_id: int, nom_preset: str) -> list:
+    """Retourne la liste ordonnée des Pokémon d'une équipe pré-configurée."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT pokemon_nom FROM equipe_presets_combat WHERE user_id = ? AND nom_preset = ? ORDER BY id",
+        (user_id, nom_preset),
+    )
+    resultats = [row["pokemon_nom"] for row in cur.fetchall()]
+    conn.close()
+    return resultats
+
+
+def sauvegarder_preset_equipe(user_id: int, nom_preset: str, noms_pokemon: list) -> bool:
+    """Enregistre (ou écrase si le nom existe déjà) une équipe pré-configurée à partir de
+    la liste de noms donnée. Retourne False si le joueur a atteint son nombre maximum
+    d'équipes sauvegardées et que nom_preset n'en fait pas déjà partie."""
+    presets_existants = obtenir_noms_presets_equipe(user_id)
+    if nom_preset not in presets_existants and len(presets_existants) >= TAILLE_MAX_PRESETS_EQUIPE:
+        return False
+
+    conn = get_connexion()
+    cur = conn.cursor()
+    # Écrase l'ancienne version si ce nom existait déjà (permet de "mettre à jour" une
+    # équipe sauvegardée en la resauvegardant sous le même nom).
+    cur.execute(
+        "DELETE FROM equipe_presets_combat WHERE user_id = ? AND nom_preset = ?",
+        (user_id, nom_preset),
+    )
+    for nom in noms_pokemon[:TAILLE_MAX_EQUIPE_COMBAT]:
+        cur.execute(
+            "INSERT INTO equipe_presets_combat (user_id, nom_preset, pokemon_nom) VALUES (?, ?, ?)",
+            (user_id, nom_preset, nom),
+        )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def supprimer_preset_equipe(user_id: int, nom_preset: str):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM equipe_presets_combat WHERE user_id = ? AND nom_preset = ?",
+        (user_id, nom_preset),
+    )
     conn.commit()
     conn.close()
 
