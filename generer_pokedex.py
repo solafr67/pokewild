@@ -84,11 +84,31 @@ def determiner_rarete(pokedex_id: int, est_legendaire: bool, est_mythique: bool,
 SHOWDOWN_SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/{numero}.gif"
 
 
-def _sprite_est_correctement_colore(donnees: bytes) -> bool:
-    """Heuristique : ouvre la première image du GIF et regarde si elle a une vraie
-    diversité de teintes (pas juste du gris/blanc/noir) — les sprites Showdown cassés ou
-    placeholders (bug documenté du projet communautaire Smogon/Showdown sur certaines
-    espèces) ressemblent à un simple contour monochrome plutôt qu'à un vrai sprite coloré."""
+def _couleur_moyenne(donnees: bytes):
+    """Couleur RGB moyenne des pixels non-transparents de la première image, ou None
+    si le fichier est illisible."""
+    try:
+        from PIL import Image
+
+        img = Image.open(io.BytesIO(donnees)).convert("RGBA")
+        total_r = total_g = total_b = n = 0
+        for r, g, b, a in img.getdata():
+            if a < 20:
+                continue
+            total_r += r
+            total_g += g
+            total_b += b
+            n += 1
+        if n == 0:
+            return None
+        return (total_r / n, total_g / n, total_b / n)
+    except Exception:
+        return None
+
+
+def _a_une_vraie_diversite_de_teintes(donnees: bytes) -> bool:
+    """Filet de secours quand on n'a pas de sprite statique pour comparer : au moins
+    vérifier que ce n'est pas juste un contour gris/blanc/noir uniforme."""
     try:
         from PIL import Image
 
@@ -96,38 +116,57 @@ def _sprite_est_correctement_colore(donnees: bytes) -> bool:
         teintes_vues = set()
         for r, g, b, a in img.getdata():
             if a < 20:
-                continue  # pixel transparent, ignoré
-            # Un pixel "coloré" a un vrai écart entre ses canaux R/G/B — un pixel gris/
-            # blanc/noir a ses 3 canaux quasi identiques entre eux.
+                continue
             if max(r, g, b) - min(r, g, b) > 25:
-                teintes_vues.add((r // 32, g // 32, b // 32))  # quantifié, pour limiter le bruit
+                teintes_vues.add((r // 32, g // 32, b // 32))
             if len(teintes_vues) >= 3:
-                return True  # assez de teintes distinctes trouvées, sprite considéré valide
-        return False  # quasiment aucune couleur détectée -> probablement un sprite cassé/gris
+                return True
+        return False
     except Exception:
-        return True  # en cas de doute (format inattendu, Pillow absent...), on ne bloque pas —
-        # mieux vaut un faux positif occasionnel qu'écarter des sprites valides par erreur
+        return True
 
 
-def verifier_sprite_showdown_existe(pokedex_id: int) -> bool:
+def verifier_sprite_showdown_existe(pokedex_id: int, url_sprite_statique: str | None) -> bool:
     """Vérifie que le sprite animé style Showdown existe VRAIMENT et est correctement
-    colorié pour ce numéro, plutôt que de supposer que oui. Deux soucis rencontrés en
+    colorié pour ce numéro, plutôt que de supposer que oui. Trois soucis rencontrés en
     pratique avec ce pack communautaire :
     1. Il n'a jamais été dessiné pour une bonne partie des Pokémon Gen 9 récents (base +
        DLC) — l'URL renvoie une 404.
-    2. Certaines espèces plus anciennes ont un sprite communautaire connu pour être
-       incomplet ou mal colorié (bug documenté du projet Smogon/Showdown) — le fichier
-       EXISTE (200 OK) mais s'affiche en gris/blanc plutôt qu'en couleur.
-    Le deuxième cas ne se détecte pas avec une simple requête HEAD (qui ne vérifie que
-    l'existence) — il faut télécharger l'image et l'analyser."""
+    2. Certaines espèces ont un sprite communautaire connu pour être gris/quasi
+       monochrome (bug documenté du projet Smogon/Showdown).
+    3. Plus sournois : certaines espèces ont un sprite avec de VRAIES couleurs, mais les
+       MAUVAISES (ex. Passimian, censé être bleu/beige, rendu blanc/gris/noir) — un simple
+       test "y a-t-il de la couleur" ne suffit pas à l'attraper, il faut comparer avec une
+       référence fiable (le sprite statique de la PokéAPI, toujours correct).
+    """
     url = SHOWDOWN_SPRITE_URL.format(numero=pokedex_id)
     try:
         reponse = requests.get(url, timeout=8)
         if reponse.status_code != 200:
             return False
-        return _sprite_est_correctement_colore(reponse.content)
     except requests.RequestException:
         return False  # en cas de doute (timeout, etc.), on retombe sur le sprite statique
+
+    couleur_showdown = _couleur_moyenne(reponse.content)
+    if couleur_showdown is None:
+        return False  # image illisible, mieux vaut ne pas prendre de risque
+
+    if not url_sprite_statique:
+        return _a_une_vraie_diversite_de_teintes(reponse.content)
+
+    try:
+        reponse_statique = requests.get(url_sprite_statique, timeout=8)
+        couleur_statique = _couleur_moyenne(reponse_statique.content) if reponse_statique.status_code == 200 else None
+    except requests.RequestException:
+        couleur_statique = None
+
+    if couleur_statique is None:
+        return _a_une_vraie_diversite_de_teintes(reponse.content)
+
+    # Distance euclidienne entre les deux couleurs moyennes — si le sprite animé est très
+    # éloigné de la référence statique fiable, ses couleurs sont probablement fausses.
+    ecart = sum((a - b) ** 2 for a, b in zip(couleur_showdown, couleur_statique)) ** 0.5
+    return ecart < 70  # seuil empirique — à resserrer si de faux positifs subsistent
 
 
 def recuperer_pokemon(pokedex_id: int):
@@ -177,7 +216,7 @@ def recuperer_pokemon(pokedex_id: int):
     # récents (base + DLC) — sans vérification, l'URL construite à partir du numéro pointe
     # dans le vide et l'image ne s'affiche tout simplement pas. On vérifie une fois ici, à la
     # génération, pour ne pas avoir à le refaire à chaque affichage en jeu.
-    sprite_anime_disponible = verifier_sprite_showdown_existe(pokedex_id)
+    sprite_anime_disponible = verifier_sprite_showdown_existe(pokedex_id, sprite_url)
 
     generation = GENERATION_MAP.get(data_espece["generation"]["name"], 0)
 
