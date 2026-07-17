@@ -39,6 +39,14 @@ SHOWDOWN_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites
 DOSSIER_SORTIE = "sprites_corriges"
 
 
+DUREE_MIN_FRAME_MS = 80  # en dessous, l'animation clignote au lieu de sembler fluide
+DUREE_PAR_DEFAUT_MS = 120
+
+
+COULEUR_CLE = (255, 0, 255)  # magenta : improbable dans un sprite Pokémon, sert de fond
+                              # de substitution partout où le pixel est transparent
+
+
 def corriger_gif(donnees: bytes):
     """Recompose les frames d'un GIF correctement et le réencode avec un disposal fiable.
     Retourne les octets du GIF corrigé, ou None si le fichier n'est pas exploitable."""
@@ -50,9 +58,14 @@ def corriger_gif(donnees: bytes):
             while True:
                 # .convert("RGBA") force Pillow à recomposer l'image RÉELLE de cette frame
                 # (en tenant compte de la transparence et de ce qui précède), pas juste le
-                # patch brut stocké dans le fichier — c'est ça qui corrige le bug.
+                # patch brut stocké dans le fichier — c'est ça qui corrige le ghosting.
                 frames.append(gif.convert("RGBA").copy())
-                durees.append(gif.info.get("duration", 100) or 100)
+                duree_brute = gif.info.get("duration") or DUREE_PAR_DEFAUT_MS
+                # Certains fichiers du pack communautaire ont des durées quasi nulles ou
+                # erratiques sur une frame précise, ce qui donne un effet de clignotement
+                # ("crise d'épilepsie") au lieu d'une animation fluide — on impose un
+                # plancher plutôt que de reproduire fidèlement une valeur peut-être fautive.
+                durees.append(max(DUREE_MIN_FRAME_MS, duree_brute))
                 gif.seek(gif.tell() + 1)
         except EOFError:
             pass
@@ -60,23 +73,49 @@ def corriger_gif(donnees: bytes):
         if not frames:
             return None
 
-        if len(frames) == 1:
-            tampon = io.BytesIO()
-            frames[0].save(tampon, format="GIF")
-            return tampon.getvalue()
+        # On colle chaque frame RGBA sur un fond de couleur-clé : les pixels
+        # transparents deviennent cette couleur, les pixels opaques restent
+        # inchangés (l'alpha de la frame sert de masque de collage).
+        frames_composees = []
+        for frame in frames:
+            fond = Image.new("RGBA", frame.size, COULEUR_CLE + (255,))
+            fond.paste(frame, (0, 0), frame)
+            frames_composees.append(fond.convert("RGB"))
+
+        # Palette commune à TOUTES les frames, construite en les concaténant
+        # avant quantification. C'est le point clé du correctif : avant, chaque
+        # frame recevait sa propre palette générée indépendamment, donc l'index 0
+        # ne correspondait pas forcément au fond d'une frame à l'autre — c'est ce
+        # qui causait le bug (fond noir opaque au lieu de transparent sur Pohm,
+        # Qubultoké, etc.). Avec une palette partagée, la couleur-clé a le MÊME
+        # index sur chaque frame, donc "transparency=" reste correct partout.
+        largeur, hauteur = frames_composees[0].size
+        planche = Image.new("RGB", (largeur * len(frames_composees), hauteur))
+        for i, f in enumerate(frames_composees):
+            planche.paste(f, (i * largeur, 0))
+        palette_img = planche.quantize(colors=255)
+
+        # Index de la couleur-clé dans cette palette commune
+        pixel_clef = Image.new("RGB", (1, 1), COULEUR_CLE).quantize(palette=palette_img)
+        index_transparent = pixel_clef.getpixel((0, 0))
+
+        frames_finales = [f.quantize(palette=palette_img) for f in frames_composees]
 
         tampon = io.BytesIO()
-        frames[0].save(
-            tampon,
-            format="GIF",
-            save_all=True,
-            append_images=frames[1:],
-            duration=durees,
-            loop=0,
-            disposal=2,  # efface vers l'arrière-plan avant chaque frame — élimine le ghosting
-            transparency=0,
-            optimize=False,
-        )
+        if len(frames_finales) == 1:
+            frames_finales[0].save(tampon, format="GIF", transparency=index_transparent)
+        else:
+            frames_finales[0].save(
+                tampon,
+                format="GIF",
+                save_all=True,
+                append_images=frames_finales[1:],
+                duration=durees,
+                loop=0,
+                disposal=2,  # efface vers l'arrière-plan avant chaque frame — élimine le ghosting
+                transparency=index_transparent,
+                optimize=False,
+            )
         return tampon.getvalue()
     except Exception as e:
         print(f"    ⚠️ Erreur de traitement d'image : {e}")
