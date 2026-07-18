@@ -21,6 +21,8 @@ import quetes as quetes_module
 import quetes_ui as quetes_ui_module
 import dresseurs as dresseurs_module
 import defi_stats as defi_stats_module
+import plus_ou_moins as plus_ou_moins_module
+import quiz as quiz_module
 import elevage as elevage_module
 import journal
 import pnj
@@ -1117,6 +1119,10 @@ async def on_ready():
         bot.loop.create_task(boucle_evenement_pokestop())
         bot.boucle_evenement_pokestop_lancee = True
 
+    if not getattr(bot, "boucle_quiz_lancee", False):
+        bot.loop.create_task(quiz_module.boucle_quiz(bot))
+        bot.boucle_quiz_lancee = True
+
     if not getattr(bot, "boucle_gladio_lancee", False):
         bot.loop.create_task(boucle_gladio_spontane())
         bot.boucle_gladio_lancee = True
@@ -1170,6 +1176,9 @@ async def on_message(message: discord.Message):
             except discord.HTTPException:
                 pass
             return
+
+    if message.channel.id == getattr(config, "CHANNEL_QUIZ_ID", None):
+        await quiz_module.verifier_reponse_texte(message)
 
     await bot.process_commands(message)
 
@@ -1527,6 +1536,18 @@ async def defi_stats_cmd(interaction: discord.Interaction, adversaire: discord.M
         view=vue,
     )
     await interaction.response.send_message(f"Défi envoyé dans {thread.mention} !", ephemeral=True)
+
+
+@bot.tree.command(
+    name="plus-ou-moins",
+    description="Mini-jeu solo : devine si le PC du prochain Pokémon est plus haut ou plus bas, enchaîne ta série !",
+)
+async def plus_ou_moins_cmd(interaction: discord.Interaction):
+    actuel = plus_ou_moins_module.tirer_pokemon_pc()
+    mystere = plus_ou_moins_module.tirer_pokemon_pc()
+    embed = plus_ou_moins_module.construire_embed_manche(actuel, mystere, 0)
+    vue = plus_ou_moins_module.VuePlusOuMoins(interaction.user.id, actuel, mystere, 0)
+    await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
 @bot.tree.command(name="equipe-combat", description="Compose ton équipe de 6 Pokémon pour les futurs combats")

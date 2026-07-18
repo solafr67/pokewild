@@ -416,6 +416,15 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS record_plus_ou_moins (
+            user_id INTEGER PRIMARY KEY,
+            meilleur_score INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS etat_combat_pokemon (
             user_id INTEGER NOT NULL,
             pokemon_nom TEXT NOT NULL,
@@ -944,6 +953,29 @@ def obtenir_toutes_paires_capturees() -> list:
     resultats = [(row["user_id"], row["pokemon_nom"]) for row in cur.fetchall()]
     conn.close()
     return resultats
+
+
+def obtenir_record_plus_ou_moins(user_id: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT meilleur_score FROM record_plus_ou_moins WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row["meilleur_score"] if row else 0
+
+
+def definir_record_plus_ou_moins(user_id: int, score: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO record_plus_ou_moins (user_id, meilleur_score) VALUES (?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET meilleur_score = excluded.meilleur_score
+        """,
+        (user_id, score),
+    )
+    conn.commit()
+    conn.close()
 
 
 def _assurer_joueur_existe(cur, user_id: int):

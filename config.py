@@ -112,6 +112,11 @@ COEFFICIENT_COURBE_NIVEAU_POKEMON = 25
 # --- Mini-jeu Défi Base Stat (pur fun, aucune récompense) ---
 DEFI_STATS_NB_ROUNDS = 5
 
+# --- Quiz communautaire multi-thèmes (Qui est-ce / Anagramme / Quiz de types / Trivia) ---
+CHANNEL_QUIZ_ID = 1528155287213572306
+QUIZ_TIMEOUT_QUESTION = 60  # secondes avant de révéler la réponse si personne ne trouve
+QUIZ_DELAI_PROCHAINE_QUESTION = 5  # pause entre deux questions
+
 # --- CT au Maître des Types : coût en Poké Dollars pour apprendre une attaque que le
 # Pokémon n'a pas encore débloquée par son niveau (ou qui ne se débloque jamais par
 # niveau — CT/tuteur/œuf uniquement dans les vrais jeux). Une attaque déjà débloquée par
