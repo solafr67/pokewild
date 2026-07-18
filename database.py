@@ -915,6 +915,25 @@ def obtenir_ct_possedees(user_id: int) -> set:
     return resultats
 
 
+def obtenir_paires_sans_niveau() -> list:
+    """Paires (user_id, pokemon_nom) qui ont au moins une capture mais aucune ligne dans
+    niveaux_pokemon — Pokémon capturés avant la mise en place du système de niveau.
+    Utilisé uniquement par la commande d'admin /backfill-niveaux."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT DISTINCT c.user_id AS user_id, c.pokemon_nom AS pokemon_nom
+        FROM captures c
+        LEFT JOIN niveaux_pokemon n ON n.user_id = c.user_id AND n.pokemon_nom = c.pokemon_nom
+        WHERE n.user_id IS NULL
+        """
+    )
+    resultats = [(row["user_id"], row["pokemon_nom"]) for row in cur.fetchall()]
+    conn.close()
+    return resultats
+
+
 def _assurer_joueur_existe(cur, user_id: int):
     """Crée l'entrée du joueur avec ses balls de départ s'il n'existe pas encore."""
     cur.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))

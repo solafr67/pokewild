@@ -29,6 +29,7 @@ import leveling
 import meteo
 import niveaux_pokemon
 from pokemon_data import (
+    ATTAQUES,
     EMOJI_BALLS,
     EMOJI_OBJETS_DIVERS,
     EMOJI_POKEDOLLAR,
@@ -1604,6 +1605,74 @@ async def give_xp(interaction: discord.Interaction, membre: discord.Member, mont
     if niveau_apres > niveau_avant:
         texte += f" (niveau {niveau_avant} → {niveau_apres})"
     await interaction.response.send_message(texte)
+
+
+@bot.tree.command(
+    name="backfill-niveaux",
+    description="[Admin] Attribue un niveau (grille de rareté) aux Pokémon capturés avant le système de niveau",
+)
+@app_commands.checks.has_permissions(administrator=True)
+async def backfill_niveaux(interaction: discord.Interaction):
+    await interaction.response.defer()
+
+    paires = database.obtenir_paires_sans_niveau()
+    compte = 0
+    for user_id, nom in paires:
+        pokemon = obtenir_pokemon_par_nom(nom)
+        if not pokemon:
+            continue
+        niveau = tirer_niveau_spawn(pokemon["rarete"])
+        database.definir_niveau_xp_pokemon(user_id, nom, niveau, niveaux_pokemon.xp_cumulee_pour_niveau(niveau))
+        compte += 1
+
+    journal.logger(f"🛠️ <@{interaction.user.id}> a lancé /backfill-niveaux : {compte} Pokémon mis à jour.")
+    await interaction.followup.send(
+        f"✅ Niveau attribué (selon la grille de spawn par rareté) à **{compte}** Pokémon "
+        f"(espèce × joueur) qui n'en avaient pas encore. Sans effet sur ceux qui ont déjà "
+        f"un niveau — relançable sans risque."
+    )
+
+
+@bot.tree.command(name="give-ct", description="[Admin] Donne la CT d'une attaque à un joueur (possédée pour toujours)")
+@app_commands.checks.has_permissions(administrator=True)
+async def give_ct(interaction: discord.Interaction, membre: discord.Member, attaque: str):
+    if attaque not in ATTAQUES:
+        await interaction.response.send_message(f"❌ Attaque **{attaque}** introuvable.", ephemeral=True)
+        return
+
+    if database.possede_ct(membre.id, attaque):
+        await interaction.response.send_message(
+            f"{membre.mention} possède déjà la CT de **{attaque}**.", ephemeral=True
+        )
+        return
+
+    database.acheter_ct(membre.id, attaque)
+    journal.logger(f"🛠️ <@{interaction.user.id}> a donné la CT de {attaque} à <@{membre.id}> (/give-ct).")
+    await interaction.response.send_message(f"✅ CT **{attaque}** donnée à {membre.mention} — utilisable pour toujours.")
+
+
+@bot.tree.command(
+    name="force-pokestop-dore",
+    description="[Admin] Déclenche immédiatement l'Heure de pointe PokéStop pour 30 minutes",
+)
+@app_commands.checks.has_permissions(administrator=True)
+async def force_pokestop_dore(interaction: discord.Interaction):
+    tz = ZoneInfo("Europe/Paris")
+    maintenant_dt = datetime.now(tz)
+    database.definir_parametre("pokestop_event_date", maintenant_dt.date().isoformat())
+    database.definir_parametre("pokestop_event_debut", str(int(maintenant_dt.timestamp())))
+    etat_jeu.heure_de_pointe_pokestop_active = True
+    await poster_message_pokestop_si_absent()
+
+    journal.logger(f"🛠️ <@{interaction.user.id}> a déclenché l'Heure de pointe PokéStop manuellement (/force-pokestop-dore).")
+    await interaction.response.send_message("🔥 **Heure de pointe PokéStop** déclenchée pour 30 minutes !")
+
+    channel = bot.get_channel(config.CHANNEL_POKESTOP_ID) if getattr(config, "CHANNEL_POKESTOP_ID", None) else None
+    if channel and channel.id != interaction.channel_id:
+        try:
+            await channel.send("🔥 **Heure de pointe au PokéStop !** Récompenses doublées pendant 30 minutes !")
+        except (discord.Forbidden, discord.HTTPException):
+            pass
 
 
 # ----------------------------------------------------------------------------
