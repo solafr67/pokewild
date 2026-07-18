@@ -71,11 +71,20 @@ XP_POKESTOP = 5
 # le niveau devient la progression via le jeu). Seuls les Pokémon de l'équipe de combat
 # active gagnent cette XP (capture, PokéStop...) — équipe vide = XP perdue.
 NIVEAU_MAX_PAR_RARETE = {
-    "commun": 50,
-    "peu_commun": 65,
-    "rare": 80,
-    "hyper_rare": 90,
+    "commun": 100,
+    "peu_commun": 100,
+    "rare": 100,
+    "hyper_rare": 100,
     "legendaire": 100,
+}
+# Fourchette de niveau (min, max) tirée aléatoirement à l'apparition d'un Pokémon
+# sauvage, selon sa rareté — affiché sur la carte de spawn au même titre que le PC.
+NIVEAU_SPAWN_PAR_RARETE = {
+    "commun": (1, 15),
+    "peu_commun": (10, 30),
+    "rare": (25, 45),
+    "hyper_rare": (35, 55),
+    "legendaire": (50, 70),
 }
 # XP donnée à CHAQUE Pokémon de l'équipe active (pas divisée entre eux) selon la rareté
 # du Pokémon capturé, et à chaque tirage PokéStop.

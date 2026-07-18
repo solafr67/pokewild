@@ -31,10 +31,11 @@ class SelectionBallView(discord.ui.View):
     sont trop faciles à mal viser. Des boutons pleine largeur, bien séparés, réduisent
     nettement les mauvais clics."""
 
-    def __init__(self, pokemon: dict, pc: int, vue_spawn: "VueSpawn", user_id: int):
+    def __init__(self, pokemon: dict, pc: int, niveau: int, vue_spawn: "VueSpawn", user_id: int):
         super().__init__(timeout=20)
         self.pokemon = pokemon
         self.pc = pc
+        self.niveau = niveau
         self.vue_spawn = vue_spawn
         self.user_id = user_id
 
@@ -101,6 +102,16 @@ class SelectionBallView(discord.ui.View):
             est_shiny = self.vue_spawn.force_shiny or (random.random() < chance_shiny)
 
             database.ajouter_capture(user_id, self.pokemon["nom"], self.pc, shiny=est_shiny)
+
+            # Le niveau suit l'espèce (comme le PC déjà affiché) : on ne l'écrase que s'il
+            # est plus haut que celui déjà acquis pour cette espèce, pour ne jamais faire
+            # régresser un Pokémon déjà entraîné via l'XP d'équipe.
+            niveau_actuel, _xp_actuel = database.obtenir_niveau_pokemon(user_id, self.pokemon["nom"])
+            if self.niveau > niveau_actuel:
+                database.definir_niveau_xp_pokemon(
+                    user_id, self.pokemon["nom"], self.niveau, niveaux_pokemon.xp_cumulee_pour_niveau(self.niveau)
+                )
+
             dollars_gagnes = round(10 * database.multiplicateur_boost(user_id, "argent"))
             database.ajouter_poke_dollars(user_id, dollars_gagnes)
             quetes_completees = database.incrementer_progression_quete(user_id, "capture", {"rarete": self.pokemon["rarete"]})
@@ -256,10 +267,11 @@ class SelectionBallView(discord.ui.View):
 class VueSpawn(discord.ui.View):
     """Vue attachée au message de spawn public. Chaque joueur peut tenter une seule capture."""
 
-    def __init__(self, pokemon: dict, pc: int, force_shiny: bool = False):
+    def __init__(self, pokemon: dict, pc: int, niveau: int, force_shiny: bool = False):
         super().__init__(timeout=None)  # le spawn suivant remplacera celui-ci, pas de timeout fixe
         self.pokemon = pokemon
         self.pc = pc
+        self.niveau = niveau
         self.tentatives = set()
         self.force_shiny = force_shiny
 
@@ -293,7 +305,7 @@ class VueSpawn(discord.ui.View):
         # plusieurs menus de sélection en parallèle pour tenter plusieurs fois.
         self.tentatives.add(user_id)
 
-        vue_selection = SelectionBallView(self.pokemon, self.pc, self, user_id)
+        vue_selection = SelectionBallView(self.pokemon, self.pc, self.niveau, self, user_id)
 
         nb_possedes = database.compter_captures_espece(user_id, self.pokemon["nom"])
         if nb_possedes > 0:
@@ -308,7 +320,7 @@ class VueSpawn(discord.ui.View):
         )
 
 
-def construire_embed_spawn(pokemon: dict, pc: int, force_shiny: bool = False) -> discord.Embed:
+def construire_embed_spawn(pokemon: dict, pc: int, niveau: int, force_shiny: bool = False) -> discord.Embed:
     from pokemon_data import COULEUR_RARETE, EMOJI_RARETE, affichage_types
 
     emoji_rarete = EMOJI_RARETE[pokemon["rarete"]]
@@ -322,6 +334,7 @@ def construire_embed_spawn(pokemon: dict, pc: int, force_shiny: bool = False) ->
     )
     embed.add_field(name="Type", value=types_affiches, inline=True)
     embed.add_field(name="PC", value=f"💪 {pc}", inline=True)
+    embed.add_field(name="Niveau", value=f"⭐ {niveau}", inline=True)
     embed.add_field(
         name="Rareté", value=f"{emoji_rarete} {pokemon['rarete'].replace('_', ' ').upper()}", inline=False
     )

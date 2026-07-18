@@ -41,6 +41,7 @@ from pokemon_data import (
     generer_pc,
     obtenir_pokemon_par_nom,
     tirer_boss_raid_par_etoile,
+    tirer_niveau_spawn,
     tirer_pokemon_aleatoire,
 )
 from boutique import construire_embed_boutique, VueBoutique
@@ -323,9 +324,10 @@ async def envoyer_spawn(
         pokemon = tirer_pokemon_aleatoire(poids_rarete, multiplicateurs_types)
 
     pc = generer_pc(pokemon)
+    niveau = tirer_niveau_spawn(pokemon["rarete"])
 
-    embed = construire_embed_spawn(pokemon, pc, force_shiny=force_shiny)
-    vue = VueSpawn(pokemon, pc, force_shiny=force_shiny)
+    embed = construire_embed_spawn(pokemon, pc, niveau, force_shiny=force_shiny)
+    vue = VueSpawn(pokemon, pc, niveau, force_shiny=force_shiny)
     message = await channel.send(embed=embed, view=vue)
 
     # Suivi en base le temps que le spawn est affiché : sa vue n'étant pas persistante

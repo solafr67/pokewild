@@ -171,7 +171,7 @@ class VueGestionAttaques(discord.ui.View):
         nb_pages = max(1, (len(self.attaques_dispo) + ATTAQUES_PAR_PAGE - 1) // ATTAQUES_PAR_PAGE)
         embed.set_footer(
             text=(
-                f"Niv. {self.niveau} — {EMOJI_POKEDOLLAR} {solde} — "
+                f"Niv. {self.niveau} — {solde} PD — "
                 f"{len(self.attaques_dispo)} attaques — page {self.page + 1}/{nb_pages}"
             )
         )
@@ -197,7 +197,7 @@ class VueGestionAttaques(discord.ui.View):
         for nom in page_attaques:
             attaque = obtenir_attaque(nom)
             if attaque_necessite_ct(self.pokemon, nom, self.niveau):
-                description = f"🔒 CT — {prix_ct(nom)} {EMOJI_POKEDOLLAR}"
+                description = f"🔒 CT — {prix_ct(nom)} PD"
             else:
                 description = _description_attaque(nom)
             options.append(

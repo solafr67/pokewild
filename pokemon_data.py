@@ -411,6 +411,13 @@ def generer_pc(pokemon: dict) -> int:
     return min(pc, config.PC_MAXIMUM)
 
 
+def tirer_niveau_spawn(rarete: str) -> int:
+    """Tire le niveau d'un Pokémon sauvage à son apparition, selon sa rareté
+    (config.NIVEAU_SPAWN_PAR_RARETE)."""
+    mini, maxi = config.NIVEAU_SPAWN_PAR_RARETE.get(rarete, (1, 15))
+    return random.randint(mini, maxi)
+
+
 def calculer_pv_max(pc: int) -> int:
     """Calcule les PV de combat max d'un Pokémon à partir de son PC."""
     return max(1, round(pc * config.FACTEUR_PV_PAR_PC))
