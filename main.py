@@ -2026,17 +2026,9 @@ async def echanger(interaction: discord.Interaction, membre: discord.Member):
 
 @bot.tree.command(name="maitre-types", description="Rends visite au Maître des Types pour gérer les attaques de tes Pokémon")
 async def maitre_types_cmd(interaction: discord.Interaction):
-    noms_equipe = database.obtenir_equipe_combat(interaction.user.id)
-    if not noms_equipe:
-        await interaction.response.send_message(
-            "*« Reviens me voir quand tu auras configuré ton équipe de combat (`/equipe-combat`) ! »*",
-            ephemeral=True,
-        )
-        return
-    vue = maitre_types_module.VueChoixPokemonAttaques(interaction.user.id)
-    await interaction.response.send_message(
-        "*« Quel Pokémon veux-tu entraîner ? »*", view=vue, ephemeral=True
-    )
+    embed = maitre_types_module.construire_embed_maitre()
+    vue = maitre_types_module.VueMaitreTypes()
+    await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
 @bot.tree.command(name="exploration", description="Ouvre le Centre des Explorations pour gérer tes équipes en exploration")
