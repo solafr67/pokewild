@@ -1,4 +1,4 @@
 __pycache__/
 *.pyc
 .env
-pokebot.sqlite3
+pokebot.sqlite3venv/
