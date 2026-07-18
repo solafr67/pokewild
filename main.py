@@ -1449,34 +1449,44 @@ async def equipe(interaction: discord.Interaction, nom: app_commands.Choice[str]
         app_commands.Choice(name="Capturés", value="captures"),
     ],
 )
-@app_commands.describe(generation="Filtrer par génération (1 à 9)")
+@app_commands.describe(
+    generation="Filtrer par génération (1 à 9)",
+    membre="Voir le pokédex d'un autre joueur (pratique pour les échanges) — toi par défaut",
+)
 async def pokedex(
     interaction: discord.Interaction,
     rarete: app_commands.Choice[str] = None,
     tri: app_commands.Choice[str] = None,
     generation: app_commands.Range[int, 1, 9] = None,
     filtre_capture: app_commands.Choice[str] = None,
+    membre: discord.Member = None,
 ):
     filtre_rarete = None if (rarete is None or rarete.value == "toutes") else rarete.value
     valeur_tri = tri.value if tri else "alphabetique"
     valeur_filtre_capture = None if (filtre_capture is None or filtre_capture.value == "tous") else filtre_capture.value
+    cible = membre or interaction.user
 
     vue = pokedex_module.VuePokedex(
-        interaction.user,
+        cible,
         filtre_rarete=filtre_rarete,
         filtre_generation=generation,
         tri=valeur_tri,
         filtre_capture=valeur_filtre_capture,
+        proprietaire_id=interaction.user.id,
     )
     await interaction.response.send_message(embed=vue.construire_embed(), view=vue)
 
 
 @bot.tree.command(name="pokedex-info", description="Affiche la fiche détaillée d'un Pokémon précis")
-async def pokedex_info(interaction: discord.Interaction, nom: str):
-    embed = pokedex_module.construire_embed_fiche(interaction.user.id, nom)
+@app_commands.describe(membre="Voir la fiche chez un autre joueur (pratique pour les échanges) — toi par défaut")
+async def pokedex_info(interaction: discord.Interaction, nom: str, membre: discord.Member = None):
+    cible = membre or interaction.user
+    embed = pokedex_module.construire_embed_fiche(cible.id, nom)
     if embed is None:
         await interaction.response.send_message(f"❌ Pokémon **{nom}** introuvable dans la base.", ephemeral=True)
         return
+    if membre:
+        embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url=membre.display_avatar.url)
     await interaction.response.send_message(embed=embed)
 
 

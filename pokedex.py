@@ -126,9 +126,11 @@ class VuePokedex(discord.ui.View):
         tri: str = "alphabetique",
         filtre_capture: str = None,
         page: int = 0,
+        proprietaire_id: int = None,
     ):
         super().__init__(timeout=180)
-        self.user = user
+        self.user = user  # de qui on affiche le pokédex
+        self.proprietaire_id = proprietaire_id if proprietaire_id is not None else user.id  # qui a le droit d'interagir
         self.filtre_rarete = filtre_rarete
         self.filtre_generation = filtre_generation
         self.tri = tri
@@ -228,8 +230,10 @@ class VuePokedex(discord.ui.View):
         return embed
 
     async def _verifier_proprietaire(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id != self.user.id:
-            await interaction.response.send_message("Ce n'est pas ton pokédex !", ephemeral=True)
+        if interaction.user.id != self.proprietaire_id:
+            await interaction.response.send_message(
+                "Seule la personne qui a lancé cette commande peut naviguer ici !", ephemeral=True
+            )
             return False
         return True
 
