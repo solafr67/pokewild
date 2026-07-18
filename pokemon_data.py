@@ -354,6 +354,32 @@ def attaques_verrouillees_par_niveau(pokemon: dict, niveau: int) -> list:
     verrouillees = [(nom, palier) for nom, palier in movepool.items() if palier > niveau and nom in ATTAQUES]
     return sorted(verrouillees, key=lambda t: t[1])
 
+
+def attaque_necessite_ct(pokemon: dict, nom_attaque: str, niveau: int) -> bool:
+    """True si cette attaque n'est PAS encore connue naturellement au niveau actuel du
+    Pokémon (donc une CT payante est nécessaire pour l'apprendre tout de suite, comme
+    dans les jeux). Une attaque sans palier connu (CT/tuteur/œuf uniquement) nécessite
+    toujours une CT."""
+    if not pokemon:
+        return True
+    palier = (pokemon.get("movepool_niveaux") or {}).get(nom_attaque)
+    if palier is None:
+        return True
+    return niveau < palier
+
+
+def prix_ct(nom_attaque: str) -> int:
+    """Prix en Poké Dollars pour apprendre cette attaque via CT."""
+    attaque = obtenir_attaque(nom_attaque)
+    puissance = attaque.get("puissance")
+    if not puissance:
+        return config.PRIX_CT_STATUT
+    prix = config.PRIX_CT_PAR_PUISSANCE[0]
+    for seuil, valeur in sorted(config.PRIX_CT_PAR_PUISSANCE.items()):
+        if puissance >= seuil:
+            prix = valeur
+    return prix
+
 # Poids de tirage par rareté, pour le channel classique et le channel VIP
 POIDS_RARETE_CLASSIQUE = {"commun": 60, "peu_commun": 26, "rare": 9, "hyper_rare": 3, "legendaire": 2}
 POIDS_RARETE_VIP = {"commun": 45, "peu_commun": 30, "rare": 15, "hyper_rare": 6, "legendaire": 4}

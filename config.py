@@ -93,6 +93,19 @@ XP_POKEMON_POKESTOP = 20
 # retendre toute la courbe si le rythme ne convient pas.
 COEFFICIENT_COURBE_NIVEAU_POKEMON = 25
 
+# --- CT au Maître des Types : coût en Poké Dollars pour apprendre une attaque que le
+# Pokémon n'a pas encore débloquée par son niveau (ou qui ne se débloque jamais par
+# niveau — CT/tuteur/œuf uniquement dans les vrais jeux). Une attaque déjà débloquée par
+# le niveau reste gratuite à équiper, comme dans les jeux (le Pokémon la connaît déjà).
+PRIX_CT_STATUT = 150  # attaque sans dégâts (statut, buff/debuff...)
+PRIX_CT_PAR_PUISSANCE = {  # puissance minimale -> prix (le seuil le plus haut atteint s'applique)
+    0: 120,
+    40: 200,
+    70: 350,
+    90: 550,
+    120: 900,
+}
+
 # --- Stockage des Pokémon et objets (extensible en boutique) ---
 LIMITE_STOCKAGE_POKEMON_BASE = 300
 LIMITE_STOCKAGE_OBJETS_BASE = 50

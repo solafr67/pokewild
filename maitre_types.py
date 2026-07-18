@@ -3,12 +3,15 @@ import discord
 import database
 from pokemon_data import (
     ATTAQUES,
+    EMOJI_POKEDOLLAR,
     EMOJI_TYPES,
     affichage_types,
+    attaque_necessite_ct,
     attaques_apprenables,
     attaques_verrouillees_par_niveau,
     obtenir_attaque,
     obtenir_pokemon_par_nom,
+    prix_ct,
     sprite_pokemon,
 )
 
@@ -42,15 +45,17 @@ def construire_embed_maitre() -> discord.Embed:
     embed = discord.Embed(
         title="🧙 Le Maître des Types",
         description=(
-            "*« Approche, dresseur ! Je peux enseigner à tes Pokémon n'importe quelle "
-            "attaque qu'ils sont capables d'apprendre. Choisis bien : chaque Pokémon ne "
-            "peut retenir que 4 attaques à la fois. »*\n\n"
+            "*« Approche, dresseur ! Tes Pokémon apprennent gratuitement les attaques "
+            "que leur niveau leur permet déjà. Pour le reste — ou pour ne pas attendre "
+            "d'avoir le niveau requis — j'ai des CT, contre quelques Poké Dollars. "
+            "Choisis bien : chaque Pokémon ne peut retenir que 4 attaques à la fois. »*\n\n"
             "Clique sur le bouton ci-dessous pour gérer les attaques de ton équipe de combat."
         ),
         color=discord.Color.purple(),
     )
     embed.set_footer(text="Sans attaque équipée, tes Pokémon utiliseront Charge (40 pcs) par défaut.")
     return embed
+
 
 
 class VueMaitreTypes(discord.ui.View):
@@ -121,8 +126,12 @@ class VueGestionAttaques(discord.ui.View):
         self.slot_selectionne = 1
         self.page = 0
         pokemon = obtenir_pokemon_par_nom(pokemon_nom)
+        self.pokemon = pokemon
         self.niveau, _xp = database.obtenir_niveau_pokemon(user_id, pokemon_nom)
-        self.attaques_dispo = attaques_apprenables(pokemon, self.niveau)
+        # Liste COMPLÈTE (pas filtrée par niveau) : les attaques pas encore débloquées
+        # restent visibles, mais nécessiteront une CT payante pour être équipées tout de
+        # suite au lieu d'attendre le niveau requis.
+        self.attaques_dispo = attaques_apprenables(pokemon)
         self._construire_composants()
 
     def construire_embed(self) -> discord.Embed:
@@ -152,11 +161,19 @@ class VueGestionAttaques(discord.ui.View):
             apercu = ", ".join(f"{nom} (niv. {palier})" for nom, palier in verrouillees[:3])
             if len(verrouillees) > 3:
                 apercu += f", +{len(verrouillees) - 3} autre(s)"
-            embed.add_field(name="🔒 À venir par niveau", value=apercu, inline=False)
+            embed.add_field(
+                name="🔒 À venir par niveau (ou dès maintenant avec une CT)",
+                value=apercu,
+                inline=False,
+            )
 
+        solde = database.obtenir_poke_dollars(self.user_id)
         nb_pages = max(1, (len(self.attaques_dispo) + ATTAQUES_PAR_PAGE - 1) // ATTAQUES_PAR_PAGE)
         embed.set_footer(
-            text=f"Niv. {self.niveau} — {len(self.attaques_dispo)} attaques apprenables — page {self.page + 1}/{nb_pages}"
+            text=(
+                f"Niv. {self.niveau} — {EMOJI_POKEDOLLAR} {solde} — "
+                f"{len(self.attaques_dispo)} attaques — page {self.page + 1}/{nb_pages}"
+            )
         )
         return embed
 
@@ -179,10 +196,14 @@ class VueGestionAttaques(discord.ui.View):
         options = []
         for nom in page_attaques:
             attaque = obtenir_attaque(nom)
+            if attaque_necessite_ct(self.pokemon, nom, self.niveau):
+                description = f"🔒 CT — {prix_ct(nom)} {EMOJI_POKEDOLLAR}"
+            else:
+                description = _description_attaque(nom)
             options.append(
                 discord.SelectOption(
                     label=_label_attaque(nom)[:100],
-                    description=_description_attaque(nom)[:100],
+                    description=description[:100],
                     value=nom,
                     emoji=EMOJI_TYPES.get(attaque["type"]),  # seul endroit où Discord rend un émoji custom sur une option
                 )
@@ -235,7 +256,7 @@ class VueGestionAttaques(discord.ui.View):
                 return
             self.slot_selectionne = slot
             self._construire_composants()
-            await interaction.response.edit_message(embed=self.construire_embed(), view=self)
+            await interaction.response.edit_message(content=None, embed=self.construire_embed(), view=self)
         return callback
 
     async def _on_select_attaque(self, interaction: discord.Interaction):
@@ -254,40 +275,57 @@ class VueGestionAttaques(discord.ui.View):
                 )
                 return
 
+        texte_ct = ""
+        if attaque_necessite_ct(self.pokemon, nom, self.niveau):
+            cout = prix_ct(nom)
+            solde = database.obtenir_poke_dollars(self.user_id)
+            if solde < cout:
+                await interaction.response.send_message(
+                    f"*« Cette attaque nécessite une CT à {cout} {EMOJI_POKEDOLLAR}, "
+                    f"mais tu n'as que {solde} {EMOJI_POKEDOLLAR}. »*",
+                    ephemeral=True,
+                )
+                return
+            database.ajouter_poke_dollars(self.user_id, -cout)
+            texte_ct = f" (CT achetée : -{cout} {EMOJI_POKEDOLLAR})"
+
         database.equiper_attaque(self.user_id, self.pokemon_nom, self.slot_selectionne, nom)
         self._construire_composants()
-        await interaction.response.edit_message(embed=self.construire_embed(), view=self)
+        contenu = f"✅ **{nom}** apprise !{texte_ct}" if texte_ct else None
+        await interaction.response.edit_message(content=contenu, embed=self.construire_embed(), view=self)
 
     async def _on_page_prec(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
             return
         self.page = max(0, self.page - 1)
         self._construire_composants()
-        await interaction.response.edit_message(embed=self.construire_embed(), view=self)
+        await interaction.response.edit_message(content=None, embed=self.construire_embed(), view=self)
 
     async def _on_page_suiv(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
             return
         self.page += 1
         self._construire_composants()
-        await interaction.response.edit_message(embed=self.construire_embed(), view=self)
+        await interaction.response.edit_message(content=None, embed=self.construire_embed(), view=self)
 
     async def _on_vider(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
             return
         database.retirer_attaque(self.user_id, self.pokemon_nom, self.slot_selectionne)
         self._construire_composants()
-        await interaction.response.edit_message(embed=self.construire_embed(), view=self)
+        await interaction.response.edit_message(content=None, embed=self.construire_embed(), view=self)
 
     async def _on_aleatoire(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
             return
-        # Tire 4 attaques distinctes au hasard parmi celles apprenables par ce Pokémon
-        # (priorité aux offensives, complétées par des attaques de statut s'il n'y en a pas assez)
+        # Tire 4 attaques distinctes au hasard parmi celles DÉJÀ débloquées gratuitement
+        # par le niveau (priorité aux offensives) — pas de CT facturée sans confirmation
+        # explicite du joueur via le menu déroulant.
         import random
 
-        offensives = [n for n in self.attaques_dispo if ATTAQUES[n].get("puissance")]
-        statuts = [n for n in self.attaques_dispo if not ATTAQUES[n].get("puissance")]
+        gratuites = [n for n in self.attaques_dispo if not attaque_necessite_ct(self.pokemon, n, self.niveau)]
+        offensives = [n for n in gratuites if ATTAQUES[n].get("puissance")]
+        statuts = [n for n in gratuites if not ATTAQUES[n].get("puissance")]
         random.shuffle(offensives)
         random.shuffle(statuts)
         tirage = (offensives[:3] + statuts)[:4] if len(offensives) >= 3 else (offensives + statuts)[:4]
@@ -299,7 +337,7 @@ class VueGestionAttaques(discord.ui.View):
             database.retirer_attaque(self.user_id, self.pokemon_nom, slot)
 
         self._construire_composants()
-        await interaction.response.edit_message(embed=self.construire_embed(), view=self)
+        await interaction.response.edit_message(content=None, embed=self.construire_embed(), view=self)
 
     async def _on_retour(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
