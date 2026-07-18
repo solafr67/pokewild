@@ -1,6 +1,7 @@
 import discord
 
 import database
+import niveaux_pokemon
 from pokemon_data import COULEUR_RARETE, EMOJI_POKEDEX, EMOJI_RARETE, POKEDEX, affichage_types, cle_tri_alphabetique_fr, obtenir_pokemon_par_nom, sprite_pokemon
 
 TAILLE_PAGE = 10
@@ -277,6 +278,11 @@ def construire_embed_fiche(user_id: int, nom_pokemon: str) -> discord.Embed:
         embed.add_field(name="Capturés", value=f"×{info['quantite']}", inline=True)
         embed.add_field(name="Meilleur PC", value=str(info["meilleur_pc"]), inline=True)
         embed.add_field(name="Shiny obtenu", value="✨ Oui" if info["shiny"] else "Non", inline=True)
+
+        niveau, _xp = database.obtenir_niveau_pokemon(user_id, pokemon["nom"])
+        niveau_max = niveaux_pokemon.niveau_max_pour_rarete(pokemon["rarete"])
+        embed.add_field(name="Niveau", value=f"⭐ {niveau}/{niveau_max}", inline=True)
+
         sprite_url = sprite_pokemon(pokemon, shiny=info["shiny"])
     else:
         embed.add_field(name="Statut", value="Non capturé", inline=False)
