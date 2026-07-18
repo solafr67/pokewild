@@ -2,8 +2,12 @@
 chaque round, les deux joueurs choisissent en secret la stat qu'ils pensent la plus haute
 pour cette espèce ; celui qui a misé sur la plus haute remporte le round. Le meilleur score
 après plusieurs rounds remporte le défi.
+
+Se déroule dans un fil Discord dédié (comme les combats PvP), supprimé automatiquement
+2 minutes après la fin du défi (accepté et joué jusqu'au bout, refusé, ou invitation expirée).
 """
 
+import asyncio
 import random
 
 import discord
@@ -20,6 +24,8 @@ STATS_DEFI = [
     ("vitesse", "Vitesse", "💨"),
 ]
 
+DELAI_SUPPRESSION_FIL = 120  # secondes après la fin du défi avant suppression auto du fil
+
 
 def _nom_stat(cle: str) -> str:
     return next(label for c, label, _ in STATS_DEFI if c == cle)
@@ -33,16 +39,31 @@ def tirer_pokemon_avec_stats() -> dict:
     return random.choice(candidats) if candidats else random.choice(POKEDEX)
 
 
-class VueDefiStats(discord.ui.View):
-    """Vue du duel en cours : un message public partagé par les deux joueurs, dont les
-    boutons enregistrent un choix en secret (réponse éphémère à celui qui clique) tant que
-    l'autre joueur n'a pas encore choisi pour ce round."""
+async def supprimer_fil_apres_delai(thread: discord.Thread, delai_secondes: int):
+    """Supprime le fil du défi après un délai, sans planter s'il a déjà disparu."""
+    await asyncio.sleep(delai_secondes)
+    try:
+        await thread.delete()
+    except Exception:
+        pass  # fil déjà supprimé, permissions manquantes, etc.
 
-    def __init__(self, membre1: discord.Member, membre2: discord.Member):
+
+def programmer_suppression_fil(bot, thread: discord.Thread):
+    bot.loop.create_task(supprimer_fil_apres_delai(thread, DELAI_SUPPRESSION_FIL))
+
+
+class VueDefiStats(discord.ui.View):
+    """Vue du duel en cours : un message partagé dans le fil dédié, dont les boutons
+    enregistrent un choix en secret (réponse éphémère à celui qui clique) tant que l'autre
+    joueur n'a pas encore choisi pour ce round."""
+
+    def __init__(self, membre1: discord.Member, membre2: discord.Member, bot, thread: discord.Thread):
         super().__init__(timeout=300)
         self.id1, self.id2 = membre1.id, membre2.id
         self.noms = {membre1.id: membre1.display_name, membre2.id: membre2.display_name}
         self.score = {membre1.id: 0, membre2.id: 0}
+        self.bot = bot
+        self.thread = thread
         self.round_actuel = 0
         self.historique = []
         self.termine = False
@@ -112,6 +133,12 @@ class VueDefiStats(discord.ui.View):
 
         await interaction.response.edit_message(embed=self._construire_embed(), view=self)
 
+        if self.termine:
+            await self.thread.send(
+                f"🗑️ Ce fil sera supprimé automatiquement dans {DELAI_SUPPRESSION_FIL // 60} minutes."
+            )
+            programmer_suppression_fil(self.bot, self.thread)
+
     def _construire_embed(self) -> discord.Embed:
         embed = discord.Embed(title="⚔️ Défi Base Stat", color=discord.Color.blurple())
 
@@ -146,15 +173,26 @@ class VueDefiStats(discord.ui.View):
     async def on_timeout(self):
         for item in self.children:
             item.disabled = True
+        # Personne n'a terminé le défi (abandon) : on nettoie le fil quand même.
+        if not self.termine:
+            try:
+                await self.thread.send(
+                    f"⌛ Défi abandonné (inactivité). Ce fil sera supprimé dans {DELAI_SUPPRESSION_FIL // 60} minutes."
+                )
+            except Exception:
+                pass
+            programmer_suppression_fil(self.bot, self.thread)
 
 
 class VueInvitationDefiStats(discord.ui.View):
     """Invitation avant de démarrer le duel — évite de lancer un défi non désiré."""
 
-    def __init__(self, challenger: discord.Member, adversaire: discord.Member):
+    def __init__(self, challenger: discord.Member, adversaire: discord.Member, bot, thread: discord.Thread):
         super().__init__(timeout=120)
         self.challenger = challenger
         self.adversaire = adversaire
+        self.bot = bot
+        self.thread = thread
 
         bouton_accepter = discord.ui.Button(label="Accepter", emoji="⚔️", style=discord.ButtonStyle.success)
         bouton_accepter.callback = self._on_accepter
@@ -168,7 +206,7 @@ class VueInvitationDefiStats(discord.ui.View):
         if interaction.user.id != self.adversaire.id:
             await interaction.response.send_message("Cette invitation ne t'est pas destinée !", ephemeral=True)
             return
-        vue = VueDefiStats(self.challenger, self.adversaire)
+        vue = VueDefiStats(self.challenger, self.adversaire, self.bot, self.thread)
         await interaction.response.edit_message(content=None, embed=vue._construire_embed(), view=vue)
 
     async def _on_refuser(self, interaction: discord.Interaction):
@@ -177,5 +215,19 @@ class VueInvitationDefiStats(discord.ui.View):
             return
         self.clear_items()
         await interaction.response.edit_message(
-            content=f"❌ {self.adversaire.display_name} n'a pas donné suite au défi.", embed=None, view=None
+            content=f"❌ {self.adversaire.display_name} n'a pas donné suite au défi. "
+            f"Ce fil sera supprimé dans {DELAI_SUPPRESSION_FIL // 60} minutes.",
+            embed=None,
+            view=None,
         )
+        programmer_suppression_fil(self.bot, self.thread)
+
+    async def on_timeout(self):
+        try:
+            await self.thread.send(
+                f"⌛ Invitation expirée (personne n'a répondu). Ce fil sera supprimé dans "
+                f"{DELAI_SUPPRESSION_FIL // 60} minutes."
+            )
+        except Exception:
+            pass
+        programmer_suppression_fil(self.bot, self.thread)

@@ -1503,12 +1503,30 @@ async def defi_stats_cmd(interaction: discord.Interaction, adversaire: discord.M
         await interaction.response.send_message("Tu ne peux pas défier un bot !", ephemeral=True)
         return
 
-    vue = defi_stats_module.VueInvitationDefiStats(interaction.user, adversaire)
-    await interaction.response.send_message(
+    if not isinstance(interaction.channel, (discord.TextChannel, discord.VoiceChannel)):
+        await interaction.response.send_message(
+            "Cette commande doit être utilisée dans un channel classique (pas un fil).", ephemeral=True
+        )
+        return
+
+    try:
+        thread = await interaction.channel.create_thread(
+            name=f"⚔️ Défi Base Stat : {interaction.user.display_name} vs {adversaire.display_name}",
+            type=discord.ChannelType.public_thread,
+        )
+        await thread.add_user(interaction.user)
+        await thread.add_user(adversaire)
+    except discord.HTTPException as e:
+        await interaction.response.send_message(f"❌ Impossible de créer le fil : {e}", ephemeral=True)
+        return
+
+    vue = defi_stats_module.VueInvitationDefiStats(interaction.user, adversaire, bot, thread)
+    await thread.send(
         f"⚔️ {adversaire.mention}, **{interaction.user.display_name}** te défie au **Défi Base Stat** ! "
         f"({config.DEFI_STATS_NB_ROUNDS} rounds — pur fun, aucune récompense). Tu acceptes ?",
         view=vue,
     )
+    await interaction.response.send_message(f"Défi envoyé dans {thread.mention} !", ephemeral=True)
 
 
 @bot.tree.command(name="equipe-combat", description="Compose ton équipe de 6 Pokémon pour les futurs combats")
