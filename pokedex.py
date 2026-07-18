@@ -54,6 +54,7 @@ def construire_lignes(
     filtre_generation: int = None,
     tri: str = "alphabetique",
     filtre_capture: str = None,  # None = tous, "non_captures", "captures"
+    recherche: str = None,
 ):
     """Retourne (lignes formatées, nb_captures_distinctes, total_especes).
     Chaque ligne est numérotée selon sa POSITION dans la liste actuellement triée et
@@ -70,6 +71,9 @@ def construire_lignes(
         especes = [p for p in especes if p["nom"] not in captures_par_nom]
     elif filtre_capture == "captures":
         especes = [p for p in especes if p["nom"] in captures_par_nom]
+    if recherche:
+        terme = recherche.lower()
+        especes = [p for p in especes if terme in p["nom"].lower()]
 
     if tri == "rarete":
         especes = sorted(especes, key=lambda p: (ORDRE_RARETE[p["rarete"]], cle_tri_alphabetique_fr(p["nom"])))
@@ -127,6 +131,7 @@ class VuePokedex(discord.ui.View):
         filtre_capture: str = None,
         page: int = 0,
         proprietaire_id: int = None,
+        recherche: str = None,
     ):
         super().__init__(timeout=180)
         self.user = user  # de qui on affiche le pokédex
@@ -136,6 +141,7 @@ class VuePokedex(discord.ui.View):
         self.tri = tri
         self.filtre_capture = filtre_capture
         self.page = page
+        self.recherche = recherche
         self._recalculer()
         self._construire_composants()
 
@@ -146,6 +152,7 @@ class VuePokedex(discord.ui.View):
             filtre_generation=self.filtre_generation,
             tri=self.tri,
             filtre_capture=self.filtre_capture,
+            recherche=self.recherche,
         )
         self.derniere_page = max(0, (len(self.lignes) - 1) // TAILLE_PAGE)
         self.page = min(self.page, self.derniere_page)
@@ -210,6 +217,22 @@ class VuePokedex(discord.ui.View):
         select_generation = discord.ui.Select(placeholder="Filtrer par génération...", row=3, options=options_generation)
         select_generation.callback = self._on_select_generation
         self.add_item(select_generation)
+
+        bouton_recherche = discord.ui.Button(
+            label=f"Recherche : {self.recherche}" if self.recherche else "Rechercher",
+            emoji="🔍",
+            style=discord.ButtonStyle.primary if self.recherche else discord.ButtonStyle.secondary,
+            row=4,
+        )
+        bouton_recherche.callback = self._on_rechercher
+        self.add_item(bouton_recherche)
+
+        if self.recherche:
+            bouton_effacer = discord.ui.Button(
+                label="Effacer la recherche", emoji="❌", style=discord.ButtonStyle.secondary, row=4
+            )
+            bouton_effacer.callback = self._on_effacer_recherche
+            self.add_item(bouton_effacer)
 
     def construire_embed(self) -> discord.Embed:
         debut = self.page * TAILLE_PAGE
@@ -285,6 +308,40 @@ class VuePokedex(discord.ui.View):
         self.filtre_generation = None if valeur == 0 else valeur
         self.page = 0
         await self._rafraichir(interaction)
+
+    async def _on_rechercher(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        await interaction.response.send_modal(ModalRecherchePokedex(self))
+
+    async def _on_effacer_recherche(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        self.recherche = None
+        self.page = 0
+        await self._rafraichir(interaction)
+
+
+class ModalRecherchePokedex(discord.ui.Modal):
+    """Fenêtre de saisie pour chercher un Pokémon précis dans le Pokédex."""
+
+    def __init__(self, vue_parente: "VuePokedex"):
+        super().__init__(title="Rechercher un Pokémon")
+        self.vue_parente = vue_parente
+        self.recherche_input = discord.ui.TextInput(
+            label="Nom (ou partie du nom)",
+            placeholder="Ex : Rat",
+            required=False,
+            default=vue_parente.recherche or "",
+        )
+        self.add_item(self.recherche_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        self.vue_parente.recherche = self.recherche_input.value.strip() or None
+        self.vue_parente.page = 0
+        self.vue_parente._recalculer()
+        self.vue_parente._construire_composants()
+        await interaction.response.edit_message(embed=self.vue_parente.construire_embed(), view=self.vue_parente)
 
 
 def construire_embed_fiche(user_id: int, nom_pokemon: str) -> discord.Embed:

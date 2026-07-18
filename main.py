@@ -1474,7 +1474,7 @@ async def pokedex(
         filtre_capture=valeur_filtre_capture,
         proprietaire_id=interaction.user.id,
     )
-    await interaction.response.send_message(embed=vue.construire_embed(), view=vue)
+    await interaction.response.send_message(embed=vue.construire_embed(), view=vue, ephemeral=True)
 
 
 @bot.tree.command(name="pokedex-info", description="Affiche la fiche détaillée d'un Pokémon précis")
