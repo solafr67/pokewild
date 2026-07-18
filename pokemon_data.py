@@ -304,6 +304,16 @@ ATTAQUES_RECHARGE = {
 }
 
 
+def toutes_attaques_utilisables() -> list:
+    """Toutes les attaques ayant un effet en jeu, tous Pokémon confondus (triées par
+    nom) — utilisé par la Boutique CT, qui n'est pas rattachée à un Pokémon précis."""
+    def utilisable(nom):
+        a = ATTAQUES[nom]
+        return bool(a.get("puissance") or a.get("stats") or a.get("ailment") or nom in ATTAQUES_TERRAIN)
+
+    return sorted(n for n in ATTAQUES if utilisable(n))
+
+
 def attaques_apprenables(pokemon: dict, niveau: int = None) -> list:
     """Liste triée des attaques apprenables par ce Pokémon, en excluant celles sans
     aucun effet en jeu (ni dégâts, ni stats, ni statut, ni effet de terrain géré).

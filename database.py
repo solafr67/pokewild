@@ -406,6 +406,16 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS ct_possedees (
+            user_id INTEGER NOT NULL,
+            nom_attaque TEXT NOT NULL,
+            PRIMARY KEY (user_id, nom_attaque)
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS etat_combat_pokemon (
             user_id INTEGER NOT NULL,
             pokemon_nom TEXT NOT NULL,
@@ -869,6 +879,40 @@ def definir_niveau_xp_pokemon(user_id: int, pokemon_nom: str, niveau: int, xp: i
     )
     conn.commit()
     conn.close()
+
+
+def possede_ct(user_id: int, nom_attaque: str) -> bool:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT 1 FROM ct_possedees WHERE user_id = ? AND nom_attaque = ?",
+        (user_id, nom_attaque),
+    )
+    trouve = cur.fetchone() is not None
+    conn.close()
+    return trouve
+
+
+def acheter_ct(user_id: int, nom_attaque: str):
+    """Enregistre la CT comme possédée définitivement par ce joueur — utilisable sur
+    n'importe lequel de ses Pokémon, sans limite, dès maintenant et pour toujours."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT OR IGNORE INTO ct_possedees (user_id, nom_attaque) VALUES (?, ?)",
+        (user_id, nom_attaque),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_ct_possedees(user_id: int) -> set:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT nom_attaque FROM ct_possedees WHERE user_id = ?", (user_id,))
+    resultats = {row["nom_attaque"] for row in cur.fetchall()}
+    conn.close()
+    return resultats
 
 
 def _assurer_joueur_existe(cur, user_id: int):

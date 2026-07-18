@@ -13,9 +13,17 @@ from pokemon_data import (
     obtenir_pokemon_par_nom,
     prix_ct,
     sprite_pokemon,
+    toutes_attaques_utilisables,
 )
 
 ATTAQUES_PAR_PAGE = 25  # limite Discord d'options par menu déroulant
+
+CATEGORIES_CT = {
+    "tous": "Toutes catégories",
+    "physical": "Physique",
+    "special": "Spécial",
+    "status": "Statut",
+}
 
 
 def _label_attaque(nom: str) -> str:
@@ -46,10 +54,12 @@ def construire_embed_maitre() -> discord.Embed:
         title="🧙 Le Maître des Types",
         description=(
             "*« Approche, dresseur ! Tes Pokémon apprennent gratuitement les attaques "
-            "que leur niveau leur permet déjà. Pour le reste — ou pour ne pas attendre "
-            "d'avoir le niveau requis — j'ai des CT, contre quelques Poké Dollars. "
-            "Choisis bien : chaque Pokémon ne peut retenir que 4 attaques à la fois. »*\n\n"
-            "Clique sur le bouton ci-dessous pour gérer les attaques de ton équipe de combat."
+            "que leur niveau leur permet déjà. Pour le reste, il te faut une CT — achète-la "
+            "une fois à ma boutique, elle est à toi pour toujours, utilisable sur "
+            "n'importe lequel de tes Pokémon, autant de fois que tu veux. Choisis bien : "
+            "chaque Pokémon ne peut retenir que 4 attaques à la fois. »*\n\n"
+            "Clique sur **Gérer les attaques** pour ton équipe de combat, ou **Boutique CT** "
+            "pour acheter de nouvelles attaques."
         ),
         color=discord.Color.purple(),
     )
@@ -83,6 +93,16 @@ class VueMaitreTypes(discord.ui.View):
         await interaction.response.send_message(
             "*« Quel Pokémon veux-tu entraîner ? »*", view=vue, ephemeral=True
         )
+
+    @discord.ui.button(
+        label="Boutique CT",
+        style=discord.ButtonStyle.secondary,
+        emoji="🏪",
+        custom_id="maitre_types_boutique_ct",
+    )
+    async def boutique(self, interaction: discord.Interaction, button: discord.ui.Button):
+        vue = VueBoutiqueCT(interaction.user.id)
+        await interaction.response.send_message(embed=vue.construire_embed(), view=vue, ephemeral=True)
 
 
 class VueChoixPokemonAttaques(discord.ui.View):
@@ -128,9 +148,10 @@ class VueGestionAttaques(discord.ui.View):
         pokemon = obtenir_pokemon_par_nom(pokemon_nom)
         self.pokemon = pokemon
         self.niveau, _xp = database.obtenir_niveau_pokemon(user_id, pokemon_nom)
+        self.possedees = database.obtenir_ct_possedees(user_id)
         # Liste COMPLÈTE (pas filtrée par niveau) : les attaques pas encore débloquées
-        # restent visibles, mais nécessiteront une CT payante pour être équipées tout de
-        # suite au lieu d'attendre le niveau requis.
+        # restent visibles — équipables gratuitement si la CT a déjà été achetée en
+        # boutique, sinon un rappel invite à aller l'acheter.
         self.attaques_dispo = attaques_apprenables(pokemon)
         self._construire_composants()
 
@@ -162,7 +183,7 @@ class VueGestionAttaques(discord.ui.View):
             if len(verrouillees) > 3:
                 apercu += f", +{len(verrouillees) - 3} autre(s)"
             embed.add_field(
-                name="🔒 À venir par niveau (ou dès maintenant avec une CT)",
+                name="🔒 À venir par niveau (ou dès maintenant avec une CT achetée)",
                 value=apercu,
                 inline=False,
             )
@@ -197,7 +218,7 @@ class VueGestionAttaques(discord.ui.View):
         for nom in page_attaques:
             attaque = obtenir_attaque(nom)
             if attaque_necessite_ct(self.pokemon, nom, self.niveau):
-                description = f"🔒 CT — {prix_ct(nom)} PD"
+                description = "🎟️ CT possédée" if nom in self.possedees else "🔒 CT non achetée"
             else:
                 description = _description_attaque(nom)
             options.append(
@@ -244,6 +265,10 @@ class VueGestionAttaques(discord.ui.View):
         bouton_aleatoire.callback = self._on_aleatoire
         self.add_item(bouton_aleatoire)
 
+        bouton_boutique = discord.ui.Button(label="Boutique CT", emoji="🏪", style=discord.ButtonStyle.secondary, row=3)
+        bouton_boutique.callback = self._on_boutique
+        self.add_item(bouton_boutique)
+
     async def _verifier(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("Ce n'est pas ta session !", ephemeral=True)
@@ -275,24 +300,17 @@ class VueGestionAttaques(discord.ui.View):
                 )
                 return
 
-        texte_ct = ""
-        if attaque_necessite_ct(self.pokemon, nom, self.niveau):
-            cout = prix_ct(nom)
-            solde = database.obtenir_poke_dollars(self.user_id)
-            if solde < cout:
-                await interaction.response.send_message(
-                    f"*« Cette attaque nécessite une CT à {cout} {EMOJI_POKEDOLLAR}, "
-                    f"mais tu n'as que {solde} {EMOJI_POKEDOLLAR}. »*",
-                    ephemeral=True,
-                )
-                return
-            database.ajouter_poke_dollars(self.user_id, -cout)
-            texte_ct = f" (CT achetée : -{cout} {EMOJI_POKEDOLLAR})"
+        if attaque_necessite_ct(self.pokemon, nom, self.niveau) and nom not in self.possedees:
+            await interaction.response.send_message(
+                f"*« Tu ne possèdes pas encore la CT de **{nom}**. Va la chercher à la "
+                f"Boutique CT ({prix_ct(nom)} {EMOJI_POKEDOLLAR}) ! »*",
+                ephemeral=True,
+            )
+            return
 
         database.equiper_attaque(self.user_id, self.pokemon_nom, self.slot_selectionne, nom)
         self._construire_composants()
-        contenu = f"✅ **{nom}** apprise !{texte_ct}" if texte_ct else None
-        await interaction.response.edit_message(content=contenu, embed=self.construire_embed(), view=self)
+        await interaction.response.edit_message(content=None, embed=self.construire_embed(), view=self)
 
     async def _on_page_prec(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
@@ -318,12 +336,16 @@ class VueGestionAttaques(discord.ui.View):
     async def _on_aleatoire(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
             return
-        # Tire 4 attaques distinctes au hasard parmi celles DÉJÀ débloquées gratuitement
-        # par le niveau (priorité aux offensives) — pas de CT facturée sans confirmation
-        # explicite du joueur via le menu déroulant.
+        # Tire 4 attaques distinctes au hasard parmi celles déjà équipables gratuitement
+        # (débloquées par le niveau, ou dont la CT a déjà été achetée) — priorité aux
+        # offensives. Jamais une attaque dont la CT n'est pas encore possédée : ça reste
+        # une décision d'achat explicite via la Boutique CT.
         import random
 
-        gratuites = [n for n in self.attaques_dispo if not attaque_necessite_ct(self.pokemon, n, self.niveau)]
+        gratuites = [
+            n for n in self.attaques_dispo
+            if not attaque_necessite_ct(self.pokemon, n, self.niveau) or n in self.possedees
+        ]
         offensives = [n for n in gratuites if ATTAQUES[n].get("puissance")]
         statuts = [n for n in gratuites if not ATTAQUES[n].get("puissance")]
         random.shuffle(offensives)
@@ -338,6 +360,195 @@ class VueGestionAttaques(discord.ui.View):
 
         self._construire_composants()
         await interaction.response.edit_message(content=None, embed=self.construire_embed(), view=self)
+
+    async def _on_retour(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        vue = VueChoixPokemonAttaques(self.user_id)
+        await interaction.response.edit_message(
+            content="*« Quel Pokémon veux-tu entraîner ? »*", embed=None, view=vue
+        )
+
+    async def _on_boutique(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        vue = VueBoutiqueCT(self.user_id)
+        await interaction.response.edit_message(content=None, embed=vue.construire_embed(), view=vue)
+
+
+class VueBoutiqueCT(discord.ui.View):
+    """Boutique de CT : indépendante d'un Pokémon précis. Une CT achetée est possédée
+    définitivement par le joueur et utilisable sur n'importe lequel de ses Pokémon,
+    autant de fois qu'il veut — contrairement à un achat ponctuel."""
+
+    def __init__(self, user_id: int, filtre_type: str = "tous", filtre_categorie: str = "tous", page: int = 0):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        self.filtre_type = filtre_type
+        self.filtre_categorie = filtre_categorie
+        self.page = page
+        self.possedees = database.obtenir_ct_possedees(user_id)
+        self._recalculer_liste()
+        self._construire_composants()
+
+    def _recalculer_liste(self):
+        noms = toutes_attaques_utilisables()
+        if self.filtre_type != "tous":
+            noms = [n for n in noms if obtenir_attaque(n)["type"] == self.filtre_type]
+        if self.filtre_categorie != "tous":
+            noms = [n for n in noms if obtenir_attaque(n).get("classe", "physical") == self.filtre_categorie]
+        self.attaques = noms
+        nb_pages = max(1, (len(self.attaques) + ATTAQUES_PAR_PAGE - 1) // ATTAQUES_PAR_PAGE)
+        self.page = min(self.page, nb_pages - 1)
+
+    def construire_embed(self) -> discord.Embed:
+        solde = database.obtenir_poke_dollars(self.user_id)
+        nb_pages = max(1, (len(self.attaques) + ATTAQUES_PAR_PAGE - 1) // ATTAQUES_PAR_PAGE)
+        embed = discord.Embed(
+            title="🏪 Boutique CT",
+            description=(
+                "*« Une CT achetée est à toi pour toujours — utilisable sur n'importe "
+                "lequel de tes Pokémon, sans limite. »*"
+            ),
+            color=discord.Color.purple(),
+        )
+        embed.set_footer(
+            text=(
+                f"{solde} PD — {len(self.possedees)} CT possédées — "
+                f"{len(self.attaques)} attaques (filtre) — page {self.page + 1}/{nb_pages}"
+            )
+        )
+        return embed
+
+    def _construire_composants(self):
+        self.clear_items()
+
+        options_type = [
+            discord.SelectOption(label="Tous les types", value="tous", default=self.filtre_type == "tous")
+        ]
+        for type_nom, emoji in EMOJI_TYPES.items():
+            options_type.append(
+                discord.SelectOption(
+                    label=type_nom.capitalize(), value=type_nom, emoji=emoji, default=self.filtre_type == type_nom
+                )
+            )
+        select_type = discord.ui.Select(placeholder="Filtrer par type...", options=options_type[:25], row=0)
+        select_type.callback = self._on_filtre_type
+        self.add_item(select_type)
+
+        options_cat = [
+            discord.SelectOption(label=label, value=valeur, default=self.filtre_categorie == valeur)
+            for valeur, label in CATEGORIES_CT.items()
+        ]
+        select_cat = discord.ui.Select(placeholder="Filtrer par catégorie...", options=options_cat, row=1)
+        select_cat.callback = self._on_filtre_categorie
+        self.add_item(select_cat)
+
+        debut = self.page * ATTAQUES_PAR_PAGE
+        page_attaques = self.attaques[debut : debut + ATTAQUES_PAR_PAGE]
+        options = []
+        for nom in page_attaques:
+            attaque = obtenir_attaque(nom)
+            description = "✅ Déjà possédée" if nom in self.possedees else f"{prix_ct(nom)} PD"
+            options.append(
+                discord.SelectOption(
+                    label=_label_attaque(nom)[:100],
+                    description=description[:100],
+                    value=nom,
+                    emoji=EMOJI_TYPES.get(attaque["type"]),
+                )
+            )
+        select_achat = discord.ui.Select(
+            placeholder="Choisis une CT à acheter...",
+            options=options if options else [discord.SelectOption(label="Aucune attaque avec ce filtre", value="none")],
+            disabled=not options,
+            row=2,
+        )
+        select_achat.callback = self._on_achat
+        self.add_item(select_achat)
+
+        nb_pages = max(1, (len(self.attaques) + ATTAQUES_PAR_PAGE - 1) // ATTAQUES_PAR_PAGE)
+        if nb_pages > 1:
+            bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=3, disabled=self.page == 0)
+            bouton_prec.callback = self._on_page_prec
+            self.add_item(bouton_prec)
+            bouton_suiv = discord.ui.Button(
+                label="▶", style=discord.ButtonStyle.secondary, row=3, disabled=self.page >= nb_pages - 1
+            )
+            bouton_suiv.callback = self._on_page_suiv
+            self.add_item(bouton_suiv)
+
+        bouton_retour = discord.ui.Button(label="Retour", emoji="↩️", style=discord.ButtonStyle.secondary, row=3)
+        bouton_retour.callback = self._on_retour
+        self.add_item(bouton_retour)
+
+    async def _verifier(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ta session !", ephemeral=True)
+            return False
+        return True
+
+    async def _on_filtre_type(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.filtre_type = interaction.data["values"][0]
+        self.page = 0
+        self._recalculer_liste()
+        self._construire_composants()
+        await interaction.response.edit_message(content=None, embed=self.construire_embed(), view=self)
+
+    async def _on_filtre_categorie(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.filtre_categorie = interaction.data["values"][0]
+        self.page = 0
+        self._recalculer_liste()
+        self._construire_composants()
+        await interaction.response.edit_message(content=None, embed=self.construire_embed(), view=self)
+
+    async def _on_page_prec(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.page = max(0, self.page - 1)
+        self._construire_composants()
+        await interaction.response.edit_message(content=None, embed=self.construire_embed(), view=self)
+
+    async def _on_page_suiv(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.page += 1
+        self._construire_composants()
+        await interaction.response.edit_message(content=None, embed=self.construire_embed(), view=self)
+
+    async def _on_achat(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        nom = interaction.data["values"][0]
+        if nom == "none":
+            return
+
+        if nom in self.possedees:
+            await interaction.response.send_message(f"Tu possèdes déjà la CT de **{nom}** !", ephemeral=True)
+            return
+
+        cout = prix_ct(nom)
+        solde = database.obtenir_poke_dollars(self.user_id)
+        if solde < cout:
+            await interaction.response.send_message(
+                f"*« Il te faut {cout} {EMOJI_POKEDOLLAR}, tu n'as que {solde} {EMOJI_POKEDOLLAR}. »*",
+                ephemeral=True,
+            )
+            return
+
+        database.ajouter_poke_dollars(self.user_id, -cout)
+        database.acheter_ct(self.user_id, nom)
+        self.possedees.add(nom)
+        self._construire_composants()
+        await interaction.response.edit_message(
+            content=f"✅ CT **{nom}** achetée pour {cout} {EMOJI_POKEDOLLAR} — utilisable sur tous tes Pokémon dès maintenant.",
+            embed=self.construire_embed(),
+            view=self,
+        )
 
     async def _on_retour(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
