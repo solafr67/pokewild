@@ -77,42 +77,59 @@ DERNIERE_ACTIVITE_BOUCLES: dict[str, float] = {}
 # ----------------------------------------------------------------------------
 
 def construire_embed_pokestop() -> discord.Embed:
-    """Embed du message fixe du PokéStop, avec cooldown et récompenses possibles."""
+    """Embed du message fixe du PokéStop, avec cooldown et récompenses possibles.
+    Pendant l'Heure de pointe, les quantités/chances affichées reflètent le vrai
+    multiplicateur en cours, pas les valeurs de base."""
     minutes_cooldown = config.COOLDOWN_POKESTOP // 60
+    actif = etat_jeu.heure_de_pointe_pokestop_active
+    mult = config.MULTIPLICATEUR_HEURE_DE_POINTE if actif else 1.0
+
+    def plage(mini, maxi):
+        return f"{round(mini * mult)}-{round(maxi * mult)}" if maxi > mini else f"{round(mini * mult)}"
+
+    def pourcent(p):
+        return f"{min(100, p * 100 * mult):g}%"
 
     embed = discord.Embed(
         title="🔵 PokéStop",
         description="Clique sur le bouton ci-dessous pour tourner le disque et obtenir une récompense !",
-        color=discord.Color.gold() if etat_jeu.heure_de_pointe_pokestop_active else discord.Color.blue(),
+        color=discord.Color.gold() if actif else discord.Color.blue(),
     )
-    if etat_jeu.heure_de_pointe_pokestop_active:
+    if actif:
+        debut_str = database.obtenir_parametre("pokestop_event_debut")
+        tz = ZoneInfo("Europe/Paris")
+        texte_horaire = ""
+        if debut_str:
+            debut_dt = datetime.fromtimestamp(int(debut_str), tz)
+            fin_dt = debut_dt + timedelta(seconds=config.DUREE_HEURE_DE_POINTE_POKESTOP)
+            texte_horaire = f"\nDémarrée à **{debut_dt.strftime('%Hh%M')}**, se termine à **{fin_dt.strftime('%Hh%M')}** (heure de Paris)."
         embed.add_field(
             name="🔥 Heure de pointe en cours !",
-            value=f"Récompenses ×{config.MULTIPLICATEUR_HEURE_DE_POINTE:g} pendant encore quelques minutes !",
+            value=f"Récompenses ×{mult:g} pendant 30 minutes.{texte_horaire}",
             inline=False,
         )
     embed.add_field(name="⏱️ Recharge", value=f"Toutes les {minutes_cooldown} minutes (par joueur)", inline=False)
     embed.add_field(
         name="🎁 Récompenses garanties",
-        value=f"{EMOJI_POKEDOLLAR} 20 à 45 Poké Dollars à chaque tirage",
+        value=f"{EMOJI_POKEDOLLAR} {plage(20, 45)} Poké Dollars à chaque tirage",
         inline=False,
     )
     embed.add_field(
         name="✨ Bonus possible en plus (3 tirages indépendants)",
         value=(
-            f"**Balls** — {EMOJI_BALLS['pokeball']} ×2-5 (55%) / "
-            f"{EMOJI_BALLS['superball']} ×1-3 (30%) / "
-            f"{EMOJI_BALLS['hyperball']} ×1-3 (10%) / "
+            f"**Balls** — {EMOJI_BALLS['pokeball']} ×{plage(2, 5)} (55%) / "
+            f"{EMOJI_BALLS['superball']} ×{plage(1, 3)} (30%) / "
+            f"{EMOJI_BALLS['hyperball']} ×{plage(1, 3)} (10%) / "
             f"{EMOJI_BALLS['masterball']} ×1 (0,1%, rarissime !) / Rien (4,9%)\n"
-            f"**Potions** — {EMOJI_SOINS['potion']} ×2-5 (50%) / "
-            f"{EMOJI_SOINS['superpotion']} ×1-3 (28%) / "
-            f"{EMOJI_SOINS['hyperpotion']} ×1 (10%) / "
-            f"{EMOJI_SOINS['totalsoin']} ×1 (7%) / Rien (5%)\n"
+            f"**Potions** — {EMOJI_SOINS['potion']} ×{plage(2, 5)} (50%) / "
+            f"{EMOJI_SOINS['superpotion']} ×{plage(1, 3)} (28%) / "
+            f"{EMOJI_SOINS['hyperpotion']} ×{plage(1, 1)} (10%) / "
+            f"{EMOJI_SOINS['totalsoin']} ×{plage(1, 1)} (7%) / Rien (5%)\n"
             f"**Objet rare** — {EMOJI_OBJETS_DIVERS['cristal_mutation']} {NOM_OBJETS_DIVERS['cristal_mutation']} ×1 "
-            f"({round(config.CHANCE_CRISTAL_POKESTOP * 100)}%)\n"
+            f"({pourcent(config.CHANCE_CRISTAL_POKESTOP)})\n"
             f"**Œuf** — "
             + " / ".join(
-                f"{EMOJI_OBJETS_DIVERS[f'oeuf_{p}']} {NOM_OBJETS_DIVERS[f'oeuf_{p}']} ({poids * 100:g}%)"
+                f"{EMOJI_OBJETS_DIVERS[f'oeuf_{p}']} {NOM_OBJETS_DIVERS[f'oeuf_{p}']} ({pourcent(poids)})"
                 for p, poids in config.OEUF_POIDS_POKESTOP.items()
             )
         ),
@@ -212,11 +229,13 @@ class VuePokestop(discord.ui.View):
                     database.ajouter_balls(user_id, "superpotion", quantite)
                     texte_bonus_potion = f"{EMOJI_SOINS['superpotion']} {quantite}× Super Potion"
                 elif tirage_potion < seuil_hyperpotion:
-                    database.ajouter_balls(user_id, "hyperpotion", 1)
-                    texte_bonus_potion = f"{EMOJI_SOINS['hyperpotion']} 1× Hyper Potion"
+                    quantite = min(round(1 * mult_pointe), place_disponible_potion)
+                    database.ajouter_balls(user_id, "hyperpotion", quantite)
+                    texte_bonus_potion = f"{EMOJI_SOINS['hyperpotion']} {quantite}× Hyper Potion"
                 elif tirage_potion < seuil_totalsoin:
-                    database.ajouter_balls(user_id, "totalsoin", 1)
-                    texte_bonus_potion = f"{EMOJI_SOINS['totalsoin']} 1× Total Soin"
+                    quantite = min(round(1 * mult_pointe), place_disponible_potion)
+                    database.ajouter_balls(user_id, "totalsoin", quantite)
+                    texte_bonus_potion = f"{EMOJI_SOINS['totalsoin']} {quantite}× Total Soin"
                 # sinon (5%) : pas de potion ce tirage-ci
 
             # --- Tirage Objet rare (indépendant) : Cristal de Mutation, petite chance ---
@@ -1673,6 +1692,32 @@ async def force_pokestop_dore(interaction: discord.Interaction):
             await channel.send("🔥 **Heure de pointe au PokéStop !** Récompenses doublées pendant 30 minutes !")
         except (discord.Forbidden, discord.HTTPException):
             pass
+
+
+@bot.tree.command(
+    name="stop-pokestop-dore",
+    description="[Admin] Coupe l'Heure de pointe PokéStop en cours, sans en reprogrammer une autre aujourd'hui",
+)
+@app_commands.checks.has_permissions(administrator=True)
+async def stop_pokestop_dore(interaction: discord.Interaction):
+    if not etat_jeu.heure_de_pointe_pokestop_active:
+        await interaction.response.send_message("Il n'y a pas d'Heure de pointe en cours.", ephemeral=True)
+        return
+
+    # On pousse le créneau enregistré dans le passé (fin < maintenant) sans toucher à la
+    # date du jour : la boucle voit "déjà fini" au prochain passage et ne retire PAS un
+    # nouveau créneau aléatoire pour le reste de la journée.
+    tz = ZoneInfo("Europe/Paris")
+    maintenant_dt = datetime.now(tz)
+    debut_dans_le_passe = maintenant_dt - timedelta(seconds=config.DUREE_HEURE_DE_POINTE_POKESTOP + 60)
+    database.definir_parametre("pokestop_event_date", maintenant_dt.date().isoformat())
+    database.definir_parametre("pokestop_event_debut", str(int(debut_dans_le_passe.timestamp())))
+
+    etat_jeu.heure_de_pointe_pokestop_active = False
+    await poster_message_pokestop_si_absent()
+
+    journal.logger(f"🛠️ <@{interaction.user.id}> a coupé l'Heure de pointe PokéStop manuellement (/stop-pokestop-dore).")
+    await interaction.response.send_message("🛑 **Heure de pointe PokéStop** coupée.")
 
 
 # ----------------------------------------------------------------------------
