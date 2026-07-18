@@ -6,6 +6,7 @@ from pokemon_data import (
     EMOJI_TYPES,
     affichage_types,
     attaques_apprenables,
+    attaques_verrouillees_par_niveau,
     obtenir_attaque,
     obtenir_pokemon_par_nom,
     sprite_pokemon,
@@ -120,7 +121,8 @@ class VueGestionAttaques(discord.ui.View):
         self.slot_selectionne = 1
         self.page = 0
         pokemon = obtenir_pokemon_par_nom(pokemon_nom)
-        self.attaques_dispo = attaques_apprenables(pokemon)
+        self.niveau, _xp = database.obtenir_niveau_pokemon(user_id, pokemon_nom)
+        self.attaques_dispo = attaques_apprenables(pokemon, self.niveau)
         self._construire_composants()
 
     def construire_embed(self) -> discord.Embed:
@@ -144,9 +146,17 @@ class VueGestionAttaques(discord.ui.View):
         )
         if pokemon and sprite_pokemon(pokemon):
             embed.set_thumbnail(url=sprite_pokemon(pokemon))
+
+        verrouillees = attaques_verrouillees_par_niveau(pokemon, self.niveau) if pokemon else []
+        if verrouillees:
+            apercu = ", ".join(f"{nom} (niv. {palier})" for nom, palier in verrouillees[:3])
+            if len(verrouillees) > 3:
+                apercu += f", +{len(verrouillees) - 3} autre(s)"
+            embed.add_field(name="🔒 À venir par niveau", value=apercu, inline=False)
+
         nb_pages = max(1, (len(self.attaques_dispo) + ATTAQUES_PAR_PAGE - 1) // ATTAQUES_PAR_PAGE)
         embed.set_footer(
-            text=f"{len(self.attaques_dispo)} attaques apprenables — page {self.page + 1}/{nb_pages}"
+            text=f"Niv. {self.niveau} — {len(self.attaques_dispo)} attaques apprenables — page {self.page + 1}/{nb_pages}"
         )
         return embed
 

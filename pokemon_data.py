@@ -304,10 +304,17 @@ ATTAQUES_RECHARGE = {
 }
 
 
-def attaques_apprenables(pokemon: dict) -> list:
+def attaques_apprenables(pokemon: dict, niveau: int = None) -> list:
     """Liste triée des attaques apprenables par ce Pokémon, en excluant celles sans
     aucun effet en jeu (ni dégâts, ni stats, ni statut, ni effet de terrain géré).
-    Attaques offensives d'abord (par puissance décroissante), puis le reste (par nom)."""
+    Attaques offensives d'abord (par puissance décroissante), puis le reste (par nom).
+
+    Si `niveau` est fourni, les attaques apprises par montée de niveau (voir
+    movepool_niveaux, rempli par maj_movepool.py) dont le palier n'est pas encore atteint
+    sont exclues. Les attaques sans palier connu (CT/tuteur/œuf) restent apprenables sans
+    restriction pour l'instant — la restriction "il faut la CT" viendra avec le Maître des
+    Types payant. Si movepool_niveaux n'existe pas encore (script pas encore lancé) ou si
+    `niveau` vaut None, aucun filtrage par niveau n'est appliqué (comportement inchangé)."""
     if not pokemon:
         return [ATTAQUE_DEFAUT_NOM]
 
@@ -320,7 +327,13 @@ def attaques_apprenables(pokemon: dict) -> list:
             or nom in ATTAQUES_TERRAIN
         )
 
-    noms = [n for n in pokemon.get("attaques", []) if n in ATTAQUES and est_utilisable(n)]
+    def est_debloquee(nom):
+        if niveau is None:
+            return True
+        palier = pokemon.get("movepool_niveaux", {}).get(nom)
+        return palier is None or palier <= niveau
+
+    noms = [n for n in pokemon.get("attaques", []) if n in ATTAQUES and est_utilisable(n) and est_debloquee(n)]
     if not noms:
         return [ATTAQUE_DEFAUT_NOM]
 
@@ -329,6 +342,17 @@ def attaques_apprenables(pokemon: dict) -> list:
         return (0, -puissance) if puissance else (1, 0)
 
     return sorted(noms, key=lambda n: (cle_tri(n), n))
+
+
+def attaques_verrouillees_par_niveau(pokemon: dict, niveau: int) -> list:
+    """Liste (nom, palier_requis) des attaques que ce Pokémon apprendrait par montée de
+    niveau mais qu'il n'a pas encore débloquées, triée par palier croissant. Utilisée
+    pour indiquer au joueur ce qui l'attend aux prochains niveaux."""
+    if not pokemon:
+        return []
+    movepool = pokemon.get("movepool_niveaux") or {}
+    verrouillees = [(nom, palier) for nom, palier in movepool.items() if palier > niveau and nom in ATTAQUES]
+    return sorted(verrouillees, key=lambda t: t[1])
 
 # Poids de tirage par rareté, pour le channel classique et le channel VIP
 POIDS_RARETE_CLASSIQUE = {"commun": 60, "peu_commun": 26, "rare": 9, "hyper_rare": 3, "legendaire": 2}
