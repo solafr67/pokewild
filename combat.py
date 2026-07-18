@@ -7,6 +7,7 @@ import config
 import database
 import journal
 import leveling
+import niveaux_pokemon
 import quetes_ui
 from pokemon_data import (
     ATTAQUE_DEFAUT_NOM,
@@ -20,6 +21,7 @@ from pokemon_data import (
     obtenir_pokemon_par_nom,
     pp_max_attaque,
     sprite_pokemon,
+    stat_effective,
 )
 
 DUREE_TOUR = 45  # secondes avant qu'un tour se résolve automatiquement
@@ -304,6 +306,18 @@ async def resoudre_tour(combat_id: int) -> list:
     def pc_depuis_pv_max(pv_max):
         return pv_max / config.FACTEUR_PV_COMBAT_PVP
 
+    def stat_combat(user_id, nom, pc, cle_stat):
+        """Valeur effective d'une stat (attaque/defense/attaque_spe/defense_spe/vitesse)
+        pour ce combattant précis. Repli sur le PC brut si stats_detaillees n'est pas
+        encore disponible pour cette espèce (avant le premier passage de maj_stats.py)."""
+        pokemon = obtenir_pokemon_par_nom(nom)
+        if not pokemon:
+            return pc
+        niveau, _xp = database.obtenir_niveau_pokemon(user_id, nom)
+        niveau_max = niveaux_pokemon.niveau_max_pour_rarete(pokemon["rarete"])
+        valeur = stat_effective(pokemon, cle_stat, pc, niveau, niveau_max)
+        return valeur if valeur is not None else pc
+
     def mult_stage(stage: int) -> float:
         """Multiplicateur officiel Pokémon pour un stage de stat (-6..+6)."""
         return (2 + stage) / 2 if stage >= 0 else 2 / (2 - stage)
@@ -352,7 +366,7 @@ async def resoudre_tour(combat_id: int) -> list:
         if row is None or row["pv_actuels"] <= 0:
             continue
         boosts = database.obtenir_boosts(combat_id, user_id, nom)
-        vitesse = pc_depuis_pv_max(row["pv_max"]) * mult_stage(boosts["vit"])
+        vitesse = stat_combat(user_id, nom, pc_depuis_pv_max(row["pv_max"]), "vitesse") * mult_stage(boosts["vit"])
         statut_actuel = database.obtenir_statut(combat_id, user_id, nom)
         if statut_actuel and statut_actuel[0] == "paralysis":
             vitesse /= 2  # la paralysie ralentit
@@ -471,9 +485,23 @@ async def resoudre_tour(combat_id: int) -> list:
             boosts_def = database.obtenir_boosts(combat_id, adversaire_id, nom_def)
 
             pc = pc_depuis_pv_max(row_atk["pv_max"])
+            pc_def = pc_depuis_pv_max(row_def["pv_max"])
+
+            # Stat offensive de l'attaquant / stat défensive du défenseur (physique ou
+            # spécial selon la classe de l'attaque) — borné [0.5x, 2x] pour ajouter une
+            # vraie différenciation entre types de combattants SANS casser l'équilibrage
+            # déjà calibré sur le PC (voir PUISSANCE_DIVISEUR_COMBAT ci-dessus).
+            est_special = attaque.get("classe") == "special"
+            cle_off = "attaque_spe" if est_special else "attaque"
+            cle_def = "defense_spe" if est_special else "defense"
+            stat_off = stat_combat(user_id, nom_atk, pc, cle_off)
+            stat_def = stat_combat(adversaire_id, nom_def, pc_def, cle_def)
+            ratio_stat = min(2.0, max(0.5, stat_off / stat_def)) if stat_def else 1.0
+
             variance = random.uniform(0.85, 1.15)
             degats = max(1, round(
                 pc * attaque["puissance"] / PUISSANCE_DIVISEUR_COMBAT
+                * ratio_stat
                 * multi_type * stab * variance
                 * mult_stage(boosts_atk["atk"]) / mult_stage(boosts_def["def"])
             ))

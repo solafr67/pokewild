@@ -366,6 +366,30 @@ def calculer_pv_max(pc: int) -> int:
     return max(1, round(pc * config.FACTEUR_PV_PAR_PC))
 
 
+def stat_effective(pokemon: dict, cle_stat: str, pc: int, niveau: int, niveau_max: int):
+    """Valeur effective d'une stat de combat (attaque/defense/attaque_spe/defense_spe/
+    vitesse) pour un INDIVIDU précis, à partir de :
+    - la stat de base de l'espèce (PokéAPI, via stats_detaillees)
+    - son ratio PC individuel / base_pc (même rareté+variance que celle qui détermine
+      déjà le PC affiché — pas un second tirage séparé)
+    - son niveau, en pourcentage de son propre plafond (0.7x au niveau 1, 1.3x au plafond
+      quelle que soit la rareté — le niveau reflète l'entraînement, pas la rareté, qui est
+      déjà pleinement portée par le PC)
+
+    Retourne None si stats_detaillees n'est pas encore disponible (avant le premier
+    passage de maj_stats.py) — à charge de l'appelant de retomber sur l'ancien calcul
+    basé uniquement sur le PC dans ce cas."""
+    stats_base = pokemon.get("stats_detaillees")
+    if not stats_base or cle_stat not in stats_base:
+        return None
+
+    base_pc = pokemon.get("base_pc") or 1
+    ratio_individuel = pc / base_pc
+    ratio_niveau = 0.7 + 0.6 * (niveau - 1) / max(1, niveau_max - 1)
+
+    return max(1, round(stats_base[cle_stat] * ratio_individuel * ratio_niveau))
+
+
 def obtenir_pokemon_par_nom(nom: str):
     for p in POKEDEX:
         if p["nom"].lower() == nom.lower():
