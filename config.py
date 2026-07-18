@@ -10,7 +10,7 @@ CHANNEL_SPAWN_CLASSIQUE_ID = 1524432178694455346
 CHANNEL_SPAWN_VIP_ID = 1524433167874920509
 CHANNEL_POKESTOP_ID = 1524432806912983241
 CHANNEL_BOUTIQUE_ID = 1524503716982689827
-CHANNEL_MAITRE_TYPES_ID = 1525581819901251726  # crée un channel dédié et mets son ID ici pour afficher le PNJ (sinon /maitre-types marche partout)
+CHANNEL_MAITRE_TYPES_ID = None  # crée un channel dédié et mets son ID ici pour afficher le PNJ (sinon /maitre-types marche partout)
 CHANNEL_EXPLORATION_ID = 1525908138203807926
 CHANNEL_QUETES_ID = 1525970082264514730
 CHANNEL_AVENTURE_ID = 1526201523867226192
@@ -66,6 +66,13 @@ XP_PAR_RARETE = {
 }
 XP_BONUS_SHINY = 20
 XP_POKESTOP = 5
+
+# --- Heure de pointe PokéStop : un créneau de 30 min tiré aléatoirement chaque jour
+# entre 9h et 23h (heure de Paris), pendant lequel les récompenses sont meilleures.
+DUREE_HEURE_DE_POINTE_POKESTOP = 30 * 60
+HEURE_DEBUT_FENETRE_POINTE = 9
+HEURE_FIN_FENETRE_POINTE = 23
+MULTIPLICATEUR_HEURE_DE_POINTE = 2.0  # Poké Dollars et quantités d'objets doublés
 
 # --- Niveau par Pokémon (coexiste avec le PC : le PC reste la mesure de potentiel/IV,
 # le niveau devient la progression via le jeu). Seuls les Pokémon de l'équipe de combat

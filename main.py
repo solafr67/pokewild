@@ -1,6 +1,8 @@
 import asyncio
 import random
 import time
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import discord
 from discord import app_commands
@@ -80,8 +82,14 @@ def construire_embed_pokestop() -> discord.Embed:
     embed = discord.Embed(
         title="🔵 PokéStop",
         description="Clique sur le bouton ci-dessous pour tourner le disque et obtenir une récompense !",
-        color=discord.Color.blue(),
+        color=discord.Color.gold() if etat_jeu.heure_de_pointe_pokestop_active else discord.Color.blue(),
     )
+    if etat_jeu.heure_de_pointe_pokestop_active:
+        embed.add_field(
+            name="🔥 Heure de pointe en cours !",
+            value=f"Récompenses ×{config.MULTIPLICATEUR_HEURE_DE_POINTE:g} pendant encore quelques minutes !",
+            inline=False,
+        )
     embed.add_field(name="⏱️ Recharge", value=f"Toutes les {minutes_cooldown} minutes (par joueur)", inline=False)
     embed.add_field(
         name="🎁 Récompenses garanties",
@@ -142,8 +150,12 @@ class VuePokestop(discord.ui.View):
 
         database.marquer_pokestop_utilise(user_id)
 
+        mult_pointe = config.MULTIPLICATEUR_HEURE_DE_POINTE if etat_jeu.heure_de_pointe_pokestop_active else 1.0
+
         # Poké Dollars garantis à chaque tirage
-        montant_dollars = round(random.randint(20, 45) * database.multiplicateur_boost(user_id, "argent"))
+        montant_dollars = round(
+            random.randint(20, 45) * database.multiplicateur_boost(user_id, "argent") * mult_pointe
+        )
         database.ajouter_poke_dollars(user_id, montant_dollars)
         quetes_completees_pokestop = database.incrementer_progression_quete(user_id, "pokestop")
 
@@ -163,15 +175,15 @@ class VuePokestop(discord.ui.View):
             # --- Tirage ball ---
             tirage_ball = random.random()
             if tirage_ball < 0.55:
-                quantite = min(random.randint(2, 5), place_disponible)
+                quantite = min(round(random.randint(2, 5) * mult_pointe), place_disponible)
                 database.ajouter_balls(user_id, "pokeball", quantite)
                 texte_bonus_ball = f"{EMOJI_BALLS['pokeball']} {quantite}× Poké Ball"
             elif tirage_ball < 0.85:
-                quantite = min(random.randint(1, 3), place_disponible)
+                quantite = min(round(random.randint(1, 3) * mult_pointe), place_disponible)
                 database.ajouter_balls(user_id, "superball", quantite)
                 texte_bonus_ball = f"{EMOJI_BALLS['superball']} {quantite}× Super Ball"
             elif tirage_ball < 0.95:
-                quantite = min(random.randint(1, 3), place_disponible)
+                quantite = min(round(random.randint(1, 3) * mult_pointe), place_disponible)
                 database.ajouter_balls(user_id, "hyperball", quantite)
                 texte_bonus_ball = f"{EMOJI_BALLS['hyperball']} {quantite}× Hyper Ball"
             elif tirage_ball < 0.951:  # 0,1% de chance, inchangé
@@ -191,11 +203,11 @@ class VuePokestop(discord.ui.View):
                 seuil_totalsoin = seuil_hyperpotion + config.POTIONS_POIDS_POKESTOP["totalsoin"]
 
                 if tirage_potion < seuil_potion:
-                    quantite = min(random.randint(2, 5), place_disponible_potion)
+                    quantite = min(round(random.randint(2, 5) * mult_pointe), place_disponible_potion)
                     database.ajouter_balls(user_id, "potion", quantite)
                     texte_bonus_potion = f"{EMOJI_SOINS['potion']} {quantite}× Potion"
                 elif tirage_potion < seuil_superpotion:
-                    quantite = min(random.randint(1, 3), place_disponible_potion)
+                    quantite = min(round(random.randint(1, 3) * mult_pointe), place_disponible_potion)
                     database.ajouter_balls(user_id, "superpotion", quantite)
                     texte_bonus_potion = f"{EMOJI_SOINS['superpotion']} {quantite}× Super Potion"
                 elif tirage_potion < seuil_hyperpotion:
@@ -208,7 +220,7 @@ class VuePokestop(discord.ui.View):
 
             # --- Tirage Objet rare (indépendant) : Cristal de Mutation, petite chance ---
             objets_actuels_apres_potion = database.compter_objets_totaux(user_id)
-            if objets_actuels_apres_potion < limite_objets and random.random() < config.CHANCE_CRISTAL_POKESTOP:
+            if objets_actuels_apres_potion < limite_objets and random.random() < min(1.0, config.CHANCE_CRISTAL_POKESTOP * mult_pointe):
                 database.ajouter_balls(user_id, "cristal_mutation", 1)
                 texte_bonus_rare = f"{EMOJI_OBJETS_DIVERS['cristal_mutation']} 1× {NOM_OBJETS_DIVERS['cristal_mutation']}"
             else:
@@ -219,7 +231,10 @@ class VuePokestop(discord.ui.View):
             objets_actuels_apres_rare = database.compter_objets_totaux(user_id)
             texte_bonus_oeuf = None
             if objets_actuels_apres_rare < limite_objets:
-                tirage_oeuf = random.random()
+                # Diviser le tirage par le multiplicateur resserre la plage vers le bas,
+                # ce qui augmente la chance de tomber sous un des seuils — sans changer
+                # la répartition relative entre paliers d'œuf.
+                tirage_oeuf = random.random() / mult_pointe
                 seuil = 0.0
                 for palier, poids in config.OEUF_POIDS_POKESTOP.items():
                     seuil += poids
@@ -233,6 +248,10 @@ class VuePokestop(discord.ui.View):
             title="🎁 Résultat du disque",
             color=discord.Color.gold(),
         )
+        if mult_pointe > 1.0:
+            embed_resultat.add_field(
+                name="🔥 Heure de pointe !", value=f"Récompenses ×{mult_pointe:g}", inline=False
+            )
         embed_resultat.add_field(name="Poké Dollars", value=f"{EMOJI_POKEDOLLAR} +{montant_dollars}", inline=False)
         if texte_bonus_ball:
             embed_resultat.add_field(name="Bonus ball", value=texte_bonus_ball, inline=False)
@@ -524,6 +543,71 @@ async def boucle_meteo():
             print("⚠️ Erreur dans boucle_meteo (le cycle suivant sera quand même tenté) :")
             traceback.print_exc()
             journal.logger("🔴 Erreur dans `boucle_meteo` — voir les logs serveur pour le détail complet.")
+
+
+async def boucle_evenement_pokestop():
+    """Tire un créneau aléatoire de 30 min par jour (9h-23h, heure de Paris) pendant
+    lequel le PokéStop donne de meilleures récompenses. Le créneau du jour est stocké en
+    base (table parametres) pour survivre à un redémarrage du bot en plein milieu."""
+    await bot.wait_until_ready()
+    tz = ZoneInfo("Europe/Paris")
+
+    while not bot.is_closed():
+        await asyncio.sleep(60)
+        DERNIERE_ACTIVITE_BOUCLES["evenement_pokestop"] = time.time()
+
+        try:
+            maintenant_dt = datetime.now(tz)
+            aujourdhui = maintenant_dt.date().isoformat()
+
+            date_programmee = database.obtenir_parametre("pokestop_event_date")
+            debut_str = database.obtenir_parametre("pokestop_event_debut")
+
+            if date_programmee != aujourdhui:
+                # Nouveau jour : tirer un nouvel horaire aléatoire de départ, en
+                # s'assurant que les 30 minutes tiennent avant la fin de la fenêtre.
+                fin_fenetre_dt = maintenant_dt.replace(
+                    hour=config.HEURE_FIN_FENETRE_POINTE, minute=0, second=0, microsecond=0
+                )
+                dernier_depart_possible = fin_fenetre_dt - timedelta(seconds=config.DUREE_HEURE_DE_POINTE_POKESTOP)
+                minutes_fenetre = int((dernier_depart_possible.hour * 60 + dernier_depart_possible.minute) - config.HEURE_DEBUT_FENETRE_POINTE * 60)
+                offset_minutes = random.randint(0, max(0, minutes_fenetre))
+                debut_dt = maintenant_dt.replace(
+                    hour=config.HEURE_DEBUT_FENETRE_POINTE, minute=0, second=0, microsecond=0
+                ) + timedelta(minutes=offset_minutes)
+
+                database.definir_parametre("pokestop_event_date", aujourdhui)
+                database.definir_parametre("pokestop_event_debut", str(int(debut_dt.timestamp())))
+                debut_str = str(int(debut_dt.timestamp()))
+                print(f"🔥 Heure de pointe PokéStop programmée aujourd'hui à {debut_dt.strftime('%H:%M')} (heure de Paris).")
+
+            debut_epoch = int(debut_str)
+            fin_epoch = debut_epoch + config.DUREE_HEURE_DE_POINTE_POKESTOP
+            maintenant_epoch = time.time()
+            en_cours = debut_epoch <= maintenant_epoch < fin_epoch
+
+            if en_cours and not etat_jeu.heure_de_pointe_pokestop_active:
+                etat_jeu.heure_de_pointe_pokestop_active = True
+                await poster_message_pokestop_si_absent()
+                channel = bot.get_channel(config.CHANNEL_POKESTOP_ID) if getattr(config, "CHANNEL_POKESTOP_ID", None) else None
+                if channel:
+                    try:
+                        await channel.send(
+                            "🔥 **Heure de pointe au PokéStop !** Récompenses doublées pendant 30 minutes !"
+                        )
+                    except (discord.Forbidden, discord.HTTPException):
+                        pass
+                journal.logger("🔥 Heure de pointe PokéStop activée pour 30 minutes.")
+            elif not en_cours and etat_jeu.heure_de_pointe_pokestop_active:
+                etat_jeu.heure_de_pointe_pokestop_active = False
+                await poster_message_pokestop_si_absent()
+                journal.logger("🔥 Heure de pointe PokéStop terminée.")
+        except Exception:
+            import traceback
+
+            print("⚠️ Erreur dans boucle_evenement_pokestop (le cycle suivant sera quand même tenté) :")
+            traceback.print_exc()
+            journal.logger("🔴 Erreur dans `boucle_evenement_pokestop` — voir les logs serveur pour le détail complet.")
 
 
 async def boucle_gladio_spontane():
@@ -1007,6 +1091,10 @@ async def on_ready():
     if not getattr(bot, "boucle_meteo_lancee", False):
         bot.loop.create_task(boucle_meteo())
         bot.boucle_meteo_lancee = True
+
+    if not getattr(bot, "boucle_evenement_pokestop_lancee", False):
+        bot.loop.create_task(boucle_evenement_pokestop())
+        bot.boucle_evenement_pokestop_lancee = True
 
     if not getattr(bot, "boucle_gladio_lancee", False):
         bot.loop.create_task(boucle_gladio_spontane())
