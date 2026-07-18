@@ -394,6 +394,18 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS niveaux_pokemon (
+            user_id INTEGER NOT NULL,
+            pokemon_nom TEXT NOT NULL,
+            niveau INTEGER NOT NULL DEFAULT 1,
+            xp INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, pokemon_nom)
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS etat_combat_pokemon (
             user_id INTEGER NOT NULL,
             pokemon_nom TEXT NOT NULL,
@@ -824,6 +836,36 @@ def supprimer_preset_equipe(user_id: int, nom_preset: str):
     cur.execute(
         "DELETE FROM equipe_presets_combat WHERE user_id = ? AND nom_preset = ?",
         (user_id, nom_preset),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_niveau_pokemon(user_id: int, pokemon_nom: str) -> tuple:
+    """Retourne (niveau, xp) d'un Pokémon précis pour ce joueur — (1, 0) par défaut s'il
+    n'a encore jamais gagné d'XP dans l'équipe."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT niveau, xp FROM niveaux_pokemon WHERE user_id = ? AND pokemon_nom = ?",
+        (user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    if row is None:
+        return 1, 0
+    return row["niveau"], row["xp"]
+
+
+def definir_niveau_xp_pokemon(user_id: int, pokemon_nom: str, niveau: int, xp: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO niveaux_pokemon (user_id, pokemon_nom, niveau, xp) VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id, pokemon_nom) DO UPDATE SET niveau = excluded.niveau, xp = excluded.xp
+        """,
+        (user_id, pokemon_nom, niveau, xp),
     )
     conn.commit()
     conn.close()

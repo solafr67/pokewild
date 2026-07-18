@@ -25,6 +25,7 @@ import database
 import etat_jeu
 import leveling
 import meteo
+import niveaux_pokemon
 from pokemon_data import (
     EMOJI_BALLS,
     EMOJI_OBJETS_DIVERS,
@@ -250,6 +251,16 @@ class VuePokestop(discord.ui.View):
                     f"+{dollars} {EMOJI_POKEDOLLAR} Poké Dollars, "
                     f"+1× {EMOJI_BALLS[ball_type]} {NOM_BALL_AFFICHAGE[ball_type]}"
                 ),
+                inline=False,
+            )
+
+        # XP du niveau PAR Pokémon : uniquement l'équipe de combat active (équipe vide =
+        # perdue), indépendamment de l'XP de dresseur ci-dessus.
+        montees_niveau_pokemon = niveaux_pokemon.gagner_xp_equipe(user_id, config.XP_POKEMON_POKESTOP)
+        if montees_niveau_pokemon:
+            embed_resultat.add_field(
+                name="📈 Montée(s) de niveau (équipe)",
+                value=niveaux_pokemon.texte_montees_niveau(montees_niveau_pokemon),
                 inline=False,
             )
 

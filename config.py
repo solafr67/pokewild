@@ -67,6 +67,32 @@ XP_PAR_RARETE = {
 XP_BONUS_SHINY = 20
 XP_POKESTOP = 5
 
+# --- Niveau par Pokémon (coexiste avec le PC : le PC reste la mesure de potentiel/IV,
+# le niveau devient la progression via le jeu). Seuls les Pokémon de l'équipe de combat
+# active gagnent cette XP (capture, PokéStop...) — équipe vide = XP perdue.
+NIVEAU_MAX_PAR_RARETE = {
+    "commun": 50,
+    "peu_commun": 65,
+    "rare": 80,
+    "hyper_rare": 90,
+    "legendaire": 100,
+}
+# XP donnée à CHAQUE Pokémon de l'équipe active (pas divisée entre eux) selon la rareté
+# du Pokémon capturé, et à chaque tirage PokéStop.
+XP_POKEMON_PAR_RARETE = {
+    "commun": 15,
+    "peu_commun": 30,
+    "rare": 60,
+    "hyper_rare": 100,
+    "legendaire": 150,
+}
+XP_POKEMON_POKESTOP = 20
+# XP cumulée pour atteindre un niveau N = COEFFICIENT * (N-1)^2 — courbe quadratique.
+# Avec ce coefficient, niveau 100 demande environ 245 000 XP cumulée (~1600 captures
+# "communes" à répartir sur 6 emplacements d'équipe). Un seul chiffre à modifier pour
+# retendre toute la courbe si le rythme ne convient pas.
+COEFFICIENT_COURBE_NIVEAU_POKEMON = 25
+
 # --- Stockage des Pokémon et objets (extensible en boutique) ---
 LIMITE_STOCKAGE_POKEMON_BASE = 300
 LIMITE_STOCKAGE_OBJETS_BASE = 50

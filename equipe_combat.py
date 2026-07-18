@@ -2,6 +2,7 @@ import discord
 
 import config
 import database
+import niveaux_pokemon
 from pokedex import ORDRE_RARETE
 from pokemon_data import EMOJI_RARETE, EMOJI_SOINS, NOM_SOIN_AFFICHAGE, calculer_pv_max, cle_tri_alphabetique_fr, obtenir_pokemon_par_nom
 
@@ -76,8 +77,12 @@ def construire_embed_equipe(user: discord.abc.User) -> discord.Embed:
             pv_actuels = database.obtenir_pv_actuels(user.id, nom, pv_max)
             ko_txt = " 💀 K.O." if pv_actuels <= 0 else ""
 
+            niveau, xp = database.obtenir_niveau_pokemon(user.id, nom)
+            niveau_max = niveaux_pokemon.niveau_max_pour_rarete(pokemon["rarete"]) if pokemon else 100
+            niveau_txt = f"Niv. {niveau}" + (" (MAX)" if niveau >= niveau_max else f"/{niveau_max}")
+
             lignes.append(
-                f"{i + 1}. {emoji_rarete} **{nom}**{shiny_txt} — {pc_txt} PC — "
+                f"{i + 1}. {emoji_rarete} **{nom}**{shiny_txt} — {niveau_txt} — {pc_txt} PC — "
                 f"❤️ {pv_actuels}/{pv_max} PV{ko_txt}"
             )
         else:

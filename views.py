@@ -7,6 +7,7 @@ import database
 import etat_jeu
 import journal
 import leveling
+import niveaux_pokemon
 import pnj
 import quetes_ui as quetes_ui_module
 from pokemon_data import (
@@ -136,6 +137,12 @@ class SelectionBallView(discord.ui.View):
             xp_affichee = round(xp_gagnee * database.multiplicateur_boost(user_id, "xp"))
             niveau_avant, niveau_apres, recompenses_paliers = leveling.gagner_xp(user_id, xp_gagnee)
 
+            # XP du niveau PAR Pokémon : uniquement l'équipe de combat active (équipe
+            # vide = perdue), indépendamment de l'XP de dresseur ci-dessus.
+            montees_niveau_pokemon = niveaux_pokemon.gagner_xp_equipe(
+                user_id, config.XP_POKEMON_PAR_RARETE[self.pokemon["rarete"]]
+            )
+
             if est_shiny:
                 embed = discord.Embed(
                     title="✨ CAPTURE SHINY ! ✨",
@@ -183,6 +190,13 @@ class SelectionBallView(discord.ui.View):
                         f"+{dollars} {EMOJI_POKEDOLLAR} Poké Dollars, "
                         f"+1× {EMOJI_BALLS[ball_type]} {NOM_BALL_AFFICHAGE[ball_type]}"
                     ),
+                    inline=False,
+                )
+
+            if montees_niveau_pokemon:
+                embed.add_field(
+                    name="📈 Montée(s) de niveau (équipe)",
+                    value=niveaux_pokemon.texte_montees_niveau(montees_niveau_pokemon),
                     inline=False,
                 )
 
