@@ -20,6 +20,7 @@ import races
 import quetes as quetes_module
 import quetes_ui as quetes_ui_module
 import dresseurs as dresseurs_module
+import defi_stats as defi_stats_module
 import elevage as elevage_module
 import journal
 import pnj
@@ -1488,6 +1489,26 @@ async def pokedex_info(interaction: discord.Interaction, nom: str, membre: disco
     if membre:
         embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url=membre.display_avatar.url)
     await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(
+    name="defi-stats",
+    description="Défie un joueur au Défi Base Stat — devinez la meilleure stat d'un Pokémon, pur fun sans récompense",
+)
+async def defi_stats_cmd(interaction: discord.Interaction, adversaire: discord.Member):
+    if adversaire.id == interaction.user.id:
+        await interaction.response.send_message("Tu ne peux pas te défier toi-même !", ephemeral=True)
+        return
+    if adversaire.bot:
+        await interaction.response.send_message("Tu ne peux pas défier un bot !", ephemeral=True)
+        return
+
+    vue = defi_stats_module.VueInvitationDefiStats(interaction.user, adversaire)
+    await interaction.response.send_message(
+        f"⚔️ {adversaire.mention}, **{interaction.user.display_name}** te défie au **Défi Base Stat** ! "
+        f"({config.DEFI_STATS_NB_ROUNDS} rounds — pur fun, aucune récompense). Tu acceptes ?",
+        view=vue,
+    )
 
 
 @bot.tree.command(name="equipe-combat", description="Compose ton équipe de 6 Pokémon pour les futurs combats")

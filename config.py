@@ -109,6 +109,9 @@ XP_POKEMON_POKESTOP = 20
 # retendre toute la courbe si le rythme ne convient pas.
 COEFFICIENT_COURBE_NIVEAU_POKEMON = 25
 
+# --- Mini-jeu Défi Base Stat (pur fun, aucune récompense) ---
+DEFI_STATS_NB_ROUNDS = 5
+
 # --- CT au Maître des Types : coût en Poké Dollars pour apprendre une attaque que le
 # Pokémon n'a pas encore débloquée par son niveau (ou qui ne se débloque jamais par
 # niveau — CT/tuteur/œuf uniquement dans les vrais jeux). Une attaque déjà débloquée par
