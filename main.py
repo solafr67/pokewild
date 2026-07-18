@@ -65,6 +65,7 @@ import equipe_combat as equipe_combat_module
 from views import VueSpawn, construire_embed_spawn
 
 intents = discord.Intents.default()
+intents.message_content = True  # requis pour lire les réponses tapées au quiz (Qui est-ce / Anagramme)
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # --- Diagnostic (/status-bot) : chaque boucle de fond met à jour son horodatage ici à
