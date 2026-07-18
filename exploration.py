@@ -28,6 +28,24 @@ def construire_embed_centre() -> discord.Embed:
         ),
         color=discord.Color.dark_gold(),
     )
+
+    noms_duree = {"1h": "1 heure", "6h": "6 heures", "24h": "24 heures"}
+    for duree_label, nom_affiche in noms_duree.items():
+        dollars_max = round(config.EXPLORATION_PLAFOND_PC * config.EXPLORATION_FACTEUR_DOLLARS[duree_label])
+        xp_max = round(config.EXPLORATION_PLAFOND_PC * config.EXPLORATION_FACTEUR_XP[duree_label])
+        cristal = config.EXPLORATION_CHANCE_CRISTAL[duree_label]
+        oeuf = config.EXPLORATION_CHANCE_OEUF[duree_label]
+        embed.add_field(
+            name=f"⏱️ {nom_affiche}",
+            value=(
+                f"{EMOJI_POKEDOLLAR} 0 à {dollars_max} PD\n"
+                f"✨ 0 à {xp_max} XP\n"
+                f"{EMOJI_CRISTAL} {cristal['base']*100:g}% à {cristal['max']*100:g}%\n"
+                f"🥚 {oeuf['base']*100:g}% à {oeuf['max']*100:g}%"
+            ),
+            inline=True,
+        )
+    embed.set_footer(text="Le minimum correspond à une équipe faible, le maximum au plafond de PC (6000 cumulés).")
     return embed
 
 
