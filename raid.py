@@ -101,14 +101,57 @@ class VueSalleAttente(discord.ui.View):
 
     @discord.ui.button(label="Quitter", style=discord.ButtonStyle.secondary, emoji="🚪")
     async def quitter(self, interaction: discord.Interaction, button: discord.ui.Button):
-        succes = database.quitter_raid(self.raid_id, interaction.user.id)
-        if not succes:
-            await interaction.response.send_message("Tu n'avais pas encore rejoint ce raid.", ephemeral=True)
+        vue_confirmation = VueConfirmerQuitterRaid(self, interaction.message, interaction.user.id)
+        await interaction.response.send_message(
+            "Tu veux vraiment quitter ce raid ?", view=vue_confirmation, ephemeral=True
+        )
+
+
+class VueConfirmerQuitterRaid(discord.ui.View):
+    """Confirmation avant de quitter une salle d'attente de raid — évite les clics
+    accidentels sur un bouton qui te fait perdre ta place."""
+
+    def __init__(self, vue_salle_attente: "VueSalleAttente", message_salle_attente: discord.Message, user_id: int):
+        super().__init__(timeout=30)
+        self.vue_salle_attente = vue_salle_attente
+        self.message_salle_attente = message_salle_attente
+        self.user_id = user_id
+
+    async def _verifier(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ta confirmation !", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="Oui, quitter", style=discord.ButtonStyle.danger, emoji="🚪")
+    async def confirmer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
             return
 
-        nb_joueurs = len(database.obtenir_participants_raid(self.raid_id))
-        embed = construire_embed_salle_attente(self.boss, self.etoiles, self.date_debut_combat, nb_joueurs)
-        await interaction.response.edit_message(embed=embed, view=self)
+        succes = database.quitter_raid(self.vue_salle_attente.raid_id, self.user_id)
+        if not succes:
+            await interaction.response.edit_message(content="Tu n'avais pas encore rejoint ce raid.", view=None)
+            return
+
+        nb_joueurs = len(database.obtenir_participants_raid(self.vue_salle_attente.raid_id))
+        embed = construire_embed_salle_attente(
+            self.vue_salle_attente.boss,
+            self.vue_salle_attente.etoiles,
+            self.vue_salle_attente.date_debut_combat,
+            nb_joueurs,
+        )
+        try:
+            await self.message_salle_attente.edit(embed=embed, view=self.vue_salle_attente)
+        except (discord.NotFound, discord.HTTPException):
+            pass
+
+        await interaction.response.edit_message(content="🚪 Tu as quitté le raid.", view=None)
+
+    @discord.ui.button(label="Annuler", style=discord.ButtonStyle.secondary, emoji="↩️")
+    async def annuler(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
+            return
+        await interaction.response.edit_message(content="Tu restes dans le raid !", view=None)
 
 
 # ----------------------------------------------------------------------------
@@ -176,14 +219,48 @@ class VueRaidEnCombat(discord.ui.View):
 
     @discord.ui.button(label="Quitter", style=discord.ButtonStyle.secondary, emoji="🚪")
     async def quitter(self, interaction: discord.Interaction, button: discord.ui.Button):
-        succes = database.quitter_raid(self.raid_id, interaction.user.id)
-        if succes:
-            await interaction.response.send_message(
-                "🚪 Tu as quitté ce raid. Le combat étant déjà lancé, tu ne pourras pas le rejoindre à nouveau.",
-                ephemeral=True,
-            )
-        else:
-            await interaction.response.send_message("Tu n'avais pas rejoint ce raid.", ephemeral=True)
+        vue_confirmation = VueConfirmerQuitterRaidEnCombat(self.raid_id, interaction.user.id)
+        await interaction.response.send_message(
+            "⚠️ Le combat est déjà lancé — si tu quittes, tu ne pourras **pas** rejoindre ce "
+            "raid à nouveau. Tu veux vraiment quitter ?",
+            view=vue_confirmation,
+            ephemeral=True,
+        )
+
+
+class VueConfirmerQuitterRaidEnCombat(discord.ui.View):
+    """Confirmation avant de quitter un raid dont le combat est déjà lancé — départ
+    définitif (impossible de rejoindre ensuite), donc encore plus important à confirmer
+    que dans la salle d'attente."""
+
+    def __init__(self, raid_id: int, user_id: int):
+        super().__init__(timeout=30)
+        self.raid_id = raid_id
+        self.user_id = user_id
+
+    async def _verifier(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ta confirmation !", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="Oui, quitter", style=discord.ButtonStyle.danger, emoji="🚪")
+    async def confirmer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
+            return
+        succes = database.quitter_raid(self.raid_id, self.user_id)
+        texte = (
+            "🚪 Tu as quitté ce raid. Le combat étant déjà lancé, tu ne pourras pas le rejoindre à nouveau."
+            if succes
+            else "Tu n'avais pas rejoint ce raid."
+        )
+        await interaction.response.edit_message(content=texte, view=None)
+
+    @discord.ui.button(label="Annuler", style=discord.ButtonStyle.secondary, emoji="↩️")
+    async def annuler(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
+            return
+        await interaction.response.edit_message(content="Tu restes dans le raid !", view=None)
 
 
 def calculer_degats(user_id: int) -> int:

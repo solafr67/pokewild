@@ -88,8 +88,10 @@ def construire_lignes(
         info = captures_par_nom.get(p["nom"])
         if info:
             shiny_txt = " ✨" if info["shiny"] else ""
+            niveau, _xp = database.obtenir_niveau_pokemon(user_id, p["nom"])
             lignes.append(
-                f"{prefixe} {emoji} **{p['nom']}**{shiny_txt} — ×{info['quantite']} (meilleur PC : {info['meilleur_pc']})"
+                f"{prefixe} {emoji} **{p['nom']}**{shiny_txt} — ×{info['quantite']} "
+                f"(Niv. {niveau} — meilleur PC : {info['meilleur_pc']})"
             )
         else:
             lignes.append(f"{prefixe} {emoji} ~~{p['nom']}~~ — non capturé")
