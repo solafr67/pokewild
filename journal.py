@@ -47,11 +47,11 @@ async def boucle_envoi_logs(bot, channel_id: int, derniere_activite: dict):
             bloc = ""
             for ligne in lignes:
                 if len(bloc) + len(ligne) + 1 > 1900:
-                    await channel.send(bloc)
+                    await channel.send(bloc, allowed_mentions=discord.AllowedMentions.none())
                     bloc = ""
                 bloc += ligne + "\n"
             if bloc:
-                await channel.send(bloc)
+                await channel.send(bloc, allowed_mentions=discord.AllowedMentions.none())
         except Exception:
             import traceback
 
