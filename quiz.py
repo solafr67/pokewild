@@ -23,7 +23,7 @@ import config
 import database
 import journal
 from equipe_combat import TAILLE_MAX_EQUIPE
-from pokemon_data import EFFICACITE_TYPES, EMOJI_TYPES, POKEDEX, calculer_multiplicateur_type
+from pokemon_data import EFFICACITE_TYPES, EMOJI_TYPES, POKEDEX, affichage_types, calculer_multiplicateur_type
 
 URL_ARTWORK_OFFICIEL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{numero}.png"
 
@@ -181,6 +181,7 @@ async def _poser_qui_est_ce(channel) -> bool:
         description="Tape le nom de ce Pokémon dans le channel !",
         color=discord.Color.purple(),
     )
+    embed.add_field(name="💡 Indice", value=f"Type : {affichage_types(pokemon['types'])}", inline=False)
     embed.set_image(url="attachment://silhouette.png")
     await channel.send(embed=embed, file=fichier)
     return True
@@ -206,6 +207,7 @@ async def _poser_anagramme(channel):
         description=f"Remets les lettres dans l'ordre et tape le nom du Pokémon !\n\n# {melange.upper()}",
         color=discord.Color.orange(),
     )
+    embed.add_field(name="💡 Indice", value=f"Type : {affichage_types(pokemon['types'])}", inline=False)
     await channel.send(embed=embed)
 
 
