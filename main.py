@@ -1631,10 +1631,13 @@ async def give_xp(interaction: discord.Interaction, membre: discord.Member, mont
     description="[Admin] Attribue un niveau (grille de rareté) aux Pokémon capturés avant le système de niveau",
 )
 @app_commands.checks.has_permissions(administrator=True)
-async def backfill_niveaux(interaction: discord.Interaction):
+@app_commands.describe(
+    forcer="Écrase aussi le niveau des Pokémon qui en ont déjà un (nouveau tirage aléatoire). Par défaut, seuls ceux sans niveau sont touchés."
+)
+async def backfill_niveaux(interaction: discord.Interaction, forcer: bool = False):
     await interaction.response.defer()
 
-    paires = database.obtenir_paires_sans_niveau()
+    paires = database.obtenir_toutes_paires_capturees() if forcer else database.obtenir_paires_sans_niveau()
     compte = 0
     for user_id, nom in paires:
         pokemon = obtenir_pokemon_par_nom(nom)
@@ -1644,12 +1647,22 @@ async def backfill_niveaux(interaction: discord.Interaction):
         database.definir_niveau_xp_pokemon(user_id, nom, niveau, niveaux_pokemon.xp_cumulee_pour_niveau(niveau))
         compte += 1
 
-    journal.logger(f"🛠️ <@{interaction.user.id}> a lancé /backfill-niveaux : {compte} Pokémon mis à jour.")
-    await interaction.followup.send(
-        f"✅ Niveau attribué (selon la grille de spawn par rareté) à **{compte}** Pokémon "
-        f"(espèce × joueur) qui n'en avaient pas encore. Sans effet sur ceux qui ont déjà "
-        f"un niveau — relançable sans risque."
+    journal.logger(
+        f"🛠️ <@{interaction.user.id}> a lancé /backfill-niveaux"
+        f"{' --forcer' if forcer else ''} : {compte} Pokémon mis à jour."
     )
+    if forcer:
+        await interaction.followup.send(
+            f"✅ **{compte}** Pokémon (espèce × joueur) ont reçu un nouveau niveau aléatoire "
+            f"selon la grille de rareté — y compris ceux qui en avaient déjà un (XP remise à "
+            f"zéro pour ce nouveau niveau)."
+        )
+    else:
+        await interaction.followup.send(
+            f"✅ Niveau attribué (selon la grille de spawn par rareté) à **{compte}** Pokémon "
+            f"(espèce × joueur) qui n'en avaient pas encore. Sans effet sur ceux qui ont déjà "
+            f"un niveau — relançable sans risque."
+        )
 
 
 @bot.tree.command(name="give-ct", description="[Admin] Donne la CT d'une attaque à un joueur (possédée pour toujours)")

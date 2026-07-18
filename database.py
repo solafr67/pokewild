@@ -934,6 +934,18 @@ def obtenir_paires_sans_niveau() -> list:
     return resultats
 
 
+def obtenir_toutes_paires_capturees() -> list:
+    """Toutes les paires (user_id, pokemon_nom) distinctes ayant au moins une capture,
+    qu'elles aient déjà une ligne de niveau ou non. Utilisé uniquement par le mode
+    --forcer de /backfill-niveaux (écrase un niveau déjà acquis par un nouveau tirage)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT DISTINCT user_id, pokemon_nom FROM captures")
+    resultats = [(row["user_id"], row["pokemon_nom"]) for row in cur.fetchall()]
+    conn.close()
+    return resultats
+
+
 def _assurer_joueur_existe(cur, user_id: int):
     """Crée l'entrée du joueur avec ses balls de départ s'il n'existe pas encore."""
     cur.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
