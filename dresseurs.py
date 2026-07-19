@@ -81,10 +81,24 @@ ARCHETYPE_GLADIO = {
 
 
 def _pc_cumule_equipe(user_id: int) -> int:
+    """PC cumulé ACTUEL de l'équipe (vraies stats : IV réels + niveau courant) — pas le
+    PC historique figé à la capture. Sinon un joueur dont le niveau réel a peu progressé
+    depuis se retrouve face à un dresseur calibré sur une ancienne capture bien plus
+    forte que ce que son équipe vaut vraiment aujourd'hui."""
     noms = database.obtenir_equipe_combat_disponible(user_id)
     captures = database.obtenir_pokedex_joueur(user_id)
-    meilleur_pc = {row["pokemon_nom"]: row["meilleur_pc"] for row in captures}
-    return sum(meilleur_pc.get(nom, 0) for nom in noms)
+    especes_possedees = {row["pokemon_nom"] for row in captures}
+    total = 0
+    for nom in noms:
+        if nom not in especes_possedees:
+            continue
+        pokemon = obtenir_pokemon_par_nom(nom)
+        if not pokemon:
+            continue
+        ivs = database.obtenir_meilleures_ivs(user_id, nom) or IV_DEFAUT
+        niveau, _xp = database.obtenir_niveau_pokemon(user_id, nom)
+        total += calculer_pc_derive(pokemon, ivs, niveau)
+    return total
 
 
 def choisir_archetype(nom_force: str | None = None) -> dict:
