@@ -109,10 +109,28 @@ def choisir_archetype(nom_force: str | None = None) -> dict:
     return random.choice(ARCHETYPES)
 
 
-def _niveau_pour_pc_cible(pokemon: dict, pc_cible: int) -> int:
-    """Trouve le niveau (1-100) dont le PC dérivé (stats réelles, IV neutres) se rapproche
-    le plus de pc_cible — recherche binaire, calculer_pc_derive croît avec le niveau."""
-    bas, haut = 1, 100
+def _niveau_moyen_equipe(user_id: int) -> int:
+    """Niveau moyen réel de l'équipe de combat du joueur — sert de référence pour éviter
+    qu'une espèce à faibles stats de base ne se retrouve à un niveau absurdement plus
+    élevé que l'équipe du joueur juste pour égaler un PC cible (voir _niveau_pour_pc_cible)."""
+    noms = database.obtenir_equipe_combat_disponible(user_id)
+    captures = database.obtenir_pokedex_joueur(user_id)
+    especes_possedees = {row["pokemon_nom"] for row in captures}
+    niveaux = [
+        database.obtenir_niveau_pokemon(user_id, nom)[0] for nom in noms if nom in especes_possedees
+    ]
+    return round(sum(niveaux) / len(niveaux)) if niveaux else 25
+
+
+def _niveau_pour_pc_cible(pokemon: dict, pc_cible: int, niveau_reference: int = 50) -> int:
+    """Trouve le niveau dont le PC dérivé (stats réelles, IV neutres) se rapproche le plus
+    de pc_cible — recherche binaire, calculer_pc_derive croît avec le niveau. Bornée à
+    ±20 niveaux autour de niveau_reference (le niveau moyen de l'équipe du joueur) : sans
+    ça, une espèce à faibles stats de base (Métamorphe...) grimperait jusqu'à un niveau
+    délirant pour égaler la cible de PC, donnant un adversaire artificiellement plus
+    costaud niveau pour niveau que toute l'équipe du joueur."""
+    bas = max(1, niveau_reference - 20)
+    haut = min(100, niveau_reference + 20)
     while bas < haut:
         milieu = (bas + haut) // 2
         if calculer_pc_derive(pokemon, IV_DEFAUT, milieu) < pc_cible:
@@ -122,12 +140,15 @@ def _niveau_pour_pc_cible(pokemon: dict, pc_cible: int) -> int:
     return bas
 
 
-def generer_equipe_dresseur(archetype: dict, pc_cible: int) -> list:
+def generer_equipe_dresseur(archetype: dict, pc_cible: int, niveau_reference: int = 50) -> list:
     """Sélectionne une équipe de Pokémon correspondant au thème de l'archétype, dont le
     PC cumulé vise pc_cible (± la variance configurée). IV neutres (profil moyen, pas
-    d'individualité pour un dresseur synthétique) — seul le niveau varie pour atteindre la
-    cible de PC. Retourne une liste de dicts {nom, niveau, pv, attaque, defense,
-    attaque_spe, defense_spe, vitesse}, prête pour database.initialiser_equipe_combat_pvp."""
+    d'individualité pour un dresseur synthétique) — le niveau varie pour s'approcher de la
+    cible de PC, mais reste borné autour de niveau_reference (typiquement le niveau moyen
+    de l'équipe du joueur) pour un adversaire crédible plutôt qu'un Pokémon faible
+    surexploité au niveau 100. Retourne une liste de dicts {nom, niveau, pv, attaque,
+    defense, attaque_spe, defense_spe, vitesse}, prête pour
+    database.initialiser_equipe_combat_pvp."""
     types_theme = archetype["types_theme"]
     if types_theme:
         pool = [p for p in POKEDEX if any(t in p["types"] for t in types_theme)]
@@ -146,7 +167,7 @@ def generer_equipe_dresseur(archetype: dict, pc_cible: int) -> list:
     equipe = []
     for pokemon in choisis:
         pc_individuel = max(50, round(pc_par_pokemon * random.uniform(0.8, 1.2)))
-        niveau = _niveau_pour_pc_cible(pokemon, pc_individuel)
+        niveau = _niveau_pour_pc_cible(pokemon, pc_individuel, niveau_reference)
         stats = calculer_toutes_stats(pokemon, IV_DEFAUT, niveau)
         if not stats:
             stats = {"pv": 120, "attaque": 60, "defense": 60, "attaque_spe": 60, "defense_spe": 60, "vitesse": 60}
@@ -263,7 +284,8 @@ async def demarrer_combat_dresseur(
     if pc_cible <= 0:
         pc_cible = 500  # équipe joueur vide/non chiffrée : petit combat par défaut
 
-    equipe_dresseur = generer_equipe_dresseur(archetype, pc_cible)
+    niveau_reference = _niveau_moyen_equipe(joueur.id)
+    equipe_dresseur = generer_equipe_dresseur(archetype, pc_cible, niveau_reference)
 
     # --- Équipe du joueur : vraies stats (IV + niveau réels), PV persistants (partagés
     # avec les raids) potentiellement déjà entamés depuis un combat précédent ---
