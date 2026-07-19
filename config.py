@@ -123,6 +123,12 @@ GLADIO_COOLDOWN_DEFI = 24 * 3600  # un défi contre Gladio par jour et par joueu
 GLADIO_RECOMPENSE_MIN = 400  # récompense fixe en Poké Dollars (une fois par jour, indépendante du PC)
 GLADIO_RECOMPENSE_MAX = 600
 
+# Facteur purement cosmétique appliqué au PC affiché (calculer_pc_derive) pour rester
+# dans un ordre de grandeur proche de l'ancien système (pré-refonte stats/combat). N'a
+# aucun effet sur le combat — juste sur le nombre affiché. Ajustable si besoin après avoir
+# vu quelques exemples en jeu (~3.4x rapprochait un Zekrom niveau 61 de son ancien PC).
+PC_MULTIPLICATEUR_AFFICHAGE = 3.4
+
 # --- CT au Maître des Types : coût en Poké Dollars pour apprendre une attaque que le
 # Pokémon n'a pas encore débloquée par son niveau (ou qui ne se débloque jamais par
 # niveau — CT/tuteur/œuf uniquement dans les vrais jeux). Une attaque déjà débloquée par
@@ -221,7 +227,10 @@ DEGATS_DIVISEUR_RAID = 12  # conservé pour compat historique, plus utilisé par
 FACTEUR_DEGATS_RAID = 1.1  # dégâts d'un tick = (Atq + Atq Spé)/2 × ce facteur — à retendre après test en jeu
 # Riposte du boss = pourcentage des PV MAX réels du Pokémon touché (pas un nombre fixe) :
 # reste cohérent quelle que soit l'échelle de PV en vigueur (IV/niveau réels désormais).
-RIPOSTE_POURCENT_PAR_ETOILE = {1: 0.06, 2: 0.08, 3: 0.10, 4: 0.13, 5: 0.16}
+# Calibré pour ~180 tours possibles sur la durée max d'un raid (15 min / tick de 5s,
+# DUREE_RAID_MINUTES × 60 / INTERVALLE_TICK_COMBAT_RAID) — un pourcentage qui semble
+# raisonnable par coup devient vite fatal une fois répété autant de fois, d'où ces valeurs basses.
+RIPOSTE_POURCENT_PAR_ETOILE = {1: 0.004, 2: 0.007, 3: 0.011, 4: 0.016, 5: 0.022}
 
 # Nombre d'Honor Ball reçues par CHAQUE participant à la victoire (peu importe les dégâts infligés)
 # Chaque participant a le même nombre de tentatives de capture (Honor Ball), peu importe

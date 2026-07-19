@@ -471,13 +471,15 @@ def calculer_toutes_stats(pokemon: dict, ivs: dict, niveau: int) -> dict:
 
 
 def calculer_pc_derive(pokemon: dict, ivs: dict, niveau: int) -> int:
-    """Score 'PC' affiché (façon Pokémon GO) — dérivé des vraies stats à ce niveau précis.
-    Purement un résumé pratique pour comparer/trier/classer : ne pilote plus aucun calcul
-    de combat (voir calculer_toutes_stats, utilisé directement à la place)."""
+    """Score 'PC' affiché (façon Pokémon GO) — dérivé des vraies stats à ce niveau précis,
+    puis multiplié par un facteur purement cosmétique (config.PC_MULTIPLICATEUR_AFFICHAGE)
+    pour retrouver un ordre de grandeur proche de l'ancien système. Ne pilote plus aucun
+    calcul de combat (voir calculer_toutes_stats, utilisé directement à la place) — donc
+    ce facteur n'affecte que ce qui est affiché, jamais l'issue d'un combat."""
     stats = calculer_toutes_stats(pokemon, ivs, niveau)
     if not stats:
         return max(1, (pokemon.get("base_pc") or 100) * niveau // 50)  # repli grossier si stats absentes
-    return sum(stats.values())
+    return round(sum(stats.values()) * config.PC_MULTIPLICATEUR_AFFICHAGE)
 
 
 def obtenir_pokemon_par_nom(nom: str):
