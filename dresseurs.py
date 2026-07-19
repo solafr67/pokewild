@@ -196,6 +196,21 @@ class VueDefiDresseur(discord.ui.View):
         await demarrer_combat_dresseur(interaction.client, interaction.user, self.dresseur_id, interaction.channel, interaction)
 
 
+def _equipe_a_un_vivant(user_id: int) -> bool:
+    """True si au moins un Pokémon de l'équipe de combat a des PV persistants > 0."""
+    noms = database.obtenir_equipe_combat_disponible(user_id)
+    captures = database.obtenir_pokedex_joueur(user_id)
+    meilleur_pc = {row["pokemon_nom"]: row["meilleur_pc"] for row in captures}
+    for nom in noms:
+        pc = meilleur_pc.get(nom, 0)
+        if pc <= 0:
+            continue
+        pv_max = calculer_pv_max(pc)
+        if database.obtenir_pv_actuels(user_id, nom, pv_max) > 0:
+            return True
+    return False
+
+
 async def demarrer_combat_dresseur(
     bot,
     joueur: discord.Member,
@@ -491,7 +506,25 @@ async def defier_gladio(bot, joueur: discord.Member, channel: discord.TextChanne
     """Défi à la demande contre Gladio (le rival) — réutilise entièrement le moteur de
     combat dresseur existant. Équipe légèrement plus forte que celle du joueur (+15% de
     PC cible) pour un vrai ressenti de rival, cooldown dédié (config.GLADIO_COOLDOWN_DEFI,
-    indépendant des dresseurs spontanés)."""
+    indépendant des dresseurs spontanés).
+
+    Le cooldown n'est marqué qu'une fois confirmé que le combat peut vraiment démarrer
+    (équipe pas entièrement K.O.) — sinon une tentative ratée grillerait le défi du jour
+    pour rien."""
+    if not _equipe_a_un_vivant(joueur.id):
+        texte_ko = (
+            f"❌ {joueur.mention} — toute ton équipe est K.O. (PV persistants à 0) ! "
+            f"Soigne-la via `/equipe-combat` avant de défier Gladio."
+        )
+        if interaction is not None:
+            try:
+                await interaction.followup.send(texte_ko, ephemeral=True)
+            except (discord.NotFound, discord.HTTPException):
+                await channel.send(texte_ko)
+        else:
+            await channel.send(texte_ko)
+        return
+
     dresseur_id = database.creer_dresseur_actif(ARCHETYPE_GLADIO["nom"], channel.id, int(time.time()) + 300)
     database.marquer_defi_gladio(joueur.id)
     await demarrer_combat_dresseur(bot, joueur, dresseur_id, channel, interaction, multiplicateur_pc=1.15)

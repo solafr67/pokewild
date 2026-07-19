@@ -3475,6 +3475,14 @@ def marquer_defi_gladio(user_id: int):
     conn.close()
 
 
+def reinitialiser_defi_gladio(user_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM gladio_defis WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+
 def obtenir_serie_victoires_pvp(user_id: int) -> int:
     conn = get_connexion()
     cur = conn.cursor()

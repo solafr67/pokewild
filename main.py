@@ -1531,6 +1531,14 @@ async def defi_gladio_cmd(interaction: discord.Interaction):
     await dresseurs_module.defier_gladio(bot, interaction.user, interaction.channel, interaction)
 
 
+@bot.tree.command(name="reset-cooldown-gladio", description="[Admin] Réinitialise le cooldown de défi contre Gladio d'un joueur")
+@app_commands.checks.has_permissions(administrator=True)
+async def reset_cooldown_gladio(interaction: discord.Interaction, membre: discord.Member):
+    database.reinitialiser_defi_gladio(membre.id)
+    journal.logger(f"🛠️ <@{interaction.user.id}> a réinitialisé le cooldown Gladio de <@{membre.id}> (/reset-cooldown-gladio).")
+    await interaction.response.send_message(f"✅ Cooldown Gladio réinitialisé pour {membre.mention}.")
+
+
 @bot.tree.command(name="gladio", description="Découvre où tu en es avec Gladio, ton rival")
 async def gladio_cmd(interaction: discord.Interaction):
     statut = pnj.obtenir_statut(interaction.user.id)
