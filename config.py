@@ -217,7 +217,11 @@ INTERVALLE_TICK_COMBAT_RAID = 5  # secondes entre chaque attaque automatique de 
 
 DEGATS_VARIANCE_MIN = 0.8
 DEGATS_VARIANCE_MAX = 1.2
-DEGATS_DIVISEUR_RAID = 12  # ramène le PC (échelle "collection", jusqu'à 3000) à une échelle de dégâts raisonnable
+DEGATS_DIVISEUR_RAID = 12  # conservé pour compat historique, plus utilisé par calculer_degats (voir FACTEUR_DEGATS_RAID)
+FACTEUR_DEGATS_RAID = 1.1  # dégâts d'un tick = (Atq + Atq Spé)/2 × ce facteur — à retendre après test en jeu
+# Riposte du boss = pourcentage des PV MAX réels du Pokémon touché (pas un nombre fixe) :
+# reste cohérent quelle que soit l'échelle de PV en vigueur (IV/niveau réels désormais).
+RIPOSTE_POURCENT_PAR_ETOILE = {1: 0.06, 2: 0.08, 3: 0.10, 4: 0.13, 5: 0.16}
 
 # Nombre d'Honor Ball reçues par CHAQUE participant à la victoire (peu importe les dégâts infligés)
 # Chaque participant a le même nombre de tentatives de capture (Honor Ball), peu importe
@@ -241,7 +245,7 @@ FACTEUR_PV_COMBAT_PVP = 0.4  # PV en combat PvP = PC × ce facteur
 # Dégâts que le boss inflige en retour à CHAQUE participant, à chaque tick, répartis
 # entre ses Pokémon d'équipe encore en vie (0 PV = K.O., ne contribue plus aux dégâts
 # jusqu'à un soin).
-DEGATS_BOSS_PAR_ETOILE = {1: 40, 2: 90, 3: 180, 4: 350, 5: 650}
+DEGATS_BOSS_PAR_ETOILE = {1: 40, 2: 90, 3: 180, 4: 350, 5: 650}  # OBSOLÈTE — remplacé par RIPOSTE_POURCENT_PAR_ETOILE
 
 # --- Objets de soin (boutique) ---
 PRIX_SOINS = {

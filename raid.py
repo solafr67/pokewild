@@ -3,6 +3,7 @@ import time
 
 import discord
 
+import combat as combat_module
 import config
 import database
 import equipe_combat
@@ -16,9 +17,9 @@ from pokemon_data import (
     EMOJI_POKEDOLLAR,
     TAUX_CAPTURE,
     affichage_types,
-    calculer_pv_max,
-    generer_pc,
+    calculer_pc_derive,
     sprite_pokemon,
+    tirer_ivs,
 )
 
 
@@ -265,26 +266,26 @@ class VueConfirmerQuitterRaidEnCombat(discord.ui.View):
 
 def calculer_degats(user_id: int) -> int:
     """Calcule les dégâts d'un tick pour un joueur : chaque Pokémon de son équipe de combat
-    ENCORE EN VIE (PV > 0) inflige ses propres dégâts (PC / diviseur × variance indépendante).
-    Un Pokémon K.O. (0 PV) ne contribue plus tant qu'il n'est pas soigné."""
+    ENCORE EN VIE (PV > 0) inflige ses propres dégâts (stat offensive réelle × variance
+    indépendante). Un Pokémon K.O. (0 PV) ne contribue plus tant qu'il n'est pas soigné."""
     noms_equipe = database.obtenir_equipe_combat_disponible(user_id)
     if not noms_equipe:
         return 0
 
     captures = database.obtenir_pokedex_joueur(user_id)
-    meilleur_pc = {}
-    for row in captures:
-        meilleur_pc[row["pokemon_nom"]] = max(meilleur_pc.get(row["pokemon_nom"], 0), row["meilleur_pc"])
+    especes_possedees = {row["pokemon_nom"] for row in captures}
 
     degats_total = 0
     for nom in noms_equipe:
-        pc = meilleur_pc.get(nom, 0)
-        pv_max = calculer_pv_max(pc)
-        pv_actuels = database.obtenir_pv_actuels(user_id, nom, pv_max)
+        if nom not in especes_possedees:
+            continue
+        stats = combat_module.stats_combattant_reel(user_id, nom)
+        pv_actuels = database.obtenir_pv_actuels(user_id, nom, stats["pv"])
         if pv_actuels <= 0:
             continue  # K.O., ne participe plus
 
-        degats_pokemon = pc / config.DEGATS_DIVISEUR_RAID
+        stat_offensive = (stats["attaque"] + stats["attaque_spe"]) / 2
+        degats_pokemon = stat_offensive * config.FACTEUR_DEGATS_RAID
         variance = random.uniform(config.DEGATS_VARIANCE_MIN, config.DEGATS_VARIANCE_MAX)
         degats_total += round(degats_pokemon * variance)
     return degats_total
@@ -292,33 +293,34 @@ def calculer_degats(user_id: int) -> int:
 
 def appliquer_riposte_boss(user_id: int, etoiles: int):
     """Le boss riposte sur l'équipe engagée d'un joueur : dégâts répartis entre ses
-    Pokémon encore en vie. Retourne la liste des noms passés K.O. par cette riposte."""
+    Pokémon encore en vie. Un POURCENTAGE des PV max (pas un nombre fixe) : reste
+    cohérent quelle que soit l'échelle de PV réelle, contrairement à un dégât absolu qui
+    peut one-shot ou devenir dérisoire selon le niveau/les stats en jeu à un instant T."""
     noms_equipe = database.obtenir_equipe_combat_disponible(user_id)
     if not noms_equipe:
         return []
 
     captures = database.obtenir_pokedex_joueur(user_id)
-    meilleur_pc = {}
-    for row in captures:
-        meilleur_pc[row["pokemon_nom"]] = max(meilleur_pc.get(row["pokemon_nom"], 0), row["meilleur_pc"])
+    especes_possedees = {row["pokemon_nom"] for row in captures}
 
     vivants = []
     for nom in noms_equipe:
-        pc = meilleur_pc.get(nom, 0)
-        pv_max = calculer_pv_max(pc)
+        if nom not in especes_possedees:
+            continue
+        pv_max = combat_module.stats_combattant_reel(user_id, nom)["pv"]
         pv_actuels = database.obtenir_pv_actuels(user_id, nom, pv_max)
         if pv_actuels > 0:
-            vivants.append((nom, pc, pv_max))
+            vivants.append((nom, pv_max))
 
     if not vivants:
         return []
 
-    degats_totaux_boss = config.DEGATS_BOSS_PAR_ETOILE.get(etoiles, 20)
-    degats_par_pokemon = max(1, round(degats_totaux_boss / len(vivants)))
+    pourcent_riposte = config.RIPOSTE_POURCENT_PAR_ETOILE.get(etoiles, 0.10)
 
     nouveaux_ko = []
-    for nom, pc, pv_max in vivants:
-        nouveau_pv = database.modifier_pv_pokemon(user_id, nom, -degats_par_pokemon, pv_max)
+    for nom, pv_max in vivants:
+        degats = max(1, round(pv_max * pourcent_riposte))
+        nouveau_pv = database.modifier_pv_pokemon(user_id, nom, -degats, pv_max)
         if nouveau_pv <= 0:
             nouveaux_ko.append(nom)
 
@@ -466,14 +468,15 @@ class VueCaptureRaid(discord.ui.View):
             await interaction.response.send_message(message, ephemeral=True)
             return
 
-        pc = generer_pc(self.boss)
+        ivs = tirer_ivs()
+        pc = calculer_pc_derive(self.boss, ivs, self.etoiles * 15)  # niveau approximatif selon la difficulté du raid
         chance_shiny = (
             config.CHANCE_SHINY_BASE
             * etat_jeu.obtenir_multiplicateur_shiny()
             * database.multiplicateur_boost(user_id, "shiny")
         )
         est_shiny = random.random() < chance_shiny
-        database.ajouter_capture(user_id, self.boss["nom"], pc, shiny=est_shiny)
+        database.ajouter_capture(user_id, self.boss["nom"], pc, shiny=est_shiny, ivs=ivs)
         database.marquer_capture_reussie_raid(self.raid_id, user_id)
         quetes_completees = database.incrementer_progression_quete(user_id, "capture", {"rarete": self.boss["rarete"]})
 
