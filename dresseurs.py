@@ -74,6 +74,7 @@ ARCHETYPE_GLADIO = {
     "emoji": pnj.EMOJI_RIVAL,
     "tier": 3,
     "sprite": pnj.IMAGE_RIVAL,
+    "taille_equipe": 6,  # équipe complète, plus dure qu'un dresseur normal (4)
 }
 
 
@@ -103,7 +104,7 @@ def generer_equipe_dresseur(archetype: dict, pc_cible: int) -> list:
     if not pool:
         pool = list(POKEDEX)
 
-    taille = min(TAILLE_EQUIPE_DRESSEUR, len(pool))
+    taille = min(archetype.get("taille_equipe", TAILLE_EQUIPE_DRESSEUR), len(pool))
     choisis = random.sample(pool, taille)
 
     variance = random.uniform(1 - config.DRESSEUR_VARIANCE_PC, 1 + config.DRESSEUR_VARIANCE_PC)
@@ -389,10 +390,20 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
                 # AVANT le bonus de Race, comme pour l'anti-collusion PvP.
                 mult_repetition = database.enregistrer_victoire_dresseur_repetition(joueur_id)
                 journal.logger(f"🥾 <@{joueur_id}> a battu le dresseur **{archetype['nom']}**.")
-                dollars = round(
-                    pc_cible * config.DRESSEUR_FACTEUR_DOLLARS * mult_repetition
-                    * database.multiplicateur_boost(joueur_id, "argent")
-                )
+
+                if archetype["nom"] == pnj.NOM_RIVAL:
+                    # Gladio est limité à une fois par jour (cooldown dédié) : récompense
+                    # fixe et généreuse, indépendante du PC et de la dégression anti-farm
+                    # des dresseurs classiques (qui n'a pas de sens pour un combat unique/jour).
+                    dollars = round(
+                        random.randint(config.GLADIO_RECOMPENSE_MIN, config.GLADIO_RECOMPENSE_MAX)
+                        * database.multiplicateur_boost(joueur_id, "argent")
+                    )
+                else:
+                    dollars = round(
+                        pc_cible * config.DRESSEUR_FACTEUR_DOLLARS * mult_repetition
+                        * database.multiplicateur_boost(joueur_id, "argent")
+                    )
                 xp = round(pc_cible * config.DRESSEUR_FACTEUR_XP * mult_repetition)
                 # Affichage = XP réellement créditée (boost de Race/temporaire inclus) — gagner_xp()
                 # applique son propre multiplicateur en interne, donc on le reproduit ici seulement
@@ -405,7 +416,7 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
 
                 note_reduction = (
                     "\n*(récompense réduite : plusieurs dresseurs déjà battus aujourd'hui)*"
-                    if mult_repetition < 1.0 else ""
+                    if mult_repetition < 1.0 and archetype["nom"] != pnj.NOM_RIVAL else ""
                 )
                 embed = discord.Embed(
                     title=f"🏆 Victoire contre {archetype['nom']} !",

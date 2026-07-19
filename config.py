@@ -120,6 +120,8 @@ QUIZ_DELAI_PROCHAINE_QUESTION = 5  # pause entre deux questions
 # --- Rival (Gladio) ---
 GLADIO_JOURS_PAR_PALIER_DECAY = 14  # perd 1 palier de familiarité tous les X jours d'inactivité
 GLADIO_COOLDOWN_DEFI = 24 * 3600  # un défi contre Gladio par jour et par joueur
+GLADIO_RECOMPENSE_MIN = 400  # récompense fixe en Poké Dollars (une fois par jour, indépendante du PC)
+GLADIO_RECOMPENSE_MAX = 600
 
 # --- CT au Maître des Types : coût en Poké Dollars pour apprendre une attaque que le
 # Pokémon n'a pas encore débloquée par son niveau (ou qui ne se débloque jamais par
