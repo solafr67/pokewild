@@ -66,6 +66,16 @@ ARCHETYPES = [
 
 TAILLE_EQUIPE_DRESSEUR = 4
 
+# Gladio n'est PAS dans ARCHETYPES : il ne doit jamais apparaître comme dresseur spontané
+# aléatoire, seulement via /defi-gladio (voir defier_gladio ci-dessous).
+ARCHETYPE_GLADIO = {
+    "nom": pnj.NOM_RIVAL,
+    "types_theme": ["tenebres", "spectre"],
+    "emoji": pnj.EMOJI_RIVAL,
+    "tier": 3,
+    "sprite": pnj.IMAGE_RIVAL,
+}
+
 
 def _pc_cumule_equipe(user_id: int) -> int:
     noms = database.obtenir_equipe_combat_disponible(user_id)
@@ -187,12 +197,19 @@ class VueDefiDresseur(discord.ui.View):
 
 
 async def demarrer_combat_dresseur(
-    bot, joueur: discord.Member, dresseur_id: int, channel: discord.TextChannel, interaction: discord.Interaction = None
+    bot,
+    joueur: discord.Member,
+    dresseur_id: int,
+    channel: discord.TextChannel,
+    interaction: discord.Interaction = None,
+    multiplicateur_pc: float = 1.0,
 ):
     dresseur_row = database.obtenir_dresseur_actif(dresseur_id)
-    archetype = next((a for a in ARCHETYPES if a["nom"] == dresseur_row["archetype_nom"]), ARCHETYPES[0])
+    archetype = next(
+        (a for a in ARCHETYPES + [ARCHETYPE_GLADIO] if a["nom"] == dresseur_row["archetype_nom"]), ARCHETYPES[0]
+    )
 
-    pc_cible = _pc_cumule_equipe(joueur.id)
+    pc_cible = round(_pc_cumule_equipe(joueur.id) * multiplicateur_pc)
     if pc_cible <= 0:
         pc_cible = 500  # équipe joueur vide/non chiffrée : petit combat par défaut
 
@@ -394,6 +411,8 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
             embed_rival = None
             if vainqueur_id != joueur_id and random.random() < 0.3:
                 embed_rival = pnj.construire_embed_reaction("defaite_dresseur", user_id=joueur_id, joueur=f"<@{joueur_id}>")
+            elif vainqueur_id == joueur_id and archetype["nom"] == pnj.NOM_RIVAL:
+                embed_rival = pnj.construire_embed_reaction("victoire_gladio", user_id=joueur_id, joueur=f"<@{joueur_id}>")
 
             try:
                 msg = await thread.fetch_message(message_id)
@@ -466,3 +485,13 @@ async def _supprimer_message_apres_delai(message, delai):
         await message.delete()
     except Exception:
         pass
+
+
+async def defier_gladio(bot, joueur: discord.Member, channel: discord.TextChannel, interaction: discord.Interaction):
+    """Défi à la demande contre Gladio (le rival) — réutilise entièrement le moteur de
+    combat dresseur existant. Équipe légèrement plus forte que celle du joueur (+15% de
+    PC cible) pour un vrai ressenti de rival, cooldown dédié (config.GLADIO_COOLDOWN_DEFI,
+    indépendant des dresseurs spontanés)."""
+    dresseur_id = database.creer_dresseur_actif(ARCHETYPE_GLADIO["nom"], channel.id, int(time.time()) + 300)
+    database.marquer_defi_gladio(joueur.id)
+    await demarrer_combat_dresseur(bot, joueur, dresseur_id, channel, interaction, multiplicateur_pc=1.15)

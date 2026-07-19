@@ -94,6 +94,21 @@ def init_db():
         """
     )
 
+    # Migration pour les bases créées avant le suivi de décroissance par inactivité
+    try:
+        cur.execute("ALTER TABLE gladio_relation ADD COLUMN derniere_interaction INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS gladio_defis (
+            user_id INTEGER PRIMARY KEY,
+            dernier_defi INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+
     # Série de victoires PvP consécutives (remise à zéro à la première défaite) — sert de
     # déclencheur pour un commentaire de Gladio, indépendant du suivi anti-collusion existant.
     cur.execute(
@@ -3397,23 +3412,64 @@ def obtenir_captures_totales(user_id: int) -> int:
 
 
 def obtenir_relation_gladio(user_id: int) -> int:
+    """Compteur de familiarité effectif — décroît lentement si le joueur n'a pas
+    interagi avec Gladio depuis longtemps (config.GLADIO_JOURS_PAR_PALIER_DECAY)."""
     conn = get_connexion()
     cur = conn.cursor()
-    cur.execute("SELECT compteur FROM gladio_relation WHERE user_id = ?", (user_id,))
+    cur.execute("SELECT compteur, derniere_interaction FROM gladio_relation WHERE user_id = ?", (user_id,))
     row = cur.fetchone()
     conn.close()
-    return row["compteur"] if row else 0
+    if not row:
+        return 0
+
+    compteur = row["compteur"]
+    derniere = row["derniere_interaction"] or 0
+    if derniere:
+        jours_inactif = (time.time() - derniere) / 86400
+        paliers_perdus = int(jours_inactif // config.GLADIO_JOURS_PAR_PALIER_DECAY)
+        compteur = max(0, compteur - paliers_perdus)
+    return compteur
 
 
 def incrementer_relation_gladio(user_id: int):
+    effectif = obtenir_relation_gladio(user_id)  # applique la décroissance avant d'incrémenter
+    maintenant = int(time.time())
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         """
-        INSERT INTO gladio_relation (user_id, compteur) VALUES (?, 1)
-        ON CONFLICT(user_id) DO UPDATE SET compteur = compteur + 1
+        INSERT INTO gladio_relation (user_id, compteur, derniere_interaction) VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET compteur = ?, derniere_interaction = ?
         """,
-        (user_id,),
+        (user_id, effectif + 1, maintenant, effectif + 1, maintenant),
+    )
+    conn.commit()
+    conn.close()
+
+
+def temps_restant_defi_gladio(user_id: int) -> int:
+    """Secondes restantes avant de pouvoir redéfier Gladio (0 = disponible tout de suite)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT dernier_defi FROM gladio_defis WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return 0
+    ecoule = time.time() - row["dernier_defi"]
+    restant = config.GLADIO_COOLDOWN_DEFI - ecoule
+    return max(0, round(restant))
+
+
+def marquer_defi_gladio(user_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO gladio_defis (user_id, dernier_defi) VALUES (?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET dernier_defi = excluded.dernier_defi
+        """,
+        (user_id, int(time.time())),
     )
     conn.commit()
     conn.close()

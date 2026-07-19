@@ -117,6 +117,10 @@ CHANNEL_QUIZ_ID = 1528155287213572306
 QUIZ_TIMEOUT_QUESTION = 60  # secondes avant de révéler la réponse si personne ne trouve
 QUIZ_DELAI_PROCHAINE_QUESTION = 5  # pause entre deux questions
 
+# --- Rival (Gladio) ---
+GLADIO_JOURS_PAR_PALIER_DECAY = 14  # perd 1 palier de familiarité tous les X jours d'inactivité
+GLADIO_COOLDOWN_DEFI = 24 * 3600  # un défi contre Gladio par jour et par joueur
+
 # --- CT au Maître des Types : coût en Poké Dollars pour apprendre une attaque que le
 # Pokémon n'a pas encore débloquée par son niveau (ou qui ne se débloque jamais par
 # niveau — CT/tuteur/œuf uniquement dans les vrais jeux). Une attaque déjà débloquée par

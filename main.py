@@ -1438,6 +1438,16 @@ async def equipe(interaction: discord.Interaction, nom: app_commands.Choice[str]
 
     await interaction.response.send_message(message)
 
+    if ancienne_equipe is None:
+        embed_rival = pnj.construire_embed_reaction(
+            "rejoint_clan", user_id=interaction.user.id, joueur=interaction.user.display_name
+        )
+        if embed_rival:
+            try:
+                await interaction.channel.send(embed=embed_rival)
+            except discord.HTTPException:
+                pass
+
 
 @bot.tree.command(name="pokedex", description="Affiche ton Pokédex personnel")
 @app_commands.choices(
@@ -1486,6 +1496,62 @@ async def pokedex(
         proprietaire_id=interaction.user.id,
     )
     await interaction.response.send_message(embed=vue.construire_embed(), view=vue, ephemeral=True)
+
+
+@bot.tree.command(
+    name="defi-gladio",
+    description="Défie Gladio, ton rival — un vrai combat, équipe légèrement plus forte que la tienne",
+)
+async def defi_gladio_cmd(interaction: discord.Interaction):
+    if database.combat_en_cours_pour_joueur(interaction.user.id):
+        await interaction.response.send_message("❌ Tu as déjà un combat en cours !", ephemeral=True)
+        return
+
+    noms_equipe = database.obtenir_equipe_combat_disponible(interaction.user.id)
+    if not noms_equipe:
+        await interaction.response.send_message(
+            "❌ Configure ton équipe de combat d'abord (`/equipe-combat`) !", ephemeral=True
+        )
+        return
+
+    restant = database.temps_restant_defi_gladio(interaction.user.id)
+    if restant > 0:
+        heures = restant // 3600
+        minutes = (restant % 3600) // 60
+        await interaction.response.send_message(
+            f"⏳ Gladio n'est pas encore prêt à te redéfier. Reviens dans **{heures}h{minutes:02d}**.",
+            ephemeral=True,
+        )
+        return
+
+    try:
+        await interaction.response.send_message("⚔️ Gladio accepte ton défi !", ephemeral=True)
+    except (discord.NotFound, discord.HTTPException):
+        pass
+    await dresseurs_module.defier_gladio(bot, interaction.user, interaction.channel, interaction)
+
+
+@bot.tree.command(name="gladio", description="Découvre où tu en es avec Gladio, ton rival")
+async def gladio_cmd(interaction: discord.Interaction):
+    statut = pnj.obtenir_statut(interaction.user.id)
+    embed = discord.Embed(
+        title=f"{pnj.EMOJI_RIVAL} {pnj.NOM_RIVAL} — ta relation",
+        description=statut["description"],
+        color=discord.Color.dark_grey(),
+    )
+    embed.set_thumbnail(url=pnj.IMAGE_RIVAL)
+    embed.add_field(name="Palier actuel", value=statut["palier"].capitalize(), inline=True)
+    embed.add_field(name="Interactions", value=str(statut["compteur"]), inline=True)
+    if statut["prochain_seuil"] is not None:
+        embed.add_field(
+            name="Prochain palier",
+            value=f"Dans **{statut['prochain_seuil'] - statut['compteur']}** interaction(s) de plus",
+            inline=False,
+        )
+    else:
+        embed.add_field(name="Prochain palier", value="Tu as atteint le palier maximum !", inline=False)
+    embed.set_footer(text="La familiarité décroît lentement en cas de longue inactivité.")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(name="pokedex-info", description="Affiche la fiche détaillée d'un Pokémon précis")

@@ -771,6 +771,10 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
                 embed_rival = pnj.construire_embed_reaction(
                     "serie_victoires_pvp", user_id=vainqueur_id, joueur=f"<@{vainqueur_id}>"
                 )
+            elif random.random() < 0.2:
+                embed_rival = pnj.construire_embed_reaction(
+                    "defaite_pvp", user_id=perdant_id, joueur=f"<@{perdant_id}>"
+                )
 
             vainqueur = bot.get_user(vainqueur_id)
             nom_vainqueur = vainqueur.display_name if vainqueur else f"Joueur…{str(vainqueur_id)[-4:]}"

@@ -211,11 +211,18 @@ class SelectionBallView(discord.ui.View):
                     inline=False,
                 )
 
-            # Gladio ne commente que les captures marquantes (shiny/légendaire), et pas à
-            # chaque fois — pour que ça reste un petit événement plutôt qu'un bruit de fond.
-            situation_rivale = "capture_shiny" if est_shiny else ("capture_legendaire" if self.pokemon["rarete"] == "legendaire" else None)
+            # Gladio ne commente que les captures marquantes, et pas à chaque fois — pour
+            # que ça reste un petit événement plutôt qu'un bruit de fond. Rare/Hyper Rare
+            # sont plus fréquents que shiny/légendaire, donc un taux de réaction plus bas.
+            situation_rivale = (
+                "capture_shiny" if est_shiny
+                else "capture_legendaire" if self.pokemon["rarete"] == "legendaire"
+                else "capture_rare" if self.pokemon["rarete"] in ("rare", "hyper_rare")
+                else None
+            )
+            seuil_reaction = 0.5 if situation_rivale in ("capture_shiny", "capture_legendaire") else 0.15
             embed_rival = None
-            if situation_rivale and random.random() < 0.5:
+            if situation_rivale and random.random() < seuil_reaction:
                 embed_rival = pnj.construire_embed_reaction(
                     situation_rivale, user_id=user_id, joueur=interaction.user.display_name, pokemon=self.pokemon["nom"]
                 )
