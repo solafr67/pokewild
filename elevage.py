@@ -11,8 +11,9 @@ import race_ui
 from pokemon_data import (
     EMOJI_OBJETS_DIVERS,
     NOM_OBJETS_DIVERS,
-    generer_pc,
+    calculer_pc_derive,
     sprite_pokemon,
+    tirer_ivs,
     tirer_pokemon_par_rarete,
 )
 
@@ -184,7 +185,8 @@ def eclore_oeuf(user_id: int) -> discord.Embed:
     distribution = config.OEUF_DISTRIBUTION_ECLOSION[palier]
     rarete_resultat = random.choices(list(distribution.keys()), weights=list(distribution.values()))[0]
     pokemon = tirer_pokemon_par_rarete(rarete_resultat)
-    pc = generer_pc(pokemon)
+    ivs = tirer_ivs()
+    pc = calculer_pc_derive(pokemon, ivs, 1)  # un Pokémon qui éclot commence au niveau 1
 
     chance_shiny = (
         config.CHANCE_SHINY_BASE
@@ -194,7 +196,7 @@ def eclore_oeuf(user_id: int) -> discord.Embed:
     est_shiny = random.random() < chance_shiny
 
     nouvelle_entree = database.compter_captures_espece(user_id, pokemon["nom"]) == 0
-    database.ajouter_capture(user_id, pokemon["nom"], pc, shiny=est_shiny)
+    database.ajouter_capture(user_id, pokemon["nom"], pc, shiny=est_shiny, ivs=ivs)
     quetes_completees = database.incrementer_progression_quete(user_id, "capture", {"rarete": pokemon["rarete"]})
 
     xp_gagnee = config.XP_PAR_RARETE[pokemon["rarete"]]

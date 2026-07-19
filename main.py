@@ -47,8 +47,10 @@ from pokemon_data import (
     generer_pc,
     obtenir_pokemon_par_nom,
     tirer_boss_raid_par_etoile,
+    tirer_ivs,
     tirer_niveau_spawn,
     tirer_pokemon_aleatoire,
+    calculer_pc_derive,
 )
 from boutique import construire_embed_boutique, VueBoutique
 from profil import (
@@ -366,11 +368,12 @@ async def envoyer_spawn(
         multiplicateurs_types = etat_jeu.obtenir_multiplicateurs_types()
         pokemon = tirer_pokemon_aleatoire(poids_rarete, multiplicateurs_types)
 
-    pc = generer_pc(pokemon)
     niveau = tirer_niveau_spawn(pokemon["rarete"])
+    ivs = tirer_ivs()
+    pc = calculer_pc_derive(pokemon, ivs, niveau)
 
     embed = construire_embed_spawn(pokemon, pc, niveau, force_shiny=force_shiny)
-    vue = VueSpawn(pokemon, pc, niveau, force_shiny=force_shiny)
+    vue = VueSpawn(pokemon, pc, niveau, ivs, force_shiny=force_shiny)
     message = await channel.send(embed=embed, view=vue)
 
     # Suivi en base le temps que le spawn est affiché : sa vue n'étant pas persistante
@@ -1810,6 +1813,26 @@ async def backfill_niveaux(interaction: discord.Interaction, forcer: bool = Fals
         )
 
 
+@bot.tree.command(
+    name="backfill-ivs",
+    description="[Admin] Attribue des IV aléatoires aux captures d'avant la refonte du système de combat/stats",
+)
+@app_commands.checks.has_permissions(administrator=True)
+async def backfill_ivs(interaction: discord.Interaction):
+    await interaction.response.defer()
+
+    ids = database.obtenir_captures_sans_ivs()
+    for capture_id in ids:
+        database.definir_ivs_capture(capture_id, tirer_ivs())
+
+    journal.logger(f"🛠️ <@{interaction.user.id}> a lancé /backfill-ivs : {len(ids)} captures mises à jour.")
+    await interaction.followup.send(
+        f"✅ IV tirées aléatoirement pour **{len(ids)}** captures qui n'en avaient pas encore "
+        f"(d'avant la refonte du combat). Relançable sans risque, ne touche jamais une capture "
+        f"qui a déjà des IV."
+    )
+
+
 @bot.tree.command(name="give-ct", description="[Admin] Donne la CT d'une attaque à un joueur (possédée pour toujours)")
 @app_commands.checks.has_permissions(administrator=True)
 async def give_ct(interaction: discord.Interaction, membre: discord.Member, attaque: str):
@@ -2543,12 +2566,13 @@ async def give_pokemon(
         )
         return
 
+    ivs = tirer_ivs()
     if pc is not None:
         pc = max(1, min(pc, config.PC_MAXIMUM))
     else:
-        pc = generer_pc(pokemon)
+        pc = calculer_pc_derive(pokemon, ivs, 50)
 
-    database.ajouter_capture(membre.id, pokemon["nom"], pc, shiny=shiny)
+    database.ajouter_capture(membre.id, pokemon["nom"], pc, shiny=shiny, ivs=ivs)
     prefixe = "✨ " if shiny else ""
     journal.logger(f"🛠️ <@{interaction.user.id}> a donné {prefixe}**{pokemon['nom']}** ({pc} PC) à <@{membre.id}> (/give-pokemon).")
     await interaction.response.send_message(

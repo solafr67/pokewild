@@ -1,5 +1,6 @@
 import discord
 
+import combat as combat_module
 import config
 import database
 import equipe_combat
@@ -86,8 +87,9 @@ class VueSoinDepuisInventaire(discord.ui.View):
         stats = equipe_combat._stats_par_espece(self.user_id)
         blesses = []
         for nom in noms_equipe:
-            pc = stats.get(nom, {}).get("pc", 0)
-            pv_max = calculer_pv_max(pc)
+            if nom not in stats:
+                continue
+            pv_max = combat_module.stats_combattant_reel(self.user_id, nom)["pv"]
             pv_actuels = database.obtenir_pv_actuels(self.user_id, nom, pv_max)
             if pv_actuels < pv_max:
                 blesses.append((nom, pv_actuels, pv_max))
@@ -121,9 +123,7 @@ class VueSoinDepuisInventaire(discord.ui.View):
             await interaction.response.edit_message(content="Tu n'as plus cette potion.", view=None)
             return
 
-        stats = equipe_combat._stats_par_espece(self.user_id)
-        pc = stats.get(nom, {}).get("pc", 0)
-        pv_max = calculer_pv_max(pc)
+        pv_max = combat_module.stats_combattant_reel(self.user_id, nom)["pv"]
         delta = max(1, round(pv_max * config.SOIN_POURCENT[self.potion]))
         nouveau_pv = database.modifier_pv_pokemon(self.user_id, nom, delta, pv_max)
 

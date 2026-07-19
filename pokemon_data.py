@@ -433,28 +433,51 @@ def calculer_pv_max(pc: int) -> int:
     return max(1, round(pc * config.FACTEUR_PV_PAR_PC))
 
 
-def stat_effective(pokemon: dict, cle_stat: str, pc: int, niveau: int, niveau_max: int):
-    """Valeur effective d'une stat de combat (attaque/defense/attaque_spe/defense_spe/
-    vitesse) pour un INDIVIDU précis, à partir de :
-    - la stat de base de l'espèce (PokéAPI, via stats_detaillees)
-    - son ratio PC individuel / base_pc (même rareté+variance que celle qui détermine
-      déjà le PC affiché — pas un second tirage séparé)
-    - son niveau, en pourcentage de son propre plafond (0.7x au niveau 1, 1.3x au plafond
-      quelle que soit la rareté — le niveau reflète l'entraînement, pas la rareté, qui est
-      déjà pleinement portée par le PC)
+CLES_STATS = ("pv", "attaque", "defense", "attaque_spe", "defense_spe", "vitesse")
+IV_DEFAUT = {cle: 15 for cle in CLES_STATS}  # profil neutre (moyenne) pour dresseurs/raids synthétiques
 
-    Retourne None si stats_detaillees n'est pas encore disponible (avant le premier
-    passage de maj_stats.py) — à charge de l'appelant de retomber sur l'ancien calcul
-    basé uniquement sur le PC dans ce cas."""
-    stats_base = pokemon.get("stats_detaillees")
-    if not stats_base or cle_stat not in stats_base:
+
+def tirer_ivs() -> dict:
+    """Tire 6 IV indépendants (0 à 31, comme dans les jeux) — un par stat. C'est ce qui
+    rend deux individus de la même espèce réellement différents, contrairement à l'ancien
+    système à un seul facteur de variance partagé entre toutes les stats."""
+    return {cle: random.randint(0, 31) for cle in CLES_STATS}
+
+
+def calculer_stat_pv(base: int, iv: int, niveau: int) -> int:
+    """Formule officielle des PV max : PV = ((2×base + IV) × niveau) // 100 + niveau + 10."""
+    return ((2 * base + iv) * niveau) // 100 + niveau + 10
+
+
+def calculer_stat_combat(base: int, iv: int, niveau: int) -> int:
+    """Formule officielle des autres stats : (2×base + IV) × niveau // 100 + 5."""
+    return ((2 * base + iv) * niveau) // 100 + 5
+
+
+def calculer_toutes_stats(pokemon: dict, ivs: dict, niveau: int) -> dict:
+    """Stats de combat complètes {pv, attaque, defense, attaque_spe, defense_spe, vitesse}
+    pour un individu précis à un niveau précis. Retourne None si stats_detaillees n'est
+    pas encore disponible pour cette espèce (avant le premier passage de maj_stats.py) —
+    à charge de l'appelant de prévoir un repli dans ce cas."""
+    base_stats = pokemon.get("stats_detaillees")
+    if not base_stats:
         return None
+    resultat = {}
+    for cle in CLES_STATS:
+        base = base_stats.get(cle, 50)
+        iv = ivs.get(cle, 15)
+        resultat[cle] = calculer_stat_pv(base, iv, niveau) if cle == "pv" else calculer_stat_combat(base, iv, niveau)
+    return resultat
 
-    base_pc = pokemon.get("base_pc") or 1
-    ratio_individuel = pc / base_pc
-    ratio_niveau = 0.7 + 0.6 * (niveau - 1) / max(1, niveau_max - 1)
 
-    return max(1, round(stats_base[cle_stat] * ratio_individuel * ratio_niveau))
+def calculer_pc_derive(pokemon: dict, ivs: dict, niveau: int) -> int:
+    """Score 'PC' affiché (façon Pokémon GO) — dérivé des vraies stats à ce niveau précis.
+    Purement un résumé pratique pour comparer/trier/classer : ne pilote plus aucun calcul
+    de combat (voir calculer_toutes_stats, utilisé directement à la place)."""
+    stats = calculer_toutes_stats(pokemon, ivs, niveau)
+    if not stats:
+        return max(1, (pokemon.get("base_pc") or 100) * niveau // 50)  # repli grossier si stats absentes
+    return sum(stats.values())
 
 
 def obtenir_pokemon_par_nom(nom: str):

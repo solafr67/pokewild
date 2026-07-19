@@ -11,9 +11,11 @@ import leveling
 import pnj
 import quetes_ui
 from pokemon_data import (
+    IV_DEFAUT,
     POKEDEX,
     attaques_apprenables,
-    calculer_pv_max,
+    calculer_pc_derive,
+    calculer_toutes_stats,
     obtenir_pokemon_par_nom,
     pp_max_attaque,
 )
@@ -93,9 +95,25 @@ def choisir_archetype(nom_force: str | None = None) -> dict:
     return random.choice(ARCHETYPES)
 
 
+def _niveau_pour_pc_cible(pokemon: dict, pc_cible: int) -> int:
+    """Trouve le niveau (1-100) dont le PC dérivé (stats réelles, IV neutres) se rapproche
+    le plus de pc_cible — recherche binaire, calculer_pc_derive croît avec le niveau."""
+    bas, haut = 1, 100
+    while bas < haut:
+        milieu = (bas + haut) // 2
+        if calculer_pc_derive(pokemon, IV_DEFAUT, milieu) < pc_cible:
+            bas = milieu + 1
+        else:
+            haut = milieu
+    return bas
+
+
 def generer_equipe_dresseur(archetype: dict, pc_cible: int) -> list:
     """Sélectionne une équipe de Pokémon correspondant au thème de l'archétype, dont le
-    PC cumulé vise pc_cible (± la variance configurée). Retourne [(nom, pc), ...]."""
+    PC cumulé vise pc_cible (± la variance configurée). IV neutres (profil moyen, pas
+    d'individualité pour un dresseur synthétique) — seul le niveau varie pour atteindre la
+    cible de PC. Retourne une liste de dicts {nom, niveau, pv, attaque, defense,
+    attaque_spe, defense_spe, vitesse}, prête pour database.initialiser_equipe_combat_pvp."""
     types_theme = archetype["types_theme"]
     if types_theme:
         pool = [p for p in POKEDEX if any(t in p["types"] for t in types_theme)]
@@ -114,8 +132,11 @@ def generer_equipe_dresseur(archetype: dict, pc_cible: int) -> list:
     equipe = []
     for pokemon in choisis:
         pc_individuel = max(50, round(pc_par_pokemon * random.uniform(0.8, 1.2)))
-        pc_individuel = min(pc_individuel, config.PC_MAXIMUM)
-        equipe.append((pokemon["nom"], pc_individuel))
+        niveau = _niveau_pour_pc_cible(pokemon, pc_individuel)
+        stats = calculer_toutes_stats(pokemon, IV_DEFAUT, niveau)
+        if not stats:
+            stats = {"pv": 120, "attaque": 60, "defense": 60, "attaque_spe": 60, "defense_spe": 60, "vitesse": 60}
+        equipe.append({"nom": pokemon["nom"], "niveau": niveau, **stats})
     return equipe
 
 
@@ -201,13 +222,12 @@ def _equipe_a_un_vivant(user_id: int) -> bool:
     """True si au moins un Pokémon de l'équipe de combat a des PV persistants > 0."""
     noms = database.obtenir_equipe_combat_disponible(user_id)
     captures = database.obtenir_pokedex_joueur(user_id)
-    meilleur_pc = {row["pokemon_nom"]: row["meilleur_pc"] for row in captures}
+    especes_possedees = {row["pokemon_nom"] for row in captures}
     for nom in noms:
-        pc = meilleur_pc.get(nom, 0)
-        if pc <= 0:
+        if nom not in especes_possedees:
             continue
-        pv_max = calculer_pv_max(pc)
-        if database.obtenir_pv_actuels(user_id, nom, pv_max) > 0:
+        stats = combat_module.stats_combattant_reel(user_id, nom)
+        if database.obtenir_pv_actuels(user_id, nom, stats["pv"]) > 0:
             return True
     return False
 
@@ -229,22 +249,22 @@ async def demarrer_combat_dresseur(
     if pc_cible <= 0:
         pc_cible = 500  # équipe joueur vide/non chiffrée : petit combat par défaut
 
-    equipe_dresseur_brute = generer_equipe_dresseur(archetype, pc_cible)
+    equipe_dresseur = generer_equipe_dresseur(archetype, pc_cible)
 
-    # --- Équipe du joueur : PV tirés du pool PERSISTANT (partagé avec les raids) ---
+    # --- Équipe du joueur : vraies stats (IV + niveau réels), PV persistants (partagés
+    # avec les raids) potentiellement déjà entamés depuis un combat précédent ---
     noms_joueur = database.obtenir_equipe_combat_disponible(joueur.id)
     captures = database.obtenir_pokedex_joueur(joueur.id)
-    meilleur_pc = {row["pokemon_nom"]: row["meilleur_pc"] for row in captures}
+    especes_possedees = {row["pokemon_nom"] for row in captures}
     equipe_joueur = []
     for nom in noms_joueur:
-        pc = meilleur_pc.get(nom, 0)
-        if pc <= 0:
+        if nom not in especes_possedees:
             continue
-        pv_max = calculer_pv_max(pc)
-        pv_actuels = database.obtenir_pv_actuels(joueur.id, nom, pv_max)
-        equipe_joueur.append((nom, pv_max, pv_actuels))
+        stats = combat_module.stats_combattant_reel(joueur.id, nom)
+        pv_actuels = database.obtenir_pv_actuels(joueur.id, nom, stats["pv"])
+        equipe_joueur.append((stats, pv_actuels))
 
-    equipe_joueur_vivante = [(nom, pv_max) for nom, pv_max, pv_actuels in equipe_joueur if pv_actuels > 0]
+    equipe_joueur_vivante = [(stats, pv_actuels) for stats, pv_actuels in equipe_joueur if pv_actuels > 0]
     if not equipe_joueur_vivante:
         texte_ko = (
             f"❌ {joueur.mention} — toute ton équipe est K.O. (PV persistants à 0) ! "
@@ -259,16 +279,9 @@ async def demarrer_combat_dresseur(
             await channel.send(texte_ko)
         return
 
-    # Le dresseur utilise le facteur PV du PvP (0.4), pas celui des raids (0.8) : le moteur
-    # de combat réutilisé ici est calibré dégâts/PV pour le PvP, sinon les PV sont ~2x trop
-    # hauts par rapport à ce que les dégâts sont censés gérer, et les combats traînent.
-    equipe_dresseur = [
-        (nom, max(1, round(pc * config.FACTEUR_PV_COMBAT_PVP))) for nom, pc in equipe_dresseur_brute
-    ]
-
     date_limite = int(time.time()) + combat_module.DUREE_TOUR
-    actif_joueur = equipe_joueur_vivante[0][0]
-    actif_dresseur = equipe_dresseur[0][0]
+    actif_joueur = equipe_joueur_vivante[0][0]["nom"]
+    actif_dresseur = equipe_dresseur[0]["nom"]
 
     # id_dresseur_combat doit être unique PAR COMBAT (pas par spawn) : plusieurs joueurs
     # peuvent désormais affronter le même dresseur en parallèle, et attaques_equipees
@@ -281,19 +294,27 @@ async def demarrer_combat_dresseur(
     # Les PV de départ, côté joueur, respectent l'état ACTUEL (potentiellement déjà blessé)
     conn = database.get_connexion()
     cur = conn.cursor()
-    for nom, pv_max, pv_actuels in equipe_joueur:
+    for i, (stats, pv_actuels) in enumerate(equipe_joueur):
         if pv_actuels <= 0:
             continue
         cur.execute(
-            "INSERT INTO combat_equipe (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position) VALUES (?, ?, ?, ?, ?, ?)",
-            (combat_id, joueur.id, nom, pv_max, pv_actuels, len(equipe_joueur)),
+            """
+            INSERT INTO combat_equipe
+                (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                combat_id, joueur.id, stats["nom"], stats["pv"], pv_actuels, i,
+                stats["attaque"], stats["defense"], stats["attaque_spe"], stats["defense_spe"], stats["vitesse"],
+                stats["niveau"],
+            ),
         )
     conn.commit()
     conn.close()
     database.initialiser_equipe_combat_pvp(combat_id, id_dresseur_combat, equipe_dresseur)
 
-    for nom, _ in equipe_dresseur:
-        _equiper_attaques_aleatoires(id_dresseur_combat, nom)
+    for mon in equipe_dresseur:
+        _equiper_attaques_aleatoires(id_dresseur_combat, mon["nom"])
 
     database.enregistrer_defi_dresseur(dresseur_id, joueur.id)
 

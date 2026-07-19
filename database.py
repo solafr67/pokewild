@@ -375,6 +375,13 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # la colonne existe déjà
 
+    # Migration pour les bases créées avant les vrais IV par individu (refonte combat/stats)
+    for colonne in ("iv_pv", "iv_attaque", "iv_defense", "iv_attaque_spe", "iv_defense_spe", "iv_vitesse"):
+        try:
+            cur.execute(f"ALTER TABLE captures ADD COLUMN {colonne} INTEGER")
+        except sqlite3.OperationalError:
+            pass  # la colonne existe déjà
+
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS settings (
@@ -519,6 +526,18 @@ def init_db():
         )
         """
     )
+
+    # Migration : stats de combat complètes calculées une fois au début du combat (vraie
+    # formule IV + niveau), pour ne plus avoir à les re-dériver à chaque tour de résolution.
+    for colonne in ("atq", "defe", "atq_spe", "def_spe", "vit"):
+        try:
+            cur.execute(f"ALTER TABLE combat_equipe ADD COLUMN {colonne} INTEGER NOT NULL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # la colonne existe déjà
+    try:
+        cur.execute("ALTER TABLE combat_equipe ADD COLUMN niveau INTEGER NOT NULL DEFAULT 50")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
 
     cur.execute(
         """
@@ -1332,16 +1351,79 @@ def ajouter_balls(user_id: int, ball_type: str, quantite: int):
 
 # --- Captures / Pokédex ---
 
-def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False):
+def obtenir_captures_sans_ivs() -> list:
+    """IDs des captures qui n'ont pas encore d'IV (créées avant cette refonte). Utilisé
+    uniquement par la commande d'admin /backfill-ivs."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM captures WHERE iv_pv IS NULL")
+    resultats = [row["id"] for row in cur.fetchall()]
+    conn.close()
+    return resultats
+
+
+def definir_ivs_capture(capture_id: int, ivs: dict):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        UPDATE captures SET iv_pv = ?, iv_attaque = ?, iv_defense = ?,
+            iv_attaque_spe = ?, iv_defense_spe = ?, iv_vitesse = ?
+        WHERE id = ?
+        """,
+        (
+            ivs.get("pv"), ivs.get("attaque"), ivs.get("defense"),
+            ivs.get("attaque_spe"), ivs.get("defense_spe"), ivs.get("vitesse"),
+            capture_id,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_meilleures_ivs(user_id: int, pokemon_nom: str) -> dict:
+    """IV de la MEILLEURE capture (plus haut PC) de cette espèce pour ce joueur — c'est
+    cet individu-là qui est utilisé en combat (équipe de combat = par espèce, pas par
+    capture précise). Retourne None si aucune capture n'a d'IV enregistrées (anciennes
+    captures d'avant cette refonte) — l'appelant doit alors utiliser un profil neutre."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT iv_pv, iv_attaque, iv_defense, iv_attaque_spe, iv_defense_spe, iv_vitesse
+        FROM captures WHERE user_id = ? AND pokemon_nom = ? AND iv_pv IS NOT NULL
+        ORDER BY pc DESC LIMIT 1
+        """,
+        (user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "pv": row["iv_pv"], "attaque": row["iv_attaque"], "defense": row["iv_defense"],
+        "attaque_spe": row["iv_attaque_spe"], "defense_spe": row["iv_defense_spe"], "vitesse": row["iv_vitesse"],
+    }
+
+
+def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False, ivs: dict = None):
     conn = get_connexion()
     cur = conn.cursor()
     _assurer_joueur_existe(cur, user_id)
+    ivs = ivs or {}
     cur.execute(
         """
-        INSERT INTO captures (user_id, pokemon_nom, pc, date_capture, shiny)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO captures (
+            user_id, pokemon_nom, pc, date_capture, shiny,
+            iv_pv, iv_attaque, iv_defense, iv_attaque_spe, iv_defense_spe, iv_vitesse
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (user_id, pokemon_nom, pc, int(time.time()), int(shiny)),
+        (
+            user_id, pokemon_nom, pc, int(time.time()), int(shiny),
+            ivs.get("pv"), ivs.get("attaque"), ivs.get("defense"),
+            ivs.get("attaque_spe"), ivs.get("defense_spe"), ivs.get("vitesse"),
+        ),
     )
     # Compteurs à VIE (jamais décrémentés, même si la capture est relâchée plus tard) —
     # utilisés par les classements "Plus de captures"/"Plus de shiny", qui comptaient
@@ -2020,16 +2102,24 @@ def definir_adversaire_combat(combat_id: int, joueur2_id: int):
 
 
 def initialiser_equipe_combat_pvp(combat_id: int, user_id: int, equipe: list):
-    """Enregistre l'équipe d'un joueur pour ce combat (liste de (nom, pv_max))."""
+    """Enregistre l'équipe d'un joueur pour ce combat. `equipe` est une liste de dicts
+    {nom, pv, attaque, defense, attaque_spe, defense_spe, vitesse, niveau} — les stats
+    complètes, déjà calculées une fois (IV + niveau) pour ne plus être re-dérivées à
+    chaque tour."""
     conn = get_connexion()
     cur = conn.cursor()
-    for i, (nom, pv_max) in enumerate(equipe):
+    for i, mon in enumerate(equipe):
         cur.execute(
             """
-            INSERT INTO combat_equipe (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO combat_equipe
+                (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (combat_id, user_id, nom, pv_max, pv_max, i),
+            (
+                combat_id, user_id, mon["nom"], mon["pv"], mon["pv"], i,
+                mon["attaque"], mon["defense"], mon["attaque_spe"], mon["defense_spe"], mon["vitesse"],
+                mon.get("niveau", 50),
+            ),
         )
     conn.commit()
     conn.close()

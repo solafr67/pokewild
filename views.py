@@ -31,11 +31,12 @@ class SelectionBallView(discord.ui.View):
     sont trop faciles à mal viser. Des boutons pleine largeur, bien séparés, réduisent
     nettement les mauvais clics."""
 
-    def __init__(self, pokemon: dict, pc: int, niveau: int, vue_spawn: "VueSpawn", user_id: int):
+    def __init__(self, pokemon: dict, pc: int, niveau: int, ivs: dict, vue_spawn: "VueSpawn", user_id: int):
         super().__init__(timeout=20)
         self.pokemon = pokemon
         self.pc = pc
         self.niveau = niveau
+        self.ivs = ivs
         self.vue_spawn = vue_spawn
         self.user_id = user_id
 
@@ -101,7 +102,7 @@ class SelectionBallView(discord.ui.View):
             )
             est_shiny = self.vue_spawn.force_shiny or (random.random() < chance_shiny)
 
-            database.ajouter_capture(user_id, self.pokemon["nom"], self.pc, shiny=est_shiny)
+            database.ajouter_capture(user_id, self.pokemon["nom"], self.pc, shiny=est_shiny, ivs=self.ivs)
 
             # Le niveau suit l'espèce (comme le PC déjà affiché) : on ne l'écrase que s'il
             # est plus haut que celui déjà acquis pour cette espèce, pour ne jamais faire
@@ -274,11 +275,12 @@ class SelectionBallView(discord.ui.View):
 class VueSpawn(discord.ui.View):
     """Vue attachée au message de spawn public. Chaque joueur peut tenter une seule capture."""
 
-    def __init__(self, pokemon: dict, pc: int, niveau: int, force_shiny: bool = False):
+    def __init__(self, pokemon: dict, pc: int, niveau: int, ivs: dict, force_shiny: bool = False):
         super().__init__(timeout=None)  # le spawn suivant remplacera celui-ci, pas de timeout fixe
         self.pokemon = pokemon
         self.pc = pc
         self.niveau = niveau
+        self.ivs = ivs
         self.tentatives = set()
         self.force_shiny = force_shiny
 
@@ -312,7 +314,7 @@ class VueSpawn(discord.ui.View):
         # plusieurs menus de sélection en parallèle pour tenter plusieurs fois.
         self.tentatives.add(user_id)
 
-        vue_selection = SelectionBallView(self.pokemon, self.pc, self.niveau, self, user_id)
+        vue_selection = SelectionBallView(self.pokemon, self.pc, self.niveau, self.ivs, self, user_id)
 
         nb_possedes = database.compter_captures_espece(user_id, self.pokemon["nom"])
         if nb_possedes > 0:

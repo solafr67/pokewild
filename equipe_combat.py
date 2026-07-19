@@ -1,5 +1,6 @@
 import discord
 
+import combat as combat_module
 import config
 import database
 import niveaux_pokemon
@@ -73,13 +74,13 @@ def construire_embed_equipe(user: discord.abc.User) -> discord.Embed:
             shiny_txt = " ✨" if info and info["shiny"] else ""
             pc_txt = info["pc"] if info else "?"
 
-            pv_max = calculer_pv_max(info["pc"]) if info else 1
-            pv_actuels = database.obtenir_pv_actuels(user.id, nom, pv_max)
-            ko_txt = " 💀 K.O." if pv_actuels <= 0 else ""
-
             niveau, xp = database.obtenir_niveau_pokemon(user.id, nom)
             niveau_max = niveaux_pokemon.niveau_max_pour_rarete(pokemon["rarete"]) if pokemon else 100
             niveau_txt = f"Niv. {niveau}" + (" (MAX)" if niveau >= niveau_max else f"/{niveau_max}")
+
+            pv_max = combat_module.stats_combattant_reel(user.id, nom)["pv"] if info else 1
+            pv_actuels = database.obtenir_pv_actuels(user.id, nom, pv_max)
+            ko_txt = " 💀 K.O." if pv_actuels <= 0 else ""
 
             lignes.append(
                 f"{i + 1}. {emoji_rarete} **{nom}**{shiny_txt} — {niveau_txt} — {pc_txt} PC — "
@@ -448,8 +449,9 @@ class VueSoin(discord.ui.View):
         stats = _stats_par_espece(self.user_id)
         blesses = []
         for nom in noms_equipe:
-            pc = stats.get(nom, {}).get("pc", 0)
-            pv_max = calculer_pv_max(pc)
+            if nom not in stats:
+                continue
+            pv_max = combat_module.stats_combattant_reel(self.user_id, nom)["pv"]
             pv_actuels = database.obtenir_pv_actuels(self.user_id, nom, pv_max)
             if pv_actuels < pv_max:
                 blesses.append((nom, pv_actuels, pv_max))
@@ -522,9 +524,7 @@ class VueSoin(discord.ui.View):
             await interaction.response.edit_message(content="Tu n'as plus cette potion.", view=self)
             return
 
-        stats = _stats_par_espece(self.user_id)
-        pc = stats.get(nom, {}).get("pc", 0)
-        pv_max = calculer_pv_max(pc)
+        pv_max = combat_module.stats_combattant_reel(self.user_id, nom)["pv"]
         delta = max(1, round(pv_max * config.SOIN_POURCENT[potion]))
         nouveau_pv = database.modifier_pv_pokemon(self.user_id, nom, delta, pv_max)
 

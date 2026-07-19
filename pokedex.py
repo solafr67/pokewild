@@ -2,7 +2,7 @@ import discord
 
 import database
 import niveaux_pokemon
-from pokemon_data import COULEUR_RARETE, EMOJI_POKEDEX, EMOJI_RARETE, POKEDEX, affichage_types, cle_tri_alphabetique_fr, obtenir_pokemon_par_nom, sprite_pokemon, stat_effective
+from pokemon_data import COULEUR_RARETE, EMOJI_POKEDEX, EMOJI_RARETE, IV_DEFAUT, POKEDEX, affichage_types, calculer_toutes_stats, cle_tri_alphabetique_fr, obtenir_pokemon_par_nom, sprite_pokemon
 
 STATS_HEXAGONE = [
     ("pv", "PV"),
@@ -14,17 +14,18 @@ STATS_HEXAGONE = [
 ]
 
 
-def _texte_hexagone(pokemon: dict, pc: int, niveau: int, niveau_max: int) -> str:
+def _texte_hexagone(pokemon: dict, ivs: dict, niveau: int) -> str:
     """Représentation texte des 6 stats de combat (l'équivalent de l'hexagone des jeux
     principaux), avec une mini barre pour comparer d'un coup d'œil. Repère visuel à 200
     (les stats peuvent dépasser sans problème, la barre plafonne juste à 10/10 dans ce cas).
     Retourne None si stats_detaillees n'est pas encore disponible pour cette espèce."""
+    stats = calculer_toutes_stats(pokemon, ivs, niveau)
+    if not stats:
+        return None
     echelle = 200
     lignes = []
     for cle, label in STATS_HEXAGONE:
-        valeur = stat_effective(pokemon, cle, pc, niveau, niveau_max)
-        if valeur is None:
-            return None
+        valeur = stats[cle]
         rempli = min(10, round(valeur / echelle * 10))
         barre = "█" * rempli + "░" * (10 - rempli)
         lignes.append(f"{label:<9}{barre} {valeur}")
@@ -372,7 +373,8 @@ def construire_embed_fiche(user_id: int, nom_pokemon: str) -> discord.Embed:
         niveau_max = niveaux_pokemon.niveau_max_pour_rarete(pokemon["rarete"])
         embed.add_field(name="Niveau", value=f"⭐ {niveau}/{niveau_max}", inline=True)
 
-        texte_hexagone = _texte_hexagone(pokemon, info["meilleur_pc"], niveau, niveau_max)
+        ivs = database.obtenir_meilleures_ivs(user_id, pokemon["nom"]) or IV_DEFAUT
+        texte_hexagone = _texte_hexagone(pokemon, ivs, niveau)
         if texte_hexagone:
             embed.add_field(name="📊 Statistiques", value=f"```{texte_hexagone}```", inline=False)
 
