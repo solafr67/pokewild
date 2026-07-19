@@ -183,10 +183,12 @@ class VueDefiDresseur(discord.ui.View):
             # Interaction expirée (bot ralenti/redémarré entre le clic et la réponse) — pas
             # grave en soi, mais il ne faut surtout pas que ça empêche le combat de démarrer.
             pass
-        await demarrer_combat_dresseur(interaction.client, interaction.user, self.dresseur_id, interaction.channel)
+        await demarrer_combat_dresseur(interaction.client, interaction.user, self.dresseur_id, interaction.channel, interaction)
 
 
-async def demarrer_combat_dresseur(bot, joueur: discord.Member, dresseur_id: int, channel: discord.TextChannel):
+async def demarrer_combat_dresseur(
+    bot, joueur: discord.Member, dresseur_id: int, channel: discord.TextChannel, interaction: discord.Interaction = None
+):
     dresseur_row = database.obtenir_dresseur_actif(dresseur_id)
     archetype = next((a for a in ARCHETYPES if a["nom"] == dresseur_row["archetype_nom"]), ARCHETYPES[0])
 
@@ -211,10 +213,17 @@ async def demarrer_combat_dresseur(bot, joueur: discord.Member, dresseur_id: int
 
     equipe_joueur_vivante = [(nom, pv_max) for nom, pv_max, pv_actuels in equipe_joueur if pv_actuels > 0]
     if not equipe_joueur_vivante:
-        await channel.send(
+        texte_ko = (
             f"❌ {joueur.mention} — toute ton équipe est K.O. (PV persistants à 0) ! "
             f"Soigne-la via `/equipe-combat` avant de défier un dresseur."
         )
+        if interaction is not None:
+            try:
+                await interaction.followup.send(texte_ko, ephemeral=True)
+            except (discord.NotFound, discord.HTTPException):
+                await channel.send(texte_ko)  # interaction expirée : repli visible plutôt que perdu
+        else:
+            await channel.send(texte_ko)
         return
 
     # Le dresseur utilise le facteur PV du PvP (0.4), pas celui des raids (0.8) : le moteur
