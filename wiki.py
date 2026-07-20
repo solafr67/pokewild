@@ -218,6 +218,20 @@ PAGES = {
             "types, Trivia PokéWild, une question à la fois, premier qui trouve gagne"
         ),
     },
+    "draft_pvp": {
+        "titre": "Draft PvP",
+        "emoji": "🎯",
+        "texte": (
+            "Un mode de combat **compétitif équitable**, indépendant de ta collection.\n\n"
+            "`/defi-draft @adversaire` — un pool de 8 Pokémon aléatoires est proposé, "
+            "vous piochez chacun 3 Pokémon à tour de rôle (façon draft \"serpent\"). "
+            "Tous les Pokémon draftés sont au **même niveau** (peu importe votre "
+            "progression réelle), avec des IV neutres, et **4 attaques tirées au hasard** "
+            "dans tout leur movepool possible — sans tenir compte du niveau requis ni "
+            "d'une CT possédée.\n\n"
+            "Seule la lecture du plateau compte : qui a le plus farmé ne joue aucun rôle ici."
+        ),
+    },
     "parrainage": {
         "titre": "Parrainage & Boost du serveur",
         "emoji": "🤝",

@@ -33,6 +33,7 @@ import leveling
 import saison as saison_module
 import wiki as wiki_module
 import parrainage as parrainage_module
+import draft_pvp as draft_pvp_module
 import meteo
 import niveaux_pokemon
 from pokemon_data import (
@@ -1739,6 +1740,27 @@ async def parrainage_cmd(interaction: discord.Interaction):
     )
     embed.set_footer(text="Invite avec ton lien personnel Discord habituel — le bot détecte tout seul qui a invité qui.")
     await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(
+    name="defi-draft",
+    description="Défie un joueur en Draft PvP — piochez une équipe dans un pool commun, niveau et attaques standardisés",
+)
+async def defi_draft_cmd(interaction: discord.Interaction, adversaire: discord.Member):
+    if adversaire.id == interaction.user.id:
+        await interaction.response.send_message("Tu ne peux pas te défier toi-même !", ephemeral=True)
+        return
+    if adversaire.bot:
+        await interaction.response.send_message("Tu ne peux pas défier un bot !", ephemeral=True)
+        return
+
+    vue = draft_pvp_module.VueInvitationDraft(bot, interaction.user, adversaire, interaction.channel)
+    await interaction.response.send_message(
+        f"🎯 {adversaire.mention}, **{interaction.user.display_name}** te défie en **Draft PvP** ! "
+        f"Piochez chacun 3 Pokémon dans un pool commun (niveau {config.DRAFT_NIVEAU}, attaques aléatoires) "
+        f"et affrontez-vous. Tu acceptes ?",
+        view=vue,
+    )
 
 
 @bot.tree.command(name="pokedex-info", description="Affiche la fiche détaillée d'un Pokémon précis")

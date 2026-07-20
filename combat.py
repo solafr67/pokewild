@@ -207,6 +207,25 @@ async def demarrer_combat(bot, joueur1: discord.Member, joueur2: discord.Member,
         await channel.send("❌ L'un des joueurs n'a pas d'équipe de combat configurée (`/equipe-combat`).")
         return
 
+    await lancer_combat_avec_equipes(bot, joueur1, joueur2, channel, equipe1, equipe2)
+
+
+async def lancer_combat_avec_equipes(
+    bot,
+    joueur1: discord.Member,
+    joueur2: discord.Member,
+    channel: discord.TextChannel,
+    equipe1: list,
+    equipe2: list,
+    avant_lancement=None,
+) -> int:
+    """Crée le combat (thread + message + boucle de résolution) à partir de deux équipes
+    déjà construites (liste de dicts stats complètes) — factorisé pour être réutilisé
+    aussi bien par le PvP classique (preparer_equipe_pour_combat) que par le Draft PvP
+    (draft_pvp.py, équipes tirées au hasard). `avant_lancement(combat_id)`, si fourni,
+    est attendu juste après la création du combat_id mais AVANT que le thread ne soit
+    visible aux joueurs — utilisé par le Draft pour équiper les attaques tirées au sort
+    avant que quiconque ne puisse cliquer sur Attaquer. Retourne l'ID du combat créé."""
     date_limite = int(time.time()) + DUREE_TOUR
     actif1 = equipe1[0]["nom"]
     actif2 = equipe2[0]["nom"]
@@ -214,6 +233,9 @@ async def demarrer_combat(bot, joueur1: discord.Member, joueur2: discord.Member,
     combat_id = database.creer_combat(joueur1.id, joueur2.id, actif1, actif2, date_limite)
     database.initialiser_equipe_combat_pvp(combat_id, joueur1.id, equipe1)
     database.initialiser_equipe_combat_pvp(combat_id, joueur2.id, equipe2)
+
+    if avant_lancement is not None:
+        await avant_lancement(combat_id)
 
     try:
         thread = await channel.create_thread(
@@ -225,7 +247,7 @@ async def demarrer_combat(bot, joueur1: discord.Member, joueur2: discord.Member,
     except discord.HTTPException as e:
         await channel.send(f"❌ Impossible de créer le thread : {e}")
         database.terminer_combat_pvp(combat_id)
-        return
+        return combat_id
 
     conn = database.get_connexion()
     cur = conn.cursor()
@@ -244,6 +266,7 @@ async def demarrer_combat(bot, joueur1: discord.Member, joueur2: discord.Member,
     )
 
     bot.loop.create_task(boucle_resolution_tour(bot, combat_id, thread.id, msg.id, DUREE_TOUR))
+    return combat_id
 
 
 # ----------------------------------------------------------------------------
@@ -861,7 +884,7 @@ class VueActionCombat(discord.ui.View):
             return
         combat = database.obtenir_combat(self.combat_id)
         actif_nom = combat["actif1_nom"] if combat["joueur1_id"] == interaction.user.id else combat["actif2_nom"]
-        equipees = database.obtenir_attaques_equipees(interaction.user.id, actif_nom)
+        equipees = database.obtenir_attaques_equipees(interaction.user.id, actif_nom, combat_id=self.combat_id)
 
         if not equipees:
             # Aucune attaque équipée : Charge par défaut, directement (illimitée, hors système de PP)

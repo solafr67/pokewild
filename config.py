@@ -133,6 +133,12 @@ PARRAINAGE_RECOMPENSE_BALLS = [("superball", 3), ("hyperball", 1)]
 # --- Bonus des boosters du serveur Discord (argent/xp/shiny uniquement, pas capture) ---
 MULTIPLICATEUR_BOOSTER_SERVEUR = {"argent": 1.15, "xp": 1.15, "shiny": 1.5}
 
+# --- Draft PvP : niveau standardisé pour tous les Pokémon draftés (compétition équitable,
+# indépendante de la collection/progression de chacun) ---
+DRAFT_NIVEAU = 50
+DRAFT_TAILLE_POOL = 8
+DRAFT_PICKS_PAR_JOUEUR = 3
+
 # --- Rival (Gladio) ---
 GLADIO_JOURS_PAR_PALIER_DECAY = 14  # perd 1 palier de familiarité tous les X jours d'inactivité
 GLADIO_COOLDOWN_DEFI = 24 * 3600  # un défi contre Gladio par jour et par joueur

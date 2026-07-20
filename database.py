@@ -591,6 +591,19 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS draft_attaques_equipees (
+            combat_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            pokemon_nom TEXT NOT NULL,
+            slot INTEGER NOT NULL,
+            attaque_nom TEXT NOT NULL,
+            PRIMARY KEY (combat_id, user_id, pokemon_nom, slot)
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS combat_boosts (
             combat_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
@@ -2477,6 +2490,24 @@ def equiper_attaque(user_id: int, pokemon_nom: str, slot: int, attaque_nom: str)
     conn.close()
 
 
+def equiper_attaque_draft(combat_id: int, user_id: int, pokemon_nom: str, slot: int, attaque_nom: str):
+    """Comme equiper_attaque, mais dans une table dédiée au Draft PvP (draft_pvp.py) —
+    ne touche JAMAIS le loadout permanent du joueur pour cette espèce, même s'il la
+    possède réellement. Voir obtenir_attaques_equipees(..., combat_id=...)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO draft_attaques_equipees (combat_id, user_id, pokemon_nom, slot, attaque_nom)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(combat_id, user_id, pokemon_nom, slot) DO UPDATE SET attaque_nom = excluded.attaque_nom
+        """,
+        (combat_id, user_id, pokemon_nom, slot, attaque_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
 def retirer_attaque(user_id: int, pokemon_nom: str, slot: int):
     conn = get_connexion()
     cur = conn.cursor()
@@ -2488,10 +2519,23 @@ def retirer_attaque(user_id: int, pokemon_nom: str, slot: int):
     conn.close()
 
 
-def obtenir_attaques_equipees(user_id: int, pokemon_nom: str) -> dict:
-    """Retourne {slot: attaque_nom} pour un Pokémon (slots 1-4, absents si vides)."""
+def obtenir_attaques_equipees(user_id: int, pokemon_nom: str, combat_id: int = None) -> dict:
+    """Retourne {slot: attaque_nom} pour un Pokémon (slots 1-4, absents si vides). Si
+    combat_id est fourni et qu'un loadout Draft PvP existe pour ce combat précis, il a
+    priorité sur le loadout permanent du joueur (jamais modifié par le Draft)."""
     conn = get_connexion()
     cur = conn.cursor()
+
+    if combat_id is not None:
+        cur.execute(
+            "SELECT slot, attaque_nom FROM draft_attaques_equipees WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ? ORDER BY slot",
+            (combat_id, user_id, pokemon_nom),
+        )
+        resultat_draft = {row["slot"]: row["attaque_nom"] for row in cur.fetchall()}
+        if resultat_draft:
+            conn.close()
+            return resultat_draft
+
     cur.execute(
         "SELECT slot, attaque_nom FROM attaques_equipees WHERE user_id = ? AND pokemon_nom = ? ORDER BY slot",
         (user_id, pokemon_nom),
