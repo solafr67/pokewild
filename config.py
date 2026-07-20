@@ -114,6 +114,7 @@ DEFI_STATS_NB_ROUNDS = 5
 
 # --- Quiz communautaire multi-thèmes (Qui est-ce / Anagramme / Quiz de types / Trivia) ---
 CHANNEL_QUIZ_ID = 1528155287213572306
+CHANNEL_WIKI_ID = 1528849699812151447
 QUIZ_TIMEOUT_QUESTION = 60  # secondes avant de révéler la réponse si personne ne trouve
 QUIZ_DELAI_PROCHAINE_QUESTION = 5  # pause entre deux questions
 

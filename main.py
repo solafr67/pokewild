@@ -30,6 +30,7 @@ import database
 import etat_jeu
 import leveling
 import saison as saison_module
+import wiki as wiki_module
 import meteo
 import niveaux_pokemon
 from pokemon_data import (
@@ -1092,6 +1093,7 @@ async def on_ready():
     bot.add_view(VueProfil())  # idem pour le profil
     bot.add_view(VueOuvrirPokedex())  # idem pour le bouton pokédex affiché sur le profil
     bot.add_view(maitre_types_module.VueMaitreTypes())  # idem pour le Maître des Types
+    bot.add_view(wiki_module.VueWiki())  # idem pour le wiki
     bot.add_view(exploration_module.VueCentreExploration())  # idem pour le Centre des Explorations
     bot.add_view(quetes_ui_module.VueCentreQuetes())  # idem pour les Quêtes
     bot.add_view(classement_module.VueClassements())  # idem pour les classements
@@ -1164,6 +1166,7 @@ async def on_ready():
     await poster_message_pokestop_si_absent()
     await poster_message_boutique_si_absent()
     await poster_message_maitre_types_si_absent()
+    await poster_message_wiki_si_absent()
     await poster_message_centre_exploration_si_absent()
     await poster_message_quetes_si_absent()
     await poster_message_profil_si_absent()
@@ -1272,6 +1275,33 @@ async def poster_message_maitre_types_si_absent():
 
     message = await channel.send(embed=embed, view=maitre_types_module.VueMaitreTypes())
     database.definir_parametre("maitre_types_message_id", str(message.id))
+
+
+async def poster_message_wiki_si_absent():
+    """Poste le message fixe du wiki (si le channel est configuré), ou le met à jour
+    s'il existe déjà."""
+    channel_id = getattr(config, "CHANNEL_WIKI_ID", None)
+    if not channel_id:
+        return  # channel non configuré : le wiki reste accessible via /wiki
+
+    channel = bot.get_channel(channel_id)
+    if channel is None:
+        print("⚠️ CHANNEL_WIKI_ID introuvable — vérifie l'ID dans config.py.")
+        return
+
+    embed = wiki_module.construire_embed_accueil()
+    message_id = database.obtenir_parametre("wiki_message_id")
+
+    if message_id:
+        try:
+            message_existant = await channel.fetch_message(int(message_id))
+            await message_existant.edit(embed=embed, view=wiki_module.VueWiki())
+            return
+        except discord.NotFound:
+            pass
+
+    message = await channel.send(embed=embed, view=wiki_module.VueWiki())
+    database.definir_parametre("wiki_message_id", str(message.id))
 
 
 async def poster_message_centre_exploration_si_absent():
@@ -1606,6 +1636,12 @@ async def passe_saison_cmd(interaction: discord.Interaction):
     )
     embed.set_footer(text="Progresse en jouant normalement — toute XP de dresseur gagnée alimente aussi le passe.")
     await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="wiki", description="Ouvre le wiki interactif de PokéWild — toutes les infos sur le jeu")
+async def wiki_cmd(interaction: discord.Interaction):
+    vue = wiki_module.VueWiki()
+    await interaction.response.send_message(embed=wiki_module.construire_embed_accueil(), view=vue, ephemeral=True)
 
 
 @bot.tree.command(name="pokedex-info", description="Affiche la fiche détaillée d'un Pokémon précis")
