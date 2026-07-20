@@ -147,12 +147,15 @@ def recuperer_pokemon(pokedex_id: int):
     }
 
 
-# Mapping des stats PokéAPI vers les 3 stats simplifiées du bot
+# Mapping des stats PokéAPI vers les stats simplifiées du bot — physique et spécial
+# restent bien DISTINCTS (nécessaire depuis que le combat différencie Attaque/Attaque
+# Spé et Défense/Défense Spé ; les collapser ensemble comme avant faisait qu'une attaque
+# censée booster Attaque ET Attaque Spé ne boostait en réalité que l'Attaque, deux fois).
 TRADUCTION_STATS = {
     "attack": "atk",
-    "special-attack": "atk",
+    "special-attack": "atk_spe",
     "defense": "def",
-    "special-defense": "def",
+    "special-defense": "def_spe",
     "speed": "vit",
 }
 

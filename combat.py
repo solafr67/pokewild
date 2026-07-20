@@ -342,7 +342,7 @@ async def resoudre_tour(combat_id: int) -> list:
         """Multiplicateur officiel Pokémon pour un stage de stat (-6..+6)."""
         return (2 + stage) / 2 if stage >= 0 else 2 / (2 - stage)
 
-    NOMS_STATS = {"atk": "Attaque", "def": "Défense", "vit": "Vitesse"}
+    NOMS_STATS = {"atk": "Attaque", "def": "Défense", "atk_spe": "Attaque Spé", "def_spe": "Défense Spé", "vit": "Vitesse"}
 
     # --- Phase 1 : changements de Pokémon (réinitialisent les boosts du sortant) ---
     for user_id, action in ((j1, a1), (j2, a2)):
@@ -514,8 +514,10 @@ async def resoudre_tour(combat_id: int) -> list:
             # Vraie formule officielle des jeux (avec STAB/types/variance en plus, gérés
             # séparément ci-dessous) : ((2×niveau/5 + 2) × puissance × Atq/Déf / 50) + 2.
             variance = random.uniform(0.85, 1.15)
-            stat_def_boostee = max(1, stat_def / mult_stage(boosts_def["def"]))
-            stat_off_boostee = max(1, stat_off * mult_stage(boosts_atk["atk"]))
+            cle_boost_off = "atk_spe" if est_special else "atk"
+            cle_boost_def = "def_spe" if est_special else "def"
+            stat_def_boostee = max(1, stat_def / mult_stage(boosts_def[cle_boost_def]))
+            stat_off_boostee = max(1, stat_off * mult_stage(boosts_atk[cle_boost_off]))
             degats = max(1, round(
                 ((2 * row_atk["niveau"] / 5 + 2) * attaque["puissance"] * stat_off_boostee / stat_def_boostee / 50 + 2)
                 * multi_type * stab * variance
@@ -722,7 +724,7 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
 
     if combat["thread_id"]:
         try:
-            thread = bot.get_channel(int(combat["thread_id"]))
+            thread = bot.get_channel(int(combat["thread_id"])) or await bot.fetch_channel(int(combat["thread_id"]))
             if thread:
                 embeds_a_envoyer = [embed, embed_rival] if embed_rival else [embed]
                 await thread.send(embeds=embeds_a_envoyer)
@@ -764,6 +766,15 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
         vainqueur_id = verifier_fin_combat(combat_id)
 
         thread = bot.get_channel(int(thread_id))
+        if thread is None:
+            # get_channel ne regarde que le cache local — un fil peut en être absent
+            # (redémarrage, inactivité...) sans avoir réellement disparu. On vérifie pour
+            # de vrai auprès de Discord avant de conclure que le combat doit se terminer.
+            try:
+                thread = await bot.fetch_channel(int(thread_id))
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                thread = None
+
         if thread is None:
             database.terminer_combat_pvp(combat_id)
             return

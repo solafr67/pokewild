@@ -616,6 +616,15 @@ def init_db():
         """
     )
 
+    # Migration : Attaque Spé / Défense Spé distinctes de Attaque / Défense (avant, un
+    # boost visant l'une ou l'autre catégorie physique/spéciale était confondu avec la
+    # même colonne — une attaque boostant Atq ET Atq Spé ne boostait donc que l'Atq, deux fois).
+    for colonne in ("stage_atk_spe", "stage_def_spe"):
+        try:
+            cur.execute(f"ALTER TABLE combat_boosts ADD COLUMN {colonne} INTEGER NOT NULL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # la colonne existe déjà
+
     # Attaques à deux tours (charge type Lance-Soleil, recharge type Ultimaton/Ultralaser) —
     # voir ATTAQUES_CHARGE / ATTAQUES_RECHARGE dans pokemon_data.py.
     cur.execute(
@@ -2548,23 +2557,28 @@ def obtenir_attaques_equipees(user_id: int, pokemon_nom: str, combat_id: int = N
 # --- Boosts de stats en combat (stages -6..+6, réinitialisés au changement de Pokémon) ---
 
 def obtenir_boosts(combat_id: int, user_id: int, pokemon_nom: str) -> dict:
-    """Retourne {'atk': stage, 'def': stage, 'vit': stage} (0 partout si jamais boosté)."""
+    """Retourne {'atk','def','atk_spe','def_spe','vit'} (0 partout si jamais boosté)."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
-        "SELECT stage_atk, stage_def, stage_vit FROM combat_boosts WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        "SELECT stage_atk, stage_def, stage_atk_spe, stage_def_spe, stage_vit FROM combat_boosts "
+        "WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
         (combat_id, user_id, pokemon_nom),
     )
     row = cur.fetchone()
     conn.close()
     if row is None:
-        return {"atk": 0, "def": 0, "vit": 0}
-    return {"atk": row["stage_atk"], "def": row["stage_def"], "vit": row["stage_vit"]}
+        return {"atk": 0, "def": 0, "atk_spe": 0, "def_spe": 0, "vit": 0}
+    return {
+        "atk": row["stage_atk"], "def": row["stage_def"],
+        "atk_spe": row["stage_atk_spe"], "def_spe": row["stage_def_spe"],
+        "vit": row["stage_vit"],
+    }
 
 
 def modifier_boost(combat_id: int, user_id: int, pokemon_nom: str, stat: str, delta: int) -> int:
-    """Applique un delta de stage à une stat (atk/def/vit), borné entre -6 et +6.
-    Retourne le nouveau stage."""
+    """Applique un delta de stage à une stat (atk/def/atk_spe/def_spe/vit), borné entre
+    -6 et +6. Retourne le nouveau stage."""
     boosts = obtenir_boosts(combat_id, user_id, pokemon_nom)
     nouveau = max(-6, min(6, boosts[stat] + delta))
     boosts[stat] = nouveau
@@ -2573,14 +2587,17 @@ def modifier_boost(combat_id: int, user_id: int, pokemon_nom: str, stat: str, de
     cur = conn.cursor()
     cur.execute(
         """
-        INSERT INTO combat_boosts (combat_id, user_id, pokemon_nom, stage_atk, stage_def, stage_vit)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO combat_boosts
+            (combat_id, user_id, pokemon_nom, stage_atk, stage_def, stage_atk_spe, stage_def_spe, stage_vit)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(combat_id, user_id, pokemon_nom) DO UPDATE SET
             stage_atk = excluded.stage_atk,
             stage_def = excluded.stage_def,
+            stage_atk_spe = excluded.stage_atk_spe,
+            stage_def_spe = excluded.stage_def_spe,
             stage_vit = excluded.stage_vit
         """,
-        (combat_id, user_id, pokemon_nom, boosts["atk"], boosts["def"], boosts["vit"]),
+        (combat_id, user_id, pokemon_nom, boosts["atk"], boosts["def"], boosts["atk_spe"], boosts["def_spe"], boosts["vit"]),
     )
     conn.commit()
     conn.close()
