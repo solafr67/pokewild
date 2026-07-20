@@ -125,7 +125,8 @@
       "Soucigraine": 30,
       "Canon Graine": 18,
       "Mégafouet": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Herbizarre",
@@ -250,7 +251,8 @@
       "Soucigraine": 36,
       "Canon Graine": 20,
       "Mégafouet": 45
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Florizarre",
@@ -392,7 +394,8 @@
       "Canon Graine": 20,
       "Mégafouet": 1,
       "Tempête Florale": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Salamèche",
@@ -540,7 +543,8 @@
       "Crocs Feu": 17,
       "Rebondifeu": 28,
       "Feu d’Enfer": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Reptincel",
@@ -686,7 +690,8 @@
       "Crocs Feu": 19,
       "Rebondifeu": 32,
       "Feu d’Enfer": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dracaufeu",
@@ -868,7 +873,8 @@
       "Crocs Feu": 19,
       "Rebondifeu": 32,
       "Feu d’Enfer": 54
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Carapuce",
@@ -1016,7 +1022,8 @@
       "Hydro-Queue": 24,
       "Exuviation": 27,
       "Aquatacle": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Carabaffe",
@@ -1160,7 +1167,8 @@
       "Hydro-Queue": 30,
       "Exuviation": 35,
       "Aquatacle": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tortank",
@@ -1327,7 +1335,8 @@
       "Aqua-Jet": 1,
       "Exuviation": 35,
       "Aquatacle": 56
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chenipan",
@@ -1360,7 +1369,8 @@
       "Charge": 1,
       "Sécrétion": 1,
       "Piqûre": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chrysacier",
@@ -1391,7 +1401,8 @@
     },
     "movepool_niveaux": {
       "Armure": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Papilusion",
@@ -1524,7 +1535,8 @@
       "Piqûre": 1,
       "Poudre Fureur": 34,
       "Papillodanse": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Aspicot",
@@ -1557,7 +1569,8 @@
       "Dard-Venin": 1,
       "Sécrétion": 1,
       "Piqûre": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Coconfort",
@@ -1589,7 +1602,8 @@
     },
     "movepool_niveaux": {
       "Armure": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dardargnan",
@@ -1729,7 +1743,8 @@
       "Choc Venin": 23,
       "Dard Mortel": 44,
       "Affilage": 14
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Roucool",
@@ -1835,7 +1850,8 @@
       "Vent Arrière": 41,
       "Lame d’Air": 27,
       "Vent Violent": 53
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Roucoups",
@@ -1938,7 +1954,8 @@
       "Vent Arrière": 47,
       "Lame d’Air": 39,
       "Vent Violent": 62
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Roucarnage",
@@ -2047,7 +2064,8 @@
       "Vent Arrière": 50,
       "Lame d’Air": 43,
       "Vent Violent": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rattata",
@@ -2169,7 +2187,8 @@
       "Assurance": 19,
       "Coup Bas": 19,
       "Affilage": 13
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rattatac",
@@ -2298,7 +2317,8 @@
       "Assurance": 19,
       "Coup Bas": 19,
       "Affilage": 13
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Piafabec",
@@ -2408,7 +2428,8 @@
       "Aéropique": 15,
       "Atterrissage": 24,
       "Assurance": 8
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rapasdepic",
@@ -2521,7 +2542,8 @@
       "Picore": 1,
       "Assurance": 8,
       "Tunnelier": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Abo",
@@ -2662,7 +2684,8 @@
       "Enroulement": 44,
       "Bombe Acide": 28,
       "Éructation": 38
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Arbok",
@@ -2816,7 +2839,8 @@
       "Enroulement": 56,
       "Bombe Acide": 32,
       "Éructation": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pikachu",
@@ -2974,7 +2998,8 @@
       "Éclair Fou": 50,
       "Camaraderie": 1,
       "Frotte-Frimousse": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Raichu",
@@ -3140,7 +3165,8 @@
       "Boule Élek": 1,
       "Camaraderie": 1,
       "Frotte-Frimousse": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sabelette",
@@ -3284,7 +3310,8 @@
       "Tourbi-Sable": 23,
       "Gyroballe": 33,
       "Piétisol": 18
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sablaireau",
@@ -3434,7 +3461,8 @@
       "Tourbi-Sable": 23,
       "Gyroballe": 34,
       "Piétisol": 18
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nidoran♀",
@@ -3554,7 +3582,8 @@
       "Pics Toxik": 20,
       "Telluriforce": 55,
       "Séduction": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nidorina",
@@ -3673,7 +3702,8 @@
       "Pics Toxik": 22,
       "Telluriforce": 71,
       "Séduction": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nidoqueen",
@@ -3852,7 +3882,8 @@
       "Telluriforce": 1,
       "Cradovague": 1,
       "Attrition": 23
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nidoran♂",
@@ -3973,7 +4004,8 @@
       "Direct Toxik": 24,
       "Telluriforce": 55,
       "Séduction": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nidorino",
@@ -4090,7 +4122,8 @@
       "Direct Toxik": 39,
       "Telluriforce": 71,
       "Séduction": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nidoking",
@@ -4270,7 +4303,8 @@
       "Telluriforce": 1,
       "Cradovague": 1,
       "Attrition": 23
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mélofée",
@@ -4493,7 +4527,8 @@
       "Regard Touchant": 9,
       "Projecteur": 1,
       "Fontaine de Vie": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mélodelfe",
@@ -4713,7 +4748,8 @@
       "Regard Touchant": 9,
       "Projecteur": 1,
       "Fontaine de Vie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Goupix",
@@ -4852,7 +4888,8 @@
       "Calcination": 16,
       "Feu d’Enfer": 44,
       "Regard Touchant": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Feunard",
@@ -4997,7 +5034,8 @@
       "Châtiment": 21,
       "Calcination": 1,
       "Feu d’Enfer": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rondoudou",
@@ -5197,7 +5235,8 @@
       "Voix Enjôleuse": 1,
       "Câlinerie": 40,
       "Camaraderie": 8
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grodoudou",
@@ -5400,7 +5439,8 @@
       "Écho": 1,
       "Voix Enjôleuse": 1,
       "Câlinerie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nosferapti",
@@ -5529,7 +5569,8 @@
       "Choc Venin": 37,
       "Prévention": 20,
       "Acrobatie": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nosferalto",
@@ -5663,7 +5704,8 @@
       "Choc Venin": 43,
       "Prévention": 20,
       "Acrobatie": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mystherbe",
@@ -5781,7 +5823,8 @@
       "Air Veinard": 23,
       "Champ Herbu": 32,
       "Pouvoir Lunaire": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ortide",
@@ -5904,7 +5947,8 @@
       "Tempête Florale": 49,
       "Champ Herbu": 38,
       "Pouvoir Lunaire": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rafflesia",
@@ -6033,7 +6077,8 @@
       "Tempête Florale": 1,
       "Champ Herbu": 1,
       "Pouvoir Lunaire": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Paras",
@@ -6163,7 +6208,8 @@
       "Éco-Sphère": 47,
       "Choc Venin": 15,
       "Poudre Fureur": 49
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Parasect",
@@ -6289,7 +6335,8 @@
       "Poison Croix": 1,
       "Choc Venin": 15,
       "Poudre Fureur": 59
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mimitoss",
@@ -6406,7 +6453,8 @@
       "Bourdon": 25,
       "Psykoud’Boul": 37,
       "Survinsecte": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Aéromite",
@@ -6548,7 +6596,8 @@
       "Psykoud’Boul": 41,
       "Papillodanse": 1,
       "Survinsecte": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Taupiqueur",
@@ -6672,7 +6721,8 @@
       "Telluriforce": 26,
       "Boue-Bombe": 25,
       "Piétisol": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Triopikeur",
@@ -6802,7 +6852,8 @@
       "Boue-Bombe": 25,
       "Piétisol": 16,
       "Fertilisation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Miaouss",
@@ -6954,7 +7005,8 @@
       "Machination": 31,
       "Séduction": 46,
       "Câlinerie": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Persian",
@@ -7111,7 +7163,8 @@
       "Machination": 37,
       "Séduction": 56,
       "Câlinerie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Psykokwak",
@@ -7276,7 +7329,8 @@
       "Psykoud’Boul": 18,
       "Zone Étrange": 39,
       "Détrempage": 27
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Akwakwak",
@@ -7449,7 +7503,8 @@
       "Aqua-Jet": 1,
       "Zone Étrange": 45,
       "Détrempage": 27
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Férosinge",
@@ -7616,7 +7671,8 @@
       "Vengeance": 15,
       "Tout ou Rien": 48,
       "Trépignement": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Colossinge",
@@ -7785,7 +7841,8 @@
       "Tout ou Rien": 1,
       "Trépignement": 48,
       "Poing de Colère": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Caninos",
@@ -7911,7 +7968,8 @@
       "Rebondifeu": 28,
       "Vengeance": 28,
       "Câlinerie": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Arcanin",
@@ -8050,7 +8108,8 @@
       "Vengeance": 1,
       "Câlinerie": 1,
       "Flamme Ultime": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ptitard",
@@ -8170,7 +8229,8 @@
       "Réveil Forcé": 35,
       "Telluriforce": 36,
       "Boue-Bombe": 41
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Têtarte",
@@ -8304,7 +8364,8 @@
       "Réveil Forcé": 43,
       "Telluriforce": 40,
       "Boue-Bombe": 53
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tartard",
@@ -8467,7 +8528,8 @@
       "Tir de Boue": 1,
       "Telluriforce": 1,
       "Projection": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Abra",
@@ -8589,7 +8651,8 @@
     },
     "movepool_niveaux": {
       "Téléport": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kadabra",
@@ -8739,7 +8802,8 @@
       "Choc Psy": 30,
       "Lévikinésie": 33,
       "Interversion": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Alakazam",
@@ -8900,7 +8964,8 @@
       "Choc Psy": 30,
       "Lévikinésie": 33,
       "Interversion": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Machoc",
@@ -9052,7 +9117,8 @@
       "Coup Double": 18,
       "Balayette": 12,
       "Double Baffe": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Machopeur",
@@ -9199,7 +9265,8 @@
       "Coup Double": 18,
       "Balayette": 12,
       "Double Baffe": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mackogneur",
@@ -9365,7 +9432,8 @@
       "Garde Large": 1,
       "Balayette": 12,
       "Double Baffe": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chétiflor",
@@ -9486,7 +9554,8 @@
       "Suc Digestif": 35,
       "Direct Toxik": 26,
       "Mégafouet": 52
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Boustiflor",
@@ -9610,7 +9679,8 @@
       "Suc Digestif": 35,
       "Direct Toxik": 36,
       "Mégafouet": 58
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Empiflor",
@@ -9750,7 +9820,8 @@
       "Mégafouet": 1,
       "Bain de Smog": 1,
       "Phytomixeur": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tentacool",
@@ -9889,7 +9960,8 @@
       "Cradovague": 43,
       "Bombe Acide": 22,
       "Châtiment": 18
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tentacruel",
@@ -10039,7 +10111,8 @@
       "Bombe Acide": 22,
       "Châtiment": 18,
       "Copie-Type": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Racaillou",
@@ -10175,7 +10248,8 @@
       "Piège de Roc": 12,
       "Anti-Air": 18,
       "Piétisol": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gravalanch",
@@ -10315,7 +10389,8 @@
       "Piège de Roc": 12,
       "Anti-Air": 18,
       "Piétisol": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grolem",
@@ -10464,7 +10539,8 @@
       "Tacle Lourd": 1,
       "Piétisol": 22,
       "Bulldoboule": 10
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ponyta",
@@ -10576,7 +10652,8 @@
       "Coup Double": 9,
       "Nitrocharge": 15,
       "Feu d’Enfer": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Galopa",
@@ -10703,7 +10780,8 @@
       "Nitrocharge": 15,
       "Feu d’Enfer": 33,
       "Estocorne": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ramoloss",
@@ -10861,7 +10939,8 @@
       "Vibraqua": 18,
       "Psykoud’Boul": 24,
       "Vibra Soin": 45
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flagadoss",
@@ -11044,7 +11123,8 @@
       "Vibraqua": 18,
       "Psykoud’Boul": 24,
       "Vibra Soin": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Magnéti",
@@ -11165,7 +11245,8 @@
       "Coup d’Jus": 36,
       "Bombe Aimant": 7,
       "Boule Élek": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Magnéton",
@@ -11292,7 +11373,8 @@
       "Bombe Aimant": 1,
       "Boule Élek": 12,
       "Champ Électrifié": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Canarticho",
@@ -11438,7 +11520,8 @@
       "Lame d’Air": 31,
       "Rapace": 1,
       "Acrobatie": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Doduo",
@@ -11562,7 +11645,8 @@
       "Acupression": 28,
       "Coup Double": 19,
       "Furie-Bond": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dodrio",
@@ -11696,7 +11780,8 @@
       "Acupression": 28,
       "Coup Double": 19,
       "Furie-Bond": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Otaria",
@@ -11830,7 +11915,8 @@
       "Éclats Glace": 16,
       "Aqua-Jet": 12,
       "Chute de Neige": 53
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lamantine",
@@ -11974,7 +12060,8 @@
       "Éclats Glace": 15,
       "Aqua-Jet": 1,
       "Chute de Neige": 65
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tadmorv",
@@ -12112,7 +12199,8 @@
       "Détricanon": 40,
       "Cradovague": 32,
       "Éructation": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grotadmorv",
@@ -12262,7 +12350,8 @@
       "Éructation": 52,
       "Pouvoir Lunaire": 1,
       "Piège de Venin": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kokiyas",
@@ -12380,7 +12469,8 @@
       "Éclats Glace": 8,
       "Exuviation": 40,
       "Coqui-Lame": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Crustabri",
@@ -12516,7 +12606,8 @@
       "Exuviation": 1,
       "Coqui-Lame": 1,
       "Chute Glace": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fantominus",
@@ -12659,7 +12750,8 @@
       "Vibrobscur": 28,
       "Choc Venin": 18,
       "Châtiment": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Spectrum",
@@ -12806,7 +12898,8 @@
       "Vibrobscur": 34,
       "Choc Venin": 18,
       "Châtiment": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ectoplasma",
@@ -12983,7 +13076,8 @@
       "Choc Venin": 18,
       "Châtiment": 11,
       "Copie-Type": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Onix",
@@ -13124,7 +13218,8 @@
       "Anti-Air": 4,
       "Piétisol": 11,
       "Cavalerie Lourde": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Soporifik",
@@ -13283,7 +13378,8 @@
       "Psykoud’Boul": 29,
       "Choc Psy": 45,
       "Synchropeine": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hypnomade",
@@ -13448,7 +13544,8 @@
       "Psykoud’Boul": 32,
       "Choc Psy": 51,
       "Synchropeine": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Krabby",
@@ -13573,7 +13670,8 @@
       "Tir de Boue": 12,
       "Saumure": 39,
       "Coqui-Lame": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Krabboss",
@@ -13705,7 +13803,8 @@
       "Saumure": 51,
       "Garde Large": 1,
       "Coqui-Lame": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Voltorbe",
@@ -13817,7 +13916,8 @@
       "Rayon Chargé": 16,
       "Boule Élek": 22,
       "Ondes Étranges": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Électrode",
@@ -13935,7 +14035,8 @@
       "Boule Élek": 22,
       "Ondes Étranges": 1,
       "Magné-Contrôle": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Noeunoeuf",
@@ -14070,7 +14171,8 @@
       "Don Naturel": 37,
       "Soucigraine": 33,
       "Passe-Cadeau": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Noadkoko",
@@ -14218,7 +14320,8 @@
       "Mégafouet": 1,
       "Martobois": 1,
       "Choc Psy": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Osselait",
@@ -14356,7 +14459,8 @@
       "Dégommage": 20,
       "Vengeance": 16,
       "Trépignement": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ossatueur",
@@ -14499,7 +14603,8 @@
       "Dégommage": 20,
       "Vengeance": 16,
       "Trépignement": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kicklee",
@@ -14653,7 +14758,8 @@
       "Garde Large": 21,
       "Balayette": 1,
       "Talon-Marteau": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tygnon",
@@ -14808,7 +14914,8 @@
       "Pisto-Poing": 1,
       "Prévention": 21,
       "Poing Boost": 8
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Excelangue",
@@ -14975,7 +15082,8 @@
       "Mégafouet": 45,
       "Attrition": 37,
       "Piétisol": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Smogo",
@@ -15095,7 +15203,8 @@
       "Assurance": 12,
       "Bain de Smog": 12,
       "Éructation": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Smogogo",
@@ -15218,7 +15327,8 @@
       "Coup Double": 1,
       "Bain de Smog": 1,
       "Éructation": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rhinocorne",
@@ -15377,7 +15487,8 @@
       "Piétisol": 6,
       "Tunnelier": 24,
       "Cavalerie Lourde": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rhinoféros",
@@ -15568,7 +15679,8 @@
       "Piétisol": 1,
       "Tunnelier": 24,
       "Cavalerie Lourde": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Leveinard",
@@ -15768,7 +15880,8 @@
       "Vent Féérique": 6,
       "Regard Touchant": 11,
       "Fontaine de Vie": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Saquedeneu",
@@ -15900,7 +16013,8 @@
       "Coup Double": 18,
       "Bombe Acide": 15,
       "Champ Herbu": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kangourex",
@@ -16068,7 +16182,8 @@
       "Coup Bas": 28,
       "Coup Double": 19,
       "Attrition": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hypotrempe",
@@ -16182,7 +16297,8 @@
       "Saumure": 30,
       "Draco-Choc": 36,
       "Affilage": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hypocéan",
@@ -16299,7 +16415,8 @@
       "Draco-Choc": 42,
       "Bain de Smog": 1,
       "Affilage": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Poissirène",
@@ -16414,7 +16531,8 @@
       "Vibraqua": 10,
       "Anneau Hydro": 21,
       "Détrempage": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Poissoroy",
@@ -16531,7 +16649,8 @@
       "Anneau Hydro": 21,
       "Direct Toxik": 1,
       "Détrempage": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Stari",
@@ -16656,7 +16775,8 @@
       "Saumure": 28,
       "Rayon Gemme": 36,
       "Copie-Type": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Staross",
@@ -16804,7 +16924,8 @@
       "Saumure": 1,
       "Rayon Gemme": 1,
       "Projecteur": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "M. Mime",
@@ -16991,7 +17112,8 @@
       "Prévention": 1,
       "Champ Brumeux": 1,
       "Éclat Magique": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Insécateur",
@@ -17128,7 +17250,8 @@
       "Onde Vide": 1,
       "Coup Double": 14,
       "Affilage": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lippoutou",
@@ -17299,7 +17422,8 @@
       "Avalanche": 33,
       "Crève-Cœur": 21,
       "Vampibaiser": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Élektek",
@@ -17440,7 +17564,8 @@
       "Giga Impact": 64,
       "Coup d’Jus": 34,
       "Boule Élek": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Magmar",
@@ -17586,7 +17711,8 @@
       "Ébullilave": 34,
       "Rebondifeu": 22,
       "Bain de Smog": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Scarabrute",
@@ -17721,7 +17847,8 @@
       "Piqûre": 16,
       "Coup Double": 22,
       "Yama Arashi": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tauros",
@@ -17863,7 +17990,8 @@
       "Psykoud’Boul": 29,
       "Rengorgement": 5,
       "Taurogne": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Magicarpe",
@@ -17896,7 +18024,8 @@
       "Charge": 15,
       "Trempette": 1,
       "Gigotage": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Léviator",
@@ -18050,7 +18179,8 @@
       "Crocs Givre": 8,
       "Draco-Queue": 26,
       "Vent Violent": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lokhlass",
@@ -18207,7 +18337,8 @@
       "Draco-Choc": 52,
       "Éclats Glace": 10,
       "Fontaine de Vie": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Métamorph",
@@ -18234,7 +18365,8 @@
     },
     "movepool_niveaux": {
       "Morphing": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Évoli",
@@ -18355,7 +18487,8 @@
       "Photocopie": 30,
       "Dernier Recours": 41,
       "Regard Touchant": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Aquali",
@@ -18511,7 +18644,8 @@
       "Anneau Hydro": 25,
       "Hydro-Queue": 25,
       "Regard Touchant": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Voltali",
@@ -18664,7 +18798,8 @@
       "Crocs Éclair": 20,
       "Coup d’Jus": 37,
       "Regard Touchant": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pyroli",
@@ -18818,7 +18953,8 @@
       "Crocs Feu": 20,
       "Ébullilave": 37,
       "Regard Touchant": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Porygon",
@@ -18952,7 +19088,8 @@
       "Rayon Signal": 29,
       "Vol Magnétik": 10,
       "Coup d’Jus": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Amonita",
@@ -19079,7 +19216,8 @@
       "Boule Roc": 45,
       "Saumure": 28,
       "Exuviation": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Amonistar",
@@ -19215,7 +19353,8 @@
       "Boule Roc": 49,
       "Saumure": 28,
       "Exuviation": 60
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kabuto",
@@ -19345,7 +19484,8 @@
       "Lame de Roc": 60,
       "Aqua-Jet": 15,
       "Aqua-Brèche": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kabutops",
@@ -19501,7 +19641,8 @@
       "Lame de Roc": 70,
       "Aqua-Jet": 15,
       "Aqua-Brèche": 56
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ptéra",
@@ -19645,7 +19786,8 @@
       "Tête de Fer": 1,
       "Lame de Roc": 45,
       "Chute Libre": 49
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ronflex",
@@ -19843,7 +19985,8 @@
       "Piétisol": 15,
       "Éructation": 52,
       "Cavalerie Lourde": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Artikodin",
@@ -19981,7 +20124,8 @@
       "Vent Violent": 1,
       "Lyophilisation": 1,
       "Chute de Neige": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Électhor",
@@ -20114,7 +20258,8 @@
       "Picore": 15,
       "Coup d’Jus": 45,
       "Magné-Contrôle": 65
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sulfura",
@@ -20245,7 +20390,8 @@
       "Calcination": 30,
       "Vent Violent": 1,
       "Flamme Ultime": 65
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Minidraco",
@@ -20371,7 +20517,8 @@
       "Hydro-Queue": 31,
       "Draco-Charge": 35,
       "Draco-Queue": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Draco",
@@ -20495,7 +20642,8 @@
       "Hydro-Queue": 33,
       "Draco-Charge": 39,
       "Draco-Queue": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dracolosse",
@@ -20683,7 +20831,8 @@
       "Aqua-Jet": 1,
       "Draco-Queue": 15,
       "Vent Violent": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mewtwo",
@@ -20902,7 +21051,8 @@
       "Frappe Psy": 72,
       "Affilage": 1,
       "Fontaine de Vie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mew",
@@ -21321,7 +21471,8 @@
       "Machination": 50,
       "Copie-Type": 1,
       "Fontaine de Vie": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Germignon",
@@ -21439,7 +21590,8 @@
       "Aromathérapie": 42,
       "Feuille Magik": 20,
       "Don Naturel": 23
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Macronium",
@@ -21559,7 +21711,8 @@
       "Aromathérapie": 50,
       "Feuille Magik": 22,
       "Don Naturel": 26
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Méganium",
@@ -21699,7 +21852,8 @@
       "Feuille Magik": 22,
       "Don Naturel": 26,
       "Tempête Florale": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Héricendre",
@@ -21818,7 +21972,8 @@
       "Nitrocharge": 28,
       "Feu d’Enfer": 46,
       "Flamme Ultime": 58
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Feurisson",
@@ -21937,7 +22092,8 @@
       "Nitrocharge": 35,
       "Feu d’Enfer": 53,
       "Flamme Ultime": 68
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Typhlosion",
@@ -22091,7 +22247,8 @@
       "Nitrocharge": 35,
       "Feu d’Enfer": 56,
       "Flamme Ultime": 74
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kaiminus",
@@ -22232,7 +22389,8 @@
       "Hydro-Queue": 36,
       "Crocs Givre": 19,
       "Attrition": 29
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Crocrodil",
@@ -22375,7 +22533,8 @@
       "Hydro-Queue": 42,
       "Crocs Givre": 21,
       "Attrition": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Aligatueur",
@@ -22538,7 +22697,8 @@
       "Hydro-Queue": 50,
       "Crocs Givre": 21,
       "Attrition": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fouinette",
@@ -22681,7 +22841,8 @@
       "Mégaphone": 47,
       "Moi d’Abord": 42,
       "Coup Bas": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fouinar",
@@ -22830,7 +22991,8 @@
       "Moi d’Abord": 50,
       "Coup Bas": 36,
       "Enroulement": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hoothoot",
@@ -22967,7 +23129,8 @@
       "Synchropeine": 41,
       "Écho": 6,
       "Pouvoir Lunaire": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Noarfang",
@@ -23108,7 +23271,8 @@
       "Synchropeine": 47,
       "Écho": 1,
       "Pouvoir Lunaire": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Coxy",
@@ -23224,7 +23388,8 @@
       "Lame d’Air": 36,
       "Bourdon": 33,
       "Survinsecte": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Coxyclaque",
@@ -23339,7 +23504,8 @@
       "Lame d’Air": 42,
       "Bourdon": 38,
       "Survinsecte": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mimigal",
@@ -23466,7 +23632,8 @@
       "Toile Gluante": 47,
       "Harcèlement": 8,
       "Fil Toxique": 51
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Migalos",
@@ -23604,7 +23771,8 @@
       "Piège de Venin": 1,
       "Harcèlement": 8,
       "Fil Toxique": 59
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nostenfer",
@@ -23733,7 +23901,8 @@
       "Choc Venin": 43,
       "Prévention": 20,
       "Acrobatie": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Loupio",
@@ -23852,7 +24021,8 @@
       "Coup d’Jus": 28,
       "Boule Élek": 4,
       "Déluge Plasmique": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lanturn",
@@ -23983,7 +24153,8 @@
       "Déluge Plasmique": 54,
       "Ondes Étranges": 1,
       "Projecteur": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pichu",
@@ -24108,7 +24279,8 @@
       "Machination": 13,
       "Camaraderie": 4,
       "Frotte-Frimousse": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mélo",
@@ -24259,7 +24431,8 @@
       "Vent Féérique": 5,
       "Pouvoir Lunaire": 37,
       "Regard Touchant": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Toudoudou",
@@ -24389,7 +24562,8 @@
       "Charme": 1,
       "Photocopie": 1,
       "Voix Enjôleuse": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Togepi",
@@ -24544,7 +24718,8 @@
       "Pouvoir Lunaire": 43,
       "Regard Touchant": 25,
       "Fontaine de Vie": 8
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Togetic",
@@ -24717,7 +24892,8 @@
       "Pouvoir Lunaire": 43,
       "Regard Touchant": 25,
       "Fontaine de Vie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Natu",
@@ -24852,7 +25028,8 @@
       "Permugarde": 35,
       "Vent Mauvais": 20,
       "Force Ajoutée": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Xatu",
@@ -24987,7 +25164,8 @@
       "Lame d’Air": 1,
       "Vent Mauvais": 20,
       "Force Ajoutée": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Wattouat",
@@ -25100,7 +25278,8 @@
       "Boule Élek": 22,
       "Cotogarde": 32,
       "Éclat Magique": 39
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lainergie",
@@ -25225,7 +25404,8 @@
       "Boule Élek": 25,
       "Cotogarde": 36,
       "Éclat Magique": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pharamp",
@@ -25377,7 +25557,8 @@
       "Déluge Plasmique": 1,
       "Magné-Contrôle": 1,
       "Éclat Magique": 51
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Joliflor",
@@ -25509,7 +25690,8 @@
       "Tempête Florale": 1,
       "Champ Herbu": 1,
       "Pouvoir Lunaire": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Marill",
@@ -25664,7 +25846,8 @@
       "Anneau Hydro": 23,
       "Hydro-Queue": 19,
       "Câlinerie": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Azumarill",
@@ -25817,7 +26000,8 @@
       "Anneau Hydro": 27,
       "Hydro-Queue": 21,
       "Câlinerie": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Simularbre",
@@ -25966,7 +26150,8 @@
       "Martobois": 1,
       "Fracass’Tête": 47,
       "Larme à l’Œil": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tarpaud",
@@ -26099,7 +26284,8 @@
       "Rebond": 1,
       "Tir de Boue": 1,
       "Telluriforce": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Granivol",
@@ -26228,7 +26414,8 @@
       "Poudre Fureur": 31,
       "Acrobatie": 24,
       "Vent Féérique": 8
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Floravol",
@@ -26349,7 +26536,8 @@
       "Poudre Fureur": 36,
       "Acrobatie": 28,
       "Vent Féérique": 10
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cotovol",
@@ -26473,7 +26661,8 @@
       "Poudre Fureur": 39,
       "Acrobatie": 30,
       "Vent Féérique": 10
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Capumain",
@@ -26631,7 +26820,8 @@
       "Machination": 6,
       "Boue-Bombe": 18,
       "Coup Double": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tournegrin",
@@ -26736,7 +26926,8 @@
       "Don Naturel": 31,
       "Soucigraine": 19,
       "Canon Graine": 39
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Héliatronc",
@@ -26853,7 +27044,8 @@
       "Tempête Verte": 43,
       "Tempête Florale": 50,
       "Garde Florale": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Yanma",
@@ -26975,7 +27167,8 @@
       "Lame d’Air": 25,
       "Bourdon": 43,
       "Piqûre": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Axoloto",
@@ -27108,7 +27301,8 @@
       "Tir de Boue": 8,
       "Hydro-Queue": 24,
       "Boue-Bombe": 19
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Maraiste",
@@ -27251,7 +27445,8 @@
       "Tir de Boue": 1,
       "Hydro-Queue": 28,
       "Boue-Bombe": 19
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mentali",
@@ -27407,7 +27602,8 @@
       "Permuforce": 35,
       "Dernier Recours": 41,
       "Regard Touchant": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Noctali",
@@ -27563,7 +27759,8 @@
       "Tricherie": 1,
       "Aboiement": 1,
       "Regard Touchant": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cornèbre",
@@ -27711,7 +27908,8 @@
       "Tricherie": 40,
       "À la Queue": 60,
       "Aboiement": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Roigada",
@@ -27896,7 +28094,8 @@
       "Machination": 1,
       "Psykoud’Boul": 24,
       "Vibra Soin": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Feuforêve",
@@ -28047,7 +28246,8 @@
       "Rayon Gemme": 34,
       "Ombre Portée": 1,
       "Châtiment": 18
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zarbi",
@@ -28074,7 +28274,8 @@
     },
     "movepool_niveaux": {
       "Puissance Cachée": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Qulbutoké",
@@ -28115,7 +28316,8 @@
       "Rune Protect": 1,
       "Encore": 1,
       "Voile Miroir": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Girafarig",
@@ -28271,7 +28473,8 @@
       "Psykoud’Boul": 32,
       "Coup Double": 28,
       "Double Laser": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pomdepik",
@@ -28392,7 +28595,8 @@
       "Représailles": 28,
       "Piqûre": 9,
       "Allègement": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Foretress",
@@ -28542,7 +28746,8 @@
       "Piqûre": 1,
       "Allègement": 1,
       "Tacle Lourd": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Insolourdo",
@@ -28706,7 +28911,8 @@
       "Enroulement": 28,
       "Tunnelier": 21,
       "Hyperceuse": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Scorplane",
@@ -28866,7 +29072,8 @@
       "Plaie Croix": 40,
       "Boue-Bombe": 18,
       "Acrobatie": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Steelix",
@@ -29023,7 +29230,8 @@
       "Anti-Air": 4,
       "Piétisol": 11,
       "Cavalerie Lourde": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Snubbull",
@@ -29178,7 +29386,8 @@
       "Crocs Givre": 1,
       "Crocs Feu": 1,
       "Câlinerie": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Granbull",
@@ -29341,7 +29550,8 @@
       "Crocs Givre": 1,
       "Crocs Feu": 1,
       "Câlinerie": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Qwilfish",
@@ -29488,7 +29698,8 @@
       "Direct Toxik": 28,
       "Hydro-Queue": 45,
       "Dard Mortel": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cizayox",
@@ -29637,7 +29848,8 @@
       "Tête de Fer": 34,
       "Coup Double": 14,
       "Affilage": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Caratroc",
@@ -29763,7 +29975,8 @@
       "Exuviation": 34,
       "Survinsecte": 1,
       "Toile Gluante": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Scarhino",
@@ -29913,7 +30126,8 @@
       "Tranche-Nuit": 1,
       "Attrition": 16,
       "Exécu-Son": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Farfuret",
@@ -30076,7 +30290,8 @@
       "Direct Toxik": 25,
       "Éclats Glace": 6,
       "Aiguisage": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Teddiursa",
@@ -30227,7 +30442,8 @@
       "Camaraderie": 25,
       "Regard Touchant": 1,
       "Cavalerie Lourde": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ursaring",
@@ -30383,7 +30599,8 @@
       "Camaraderie": 25,
       "Regard Touchant": 1,
       "Cavalerie Lourde": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Limagma",
@@ -30504,7 +30721,8 @@
       "Rebondifeu": 23,
       "Bain de Smog": 20,
       "Calcination": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Volcaropod",
@@ -30638,7 +30856,8 @@
       "Bain de Smog": 20,
       "Exuviation": 1,
       "Calcination": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Marcacrin",
@@ -30762,7 +30981,8 @@
       "Piétisol": 11,
       "Chute Glace": 18,
       "Cavalerie Lourde": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cochignon",
@@ -30898,7 +31118,8 @@
       "Piétisol": 11,
       "Chute Glace": 18,
       "Cavalerie Lourde": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Corayon",
@@ -31038,7 +31259,8 @@
       "Rayon Gemme": 40,
       "Telluriforce": 45,
       "Fontaine de Vie": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rémoraid",
@@ -31153,7 +31375,8 @@
       "Rayon Chargé": 11,
       "Détrempage": 40,
       "Bombe Acide": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Octillery",
@@ -31282,7 +31505,8 @@
       "Rayon Chargé": 11,
       "Détrempage": 48,
       "Bombe Acide": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cadoizo",
@@ -31411,7 +31635,8 @@
     "movepool_niveaux": {
       "Bec Vrille": 25,
       "Cadeau": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Démanta",
@@ -31546,7 +31771,8 @@
       "Anneau Hydro": 36,
       "Lame d’Air": 21,
       "Garde Large": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Airmure",
@@ -31683,7 +31909,8 @@
       "Lame d’Air": 39,
       "Rapace": 52,
       "Allègement": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Malosse",
@@ -31826,7 +32053,8 @@
       "Calcination": 20,
       "Feu d’Enfer": 56,
       "Vindicte": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Démolosse",
@@ -31973,7 +32201,8 @@
       "Calcination": 20,
       "Feu d’Enfer": 1,
       "Vindicte": 41
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hyporoi",
@@ -32096,7 +32325,8 @@
       "Draco-Choc": 1,
       "Affilage": 37,
       "Aquatacle": 72
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Phanpy",
@@ -32212,7 +32442,8 @@
       "Don Naturel": 15,
       "Dernier Recours": 37,
       "Piétisol": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Donphan",
@@ -32357,7 +32588,8 @@
       "Crocs Feu": 1,
       "Piétisol": 1,
       "Trépignement": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Porygon2",
@@ -32477,7 +32709,8 @@
       "Rayon Signal": 29,
       "Vol Magnétik": 1,
       "Coup d’Jus": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cerfrousse",
@@ -32626,7 +32859,8 @@
       "Ten-Danse": 50,
       "Furie-Bond": 43,
       "Sprint Bouclier": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Queulorior",
@@ -32653,7 +32887,8 @@
     },
     "movepool_niveaux": {
       "Gribouille": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Debugant",
@@ -32749,7 +32984,8 @@
       "Clairvoyance": 1,
       "Bluff": 1,
       "Coup d’Main": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kapoera",
@@ -32884,7 +33120,8 @@
       "Coup Bas": 24,
       "Garde Large": 21,
       "Prévention": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lippouti",
@@ -33020,7 +33257,8 @@
       "Photocopie": 8,
       "Avalanche": 31,
       "Crève-Cœur": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Élekid",
@@ -33148,7 +33386,8 @@
       "Onde de Choc": 15,
       "Coup d’Jus": 32,
       "Boule Élek": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Magby",
@@ -33277,7 +33516,8 @@
       "Ébullilave": 32,
       "Rebondifeu": 22,
       "Bain de Smog": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Écrémeuh",
@@ -33418,7 +33658,8 @@
       "Séduction": 35,
       "Câlinerie": 45,
       "Cavalerie Lourde": 55
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Leuphorie",
@@ -33611,7 +33852,8 @@
       "Vent Féérique": 6,
       "Regard Touchant": 11,
       "Fontaine de Vie": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Raikou",
@@ -33740,7 +33982,8 @@
       "Plénitude": 18,
       "Crocs Éclair": 30,
       "Coup d’Jus": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Entei",
@@ -33867,7 +34110,8 @@
       "Plénitude": 18,
       "Crocs Feu": 30,
       "Ébullilave": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Suicune",
@@ -33997,7 +34241,8 @@
       "Vibraqua": 6,
       "Vent Arrière": 1,
       "Crocs Givre": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Embrylex",
@@ -34121,7 +34366,8 @@
       "Anti-Air": 24,
       "Attrition": 14,
       "Trépignement": 18
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ymphect",
@@ -34247,7 +34493,8 @@
       "Anti-Air": 24,
       "Attrition": 14,
       "Trépignement": 18
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tyranocif",
@@ -34430,7 +34677,8 @@
       "Anti-Air": 24,
       "Attrition": 14,
       "Trépignement": 18
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lugia",
@@ -34593,7 +34841,8 @@
       "Don Naturel": 51,
       "Punition": 50,
       "Draco-Charge": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ho-Oh",
@@ -34741,7 +34990,8 @@
       "Rapace": 15,
       "Flamme Ultime": 99,
       "Fontaine de Vie": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Celebi",
@@ -34886,7 +35136,8 @@
       "Anti-Soin": 55,
       "Tempête Verte": 82,
       "Fontaine de Vie": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Arcko",
@@ -35027,7 +35278,8 @@
       "Tempête Verte": 39,
       "Prévention": 15,
       "Feuillage": 3
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Massko",
@@ -35174,7 +35426,8 @@
       "Tempête Verte": 55,
       "Prévention": 15,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Jungko",
@@ -35344,7 +35597,8 @@
       "Prévention": 15,
       "Double Baffe": 1,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Poussifeu",
@@ -35470,7 +35724,8 @@
       "Boutefeu": 39,
       "Rebondifeu": 28,
       "Nitrocharge": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Galifeu",
@@ -35618,7 +35873,8 @@
       "Rebond": 30,
       "Boutefeu": 54,
       "Nitrocharge": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Braségali",
@@ -35791,7 +36047,8 @@
       "Boutefeu": 1,
       "Rapace": 1,
       "Nitrocharge": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gobou",
@@ -35921,7 +36178,8 @@
       "Effort": 36,
       "Lance-Boue": 20,
       "Vibraqua": 18
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flobio",
@@ -36066,7 +36324,8 @@
       "Tir de Boue": 1,
       "Vibraqua": 20,
       "Boue-Bombe": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Laggron",
@@ -36232,7 +36491,8 @@
       "Vibraqua": 20,
       "Marto-Poing": 1,
       "Boue-Bombe": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Medhyèna",
@@ -36354,7 +36614,8 @@
       "Embargo": 28,
       "Coup Bas": 40,
       "Câlinerie": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grahyèna",
@@ -36483,7 +36744,8 @@
       "Crocs Feu": 1,
       "Aboiement": 1,
       "Câlinerie": 56
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zigzaton",
@@ -36606,7 +36868,8 @@
       "Dégommage": 27,
       "Passe-Cadeau": 25,
       "Regard Touchant": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Linéon",
@@ -36742,7 +37005,8 @@
       "Fertilisation": 1,
       "Câlinerie": 1,
       "Regard Touchant": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chenipotte",
@@ -36777,7 +37041,8 @@
       "Dard-Venin": 1,
       "Sécrétion": 1,
       "Piqûre": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Armulys",
@@ -36812,7 +37077,8 @@
       "Charge": 6,
       "Dard-Venin": 1,
       "Armure": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Charmillon",
@@ -36927,7 +37193,8 @@
       "Piqûre": 1,
       "Choc Venin": 25,
       "Papillodanse": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Blindalys",
@@ -36962,7 +37229,8 @@
       "Charge": 6,
       "Dard-Venin": 1,
       "Armure": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Papinox",
@@ -37075,7 +37343,8 @@
       "Piqûre": 1,
       "Choc Venin": 20,
       "Papillodanse": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nénupiot",
@@ -37189,7 +37458,8 @@
       "Don Naturel": 12,
       "Éco-Sphère": 36,
       "Psykoud’Boul": 27
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lombre",
@@ -37335,7 +37605,8 @@
       "Tourniquet": 19,
       "Éco-Sphère": 57,
       "Psykoud’Boul": 27
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ludicolo",
@@ -37483,7 +37754,8 @@
       "Étonnement": 1,
       "Éco-Sphère": 1,
       "Psykoud’Boul": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grainipiot",
@@ -37598,7 +37870,8 @@
       "Étonnement": 6,
       "Représailles": 18,
       "Coup Bas": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pifeuil",
@@ -37755,7 +38028,8 @@
       "Lame Feuille": 28,
       "Représailles": 24,
       "Coup Bas": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tengalice",
@@ -37944,7 +38218,8 @@
       "Tempête Verte": 44,
       "Phytomixeur": 1,
       "Vent Violent": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nirondelle",
@@ -38044,7 +38319,8 @@
       "Lame d’Air": 33,
       "Rapace": 41,
       "Prévention": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hélédelle",
@@ -38141,7 +38417,8 @@
       "Lame d’Air": 1,
       "Rapace": 1,
       "Prévention": 27
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Goélise",
@@ -38259,7 +38536,8 @@
       "Atterrissage": 26,
       "Lame d’Air": 30,
       "Vent Violent": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bekipan",
@@ -38395,7 +38673,8 @@
       "Lame d’Air": 1,
       "Détrempage": 1,
       "Vent Violent": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tarsal",
@@ -38545,7 +38824,8 @@
       "Voix Enjôleuse": 1,
       "Vampibaiser": 11,
       "Fontaine de Vie": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kirlia",
@@ -38688,7 +38968,8 @@
       "Voix Enjôleuse": 1,
       "Vampibaiser": 11,
       "Fontaine de Vie": 23
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gardevoir",
@@ -38861,7 +39142,8 @@
       "Feu Ensorcelé": 1,
       "Éclat Magique": 1,
       "Fontaine de Vie": 23
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Arakdo",
@@ -38974,7 +39256,8 @@
       "Aqua-Jet": 30,
       "Détrempage": 14,
       "Toile Gluante": 38
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Maskadra",
@@ -39119,7 +39402,8 @@
       "Papillodanse": 1,
       "Détrempage": 1,
       "Toile Gluante": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Balignon",
@@ -39220,7 +39504,8 @@
       "Giga-Sangsue": 26,
       "Soucigraine": 22,
       "Canon Graine": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chapignon",
@@ -39372,7 +39657,8 @@
       "Forte-Paume": 28,
       "Canon Graine": 41,
       "Vampi-Poing": 39
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Parecool",
@@ -39507,7 +39793,8 @@
       "Attrition": 25,
       "Câlinerie": 38,
       "Exécu-Son": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vigoroth",
@@ -39665,7 +39952,8 @@
       "Attrition": 27,
       "Câlinerie": 1,
       "Exécu-Son": 27
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Monaflèmit",
@@ -39844,7 +40132,8 @@
       "Attrition": 27,
       "Câlinerie": 1,
       "Exécu-Son": 27
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ningale",
@@ -39936,7 +40225,8 @@
       "Coud’Boue": 15,
       "Faux-Chage": 10,
       "Griffe Acier": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ninjask",
@@ -40052,7 +40342,8 @@
       "Aéropique": 1,
       "Plaie Croix": 47,
       "Piqûre": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Munja",
@@ -40163,7 +40454,8 @@
       "Griffe Ombre": 1,
       "Ombre Portée": 21,
       "Hantise": 45
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chuchmur",
@@ -40273,7 +40565,8 @@
       "Grondement": 10,
       "Synchropeine": 41,
       "Écho": 4
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ramboum",
@@ -40391,7 +40684,8 @@
       "Grondement": 1,
       "Synchropeine": 50,
       "Écho": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Brouhabam",
@@ -40530,7 +40824,8 @@
       "Synchropeine": 53,
       "Écho": 1,
       "Bang Sonique": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Makuhita",
@@ -40675,7 +40970,8 @@
       "Close Combat": 40,
       "Forte-Paume": 13,
       "Tacle Lourd": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hariyama",
@@ -40823,7 +41119,8 @@
       "Forte-Paume": 13,
       "Tacle Lourd": 54,
       "Assaut Frontal": 60
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Azurill",
@@ -40933,7 +41230,8 @@
       "Coup d’Main": 3,
       "Rebond": 15,
       "Tourniquet": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tarinor",
@@ -41059,7 +41357,8 @@
       "Telluriforce": 37,
       "Coup d’Jus": 31,
       "Lame de Roc": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Skitty",
@@ -41192,7 +41491,8 @@
       "Voix Enjôleuse": 13,
       "Câlinerie": 46,
       "Regard Touchant": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Delcatty",
@@ -41316,7 +41616,8 @@
       "Voix Enjôleuse": 1,
       "Câlinerie": 1,
       "Regard Touchant": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ténéfix",
@@ -41501,7 +41802,8 @@
       "Psykoud’Boul": 1,
       "Tricherie": 41,
       "À la Queue": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mysdibule",
@@ -41654,7 +41956,8 @@
       "Tête de Fer": 1,
       "Câlinerie": 1,
       "Vent Féérique": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Galekid",
@@ -41772,7 +42075,8 @@
       "Tête de Fer": 22,
       "Allègement": 39,
       "Tacle Lourd": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Galegon",
@@ -41889,7 +42193,8 @@
       "Tête de Fer": 22,
       "Allègement": 45,
       "Tacle Lourd": 51
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Galeking",
@@ -42057,7 +42362,8 @@
       "Tête de Fer": 22,
       "Allègement": 48,
       "Tacle Lourd": 57
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Méditikka",
@@ -42216,7 +42522,8 @@
       "Forte-Paume": 17,
       "Psykoud’Boul": 25,
       "Rengorgement": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Charmina",
@@ -42387,7 +42694,8 @@
       "Psykoud’Boul": 1,
       "Rengorgement": 1,
       "Talon-Marteau": 53
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dynavolt",
@@ -42492,7 +42800,8 @@
       "Crocs Éclair": 19,
       "Coup d’Jus": 29,
       "Éclair Fou": 39
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Élecsprint",
@@ -42609,7 +42918,8 @@
       "Coup d’Jus": 30,
       "Éclair Fou": 42,
       "Champ Électrifié": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Posipi",
@@ -42745,7 +43055,8 @@
       "Passe-Cadeau": 13,
       "Camaraderie": 1,
       "Frotte-Frimousse": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Négapi",
@@ -42878,7 +43189,8 @@
       "Ten-Danse": 1,
       "Camaraderie": 1,
       "Frotte-Frimousse": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Muciole",
@@ -43011,7 +43323,8 @@
       "Câlinerie": 40,
       "Camaraderie": 1,
       "Harcèlement": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lumivole",
@@ -43146,7 +43459,8 @@
       "Câlinerie": 43,
       "Camaraderie": 1,
       "Harcèlement": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rosélia",
@@ -43270,7 +43584,8 @@
       "Éco-Sphère": 43,
       "Choc Venin": 25,
       "Tempête Florale": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gloupti",
@@ -43398,7 +43713,8 @@
       "Détricanon": 49,
       "Bombe Acide": 17,
       "Éructation": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Avaltout",
@@ -43532,7 +43848,8 @@
       "Bombe Acide": 17,
       "Éructation": 46,
       "Piège de Venin": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Carvanha",
@@ -43643,7 +43960,8 @@
       "Crocs Givre": 16,
       "Aqua-Jet": 1,
       "Aqua-Brèche": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sharpedo",
@@ -43774,7 +44092,8 @@
       "Crocs Givre": 16,
       "Aqua-Jet": 1,
       "Aqua-Brèche": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Wailmer",
@@ -43884,7 +44203,8 @@
       "Vibraqua": 18,
       "Saumure": 24,
       "Tacle Lourd": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Wailord",
@@ -43996,7 +44316,8 @@
       "Tacle Lourd": 1,
       "Détrempage": 1,
       "Râle Mâle": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chamallot",
@@ -44130,7 +44451,8 @@
       "Rebondifeu": 15,
       "Calcination": 15,
       "Piétisol": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Camérupt",
@@ -44275,7 +44597,8 @@
       "Rebondifeu": 15,
       "Calcination": 15,
       "Piétisol": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chartor",
@@ -44408,7 +44731,8 @@
       "Bain de Smog": 16,
       "Exuviation": 1,
       "Feu d’Enfer": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Spoink",
@@ -44542,7 +44866,8 @@
       "Rayon Gemme": 29,
       "Psykoud’Boul": 26,
       "Choc Psy": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Groret",
@@ -44707,7 +45032,8 @@
       "Psykoud’Boul": 26,
       "Choc Psy": 37,
       "Éructation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Spinda",
@@ -44846,7 +45172,8 @@
       "Danse Folle": 10,
       "Photocopie": 5,
       "Coup Bas": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kraknoix",
@@ -44953,7 +45280,8 @@
       "Telluriforce": 26,
       "Piétisol": 8,
       "Affilage": 4
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vibraninf",
@@ -45099,7 +45427,8 @@
       "Draco-Queue": 20,
       "Bang Sonique": 47,
       "Affilage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Libégon",
@@ -45270,7 +45599,8 @@
       "Draco-Queue": 20,
       "Bang Sonique": 68,
       "Affilage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cacnea",
@@ -45420,7 +45750,8 @@
       "Direct Toxik": 16,
       "Éco-Sphère": 42,
       "Arrogance": 19
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cacturne",
@@ -45581,7 +45912,8 @@
       "Éco-Sphère": 44,
       "Pico-Défense": 1,
       "Arrogance": 19
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tylton",
@@ -45708,7 +46040,8 @@
       "Cotogarde": 32,
       "Voix Enjôleuse": 4,
       "Pouvoir Lunaire": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Altaria",
@@ -45856,7 +46189,8 @@
       "Vent Violent": 1,
       "Voix Enjôleuse": 1,
       "Pouvoir Lunaire": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mangriff",
@@ -46026,7 +46360,8 @@
       "Passe-Passe": 33,
       "Aiguisage": 12,
       "Arrogance": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Séviper",
@@ -46176,7 +46511,8 @@
       "Enroulement": 44,
       "Éructation": 41,
       "Piège de Venin": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Séléroc",
@@ -46316,7 +46652,8 @@
       "Choc Psy": 1,
       "Zone Magique": 1,
       "Pouvoir Lunaire": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Solaroc",
@@ -46460,7 +46797,8 @@
       "Psykoud’Boul": 20,
       "Lame de Roc": 35,
       "Zone Étrange": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Barloche",
@@ -46573,7 +46911,8 @@
       "Telluriforce": 43,
       "Boue-Bombe": 11,
       "Psykoud’Boul": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Barbicha",
@@ -46700,7 +47039,8 @@
       "Boue-Bombe": 11,
       "Psykoud’Boul": 1,
       "Éructation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Écrapince",
@@ -46827,7 +47167,8 @@
       "Tranche-Nuit": 26,
       "Coup Double": 20,
       "Coqui-Lame": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Colhomard",
@@ -46969,7 +47310,8 @@
       "Tranche-Nuit": 26,
       "Coup Double": 20,
       "Coqui-Lame": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Balbuto",
@@ -47097,7 +47439,8 @@
       "Telluriforce": 30,
       "Partage Garde": 34,
       "Partage Force": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kaorine",
@@ -47237,7 +47580,8 @@
       "Telluriforce": 30,
       "Partage Garde": 34,
       "Partage Force": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lilia",
@@ -47350,7 +47694,8 @@
       "Essorage": 52,
       "Suc Digestif": 31,
       "Éco-Sphère": 41
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vacilys",
@@ -47473,7 +47818,8 @@
       "Essorage": 1,
       "Suc Digestif": 31,
       "Éco-Sphère": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Anorith",
@@ -47580,7 +47926,8 @@
       "Plaie Croix": 44,
       "Piqûre": 20,
       "Anti-Air": 8
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Armaldo",
@@ -47700,7 +48047,8 @@
       "Plaie Croix": 46,
       "Piqûre": 20,
       "Anti-Air": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Barpau",
@@ -47781,7 +48129,8 @@
       "Charge": 15,
       "Trempette": 1,
       "Gigotage": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Milobellus",
@@ -47918,7 +48267,8 @@
       "Draco-Queue": 24,
       "Voix Enjôleuse": 4,
       "Fontaine de Vie": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Morphéo",
@@ -48028,7 +48378,8 @@
       "Grêle": 20,
       "Ball’Météo": 25,
       "Vent Violent": 45
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kecleon",
@@ -48186,7 +48537,8 @@
       "Ombre Portée": 7,
       "Synchropeine": 1,
       "Tricherie": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Polichombr",
@@ -48318,7 +48670,8 @@
       "Ombre Portée": 13,
       "Châtiment": 22,
       "Hantise": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Branette",
@@ -48458,7 +48811,8 @@
       "Ombre Portée": 13,
       "Châtiment": 22,
       "Hantise": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Skelénox",
@@ -48585,7 +48939,8 @@
       "Vibrobscur": 25,
       "Ombre Portée": 6,
       "Châtiment": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Téraclope",
@@ -48738,7 +49093,8 @@
       "Vibrobscur": 25,
       "Ombre Portée": 1,
       "Châtiment": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tropius",
@@ -48879,7 +49235,8 @@
       "Passe-Cadeau": 1,
       "Phytomixeur": 26,
       "Draco-Marteau": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Éoko",
@@ -49036,7 +49393,8 @@
       "Ten-Danse": 1,
       "Force Ajoutée": 16,
       "Vibra Soin": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Absol",
@@ -49197,7 +49555,8 @@
       "Coup Bas": 40,
       "Tranche-Nuit": 29,
       "Coupe Psycho": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Okéoké",
@@ -49238,7 +49597,8 @@
       "Rune Protect": 1,
       "Encore": 1,
       "Voile Miroir": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Stalgamin",
@@ -49343,7 +49703,8 @@
       "Souffle Glacé": 30,
       "Chute Glace": 34,
       "Chute de Neige": 45
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Oniglali",
@@ -49471,7 +49832,8 @@
       "Chute Glace": 34,
       "Lyophilisation": 1,
       "Chute de Neige": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Obalie",
@@ -49584,7 +49946,8 @@
       "Vibraqua": 11,
       "Saumure": 17,
       "Aqua-Brèche": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Phogleur",
@@ -49690,7 +50053,8 @@
       "Vibraqua": 11,
       "Saumure": 17,
       "Aqua-Brèche": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kaimorse",
@@ -49811,7 +50175,8 @@
       "Saumure": 19,
       "Crocs Givre": 1,
       "Aqua-Brèche": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Coquiperl",
@@ -49886,7 +50251,8 @@
       "Siphon": 1,
       "Mur de Fer": 1,
       "Exuviation": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Serpang",
@@ -49988,7 +50354,8 @@
       "Crocs Givre": 16,
       "Enroulement": 45,
       "Exuviation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rosabyss",
@@ -50092,7 +50459,8 @@
       "Enroulement": 45,
       "Exuviation": 1,
       "Vampibaiser": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Relicanth",
@@ -50211,7 +50579,8 @@
       "Tomberoche": 15,
       "Hydro-Queue": 30,
       "Fracass’Tête": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lovdisc",
@@ -50323,7 +50692,8 @@
       "Vampibaiser": 9,
       "Regard Touchant": 37,
       "Larme à l’Œil": 13
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Draby",
@@ -50433,7 +50803,8 @@
       "Mâchouille": 25,
       "Draco-Griffe": 29,
       "Psykoud’Boul": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Drackhaus",
@@ -50543,7 +50914,8 @@
       "Mâchouille": 25,
       "Draco-Griffe": 29,
       "Psykoud’Boul": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Drattak",
@@ -50684,7 +51056,8 @@
       "Psykoud’Boul": 35,
       "Draco-Queue": 1,
       "Double Volée": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Terhal",
@@ -50720,7 +51093,8 @@
     "movepool_niveaux": {
       "Charge": 1,
       "Bélier": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Métang",
@@ -50856,7 +51230,8 @@
       "Psykoud’Boul": 6,
       "Luminocanon": 18,
       "Aiguisage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Métalosse",
@@ -51002,7 +51377,8 @@
       "Pisto-Poing": 1,
       "Psykoud’Boul": 6,
       "Luminocanon": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Regirock",
@@ -51129,7 +51505,8 @@
       "Lame de Roc": 43,
       "Rayon Chargé": 1,
       "Piétisol": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Regice",
@@ -51252,7 +51629,8 @@
       "Marto-Poing": 1,
       "Rayon Chargé": 1,
       "Piétisol": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Registeel",
@@ -51383,7 +51761,8 @@
       "Rayon Chargé": 1,
       "Tacle Lourd": 48,
       "Piétisol": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Latias",
@@ -51552,7 +51931,8 @@
       "Force Ajoutée": 1,
       "Vibra Soin": 1,
       "Copie-Type": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Latios",
@@ -51717,7 +52097,8 @@
       "Force Ajoutée": 1,
       "Interversion": 30,
       "Vibra Soin": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kyogre",
@@ -51830,7 +52211,8 @@
       "Anneau Hydro": 30,
       "Hydro-Queue": 9,
       "Onde Originelle": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Groudon",
@@ -51978,7 +52360,8 @@
       "Telluriforce": 9,
       "Ébullilave": 1,
       "Lame Pangéenne": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rayquaza",
@@ -52125,7 +52508,8 @@
       "Draco-Choc": 36,
       "Vent Violent": 72,
       "Draco-Ascension": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Jirachi",
@@ -52277,7 +52661,8 @@
       "Dernier Recours": 65,
       "Psykoud’Boul": 28,
       "Fontaine de Vie": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Deoxys",
@@ -52435,7 +52820,8 @@
       "Échange Psy": 43,
       "Psykoud’Boul": 49,
       "Choc Psy": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tortipouss",
@@ -52562,7 +52948,8 @@
       "Tempête Verte": 45,
       "Piétisol": 18,
       "Feuillage": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Boskara",
@@ -52689,7 +53076,8 @@
       "Tempête Verte": 52,
       "Piétisol": 18,
       "Feuillage": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Torterra",
@@ -52842,7 +53230,8 @@
       "Piétisol": 18,
       "Feuillage": 6,
       "Assaut Frontal": 57
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ouisticram",
@@ -52984,7 +53373,8 @@
       "Machination": 23,
       "Acrobatie": 39,
       "Poing Boost": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chimpenfeu",
@@ -53138,7 +53528,8 @@
       "Machination": 1,
       "Acrobatie": 46,
       "Poing Boost": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Simiabraz",
@@ -53315,7 +53706,8 @@
       "Acrobatie": 52,
       "Poing Boost": 12,
       "Grand Courroux": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tiplouf",
@@ -53449,7 +53841,8 @@
       "Atterrissage": 25,
       "Saumure": 29,
       "Aqua-Brèche": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Prinplouf",
@@ -53587,7 +53980,8 @@
       "Atterrissage": 25,
       "Saumure": 33,
       "Aqua-Brèche": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pingoléon",
@@ -53755,7 +54149,8 @@
       "Aqua-Jet": 1,
       "Aqua-Brèche": 34,
       "Aquatacle": 57
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Étourmi",
@@ -53865,7 +54260,8 @@
       "Rapace": 37,
       "Giga Impact": 47,
       "Tout ou Rien": 41
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Étourvol",
@@ -53968,7 +54364,8 @@
       "Rapace": 37,
       "Giga Impact": 47,
       "Tout ou Rien": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Étouraptor",
@@ -54077,7 +54474,8 @@
       "Rapace": 37,
       "Giga Impact": 47,
       "Tout ou Rien": 57
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Keunotor",
@@ -54191,7 +54589,8 @@
       "Provoc": 17,
       "Surpuissance": 41,
       "Bâillement": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Castorno",
@@ -54321,7 +54720,8 @@
       "Hydro-Queue": 23,
       "Aqua-Jet": 1,
       "Fertilisation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Crikzik",
@@ -54368,7 +54768,8 @@
       "Patience": 1,
       "Piqûre": 16,
       "Survinsecte": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mélokrik",
@@ -54489,7 +54890,8 @@
       "Survinsecte": 1,
       "Toile Gluante": 44,
       "Dard Mortel": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lixy",
@@ -54604,7 +55006,8 @@
       "Change Éclair": 24,
       "Éclair Fou": 37,
       "Regard Touchant": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Luxio",
@@ -54714,7 +55117,8 @@
       "Coup d’Jus": 48,
       "Change Éclair": 31,
       "Éclair Fou": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Luxray",
@@ -54836,7 +55240,8 @@
       "Change Éclair": 33,
       "Éclair Fou": 37,
       "Champ Électrifié": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rozbouton",
@@ -54937,7 +55342,8 @@
       "Direct Toxik": 34,
       "Éco-Sphère": 43,
       "Choc Venin": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Roserade",
@@ -55063,7 +55469,8 @@
       "Tempête Florale": 1,
       "Champ Herbu": 1,
       "Piège de Venin": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kranidos",
@@ -55197,7 +55604,8 @@
       "Tête de Fer": 21,
       "Fracass’Tête": 43,
       "Attrition": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Charkos",
@@ -55351,7 +55759,8 @@
       "Tête de Fer": 21,
       "Fracass’Tête": 47,
       "Attrition": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dinoclier",
@@ -55470,7 +55879,8 @@
       "Tête de Fer": 21,
       "Piège de Roc": 37,
       "Tacle Lourd": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bastiodon",
@@ -55602,7 +56012,8 @@
       "Tête de Fer": 21,
       "Piège de Roc": 37,
       "Tacle Lourd": 58
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cheniti",
@@ -55641,7 +56052,8 @@
       "Puissance Cachée": 20,
       "Piqûre": 15,
       "Survinsecte": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cheniselle",
@@ -55753,7 +56165,8 @@
       "Papillodanse": 1,
       "Survinsecte": 1,
       "Harcèlement": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Papilord",
@@ -55860,7 +56273,8 @@
       "Papillodanse": 1,
       "Survinsecte": 1,
       "Furie-Bond": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Apitrini",
@@ -55909,7 +56323,8 @@
       "Bourdon": 29,
       "Piqûre": 1,
       "Survinsecte": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Apireine",
@@ -56056,7 +56471,8 @@
       "Survinsecte": 1,
       "Dard Mortel": 1,
       "Brume Capiteuse": 8
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pachirisu",
@@ -56192,7 +56608,8 @@
       "Boule Élek": 25,
       "Regard Touchant": 1,
       "Frotte-Frimousse": 19
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mustébouée",
@@ -56326,7 +56743,8 @@
       "Détrempage": 7,
       "Aqua-Brèche": 35,
       "Aquatacle": 49
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mustéflott",
@@ -56464,7 +56882,8 @@
       "Détrempage": 1,
       "Aqua-Brèche": 41,
       "Aquatacle": 62
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ceribou",
@@ -56572,7 +56991,8 @@
       "Tempête Florale": 35,
       "Vampibaiser": 15,
       "Feuillage": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ceriflor",
@@ -56678,7 +57098,8 @@
       "Vampibaiser": 15,
       "Garde Florale": 1,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sancoki",
@@ -56795,7 +57216,8 @@
       "Vibraqua": 7,
       "Telluriforce": 29,
       "Boue-Bombe": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tritosor",
@@ -56916,7 +57338,8 @@
       "Vibraqua": 1,
       "Telluriforce": 29,
       "Boue-Bombe": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Capidextre",
@@ -57065,7 +57488,8 @@
       "Boue-Bombe": 18,
       "Coup Double": 25,
       "Double Baffe": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Baudrive",
@@ -57210,7 +57634,8 @@
       "Vent Mauvais": 20,
       "Châtiment": 16,
       "Feu Ensorcelé": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grodrive",
@@ -57359,7 +57784,8 @@
       "Hantise": 1,
       "Feu Ensorcelé": 25,
       "Vole-Force": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Laporeille",
@@ -57503,7 +57929,8 @@
       "Vampibaiser": 16,
       "Câlinerie": 31,
       "Regard Touchant": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lockpin",
@@ -57674,7 +58101,8 @@
       "Vampibaiser": 16,
       "Câlinerie": 31,
       "Regard Touchant": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Magirêve",
@@ -57824,7 +58252,8 @@
       "Châtiment": 1,
       "Hantise": 1,
       "Feu Ensorcelé": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Corboss",
@@ -57966,7 +58395,8 @@
       "À la Queue": 1,
       "Aboiement": 6,
       "Vindicte": 65
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chaglam",
@@ -58089,7 +58519,8 @@
       "Aiguisage": 48,
       "Vengeance": 32,
       "Câlinerie": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chaffreux",
@@ -58214,7 +58645,8 @@
       "Aiguisage": 60,
       "Vengeance": 32,
       "Câlinerie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Korillon",
@@ -58335,7 +58767,8 @@
       "Dernier Recours": 16,
       "Vent Mauvais": 11,
       "Ten-Danse": 19
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Moufouette",
@@ -58476,7 +58909,8 @@
       "Bombe Acide": 6,
       "Éructation": 39,
       "Piège de Venin": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Moufflair",
@@ -58619,7 +59053,8 @@
       "Bombe Acide": 6,
       "Éructation": 43,
       "Piège de Venin": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Archéomire",
@@ -58748,7 +59183,8 @@
       "Luminocanon": 34,
       "Tacle Lourd": 32,
       "Châtiment": 18
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Archéodong",
@@ -58894,7 +59330,8 @@
       "Luminocanon": 34,
       "Tacle Lourd": 32,
       "Châtiment": 18
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Manzaï",
@@ -59016,7 +59453,8 @@
       "Piège de Roc": 9,
       "Fracass’Tête": 47,
       "Larme à l’Œil": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mime Jr.",
@@ -59161,7 +59599,8 @@
       "Coup Bas": 40,
       "Psykoud’Boul": 18,
       "Éclat Magique": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ptiravi",
@@ -59282,7 +59721,8 @@
       "Vampibaiser": 18,
       "Vent Féérique": 6,
       "Regard Touchant": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pijako",
@@ -59396,7 +59836,8 @@
       "Dernier Mot": 49,
       "Câlinerie": 43,
       "Confidence": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Spiritomb",
@@ -59526,7 +59967,8 @@
       "Ombre Portée": 1,
       "Vent Mauvais": 25,
       "Châtiment": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Griknot",
@@ -59646,7 +60088,8 @@
       "Draco-Charge": 37,
       "Telluriforce": 29,
       "Piétisol": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Carmache",
@@ -59771,7 +60214,8 @@
       "Telluriforce": 29,
       "Piétisol": 9,
       "Double Baffe": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Carchacrok",
@@ -59911,7 +60355,8 @@
       "Crocs Feu": 1,
       "Piétisol": 9,
       "Double Baffe": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Goinfrex",
@@ -60068,7 +60513,8 @@
       "Attrition": 17,
       "Piétisol": 15,
       "Cavalerie Lourde": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Riolu",
@@ -60215,7 +60661,8 @@
       "Prévention": 32,
       "Tout ou Rien": 50,
       "Rengorgement": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lucario",
@@ -60398,7 +60845,8 @@
       "Poing Boost": 15,
       "Affilage": 1,
       "Fontaine de Vie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hippopotas",
@@ -60508,7 +60956,8 @@
       "Tourbi-Sable": 12,
       "Boue-Bombe": 18,
       "Cavalerie Lourde": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hippodocus",
@@ -60627,7 +61076,8 @@
       "Crocs Feu": 1,
       "Boue-Bombe": 18,
       "Cavalerie Lourde": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rapion",
@@ -60750,7 +61200,8 @@
       "Aiguisage": 3,
       "Choc Venin": 11,
       "Dard Mortel": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Drascore",
@@ -60889,7 +61340,8 @@
       "Aiguisage": 1,
       "Choc Venin": 11,
       "Dard Mortel": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cradopaud",
@@ -61048,7 +61500,8 @@
       "Boue-Bombe": 9,
       "Choc Venin": 15,
       "Éructation": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Coatox",
@@ -61210,7 +61663,8 @@
       "Boue-Bombe": 9,
       "Choc Venin": 15,
       "Éructation": 54
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vortente",
@@ -61326,7 +61780,8 @@
       "Nœud Herbe": 27,
       "Bombe Acide": 6,
       "Phytomixeur": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Écayon",
@@ -61445,7 +61900,8 @@
       "Lame d’Air": 25,
       "Séduction": 26,
       "Détrempage": 54
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Luminéon",
@@ -61562,7 +62018,8 @@
       "Lame d’Air": 25,
       "Séduction": 26,
       "Détrempage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Babimanta",
@@ -61673,7 +62130,8 @@
       "Anneau Hydro": 36,
       "Lame d’Air": 21,
       "Garde Large": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Blizzi",
@@ -61790,7 +62248,8 @@
       "Martobois": 36,
       "Chute Glace": 18,
       "Feuillage": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Blizzaroi",
@@ -61931,7 +62390,8 @@
       "Chute Glace": 18,
       "Feuillage": 1,
       "Voile Aurore": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dimoret",
@@ -62099,7 +62559,8 @@
       "Machination": 20,
       "Éclats Glace": 1,
       "Aiguisage": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Magnézone",
@@ -62231,7 +62692,8 @@
       "Boule Élek": 12,
       "Magné-Contrôle": 1,
       "Champ Électrifié": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Coudlangue",
@@ -62381,7 +62843,8 @@
       "Mégafouet": 1,
       "Attrition": 37,
       "Piétisol": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rhinastoc",
@@ -62560,7 +63023,8 @@
       "Piétisol": 1,
       "Tunnelier": 33,
       "Cavalerie Lourde": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bouldeneu",
@@ -62693,7 +63157,8 @@
       "Coup Double": 18,
       "Bombe Acide": 15,
       "Champ Herbu": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Élekable",
@@ -62837,7 +63302,8 @@
       "Éclair Fou": 1,
       "Déluge Plasmique": 1,
       "Champ Électrifié": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Maganon",
@@ -62985,7 +63451,8 @@
       "Ébullilave": 34,
       "Rebondifeu": 22,
       "Bain de Smog": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Togekiss",
@@ -63157,7 +63624,8 @@
       "Pouvoir Lunaire": 43,
       "Regard Touchant": 25,
       "Fontaine de Vie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Yanmega",
@@ -63287,7 +63755,8 @@
       "Lame d’Air": 1,
       "Bourdon": 1,
       "Piqûre": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Phyllali",
@@ -63434,7 +63903,8 @@
       "Photocopie": 1,
       "Dernier Recours": 41,
       "Regard Touchant": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Givrali",
@@ -63580,7 +64050,8 @@
       "Lyophilisation": 40,
       "Regard Touchant": 9,
       "Chute de Neige": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Scorvol",
@@ -63745,7 +64216,8 @@
       "Crocs Feu": 1,
       "Boue-Bombe": 18,
       "Acrobatie": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mammochon",
@@ -63889,7 +64361,8 @@
       "Piétisol": 11,
       "Chute Glace": 18,
       "Cavalerie Lourde": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Porygon-Z",
@@ -64018,7 +64491,8 @@
       "Machination": 1,
       "Distorsion": 1,
       "Coup d’Jus": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gallame",
@@ -64229,7 +64703,8 @@
       "Vampibaiser": 1,
       "Fontaine de Vie": 1,
       "Tranch'Aqua": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tarinorme",
@@ -64371,7 +64846,8 @@
       "Anti-Air": 10,
       "Magné-Contrôle": 1,
       "Big Splash": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Noctunoir",
@@ -64525,7 +65001,8 @@
       "Vibrobscur": 25,
       "Ombre Portée": 1,
       "Châtiment": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Momartik",
@@ -64677,7 +65154,8 @@
       "Vampibaiser": 20,
       "Voile Aurore": 54,
       "Chute de Neige": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Motisma",
@@ -64787,7 +65265,8 @@
       "Vent Mauvais": 29,
       "Boule Élek": 20,
       "Châtiment": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Créhelf",
@@ -64930,7 +65409,8 @@
       "Don Naturel": 1,
       "Coup Double": 12,
       "Force Mystique": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Créfollet",
@@ -65074,7 +65554,8 @@
       "Photocopie": 1,
       "Coup Double": 12,
       "Force Mystique": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Créfadet",
@@ -65218,7 +65699,8 @@
       "Machination": 36,
       "Coup Double": 12,
       "Force Mystique": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dialga",
@@ -65352,7 +65834,8 @@
       "Telluriforce": 33,
       "Luminocanon": 32,
       "Hurle-Temps": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Palkia",
@@ -65492,7 +65975,8 @@
       "Rayon Gemme": 19,
       "Telluriforce": 33,
       "Spatio-Rift": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Heatran",
@@ -65620,7 +66104,8 @@
       "Tête de Fer": 1,
       "Lame de Roc": 66,
       "Vortex Magma": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Regigigas",
@@ -65757,7 +66242,8 @@
       "Tacle Lourd": 1,
       "Piétisol": 12,
       "Big Splash": 42
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Giratina",
@@ -65894,7 +66380,8 @@
       "Vent Mauvais": 6,
       "Revenant": 40,
       "Châtiment": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cresselia",
@@ -66019,7 +66506,8 @@
       "Interversion": 24,
       "Pouvoir Lunaire": 46,
       "Prière Lunaire": 57
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Phione",
@@ -66129,7 +66617,8 @@
       "Psykoud’Boul": 27,
       "Pouvoir Lunaire": 36,
       "Extravaillance": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Manaphy",
@@ -66256,7 +66745,8 @@
       "Psykoud’Boul": 27,
       "Pouvoir Lunaire": 36,
       "Extravaillance": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Darkrai",
@@ -66395,7 +66885,8 @@
       "Trou Noir": 57,
       "Vent Mauvais": 1,
       "Châtiment": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Shaymin",
@@ -66519,7 +67010,8 @@
       "Champ Herbu": 64,
       "Câlinerie": 46,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Arceus",
@@ -66737,7 +67229,8 @@
       "Punition": 1,
       "Telluriforce": 20,
       "Jugement": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Victini",
@@ -66876,7 +67369,8 @@
       "Rengorgement": 7,
       "Incendie": 1,
       "Coup Victoire": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vipélierre",
@@ -66994,7 +67488,8 @@
       "Tempête Verte": 40,
       "Enroulement": 31,
       "Phytomixeur": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lianaja",
@@ -67109,7 +67604,8 @@
       "Tempête Verte": 48,
       "Enroulement": 36,
       "Phytomixeur": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Majaspic",
@@ -67237,7 +67733,8 @@
       "Tempête Verte": 56,
       "Enroulement": 38,
       "Phytomixeur": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gruikui",
@@ -67350,7 +67847,8 @@
       "Fracass’Tête": 37,
       "Nitrocharge": 15,
       "Tacle Feu": 27
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grotichon",
@@ -67484,7 +67982,8 @@
       "Fracass’Tête": 44,
       "Nitrocharge": 15,
       "Tacle Feu": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Roitiflam",
@@ -67634,7 +68133,8 @@
       "Fracass’Tête": 50,
       "Nitrocharge": 15,
       "Tacle Feu": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Moustillon",
@@ -67755,7 +68255,8 @@
       "Détrempage": 11,
       "Vengeance": 37,
       "Coqui-Lame": 17
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mateloutre",
@@ -67875,7 +68376,8 @@
       "Détrempage": 1,
       "Vengeance": 44,
       "Coqui-Lame": 17
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Clamiral",
@@ -68015,7 +68517,8 @@
       "Détrempage": 1,
       "Vengeance": 50,
       "Coqui-Lame": 17
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ratentif",
@@ -68120,7 +68623,8 @@
       "Machination": 33,
       "Après Vous": 23,
       "Rengorgement": 26
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Miradar",
@@ -68249,7 +68753,8 @@
       "Machination": 39,
       "Après Vous": 25,
       "Fertilisation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ponchiot",
@@ -68349,7 +68854,8 @@
       "Rengorgement": 4,
       "Câlinerie": 20,
       "Regard Touchant": 10
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ponchien",
@@ -68445,7 +68951,8 @@
       "Rengorgement": 1,
       "Câlinerie": 24,
       "Regard Touchant": 19
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mastouffe",
@@ -68549,7 +69056,8 @@
       "Rengorgement": 1,
       "Câlinerie": 24,
       "Regard Touchant": 19
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chacripan",
@@ -68665,7 +69173,8 @@
       "Séduction": 33,
       "Aiguisage": 24,
       "Câlinerie": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Léopardus",
@@ -68794,7 +69303,8 @@
       "Machination": 40,
       "Aiguisage": 26,
       "Câlinerie": 52
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Feuillajou",
@@ -68907,7 +69417,8 @@
       "Nœud Herbe": 34,
       "Acrobatie": 31,
       "Camaraderie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Feuiloutan",
@@ -69013,7 +69524,8 @@
       "Léchouille": 1,
       "Combo-Griffe": 1,
       "Canon Graine": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flamajou",
@@ -69126,7 +69638,8 @@
       "Calcination": 10,
       "Acrobatie": 31,
       "Camaraderie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flamoutan",
@@ -69236,7 +69749,8 @@
       "Léchouille": 1,
       "Combo-Griffe": 1,
       "Rebondifeu": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flotajou",
@@ -69351,7 +69865,8 @@
       "Ébullition": 22,
       "Acrobatie": 31,
       "Camaraderie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flotoutan",
@@ -69459,7 +69974,8 @@
       "Léchouille": 1,
       "Combo-Griffe": 1,
       "Ébullition": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Munna",
@@ -69579,7 +70095,8 @@
       "Synchropeine": 25,
       "Force Ajoutée": 1,
       "Pouvoir Lunaire": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mushana",
@@ -69692,7 +70209,8 @@
       "Force Ajoutée": 1,
       "Pouvoir Lunaire": 1,
       "Champ Psychique": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Poichigeon",
@@ -69785,7 +70303,8 @@
       "Atterrissage": 18,
       "Vent Arrière": 40,
       "Lame d’Air": 29
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Colombeau",
@@ -69872,7 +70391,8 @@
       "Atterrissage": 18,
       "Vent Arrière": 50,
       "Lame d’Air": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Déflaisan",
@@ -69964,7 +70484,8 @@
       "Atterrissage": 18,
       "Vent Arrière": 58,
       "Lame d’Air": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zébibron",
@@ -70067,7 +70588,8 @@
       "Coup d’Jus": 29,
       "Nitrocharge": 18,
       "Éclair Fou": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zéblitz",
@@ -70180,7 +70702,8 @@
       "Nitrocharge": 18,
       "Éclair Fou": 47,
       "Déluge Plasmique": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nodulithe",
@@ -70269,7 +70792,8 @@
       "Lame de Roc": 36,
       "Piège de Roc": 8,
       "Anti-Air": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Géolithe",
@@ -70355,7 +70879,8 @@
       "Lame de Roc": 48,
       "Piège de Roc": 1,
       "Anti-Air": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gigalithe",
@@ -70450,7 +70975,8 @@
       "Lame de Roc": 48,
       "Piège de Roc": 1,
       "Anti-Air": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chovsourir",
@@ -70580,7 +71106,8 @@
       "Lame d’Air": 32,
       "Rayon Simple": 55,
       "Crève-Cœur": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rhinolove",
@@ -70710,7 +71237,8 @@
       "Lame d’Air": 32,
       "Rayon Simple": 55,
       "Crève-Cœur": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rototaupe",
@@ -70814,7 +71342,8 @@
       "Éclate Griffe": 24,
       "Aiguisage": 8,
       "Tunnelier": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Minotaupe",
@@ -70933,7 +71462,8 @@
       "Aiguisage": 1,
       "Tunnelier": 46,
       "Fertilisation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nanméouïe",
@@ -71087,7 +71617,8 @@
       "Camaraderie": 1,
       "Regard Touchant": 5,
       "Fontaine de Vie": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Charpenti",
@@ -71209,7 +71740,8 @@
       "Marto-Poing": 36,
       "Lame de Roc": 40,
       "Attrition": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ouvrifier",
@@ -71328,7 +71860,8 @@
       "Marto-Poing": 42,
       "Lame de Roc": 48,
       "Attrition": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bétochef",
@@ -71456,7 +71989,8 @@
       "Marto-Poing": 42,
       "Lame de Roc": 48,
       "Attrition": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tritonde",
@@ -71547,7 +72081,8 @@
       "Anneau Hydro": 20,
       "Chant Canon": 9,
       "Écho": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Batracné",
@@ -71640,7 +72175,8 @@
       "Anneau Hydro": 20,
       "Chant Canon": 1,
       "Écho": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Crapustule",
@@ -71759,7 +72295,8 @@
       "Vampi-Poing": 1,
       "Chant Canon": 1,
       "Écho": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Judokrak",
@@ -71870,7 +72407,8 @@
       "Yama Arashi": 17,
       "Projection": 10,
       "Tatamigaeshi": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Karaclée",
@@ -71978,7 +72516,8 @@
       "Balayette": 9,
       "Prévention": 15,
       "Vengeance": 29
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Larveyette",
@@ -72079,7 +72618,8 @@
       "Piqûre": 8,
       "Survinsecte": 22,
       "Toile Gluante": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Couverdure",
@@ -72176,7 +72716,8 @@
       "Piqûre": 1,
       "Survinsecte": 22,
       "Toile Gluante": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Manternel",
@@ -72301,7 +72842,8 @@
       "Ten-Danse": 43,
       "Survinsecte": 22,
       "Dard Mortel": 29
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Venipatte",
@@ -72395,7 +72937,8 @@
       "Choc Venin": 24,
       "Bulldoboule": 33,
       "Piège de Venin": 38
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Scobolide",
@@ -72487,7 +73030,8 @@
       "Choc Venin": 26,
       "Bulldoboule": 37,
       "Piège de Venin": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Brutapode",
@@ -72603,7 +73147,8 @@
       "Choc Venin": 26,
       "Bulldoboule": 39,
       "Piège de Venin": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Doudouvet",
@@ -72707,7 +73252,8 @@
       "Éco-Sphère": 35,
       "Cotogarde": 37,
       "Vent Féérique": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Farfaduvet",
@@ -72826,7 +73372,8 @@
       "Vent Violent": 1,
       "Vent Féérique": 1,
       "Pouvoir Lunaire": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chlorobule",
@@ -72932,7 +73479,8 @@
       "Ten-Danse": 37,
       "Après Vous": 27,
       "Feuillage": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fragilady",
@@ -73045,7 +73593,8 @@
       "Ten-Danse": 1,
       "Après Vous": 1,
       "Tempête Florale": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bargantua",
@@ -73163,7 +73712,8 @@
       "Attrition": 11,
       "Tout ou Rien": 38,
       "Aquatacle": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mascaïman",
@@ -73288,7 +73838,8 @@
       "Aiguisage": 6,
       "Tricherie": 33,
       "Arrogance": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Escroco",
@@ -73425,7 +73976,8 @@
       "Aiguisage": 1,
       "Tricherie": 35,
       "Arrogance": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Crocorible",
@@ -73580,7 +74132,8 @@
       "Aiguisage": 1,
       "Tricherie": 35,
       "Arrogance": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Darumarond",
@@ -73691,7 +74244,8 @@
       "Crocs Feu": 11,
       "Calcination": 6,
       "Rengorgement": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Darumacho",
@@ -73825,7 +74379,8 @@
       "Crocs Feu": 11,
       "Calcination": 1,
       "Rengorgement": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Maracachi",
@@ -73936,7 +74491,8 @@
       "Cotogarde": 1,
       "Tempête Florale": 36,
       "Pico-Défense": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Crabicoque",
@@ -74037,7 +74593,8 @@
       "Piqûre": 12,
       "Anti-Air": 8,
       "Exuviation": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Crabaraque",
@@ -74140,7 +74697,8 @@
       "Piqûre": 12,
       "Anti-Air": 1,
       "Exuviation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Baggiguane",
@@ -74286,7 +74844,8 @@
       "Escalade": 45,
       "Fracass’Tête": 50,
       "Attrition": 27
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Baggaïd",
@@ -74439,7 +74998,8 @@
       "Escalade": 51,
       "Fracass’Tête": 60,
       "Attrition": 27
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cryptéro",
@@ -74567,7 +75127,8 @@
       "Vent Arrière": 11,
       "Lame d’Air": 35,
       "Synchropeine": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tutafeh",
@@ -74679,7 +75240,8 @@
       "Partage Force": 33,
       "Châtiment": 17,
       "Vigilance": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tutankafer",
@@ -74805,7 +75367,8 @@
       "Partage Force": 33,
       "Châtiment": 17,
       "Vigilance": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Carapagos",
@@ -74919,7 +75482,8 @@
       "Garde Large": 18,
       "Anti-Air": 9,
       "Exuviation": 38
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mégapagos",
@@ -75037,7 +75601,8 @@
       "Garde Large": 18,
       "Anti-Air": 9,
       "Exuviation": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Arkéapti",
@@ -75157,7 +75722,8 @@
       "Demi-Tour": 21,
       "Prévention": 18,
       "Acrobatie": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Aéroptéryx",
@@ -75282,7 +75848,8 @@
       "Demi-Tour": 21,
       "Prévention": 18,
       "Acrobatie": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Miamiasme",
@@ -75382,7 +75949,8 @@
       "Bombe Acide": 6,
       "Bain de Smog": 12,
       "Éructation": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Miasmax",
@@ -75498,7 +76066,8 @@
       "Bombe Acide": 1,
       "Bain de Smog": 12,
       "Éructation": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zorua",
@@ -75625,7 +76194,8 @@
       "Aiguisage": 8,
       "Tricherie": 29,
       "Explonuit": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zoroark",
@@ -75768,7 +76338,8 @@
       "Aiguisage": 1,
       "Tricherie": 29,
       "Explonuit": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chinchidou",
@@ -75884,7 +76455,8 @@
       "Écho": 8,
       "Plumo-Queue": 25,
       "Regard Touchant": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pashmilla",
@@ -76003,7 +76575,8 @@
       "Écho": 1,
       "Plumo-Queue": 1,
       "Regard Touchant": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Scrutella",
@@ -76136,7 +76709,8 @@
       "Lévikinésie": 40,
       "Zone Magique": 48,
       "Camaraderie": 4
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mesmérella",
@@ -76264,7 +76838,8 @@
       "Lévikinésie": 43,
       "Zone Magique": 53,
       "Camaraderie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sidérella",
@@ -76401,7 +76976,8 @@
       "Lévikinésie": 45,
       "Zone Magique": 59,
       "Camaraderie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nucléos",
@@ -76525,7 +77101,8 @@
       "Zone Étrange": 48,
       "Choc Psy": 20,
       "Interversion": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Méios",
@@ -76649,7 +77226,8 @@
       "Zone Étrange": 53,
       "Choc Psy": 20,
       "Interversion": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Symbios",
@@ -76796,7 +77374,8 @@
       "Zone Étrange": 59,
       "Choc Psy": 20,
       "Interversion": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Couaneton",
@@ -76897,7 +77476,8 @@
       "Rapace": 41,
       "Anti-Brume": 6,
       "Vent Violent": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lakmécygne",
@@ -77003,7 +77583,8 @@
       "Rapace": 47,
       "Anti-Brume": 1,
       "Vent Violent": 55
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sorbébé",
@@ -77095,7 +77676,8 @@
       "Stalactite": 1,
       "Avalanche": 16,
       "Miroi-Tir": 26
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sorboul",
@@ -77181,7 +77763,8 @@
       "Stalactite": 1,
       "Avalanche": 16,
       "Miroi-Tir": 26
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sorbouboul",
@@ -77281,7 +77864,8 @@
       "Miroi-Tir": 26,
       "Chute Glace": 1,
       "Lyophilisation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vivaldaim",
@@ -77395,7 +77979,8 @@
       "Balle Graine": 16,
       "Éco-Sphère": 28,
       "Psykoud’Boul": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Haydaim",
@@ -77520,7 +78105,8 @@
       "Éco-Sphère": 28,
       "Psykoud’Boul": 24,
       "Encornebois": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Emolga",
@@ -77630,7 +78216,8 @@
       "Acrobatie": 25,
       "Change Éclair": 40,
       "Frotte-Frimousse": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Carabing",
@@ -77724,7 +78311,8 @@
       "Plaie Croix": 32,
       "Bourdon": 28,
       "Bombe Acide": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lançargot",
@@ -77841,7 +78429,8 @@
       "Bombe Acide": 16,
       "Prévention": 1,
       "Dard Mortel": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Trompignon",
@@ -77939,7 +78528,8 @@
       "Étonnement": 1,
       "Poudre Fureur": 40,
       "Bain de Smog": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gaulet",
@@ -78039,7 +78629,8 @@
       "Étonnement": 1,
       "Poudre Fureur": 42,
       "Bain de Smog": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Viskuse",
@@ -78155,7 +78746,8 @@
       "Essorage": 55,
       "Vent Mauvais": 27,
       "Châtiment": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Moyade",
@@ -78271,7 +78863,8 @@
       "Essorage": 1,
       "Vent Mauvais": 27,
       "Châtiment": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mamanbo",
@@ -78389,7 +78982,8 @@
       "Détrempage": 33,
       "Vibra Soin": 17,
       "Camaraderie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Statitik",
@@ -78501,7 +79095,8 @@
       "Piqûre": 8,
       "Boule Élek": 20,
       "Toile Élek": 4
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mygavolt",
@@ -78614,7 +79209,8 @@
       "Boule Élek": 20,
       "Toile Élek": 1,
       "Toile Gluante": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grindur",
@@ -78715,7 +79311,8 @@
       "Miroi-Tir": 30,
       "Luminocanon": 20,
       "Tête de Fer": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Noacier",
@@ -78832,7 +79429,8 @@
       "Escalade": 1,
       "Mégafouet": 1,
       "Tête de Fer": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tic",
@@ -78925,7 +79523,8 @@
       "Allègement": 20,
       "Chgt Vitesse": 40,
       "Lancécrou": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Clic",
@@ -79019,7 +79618,8 @@
       "Allègement": 20,
       "Chgt Vitesse": 42,
       "Lancécrou": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cliticlic",
@@ -79122,7 +79722,8 @@
       "Magné-Contrôle": 1,
       "Champ Électrifié": 64,
       "Engrenage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Anchwatt",
@@ -79159,7 +79760,8 @@
       "Cage Éclair": 1,
       "Étincelle": 1,
       "Rayon Chargé": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lampéroie",
@@ -79260,7 +79862,8 @@
       "Enroulement": 54,
       "Bombe Acide": 49,
       "Éclair Fou": 59
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ohmassacre",
@@ -79393,7 +79996,8 @@
       "Enroulement": 1,
       "Éclair Fou": 5,
       "Déluge Plasmique": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lewsor",
@@ -79519,7 +80123,8 @@
       "Zone Étrange": 54,
       "Synchropeine": 53,
       "Rayon Simple": 29
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Neitram",
@@ -79648,7 +80253,8 @@
       "Synchropeine": 1,
       "Rayon Simple": 29,
       "Champ Psychique": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Funécire",
@@ -79763,7 +80369,8 @@
       "Rebondifeu": 20,
       "Châtiment": 16,
       "Feu d’Enfer": 38
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mélancolux",
@@ -79877,7 +80484,8 @@
       "Rebondifeu": 20,
       "Châtiment": 16,
       "Feu d’Enfer": 38
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lugulabre",
@@ -79995,7 +80603,8 @@
       "Rebondifeu": 1,
       "Châtiment": 1,
       "Feu d’Enfer": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Coupenotte",
@@ -80121,7 +80730,8 @@
       "Double Baffe": 13,
       "Affilage": 33,
       "Abattage": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Incisache",
@@ -80243,7 +80853,8 @@
       "Double Baffe": 13,
       "Affilage": 33,
       "Abattage": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tranchodon",
@@ -80375,7 +80986,8 @@
       "Double Baffe": 13,
       "Affilage": 33,
       "Abattage": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Polarhume",
@@ -80501,7 +81113,8 @@
       "Souffle Glacé": 18,
       "Camaraderie": 12,
       "Chute de Neige": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Polagriffe",
@@ -80650,7 +81263,8 @@
       "Chute Glace": 1,
       "Camaraderie": 9,
       "Chute de Neige": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hexagel",
@@ -80762,7 +81376,8 @@
       "Éclats Glace": 1,
       "Lyophilisation": 36,
       "Affilage": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Escargaume",
@@ -80855,7 +81470,8 @@
       "Bourdon": 44,
       "Tout ou Rien": 48,
       "Survinsecte": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Limaspeed",
@@ -80966,7 +81582,8 @@
       "Tout ou Rien": 1,
       "Survinsecte": 16,
       "Sheauriken": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Limonde",
@@ -81086,7 +81703,8 @@
       "Boue-Bombe": 21,
       "Coup d’Jus": 25,
       "Champ Électrifié": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kungfouine",
@@ -81212,7 +81830,8 @@
       "Vampi-Poing": 33,
       "Aiguisage": 40,
       "Prévention": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Shaofouine",
@@ -81347,7 +81966,8 @@
       "Aiguisage": 40,
       "Garde Large": 20,
       "Prévention": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Drakkarmin",
@@ -81481,7 +82101,8 @@
       "Aiguisage": 5,
       "Attrition": 31,
       "Draco-Queue": 10
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gringolem",
@@ -81615,7 +82236,8 @@
       "Tacle Lourd": 40,
       "Hantise": 44,
       "Trépignement": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Golemastoc",
@@ -81768,7 +82390,8 @@
       "Hantise": 1,
       "Cavalerie Lourde": 1,
       "Trépignement": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Scalpion",
@@ -81896,7 +82519,8 @@
       "Tête de Fer": 54,
       "Vengeance": 50,
       "Affilage": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Scalproie",
@@ -82026,7 +82650,8 @@
       "Tête de Fer": 1,
       "Vengeance": 50,
       "Affilage": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Frison",
@@ -82140,7 +82765,8 @@
       "Giga Impact": 55,
       "Peignée": 31,
       "Exécu-Son": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Furaiglon",
@@ -82254,7 +82880,8 @@
       "Anti-Brume": 32,
       "Aiguisage": 6,
       "Chute Libre": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gueriaigle",
@@ -82371,7 +82998,8 @@
       "Anti-Brume": 32,
       "Aiguisage": 1,
       "Chute Libre": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vostourno",
@@ -82489,7 +83117,8 @@
       "Rapace": 59,
       "Machination": 14,
       "Anti-Brume": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vaututrice",
@@ -82617,7 +83246,8 @@
       "Rapace": 1,
       "Machination": 14,
       "Anti-Brume": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Aflamanoir",
@@ -82742,7 +83372,8 @@
       "Calcination": 1,
       "Feu d’Enfer": 1,
       "Fouet de Feu": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fermite",
@@ -82849,7 +83480,8 @@
       "Tête de Fer": 26,
       "Piqûre": 16,
       "Ten-Danse": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Solochi",
@@ -82960,7 +83592,8 @@
       "Draco-Charge": 42,
       "Machination": 56,
       "Rengorgement": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Diamat",
@@ -83073,7 +83706,8 @@
       "Machination": 60,
       "Coup Double": 1,
       "Rengorgement": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Trioxhydre",
@@ -83226,7 +83860,8 @@
       "Machination": 60,
       "Coup Double": 1,
       "Rengorgement": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pyronille",
@@ -83328,7 +83963,8 @@
       "Piqûre": 24,
       "Nitrocharge": 6,
       "Survinsecte": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pyrax",
@@ -83458,7 +84094,8 @@
       "Survinsecte": 1,
       "Vent Violent": 1,
       "Danse du Feu": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cobaltium",
@@ -83580,7 +84217,8 @@
       "Vengeance": 19,
       "Rengorgement": 1,
       "Lame Sainte": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Terrakium",
@@ -83695,7 +84333,8 @@
       "Vengeance": 19,
       "Rengorgement": 1,
       "Lame Sainte": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Viridium",
@@ -83817,7 +84456,8 @@
       "Vengeance": 19,
       "Rengorgement": 1,
       "Lame Sainte": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Boréas",
@@ -83948,7 +84588,8 @@
       "Machination": 22,
       "Vent Violent": 1,
       "Typhon Hivernal": 52
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fulguris",
@@ -84093,7 +84734,8 @@
       "Coup d’Jus": 37,
       "Change Éclair": 35,
       "Typhon Fulgurant": 52
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Reshiram",
@@ -84226,7 +84868,8 @@
       "Flamme Bleue": 88,
       "Flamme Croix": 48,
       "Râle Mâle": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zekrom",
@@ -84366,7 +85009,8 @@
       "Charge Foudre": 88,
       "Éclair Croix": 48,
       "Râle Mâle": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Démétéros",
@@ -84500,7 +85144,8 @@
       "Anti-Air": 1,
       "Piétisol": 13,
       "Typhon Pyrosable": 52
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kyurem",
@@ -84629,7 +85274,8 @@
       "Ère Glaciaire": 50,
       "Râle Mâle": 1,
       "Lyophilisation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Keldeo",
@@ -84751,7 +85397,8 @@
       "Rengorgement": 1,
       "Lame Sainte": 43,
       "Lame Ointe": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Meloetta",
@@ -84898,7 +85545,8 @@
       "Écho": 36,
       "Acrobatie": 26,
       "Chant Antique": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Genesect",
@@ -85024,7 +85672,8 @@
       "Rayon Simple": 62,
       "Techno-Buster": 1,
       "Dard Mortel": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Marisson",
@@ -85159,7 +85808,8 @@
       "Tir de Boue": 35,
       "Canon Graine": 32,
       "Martobois": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Boguérisse",
@@ -85296,7 +85946,8 @@
       "Tir de Boue": 34,
       "Canon Graine": 20,
       "Martobois": 53
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Blindépique",
@@ -85461,7 +86112,8 @@
       "Giga Impact": 70,
       "Martobois": 55,
       "Pico-Défense": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Feunnec",
@@ -85576,7 +86228,8 @@
       "Choc Psy": 31,
       "Zone Magique": 46,
       "Nitrocharge": 14
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Roussil",
@@ -85702,7 +86355,8 @@
       "Choc Psy": 34,
       "Zone Magique": 53,
       "Nitrocharge": 14
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Goupelin",
@@ -85855,7 +86509,8 @@
       "Zone Magique": 58,
       "Nitrocharge": 14,
       "Feu Ensorcelé": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grenousse",
@@ -85972,7 +86627,8 @@
       "Dégommage": 25,
       "Anti-Air": 29,
       "Chant Canon": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Croâporal",
@@ -86089,7 +86745,8 @@
       "Dégommage": 28,
       "Anti-Air": 33,
       "Chant Canon": 23
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Amphinobi",
@@ -86231,7 +86888,8 @@
       "Ombre Portée": 23,
       "Tatamigaeshi": 1,
       "Sheauriken": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sapereau",
@@ -86340,7 +86998,8 @@
       "Tir de Boue": 12,
       "Piétisol": 21,
       "Affilage": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Excavarenne",
@@ -86477,7 +87136,8 @@
       "Piétisol": 1,
       "Fertilisation": 1,
       "Affilage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Passerouge",
@@ -86578,7 +87238,8 @@
       "Moi d’Abord": 41,
       "Nitrocharge": 34,
       "Acrobatie": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Braisillon",
@@ -86685,7 +87346,8 @@
       "Moi d’Abord": 46,
       "Nitrocharge": 1,
       "Acrobatie": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flambusard",
@@ -86804,7 +87466,8 @@
       "Rapace": 1,
       "Nitrocharge": 1,
       "Acrobatie": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lépidonille",
@@ -86842,7 +87505,8 @@
       "Para-Spore": 6,
       "Sécrétion": 1,
       "Piqûre": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pérégrain",
@@ -86877,7 +87541,8 @@
     "movepool_niveaux": {
       "Armure": 1,
       "Abri": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Prismillon",
@@ -86988,7 +87653,8 @@
       "Vent Violent": 50,
       "Vampibaiser": 25,
       "Nuée de Poudre": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hélionceau",
@@ -87096,7 +87762,8 @@
       "Calcination": 46,
       "Rengorgement": 8,
       "Râle Mâle": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Némélios",
@@ -87208,7 +87875,8 @@
       "Calcination": 51,
       "Rengorgement": 1,
       "Râle Mâle": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flabébé",
@@ -87318,7 +87986,8 @@
       "Champ Brumeux": 37,
       "Vent Féérique": 6,
       "Pouvoir Lunaire": 41
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Floette",
@@ -87427,7 +88096,8 @@
       "Champ Brumeux": 43,
       "Vent Féérique": 1,
       "Pouvoir Lunaire": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Florges",
@@ -87540,7 +88210,8 @@
       "Champ Herbu": 1,
       "Champ Brumeux": 1,
       "Pouvoir Lunaire": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cabriolaine",
@@ -87650,7 +88321,8 @@
       "Canon Graine": 30,
       "Piétisol": 26,
       "Encornebois": 42
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chevroum",
@@ -87768,7 +88440,8 @@
       "Canon Graine": 30,
       "Piétisol": 26,
       "Encornebois": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pandespiègle",
@@ -87900,7 +88573,8 @@
       "Projection": 12,
       "Rengorgement": 10,
       "Dernier Mot": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pandarbare",
@@ -88065,7 +88739,8 @@
       "Projection": 12,
       "Rengorgement": 1,
       "Dernier Mot": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Couafarel",
@@ -88168,7 +88843,8 @@
       "Vengeance": 33,
       "Cotogarde": 48,
       "Regard Touchant": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Psystigri",
@@ -88280,7 +88956,8 @@
       "Implore": 5,
       "Choc Psy": 25,
       "Voix Enjôleuse": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mistigrix",
@@ -88417,7 +89094,8 @@
       "Prévention": 1,
       "Voix Enjôleuse": 1,
       "Champ Brumeux": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Monorpale",
@@ -88515,7 +89193,8 @@
       "Allègement": 8,
       "Vengeance": 26,
       "Lame Sainte": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dimoclès",
@@ -88610,7 +89289,8 @@
       "Allègement": 1,
       "Vengeance": 26,
       "Lame Sainte": 51
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Exagide",
@@ -88720,7 +89400,8 @@
       "Vengeance": 1,
       "Lame Sainte": 1,
       "Bouclier Royal": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fluvetin",
@@ -88824,7 +89505,8 @@
       "Champ Brumeux": 24,
       "Vent Féérique": 1,
       "Pouvoir Lunaire": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cocotine",
@@ -88940,7 +89622,8 @@
       "Vent Féérique": 1,
       "Pouvoir Lunaire": 31,
       "Brume Capiteuse": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sucroquin",
@@ -89040,7 +89723,8 @@
       "Câlinerie": 33,
       "Vent Féérique": 5,
       "Camaraderie": 3
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cupcanaille",
@@ -89145,7 +89829,8 @@
       "Câlinerie": 33,
       "Vent Féérique": 1,
       "Camaraderie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sepiatop",
@@ -89275,7 +89960,8 @@
       "Coupe Psycho": 27,
       "Tricherie": 8,
       "Renversement": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sepiatroce",
@@ -89412,7 +90098,8 @@
       "Coupe Psycho": 27,
       "Tricherie": 8,
       "Renversement": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Opermine",
@@ -89540,7 +90227,8 @@
       "Aiguisage": 32,
       "Exuviation": 1,
       "Coqui-Lame": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Golgopathe",
@@ -89682,7 +90370,8 @@
       "Aiguisage": 32,
       "Exuviation": 1,
       "Coqui-Lame": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Venalgue",
@@ -89793,7 +90482,8 @@
       "Vibraqua": 25,
       "Hydro-Queue": 35,
       "Draco-Choc": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Kravarech",
@@ -89911,7 +90601,8 @@
       "Hydro-Queue": 35,
       "Draco-Choc": 40,
       "Draco-Queue": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flingouste",
@@ -90018,7 +90709,8 @@
       "Aqua-Jet": 15,
       "Aiguisage": 25,
       "Anti-Air": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gamblast",
@@ -90136,7 +90828,8 @@
       "Aiguisage": 25,
       "Anti-Air": 20,
       "Vibra Soin": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Galvaran",
@@ -90239,7 +90932,8 @@
       "Piétisol": 20,
       "Parabocharge": 25,
       "Électrisation": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Iguolta",
@@ -90364,7 +91058,8 @@
       "Parabocharge": 1,
       "Électrisation": 1,
       "Ondes Étranges": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ptyranidur",
@@ -90481,7 +91176,8 @@
       "Draco-Griffe": 36,
       "Piège de Roc": 15,
       "Draco-Queue": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rexillius",
@@ -90606,7 +91302,8 @@
       "Piège de Roc": 15,
       "Fracass’Tête": 1,
       "Draco-Queue": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Amagara",
@@ -90729,7 +91426,8 @@
       "Avalanche": 34,
       "Chant Canon": 16,
       "Lyophilisation": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dragmara",
@@ -90859,7 +91557,8 @@
       "Avalanche": 34,
       "Chant Canon": 16,
       "Lyophilisation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nymphali",
@@ -90997,7 +91696,8 @@
       "Vent Féérique": 1,
       "Pouvoir Lunaire": 37,
       "Regard Touchant": 9
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Brutalibré",
@@ -91152,7 +91852,8 @@
       "Aiguisage": 1,
       "Chute Libre": 55,
       "Flying Press": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dedenne",
@@ -91270,7 +91971,8 @@
       "Parabocharge": 17,
       "Câlinerie": 42,
       "Frotte-Frimousse": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Strassie",
@@ -91393,7 +92095,8 @@
       "Partage Garde": 5,
       "Anti-Air": 10,
       "Pouvoir Lunaire": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mucuscule",
@@ -91489,7 +92192,8 @@
       "Draco-Choc": 25,
       "Bombe Acide": 6,
       "Mur Fumigène": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Colimucus",
@@ -91581,7 +92285,8 @@
       "Vibraqua": 25,
       "Draco-Choc": 35,
       "Bombe Acide": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Muplodocus",
@@ -91717,7 +92422,8 @@
       "Mégafouet": 50,
       "Bombe Acide": 1,
       "Larme à l’Œil": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Trousselin",
@@ -91827,7 +92533,8 @@
       "Câlinerie": 40,
       "Vent Féérique": 5,
       "Verrou Enchanté": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Brocélôme",
@@ -91953,7 +92660,8 @@
       "Hantise": 36,
       "Maléfice Sylvain": 35,
       "Tapotige": 4
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Desséliande",
@@ -92096,7 +92804,8 @@
       "Hantise": 36,
       "Maléfice Sylvain": 35,
       "Tapotige": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pitrouille",
@@ -92208,7 +92917,8 @@
       "Canon Graine": 32,
       "Ombre Portée": 4,
       "Halloween": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Banshitrouye",
@@ -92332,7 +93042,8 @@
       "Hantise": 1,
       "Halloween": 1,
       "Pouvoir Lunaire": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grelaçon",
@@ -92439,7 +93150,8 @@
       "Avalanche": 18,
       "Éclats Glace": 9,
       "Crocs Givre": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Séracrawl",
@@ -92562,7 +93274,8 @@
       "Crocs Givre": 24,
       "Garde Large": 1,
       "Chute Glace": 51
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sonistrelle",
@@ -92678,7 +93391,8 @@
       "Vent Arrière": 35,
       "Lame d’Air": 36,
       "Vent Violent": 52
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bruyverne",
@@ -92813,7 +93527,8 @@
       "Draco-Choc": 1,
       "Vent Violent": 1,
       "Bang Sonique": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Xerneas",
@@ -92926,7 +93641,8 @@
       "Champ Brumeux": 40,
       "Pouvoir Lunaire": 35,
       "Géo-Contrôle": 26
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Yveltal",
@@ -93038,7 +93754,8 @@
       "Aboiement": 10,
       "Hantise": 55,
       "Mort’Ailes": 26
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zygarde",
@@ -93155,7 +93872,8 @@
       "Myria-Vagues": 1,
       "Force Chtonienne": 26,
       "Sanction Suprême": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Diancie",
@@ -93291,7 +94009,8 @@
       "Anti-Air": 8,
       "Pouvoir Lunaire": 50,
       "Orage Adamantin": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hoopa",
@@ -93432,7 +94151,8 @@
       "Interversion": 1,
       "Hantise": 35,
       "TrouDimensionnel": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Volcanion",
@@ -93559,7 +94279,8 @@
       "Ébullition": 32,
       "Calcination": 36,
       "Jet de Vapeur": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Brindibou",
@@ -93684,7 +94405,8 @@
       "Tempête Verte": 43,
       "Vent Mauvais": 16,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Efflèche",
@@ -93809,7 +94531,8 @@
       "Tempête Verte": 43,
       "Vent Mauvais": 16,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Archéduc",
@@ -93965,7 +94688,8 @@
       "Hantise": 1,
       "Tisse Ombre": 1,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flamiaou",
@@ -94070,7 +94794,8 @@
       "Vantardise": 25,
       "Boutefeu": 36,
       "Crocs Feu": 14
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Matoufeu",
@@ -94176,7 +94901,8 @@
       "Vantardise": 28,
       "Boutefeu": 50,
       "Crocs Feu": 14
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Félinferno",
@@ -94328,7 +95054,8 @@
       "Crocs Feu": 14,
       "Dark Lariat": 1,
       "Exécu-Son": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Otaquin",
@@ -94436,7 +95163,8 @@
       "Champ Brumeux": 27,
       "Pouvoir Lunaire": 33,
       "Regard Touchant": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Otarlette",
@@ -94544,7 +95272,8 @@
       "Champ Brumeux": 35,
       "Pouvoir Lunaire": 42,
       "Regard Touchant": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Oratoria",
@@ -94675,7 +95404,8 @@
       "Pouvoir Lunaire": 44,
       "Regard Touchant": 11,
       "Aria de l’Écume": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Picassaut",
@@ -94772,7 +95502,8 @@
       "Atterrissage": 19,
       "Picore": 15,
       "Écho": 7
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Piclairon",
@@ -94871,7 +95602,8 @@
       "Atterrissage": 21,
       "Picore": 16,
       "Écho": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bazoucan",
@@ -94983,7 +95715,8 @@
       "Picore": 16,
       "Écho": 1,
       "Bec-Canon": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Manglouton",
@@ -95092,7 +95825,8 @@
       "Flair": 13,
       "Représailles": 7,
       "Rengorgement": 13
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Argouste",
@@ -95215,7 +95949,8 @@
       "Flair": 13,
       "Représailles": 1,
       "Rengorgement": 13
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Larvibule",
@@ -95303,7 +96038,8 @@
       "Piqûre": 10,
       "Acrobatie": 19,
       "Toile Gluante": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chrysapile",
@@ -95399,7 +96135,8 @@
       "Piqûre": 1,
       "Acrobatie": 19,
       "Toile Gluante": 29
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lucanon",
@@ -95521,7 +96258,8 @@
       "Piqûre": 1,
       "Acrobatie": 19,
       "Toile Gluante": 29
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Crabagarre",
@@ -95634,7 +96372,8 @@
       "Close Combat": 49,
       "Représailles": 29,
       "Poing Boost": 22
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Crabominable",
@@ -95765,7 +96504,8 @@
       "Avalanche": 29,
       "Poing Boost": 22,
       "Marteau de Glace": 37
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Plumeline",
@@ -95874,7 +96614,8 @@
       "Acrobatie": 23,
       "Vent Violent": 47,
       "Danse Éveil": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bombydou",
@@ -95991,7 +96732,8 @@
       "Vampibaiser": 16,
       "Vent Féérique": 1,
       "Éclat Magique": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rubombelle",
@@ -96117,7 +96859,8 @@
       "Vent Féérique": 1,
       "Éclat Magique": 35,
       "Boule Pollen": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rocabot",
@@ -96222,7 +96965,8 @@
       "Escalade": 45,
       "Lame de Roc": 48,
       "Piège de Roc": 29
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lougaroc",
@@ -96344,7 +97088,8 @@
       "Piège de Roc": 29,
       "Prévention": 1,
       "Vif Roc": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Froussardine",
@@ -96437,7 +97182,8 @@
       "Hydro-Queue": 32,
       "Détrempage": 24,
       "Larme à l’Œil": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vorastérie",
@@ -96543,7 +97289,8 @@
       "Bombe Acide": 40,
       "Piège de Venin": 40,
       "Aqua-Brèche": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Prédastérie",
@@ -96660,7 +97407,8 @@
       "Piège de Venin": 42,
       "Blockhaus": 1,
       "Aqua-Brèche": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tiboudet",
@@ -96758,7 +97506,8 @@
       "Piétisol": 10,
       "Fertilisation": 8,
       "Cavalerie Lourde": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bourrinos",
@@ -96862,7 +97611,8 @@
       "Piétisol": 1,
       "Fertilisation": 1,
       "Cavalerie Lourde": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Araqua",
@@ -96968,7 +97718,8 @@
       "Harcèlement": 1,
       "Furie-Bond": 36,
       "Aqua-Brèche": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tarenbulle",
@@ -97081,7 +97832,8 @@
       "Harcèlement": 1,
       "Furie-Bond": 44,
       "Aqua-Brèche": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mimantis",
@@ -97175,7 +97927,8 @@
       "Lame Feuille": 23,
       "Plaie Croix": 30,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Floramantis",
@@ -97287,7 +98040,8 @@
       "Tempête Florale": 1,
       "Lame Solaire": 47,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Spododo",
@@ -97384,7 +98138,8 @@
       "Éclat Magique": 32,
       "Vole-Force": 25,
       "Projecteur": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lampignon",
@@ -97483,7 +98238,8 @@
       "Éclat Magique": 38,
       "Vole-Force": 27,
       "Projecteur": 53
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tritox",
@@ -97603,7 +98359,8 @@
       "Rebondifeu": 24,
       "Calcination": 30,
       "Piège de Venin": 45
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Malamandre",
@@ -97748,7 +98505,8 @@
       "Calcination": 30,
       "Piège de Venin": 51,
       "Fouet de Feu": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nounourson",
@@ -97851,7 +98609,8 @@
       "Représailles": 8,
       "Regard Touchant": 4,
       "Centrifugifle": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chelours",
@@ -97963,7 +98722,8 @@
       "Représailles": 1,
       "Regard Touchant": 1,
       "Centrifugifle": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Croquine",
@@ -98056,7 +98816,8 @@
       "Feuille Magik": 20,
       "Camaraderie": 4,
       "Brume Capiteuse": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Candine",
@@ -98159,7 +98920,8 @@
       "Séduction": 37,
       "Camaraderie": 1,
       "Brume Capiteuse": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sucreine",
@@ -98281,7 +99043,8 @@
       "Camaraderie": 1,
       "Brume Capiteuse": 33,
       "Botte Sucrette": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Guérilande",
@@ -98409,7 +99172,8 @@
       "Champ Herbu": 46,
       "Câlinerie": 39,
       "Soin Floral": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gouroutan",
@@ -98541,7 +99305,8 @@
       "Force Ajoutée": 15,
       "À la Queue": 11,
       "Sommation": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Quartermac",
@@ -98672,7 +99437,8 @@
       "Dégommage": 30,
       "Giga Impact": 50,
       "Passe-Cadeau": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sovkipou",
@@ -98739,7 +99505,8 @@
       "Jet de Sable": 1,
       "Boul’Armure": 1,
       "Survinsecte": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sarmuraï",
@@ -98862,7 +99629,8 @@
       "Coqui-Lame": 26,
       "Escarmouche": 1,
       "Aqua-Brèche": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bacabouh",
@@ -98974,7 +99742,8 @@
       "Telluriforce": 45,
       "Piétisol": 23,
       "Amass’Sable": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Trépassable",
@@ -99087,7 +99856,8 @@
       "Telluriforce": 47,
       "Piétisol": 23,
       "Amass’Sable": 54
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Concombaffe",
@@ -99169,7 +99939,8 @@
       "Suc Digestif": 29,
       "Détrempage": 41,
       "Purification": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Type:0",
@@ -99268,7 +100039,8 @@
       "Plaie Croix": 35,
       "Tête de Fer": 45,
       "Coup Double": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Silvallié",
@@ -99408,7 +100180,8 @@
       "Coup Double": 15,
       "Dernier Mot": 60,
       "Coup Varia-Type": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Météno",
@@ -99514,7 +100287,8 @@
       "Piège de Roc": 24,
       "Allègement": 31,
       "Exuviation": 45
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dodoala",
@@ -99625,7 +100399,8 @@
       "Bâillement": 16,
       "Coup Bas": 31,
       "Martobois": 41
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Boumata",
@@ -99746,7 +100521,8 @@
       "Exuviation": 37,
       "Calcination": 13,
       "Carapiège": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Togedemaru",
@@ -99865,7 +100641,8 @@
       "Champ Électrifié": 37,
       "Frotte-Frimousse": 1,
       "Électrikipik": 33
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mimiqui",
@@ -99995,7 +100772,8 @@
       "Aiguisage": 30,
       "Câlinerie": 46,
       "Regard Touchant": 10
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Denticrisse",
@@ -100119,7 +100897,8 @@
       "Synchropeine": 44,
       "Psycho-Croc": 41,
       "Aquatacle": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Draïeul",
@@ -100253,7 +101032,8 @@
       "Draco-Choc": 35,
       "Écho": 1,
       "Camaraderie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sinistrail",
@@ -100373,7 +101153,8 @@
       "Tacle Lourd": 36,
       "Hantise": 54,
       "Ancrage": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bébécaille",
@@ -100478,7 +101259,8 @@
       "Draco-Queue": 8,
       "Rengorgement": 20,
       "Râle Mâle": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Écaïd",
@@ -100601,7 +101383,8 @@
       "Draco-Queue": 1,
       "Rengorgement": 20,
       "Râle Mâle": 38
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ékaïser",
@@ -100755,7 +101538,8 @@
       "Bang Sonique": 76,
       "Vibrécaille": 1,
       "Dracacophonie": 68
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tokorico",
@@ -100874,7 +101658,8 @@
       "Vent Féérique": 10,
       "Champ Électrifié": 1,
       "Ire de la Nature": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tokopiyon",
@@ -100989,7 +101774,8 @@
       "Brume Capiteuse": 1,
       "Champ Psychique": 1,
       "Ire de la Nature": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tokotoro",
@@ -101116,7 +101902,8 @@
       "Champ Herbu": 1,
       "Feuillage": 1,
       "Ire de la Nature": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tokopisco",
@@ -101233,7 +102020,8 @@
       "Champ Brumeux": 1,
       "Pouvoir Lunaire": 1,
       "Ire de la Nature": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cosmog",
@@ -101262,7 +102050,8 @@
     "movepool_niveaux": {
       "Téléport": 1,
       "Trempette": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cosmovum",
@@ -101291,7 +102080,8 @@
     "movepool_niveaux": {
       "Téléport": 1,
       "Force Cosmique": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Solgaleo",
@@ -101422,7 +102212,8 @@
       "Éclair Fou": 56,
       "Râle Mâle": 1,
       "Choc Météore": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lunala",
@@ -101551,7 +102342,8 @@
       "Hantise": 61,
       "Pouvoir Lunaire": 47,
       "Rayon Spectral": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zéroïd",
@@ -101669,7 +102461,8 @@
       "Bombe Acide": 15,
       "Bain de Smog": 7,
       "Piège de Venin": 45
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mouscoto",
@@ -101780,7 +102573,8 @@
       "Dard Mortel": 1,
       "Poing Boost": 1,
       "Furie-Bond": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cancrelove",
@@ -101892,7 +102686,8 @@
       "Prévention": 1,
       "Furie-Bond": 45,
       "Permuvitesse": 55
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Câblifère",
@@ -101994,7 +102789,8 @@
       "Déluge Plasmique": 67,
       "Ondes Étranges": 29,
       "Champ Électrifié": 53
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bamboiselle",
@@ -102104,7 +102900,8 @@
       "Allègement": 30,
       "Anti-Air": 7,
       "Tacle Lourd": 60
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Katagami",
@@ -102194,7 +102991,8 @@
       "Anti-Brume": 1,
       "Lame Sainte": 1,
       "Affilage": 29
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Engloutyran",
@@ -102318,7 +103116,8 @@
       "Éructation": 1,
       "Centrifugifle": 13,
       "Trépignement": 20
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Necrozma",
@@ -102452,7 +103251,8 @@
       "Force Ajoutée": 13,
       "Laser Prisme": 73,
       "Photo-Geyser": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Magearna",
@@ -102608,7 +103408,8 @@
       "Magné-Contrôle": 24,
       "Engrenage": 1,
       "Canon Floral": 49
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Marshadow",
@@ -102739,7 +103540,8 @@
       "Ombre Portée": 1,
       "Affilage": 1,
       "Clepto-Mânes": 45
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vémini",
@@ -102815,7 +103617,8 @@
       "Choc Venin": 13,
       "Dard Mortel": 14,
       "Piège de Venin": 23
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mandrillon",
@@ -102935,7 +103738,8 @@
       "Choc Venin": 13,
       "Dard Mortel": 14,
       "Piège de Venin": 23
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ama-Ama",
@@ -103044,7 +103848,8 @@
       "Piège de Roc": 11,
       "Garde Large": 30,
       "Allègement": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pierroteknik",
@@ -103154,7 +103959,8 @@
       "Calcination": 30,
       "Feu Ensorcelé": 40,
       "Caboche-Kaboum": 59
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zeraora",
@@ -103280,7 +104086,8 @@
       "Aboiement": 1,
       "Poing Boost": 1,
       "Plasma Punch": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Meltan",
@@ -103332,7 +104139,8 @@
       "Armure": 1,
       "Acidarmure": 32,
       "Luminocanon": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Melmetal",
@@ -103419,7 +104227,8 @@
       "Luminocanon": 40,
       "Coup d’Jus": 64,
       "Écrous d’Poing": 72
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ouistempo",
@@ -103513,7 +104322,8 @@
       "Effort": 36,
       "Martobois": 32,
       "Tapotige": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Badabouin",
@@ -103610,7 +104420,8 @@
       "Martobois": 42,
       "Coup Double": 1,
       "Tapotige": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gorythmic",
@@ -103734,7 +104545,8 @@
       "Bang Sonique": 62,
       "Tambour Battant": 1,
       "Tapotige": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flambino",
@@ -103826,7 +104638,8 @@
       "Vive-Attaque": 8,
       "Rebond": 32,
       "Nitrocharge": 17
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lapyro",
@@ -103921,7 +104734,8 @@
       "Vive-Attaque": 1,
       "Rebond": 42,
       "Nitrocharge": 19
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pyrobut",
@@ -104038,7 +104852,8 @@
       "Nitrocharge": 19,
       "Change-Côté": 62,
       "Ballon Brûlant": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Larméléon",
@@ -104120,7 +104935,8 @@
       "Détrempage": 32,
       "Aqua-Brèche": 28,
       "Larme à l’Œil": 17
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Arrozard",
@@ -104203,7 +105019,8 @@
       "Détrempage": 42,
       "Aqua-Brèche": 36,
       "Larme à l’Œil": 19
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lézargus",
@@ -104316,7 +105133,8 @@
       "Aqua-Brèche": 38,
       "Larme à l’Œil": 19,
       "Tir de Précision": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rongourmand",
@@ -104401,7 +105219,8 @@
       "Balle Graine": 35,
       "Éructation": 45,
       "Garde-à-Joues": 10
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rongrigou",
@@ -104500,7 +105319,8 @@
       "Implore": 1,
       "Éructation": 55,
       "Garde-à-Joues": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Minisange",
@@ -104583,7 +105403,8 @@
       "Rapace": 36,
       "Aiguisage": 8,
       "Arrogance": 4
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bleuseille",
@@ -104663,7 +105484,8 @@
       "Rapace": 46,
       "Aiguisage": 1,
       "Arrogance": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Corvaillus",
@@ -104773,7 +105595,8 @@
       "Rapace": 50,
       "Aiguisage": 1,
       "Arrogance": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Larvadar",
@@ -104804,7 +105627,8 @@
     },
     "movepool_niveaux": {
       "Survinsecte": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Coléodôme",
@@ -104874,7 +105698,8 @@
       "Mur Lumière": 1,
       "Protection": 1,
       "Survinsecte": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Astronelle",
@@ -104969,7 +105794,8 @@
       "Interversion": 24,
       "Survinsecte": 1,
       "Champ Psychique": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Goupilou",
@@ -105040,7 +105866,8 @@
       "Tricherie": 36,
       "Plumo-Queue": 32,
       "Aboiement": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Roublenard",
@@ -105124,7 +105951,8 @@
       "Plumo-Queue": 40,
       "Aboiement": 12,
       "Dernier Mot": 52
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tournicoton",
@@ -105198,7 +106026,8 @@
       "Chant Canon": 16,
       "Phytomixeur": 21,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Blancoton",
@@ -105274,7 +106103,8 @@
       "Phytomixeur": 23,
       "Cotogarde": 52,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Moumouton",
@@ -105341,7 +106171,8 @@
       "Permugarde": 28,
       "Partage Garde": 12,
       "Cotogarde": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Moumouflon",
@@ -105417,7 +106248,8 @@
       "Dernier Recours": 56,
       "Partage Garde": 12,
       "Cotogarde": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Khélocrok",
@@ -105494,7 +106326,8 @@
       "Abri": 14,
       "Aqua-Brèche": 42,
       "Croque Fort": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Torgamord",
@@ -105606,7 +106439,8 @@
       "Coqui-Lame": 1,
       "Aqua-Brèche": 48,
       "Croque Fort": 39
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Voltoutou",
@@ -105680,7 +106514,8 @@
       "Éclair Fou": 40,
       "Câlinerie": 45,
       "Frotte-Frimousse": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fulgudog",
@@ -105761,7 +106596,8 @@
       "Câlinerie": 55,
       "Champ Électrifié": 62,
       "Frotte-Frimousse": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Charbi",
@@ -105839,7 +106675,8 @@
       "Anti-Air": 10,
       "Calcination": 25,
       "Tacle Feu": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Wagomine",
@@ -105933,7 +106770,8 @@
       "Calcination": 27,
       "Tacle Feu": 41,
       "Flamme Ultime": 55
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Monthracite",
@@ -106036,7 +106874,8 @@
       "Tacle Feu": 45,
       "Flamme Ultime": 63,
       "Goudronnage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Verpom",
@@ -106075,7 +106914,8 @@
     "movepool_niveaux": {
       "Repli": 1,
       "Étonnement": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pomdrapi",
@@ -106171,7 +107011,8 @@
       "Bombe Acide": 4,
       "Acrobatie": 8,
       "Force G": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dratatin",
@@ -106275,7 +107116,8 @@
       "Draco-Choc": 40,
       "Éco-Sphère": 44,
       "Acide Malique": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dunaja",
@@ -106355,7 +107197,8 @@
       "Enroulement": 45,
       "Piétisol": 15,
       "Centrifugifle": 10
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dunaconda",
@@ -106449,7 +107292,8 @@
       "Enroulement": 49,
       "Piétisol": 15,
       "Centrifugifle": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nigosier",
@@ -106549,7 +107393,8 @@
       "Plongée": 28,
       "Picore": 21,
       "Éructation": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Embrochet",
@@ -106631,7 +107476,8 @@
       "Aqua-Jet": 1,
       "Affilage": 30,
       "Aqua-Brèche": 42
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hastacuda",
@@ -106715,7 +107561,8 @@
       "Affilage": 32,
       "Exécu-Son": 1,
       "Aqua-Brèche": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Toxizap",
@@ -106768,7 +107615,8 @@
       "Éructation": 1,
       "Frotte-Frimousse": 1,
       "Larme à l’Œil": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Salarsen",
@@ -106899,7 +107747,8 @@
       "Frotte-Frimousse": 1,
       "Larme à l’Œil": 1,
       "Overdrive": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grillepattes",
@@ -106975,7 +107824,8 @@
       "Furie-Bond": 50,
       "Fouet de Feu": 45,
       "Flamme Ultime": 55
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Scolocendre",
@@ -107061,7 +107911,8 @@
       "Furie-Bond": 60,
       "Fouet de Feu": 53,
       "Flamme Ultime": 67
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Poulpaf",
@@ -107139,7 +107990,8 @@
       "Casse-Brique": 20,
       "Gonflette": 25,
       "Ruse": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Krakos",
@@ -107228,7 +108080,8 @@
       "Ruse": 1,
       "Renversement": 50,
       "Octoprise": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Théffroi",
@@ -107312,7 +108165,8 @@
       "Machination": 42,
       "Exuviation": 60,
       "Brume Capiteuse": 6
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Polthégeist",
@@ -107407,7 +108261,8 @@
       "Brume Capiteuse": 1,
       "Vole-Force": 1,
       "Thérémonie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bibichut",
@@ -107495,7 +108350,8 @@
       "Brume Capiteuse": 15,
       "Éclat Magique": 30,
       "Fontaine de Vie": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chapotus",
@@ -107582,7 +108438,8 @@
       "Éclat Magique": 30,
       "Centrifugifle": 1,
       "Fontaine de Vie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sorcilence",
@@ -107692,7 +108549,8 @@
       "Centrifugifle": 1,
       "Poudre Magique": 64,
       "Fontaine de Vie": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grimalin",
@@ -107781,7 +108639,8 @@
       "Tricherie": 44,
       "Câlinerie": 40,
       "Confidence": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fourbelin",
@@ -107873,7 +108732,8 @@
       "Câlinerie": 46,
       "Confidence": 1,
       "Fourbette": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Angoliath",
@@ -107992,7 +108852,8 @@
       "Poing Boost": 1,
       "Choc Émotionnel": 1,
       "Fourbette": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ixon",
@@ -108120,7 +108981,8 @@
       "Aboiement": 9,
       "Regard Touchant": 1,
       "Blocage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Berserkatt",
@@ -108239,7 +109101,8 @@
       "Fulmifer": 1,
       "Tête de Fer": 1,
       "Aiguisage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Corayôme",
@@ -108347,7 +109210,8 @@
       "Rayon Gemme": 40,
       "Châtiment": 25,
       "Vole-Force": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Palarticho",
@@ -108434,7 +109298,8 @@
       "Escarmouche": 1,
       "Centrifugifle": 20,
       "Joute Astrale": 70
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "M. Glaquette",
@@ -108591,7 +109456,8 @@
       "Lyophilisation": 44,
       "Champ Brumeux": 1,
       "Éclat Magique": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tutétékri",
@@ -108708,7 +109574,8 @@
       "Châtiment": 24,
       "Vigilance": 20,
       "Centrifugifle": 16
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Crèmy",
@@ -108773,7 +109640,8 @@
       "Champ Brumeux": 45,
       "Brume Capiteuse": 1,
       "Éclat Magique": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Charmilly",
@@ -108867,7 +109735,8 @@
       "Brume Capiteuse": 1,
       "Éclat Magique": 35,
       "Nappage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hexadron",
@@ -108963,7 +109832,8 @@
       "Close Combat": 50,
       "Escarmouche": 35,
       "Ultime Bastion": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Wattapik",
@@ -109062,7 +109932,8 @@
       "Coup d’Jus": 60,
       "Champ Électrifié": 40,
       "Électrikipik": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Frissonille",
@@ -109111,7 +109982,8 @@
     "movepool_niveaux": {
       "Poudreuse": 1,
       "Survinsecte": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Beldeneige",
@@ -109212,7 +110084,8 @@
       "Harcèlement": 8,
       "Voile Aurore": 36,
       "Chute de Neige": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dolman",
@@ -109305,7 +110178,8 @@
       "Piège de Roc": 30,
       "Garde Large": 48,
       "Tacle Lourd": 54
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bekaglaçon",
@@ -109398,7 +110272,8 @@
       "Lyophilisation": 36,
       "Voile Aurore": 48,
       "Chute de Neige": 42
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Wimessir",
@@ -109495,7 +110370,8 @@
       "Voix Enjôleuse": 10,
       "Camaraderie": 1,
       "Champ Psychique": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Morpeko",
@@ -109609,7 +110485,8 @@
       "Balle Graine": 45,
       "Arrogance": 10,
       "Roue Libre": 55
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Charibari",
@@ -109704,7 +110581,8 @@
       "Piétisol": 15,
       "Câlinerie": 45,
       "Cavalerie Lourde": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pachyradjah",
@@ -109807,7 +110685,8 @@
       "Piétisol": 15,
       "Câlinerie": 51,
       "Cavalerie Lourde": 58
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Galvagon",
@@ -109904,7 +110783,8 @@
       "Coup d’Jus": 56,
       "Draco-Queue": 35,
       "Prise de Bec": 63
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Galvagla",
@@ -109997,7 +110877,8 @@
       "Chute Glace": 70,
       "Lyophilisation": 42,
       "Prise de Bec": 63
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hydragon",
@@ -110086,7 +110967,8 @@
       "Draco-Charge": 77,
       "Centrifugifle": 14,
       "Branchicrok": 63
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hydragla",
@@ -110170,7 +111052,8 @@
       "Lyophilisation": 42,
       "Voile Aurore": 35,
       "Branchicrok": 63
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Duralugon",
@@ -110270,7 +111153,8 @@
       "Draco-Queue": 30,
       "Affilage": 42,
       "Abattage": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fantyrm",
@@ -110326,7 +111210,8 @@
       "Vive-Attaque": 1,
       "Étonnement": 1,
       "Harcèlement": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dispareptil",
@@ -110428,7 +111313,8 @@
       "Châtiment": 18,
       "Hantise": 48,
       "Harcèlement": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lanssorien",
@@ -110545,7 +111431,8 @@
       "Hantise": 48,
       "Harcèlement": 1,
       "Draco-Flèches": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zacian",
@@ -110648,7 +111535,8 @@
       "Râle Mâle": 44,
       "Pouvoir Lunaire": 66,
       "Affilage": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zamazenta",
@@ -110755,7 +111643,8 @@
       "Garde Large": 1,
       "Pouvoir Lunaire": 66,
       "Affilage": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Éthernatos",
@@ -110850,7 +111739,8 @@
       "Draco-Queue": 1,
       "Canon Dynamax": 56,
       "Laser Infinimax": 88
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Wushours",
@@ -110938,7 +111828,8 @@
       "Gonflette": 32,
       "Close Combat": 48,
       "Tête de Fer": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Shifours",
@@ -111056,7 +111947,8 @@
       "Coup Bas": 1,
       "Tête de Fer": 36,
       "Poing Obscur": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zarude",
@@ -111181,7 +112073,8 @@
       "Mégafouet": 84,
       "Nœud Herbe": 36,
       "Selve Salvatrice": 90
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Regieleki",
@@ -111268,7 +112161,8 @@
       "Vol Magnétik": 48,
       "Toile Élek": 6,
       "Voltageôle": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Regidrago",
@@ -111351,7 +112245,8 @@
       "Marto-Poing": 42,
       "Affilage": 60,
       "Draco-Énergie": 66
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Blizzeval",
@@ -111445,7 +112340,8 @@
       "Mur de Fer": 48,
       "Avalanche": 12,
       "Chute Glace": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Spectreval",
@@ -111534,7 +112430,8 @@
       "Ball’Ombre": 36,
       "Machination": 72,
       "Châtiment": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sylveroy",
@@ -111646,7 +112543,8 @@
       "Champ Herbu": 40,
       "Champ Psychique": 40,
       "Fontaine de Vie": 8
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cerbyllin",
@@ -111760,7 +112658,8 @@
       "Plénitude": 15,
       "Psykoud’Boul": 37,
       "Sprint Bouclier": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hachécateur",
@@ -111869,7 +112768,8 @@
       "Coup Double": 14,
       "Anti-Air": 12,
       "Hache de Pierre": 29
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ursaking",
@@ -111994,7 +112894,8 @@
       "Regard Touchant": 6,
       "Cavalerie Lourde": 34,
       "Assaut Frontal": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Paragruel",
@@ -112095,7 +112996,8 @@
       "Châtiment": 11,
       "Hantise": 1,
       "Aquatacle": 34
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Farfurex",
@@ -112210,7 +113112,8 @@
       "Direct Toxik": 24,
       "Aiguisage": 36,
       "Griffes Funestes": 11
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Qwilpik",
@@ -112322,7 +113225,8 @@
       "Hydro-Queue": 37,
       "Dard Mortel": 12,
       "Multitoxik": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Amovénus",
@@ -112422,7 +113326,8 @@
       "Feu Ensorcelé": 35,
       "Éclat Magique": 40,
       "Typhon Passionné": 52
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Poussacha",
@@ -112506,7 +113411,8 @@
       "Aiguisage": 10,
       "Câlinerie": 36,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Matourgeon",
@@ -112592,7 +113498,8 @@
       "Aiguisage": 10,
       "Câlinerie": 42,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Miascarade",
@@ -112711,7 +113618,8 @@
       "Champ Herbu": 58,
       "Câlinerie": 47,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chochodile",
@@ -112793,7 +113701,8 @@
       "Chant Canon": 7,
       "Calcination": 15,
       "Aboiement": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Crocogril",
@@ -112875,7 +113784,8 @@
       "Chant Canon": 10,
       "Calcination": 17,
       "Aboiement": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flâmigator",
@@ -112983,7 +113893,8 @@
       "Châtiment": 47,
       "Calcination": 17,
       "Aboiement": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Coiffeton",
@@ -113059,7 +113970,8 @@
       "Rengorgement": 7,
       "Aqua-Brèche": 35,
       "Tranch'Aqua": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Canarbello",
@@ -113139,7 +114051,8 @@
       "Rengorgement": 7,
       "Aqua-Brèche": 43,
       "Tranch'Aqua": 23
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Palmaval",
@@ -113252,7 +114165,8 @@
       "Aqua-Brèche": 47,
       "Aquatacle": 64,
       "Tranch'Aqua": 21
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gourmelet",
@@ -113332,7 +114246,8 @@
       "Écho": 8,
       "Rengorgement": 30,
       "Voix Enjôleuse": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fragroin",
@@ -113419,7 +114334,8 @@
       "Rengorgement": 34,
       "Éructation": 54,
       "Voix Enjôleuse": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tissenboule",
@@ -113502,7 +114418,8 @@
       "Toile Gluante": 29,
       "Exécu-Son": 40,
       "Ravage Rampant": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Filentrappe",
@@ -113596,7 +114513,8 @@
       "Toile Gluante": 33,
       "Exécu-Son": 45,
       "Ravage Rampant": 49
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lilliterelle",
@@ -113665,7 +114583,8 @@
       "Piqûre": 22,
       "Survinsecte": 4,
       "Escarmouche": 41
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gambex",
@@ -113759,7 +114678,8 @@
       "Escarmouche": 44,
       "Exécu-Son": 36,
       "Talon-Marteau": 53
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pohm",
@@ -113848,7 +114768,8 @@
       "Ten-Danse": 31,
       "Éclair Fou": 44,
       "Frotte-Frimousse": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pohmotte",
@@ -113942,7 +114863,8 @@
       "Ten-Danse": 38,
       "Éclair Fou": 52,
       "Frotte-Frimousse": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pohmarmotte",
@@ -114057,7 +114979,8 @@
       "Éclair Fou": 1,
       "Frotte-Frimousse": 12,
       "Double Décharge": 60
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Compagnol",
@@ -114145,7 +115068,8 @@
       "Câlinerie": 26,
       "Regard Touchant": 1,
       "Prolifération": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Famignol",
@@ -114241,7 +115165,8 @@
       "Regard Touchant": 1,
       "Prolifération": 53,
       "Grand Nettoyage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pâtachiot",
@@ -114329,7 +115254,8 @@
       "Rengorgement": 22,
       "Câlinerie": 18,
       "Regard Touchant": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Briochien",
@@ -114417,7 +115343,8 @@
       "Rengorgement": 22,
       "Câlinerie": 18,
       "Regard Touchant": 15
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Olivini",
@@ -114492,7 +115419,8 @@
       "Éco-Sphère": 30,
       "Champ Herbu": 23,
       "Champlification": 38
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Olivado",
@@ -114564,7 +115492,8 @@
       "Éco-Sphère": 34,
       "Champ Herbu": 23,
       "Champlification": 42
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Arboliva",
@@ -114656,7 +115585,8 @@
       "Tempête Florale": 52,
       "Champ Herbu": 23,
       "Champlification": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tapatoès",
@@ -114745,7 +115675,8 @@
       "Atterrissage": 47,
       "Photocopie": 27,
       "Rapace": 42
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Selutin",
@@ -114823,7 +115754,8 @@
       "Piège de Roc": 33,
       "Anti-Air": 10,
       "Tacle Lourd": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Amassel",
@@ -114904,7 +115836,8 @@
       "Piège de Roc": 38,
       "Anti-Air": 10,
       "Tacle Lourd": 41
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gigansel",
@@ -115007,7 +115940,8 @@
       "Garde Large": 1,
       "Tacle Lourd": 44,
       "Salaison": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Charbambin",
@@ -115070,7 +116004,8 @@
       "Nitrocharge": 24,
       "Bain de Smog": 8,
       "Calcination": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Carmadura",
@@ -115175,7 +116110,8 @@
       "Feu Ensorcelé": 1,
       "Vaste Pouvoir": 56,
       "Canon Blindé": 62
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Malvalame",
@@ -115278,7 +116214,8 @@
       "Interversion": 42,
       "Calcination": 28,
       "Lame en Peine": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Têtampoule",
@@ -115356,7 +116293,8 @@
       "Coup Bas": 45,
       "Coup d’Jus": 32,
       "Champ Électrifié": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ampibidou",
@@ -115440,7 +116378,8 @@
       "Coup Bas": 45,
       "Coup d’Jus": 32,
       "Champ Électrifié": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zapétrel",
@@ -115524,7 +116463,8 @@
       "Coup d’Jus": 43,
       "Change Éclair": 37,
       "Double Volée": 27
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fulgulairo",
@@ -115610,7 +116550,8 @@
       "Change Éclair": 43,
       "Vent Violent": 55,
       "Double Volée": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grondogue",
@@ -115693,7 +116634,8 @@
       "Aiguisage": 10,
       "Aboiement": 7,
       "Croque Fort": 43
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dogrino",
@@ -115784,7 +116726,8 @@
       "Aiguisage": 10,
       "Aboiement": 7,
       "Croque Fort": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gribouraigne",
@@ -115878,7 +116821,8 @@
       "Passe-Passe": 11,
       "Détricanon": 45,
       "Bombe Acide": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tag-Tag",
@@ -115974,7 +116918,8 @@
       "Passe-Passe": 11,
       "Détricanon": 51,
       "Bombe Acide": 5
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Virovent",
@@ -116059,7 +117004,8 @@
       "Châtiment": 21,
       "Hantise": 35,
       "Harcèlement": 17
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Virevorreur",
@@ -116147,7 +117093,8 @@
       "Châtiment": 21,
       "Hantise": 35,
       "Harcèlement": 17
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Terracool",
@@ -116248,7 +117195,8 @@
       "Telluriforce": 48,
       "Mégafouet": 52,
       "Châtiment": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Terracruel",
@@ -116348,7 +117296,8 @@
       "Mégafouet": 58,
       "Châtiment": 28,
       "Copie-Type": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Craparoi",
@@ -116440,7 +117389,8 @@
       "Boule Roc": 24,
       "Plaie Croix": 29,
       "Cavalerie Lourde": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pimito",
@@ -116516,7 +117466,8 @@
       "Canon Graine": 44,
       "Psykoud’Boul": 28,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Scovilain",
@@ -116612,7 +117563,8 @@
       "Crocs Feu": 1,
       "Psykoud’Boul": 28,
       "Feuillage": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Léboulérou",
@@ -116680,7 +117632,8 @@
       "Piqûre": 20,
       "Survinsecte": 7,
       "Furie-Bond": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Bérasca",
@@ -116790,7 +117743,8 @@
       "Survinsecte": 7,
       "Furie-Bond": 35,
       "Permuvitesse": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flotillon",
@@ -116870,7 +117824,8 @@
       "Picore": 24,
       "Voix Enjôleuse": 11,
       "Regard Touchant": 8
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cléopsytra",
@@ -116975,7 +117930,8 @@
       "Voix Enjôleuse": 11,
       "Éclat Magique": 43,
       "Regard Touchant": 8
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Forgerette",
@@ -117063,7 +118019,8 @@
       "Regard Touchant": 5,
       "Centrifugifle": 24,
       "Ravage Rampant": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Forgella",
@@ -117149,7 +118106,8 @@
       "Regard Touchant": 5,
       "Centrifugifle": 24,
       "Ravage Rampant": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Forgelina",
@@ -117245,7 +118203,8 @@
       "Regard Touchant": 5,
       "Centrifugifle": 24,
       "Ravage Rampant": 47
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Taupikeau",
@@ -117321,7 +118280,8 @@
       "Aqua-Jet": 12,
       "Exécu-Son": 36,
       "Aqua-Brèche": 40
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Triopikeau",
@@ -117400,7 +118360,8 @@
       "Exécu-Son": 48,
       "Aqua-Brèche": 54,
       "Triple Plongeon": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Lestombaile",
@@ -117502,7 +118463,8 @@
       "Aiguisage": 1,
       "Dernier Mot": 60,
       "Double Volée": 42
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dofin",
@@ -117584,7 +118546,8 @@
       "Aqua-Jet": 13,
       "Coup Double": 17,
       "Acrobatie": 29
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Superdofin",
@@ -117691,7 +118654,8 @@
       "Acrobatie": 29,
       "Aquatacle": 61,
       "Poing Sonique": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vrombi",
@@ -117778,7 +118742,8 @@
       "Détricanon": 50,
       "Tête de Fer": 28,
       "Dérapage": 46
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vrombotor",
@@ -117875,7 +118840,8 @@
       "Détricanon": 58,
       "Tête de Fer": 28,
       "Dérapage": 52
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Motorizard",
@@ -117971,7 +118937,8 @@
       "Chgt Vitesse": 40,
       "Abattage": 14,
       "Queulonage": 31
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ferdeter",
@@ -118054,7 +119021,8 @@
       "Anti-Air": 12,
       "Piétisol": 16,
       "Queulonage": 52
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Germéclat",
@@ -118135,7 +119103,8 @@
       "Anti-Air": 1,
       "Cradovague": 46,
       "Bombe Acide": 7
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Floréclat",
@@ -118226,7 +119195,8 @@
       "Cradovague": 50,
       "Bombe Acide": 7,
       "Pico-Défense": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Toutombe",
@@ -118318,7 +119288,8 @@
       "Coup d’Main": 37,
       "Hantise": 41,
       "Câlinerie": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tomberro",
@@ -118408,7 +119379,8 @@
       "Coup d’Main": 41,
       "Hantise": 46,
       "Câlinerie": 36
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flamenroule",
@@ -118503,7 +119475,8 @@
       "Rapace": 54,
       "Garde Large": 44,
       "Exécu-Son": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Piétacé",
@@ -118591,7 +119564,8 @@
       "Éclats Glace": 12,
       "Écho": 9,
       "Cryo-Pirouette": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Balbalèze",
@@ -118677,7 +119651,8 @@
       "Éclats Glace": 12,
       "Écho": 9,
       "Cryo-Pirouette": 44
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Délestin",
@@ -118764,7 +119739,8 @@
       "Aqua-Brèche": 45,
       "Décharnement": 30,
       "Tranch'Aqua": 25
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Oyacata",
@@ -118852,7 +119828,8 @@
       "Râle Mâle": 25,
       "Aquatacle": 65,
       "Plat du Jour": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Nigirigon",
@@ -118926,7 +119903,8 @@
       "Draco-Choc": 52,
       "Machination": 43,
       "Détrempage": 23
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Courrousinge",
@@ -119047,7 +120025,8 @@
       "Tout ou Rien": 57,
       "Trépignement": 48,
       "Poing de Colère": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Terraiste",
@@ -119143,7 +120122,8 @@
       "Pics Toxik": 4,
       "Direct Toxik": 24,
       "Cradovague": 30
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Farigiraf",
@@ -119264,7 +120244,8 @@
       "Machination": 46,
       "Coup Double": 28,
       "Double Laser": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Deusolourdo",
@@ -119392,7 +120373,8 @@
       "Vent Violent": 56,
       "Bang Sonique": 62,
       "Hyperceuse": 32
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Scalpereur",
@@ -119495,7 +120477,8 @@
       "Tranche-Nuit": 40,
       "Tête de Fer": 57,
       "Vengeance": 50
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fort-Ivoire",
@@ -119596,7 +120579,8 @@
       "Piétisol": 7,
       "Trépignement": 35,
       "Assaut Frontal": 91
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Hurle-Queue",
@@ -119718,7 +120702,8 @@
       "Câlinerie": 42,
       "Bang Sonique": 91,
       "Psycho-Croc": 56
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fongus-Furie",
@@ -119810,7 +120795,8 @@
       "Coup Bas": 56,
       "Poudre Fureur": 77,
       "Bain de Smog": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flotte-Mèche",
@@ -119901,7 +120887,8 @@
       "Pouvoir Lunaire": 84,
       "Feu Ensorcelé": 49,
       "Éclat Magique": 35
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rampe-Ailes",
@@ -120001,7 +120988,8 @@
       "Escarmouche": 70,
       "Furie-Bond": 42,
       "Double Volée": 63
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pelage-Sablé",
@@ -120098,7 +121086,8 @@
       "Piétisol": 14,
       "Magné-Contrôle": 91,
       "Champ Électrifié": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Roue-de-Fer",
@@ -120191,7 +121180,8 @@
       "Champ Électrifié": 1,
       "Trépignement": 35,
       "Métalliroue": 91
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Hotte-de-Fer",
@@ -120272,7 +121262,8 @@
       "Voile Aurore": 84,
       "Eau Revoir": 49,
       "Chute de Neige": 70
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Paume-de-Fer",
@@ -120371,7 +121362,8 @@
       "Forte-Paume": 35,
       "Tacle Lourd": 77,
       "Éclair Fou": 56
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Têtes-de-Fer",
@@ -120470,7 +121462,8 @@
       "Rengorgement": 1,
       "Aboiement": 28,
       "Champ Électrifié": 1
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Mite-de-Fer",
@@ -120565,7 +121558,8 @@
       "Vent Violent": 77,
       "Danse du Feu": 56,
       "Furie-Bond": 28
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Épine-de-Fer",
@@ -120683,7 +121677,8 @@
       "Lame de Roc": 84,
       "Piège de Roc": 77,
       "Éclair Fou": 56
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Frigodo",
@@ -120757,7 +121752,8 @@
       "Crocs Givre": 29,
       "Draco-Queue": 1,
       "Chute Glace": 48
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Cryodo",
@@ -120831,7 +121827,8 @@
       "Crocs Givre": 29,
       "Draco-Queue": 1,
       "Chute Glace": 55
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Glaivodo",
@@ -120926,7 +121923,8 @@
       "Chute Glace": 62,
       "Abattage": 1,
       "Chute de Neige": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mordudor",
@@ -120971,7 +121969,8 @@
     "movepool_niveaux": {
       "Charge": 1,
       "Étonnement": 1
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gromago",
@@ -121054,7 +122053,8 @@
       "Rayon Gemme": 49,
       "Machination": 63,
       "Ruée d'Or": 56
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Chongjian",
@@ -121151,7 +122151,8 @@
       "Tricherie": 55,
       "Champ Herbu": 65,
       "Cataclysme": 50
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Baojian",
@@ -121241,7 +122242,8 @@
       "Exécu-Son": 70,
       "Cataclysme": 50,
       "Chute de Neige": 30
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Dinglu",
@@ -121331,7 +122333,8 @@
       "Exécu-Son": 55,
       "Trépignement": 45,
       "Cataclysme": 50
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Yuyu",
@@ -121421,7 +122424,8 @@
       "Calcination": 25,
       "Feu d’Enfer": 65,
       "Cataclysme": 50
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Rugit-Lune",
@@ -121532,7 +122536,8 @@
       "Psykoud’Boul": 35,
       "Calcination": 7,
       "Exécu-Son": 77
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Garde-de-Fer",
@@ -121656,7 +122661,8 @@
       "Pouvoir Lunaire": 56,
       "Éclat Magique": 28,
       "Choc Émotionnel": 91
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Koraidon",
@@ -121770,7 +122776,8 @@
       "Giga Impact": 98,
       "Abattage": 1,
       "Nitro Crash": 56
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Miraidon",
@@ -121868,7 +122875,8 @@
       "Parabocharge": 21,
       "Champ Électrifié": 1,
       "Turbo Volt": 56
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Serpente-Eau",
@@ -121957,7 +122965,8 @@
       "Râle Mâle": 21,
       "Abattage": 35,
       "Hydrovapeur": 56
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Vert-de-Fer",
@@ -122053,7 +123062,8 @@
       "Lame Sainte": 42,
       "Lame Solaire": 91,
       "Lame Psychique": 56
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Pomdramour",
@@ -122137,7 +123147,8 @@
       "Éco-Sphère": 40,
       "Draco-Queue": 4,
       "Bombe au Sirop": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Poltchageist",
@@ -122214,7 +123225,8 @@
       "Tricherie": 18,
       "Châtiment": 30,
       "Fontaine de Vie": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Théffroyable",
@@ -122294,7 +123306,8 @@
       "Châtiment": 30,
       "Vole-Force": 42,
       "Fontaine de Vie": 12
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Félicanis",
@@ -122397,7 +123410,8 @@
       "Direct Toxik": 40,
       "Giga Impact": 72,
       "Centrifugifle": 48
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Fortusimia",
@@ -122492,7 +123506,8 @@
       "Cradovague": 48,
       "Bain de Smog": 24,
       "Dernier Mot": 72
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Favianos",
@@ -122595,7 +123610,8 @@
       "Plumo-Queue": 40,
       "Voix Enjôleuse": 1,
       "Pouvoir Lunaire": 72
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Ogerpon",
@@ -122697,7 +123713,8 @@
       "Pico-Défense": 48,
       "Exécu-Son": 36,
       "Massue Liane": 30
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Pondralugon",
@@ -122795,7 +123812,8 @@
       "Aiguisage": 12,
       "Draco-Queue": 30,
       "Abattage": 24
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Pomdorochi",
@@ -122895,7 +123913,8 @@
       "Mégafouet": 54,
       "Draco-Queue": 4,
       "Bombe au Sirop": 28
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Feu-Perçant",
@@ -122999,7 +124018,8 @@
       "Calcination": 1,
       "Grand Courroux": 91,
       "Rempart Brûlant": 49
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ire-Foudre",
@@ -123097,7 +124117,8 @@
       "Big Splash": 84,
       "Monte-Tension": 63,
       "Vif Éclair": 49
-    }
+    },
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Roc-de-Fer",
@@ -123189,7 +124210,8 @@
       "Lame Sainte": 49,
       "Champ Électrifié": 1,
       "Lame Puissante": 56
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Chef-de-Fer",
@@ -123281,7 +124303,8 @@
       "Champ Électrifié": 1,
       "Estocorne": 7,
       "Lame Tachyonique": 56
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Terapagos",
@@ -123377,7 +124400,8 @@
       "Telluriforce": 40,
       "Tacle Lourd": 50,
       "Pluie Térastrale": 60
-    }
+    },
+    "sprite_gif_disponible": false
   },
   {
     "nom": "Pêchaminus",
@@ -123451,6 +124475,7 @@
       "Machination": 64,
       "Dernier Mot": 32,
       "Chaîne Malsaine": 48
-    }
+    },
+    "sprite_gif_disponible": false
   }
 ]
