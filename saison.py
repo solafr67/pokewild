@@ -43,11 +43,21 @@ def points_requis_palier(palier: int) -> int:
 
 
 def _construire_recompenses() -> dict:
-    """Une récompense par palier : Poké Dollars croissants, avec des bonus d'objets aux
-    paliers ronds (tous les 5) et un Cristal de Mutation au palier final."""
+    """Une récompense par palier : Poké Dollars croissants + un petit objet varié à
+    CHAQUE palier (pas juste les ronds), avec des bonus plus généreux tous les 5/10
+    paliers, et un lot spécial (Cristal de Mutation + Master Ball) au palier final."""
+    # Cycle de petits objets, un par palier, pour que ça ne soit jamais juste des Poké
+    # Dollars — varié plutôt que répétitif sur 30 paliers.
+    cycle_objets = [
+        ("pokeball", 2), ("potion", 2), ("superball", 1), ("superpotion", 1),
+        ("pokeball", 3), ("hyperpotion", 1), ("superball", 2), ("potion", 3),
+    ]
+
     recompenses = {}
     for palier in range(1, config.SAISON_NB_PALIERS + 1):
-        objets = []
+        objet_cycle, quantite_cycle = cycle_objets[(palier - 1) % len(cycle_objets)]
+        objets = [(objet_cycle, quantite_cycle)]
+
         if palier % 5 == 0:
             objets.append(("superball", 3))
         if palier % 10 == 0:
@@ -55,6 +65,8 @@ def _construire_recompenses() -> dict:
             objets.append(("superpotion", 3))
         if palier == config.SAISON_NB_PALIERS:
             objets.append(("cristal_mutation", 1))
+            objets.append(("masterball", 1))
+
         recompenses[palier] = {"dollars": 30 + palier * 10, "objets": objets}
     return recompenses
 
