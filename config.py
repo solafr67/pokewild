@@ -117,6 +117,12 @@ CHANNEL_QUIZ_ID = 1528155287213572306
 QUIZ_TIMEOUT_QUESTION = 60  # secondes avant de révéler la réponse si personne ne trouve
 QUIZ_DELAI_PROCHAINE_QUESTION = 5  # pause entre deux questions
 
+# --- Passe saisonnier ---
+SAISON_DUREE_JOURS = 30
+SAISON_NB_PALIERS = 30
+SAISON_XP_PAR_PALIER = 400  # points de saison requis par palier (linéaire, simple à suivre)
+SAISON_RATIO_XP = 1.0  # 1 XP dresseur gagnée (partout dans le jeu) = ce nombre de points de saison
+
 # --- Rival (Gladio) ---
 GLADIO_JOURS_PAR_PALIER_DECAY = 14  # perd 1 palier de familiarité tous les X jours d'inactivité
 GLADIO_COOLDOWN_DEFI = 24 * 3600  # un défi contre Gladio par jour et par joueur

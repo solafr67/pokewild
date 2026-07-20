@@ -447,6 +447,17 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS saison_points (
+            user_id INTEGER NOT NULL,
+            saison INTEGER NOT NULL,
+            points INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, saison)
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS etat_combat_pokemon (
             user_id INTEGER NOT NULL,
             pokemon_nom TEXT NOT NULL,
@@ -987,6 +998,33 @@ def obtenir_toutes_paires_capturees() -> list:
     resultats = [(row["user_id"], row["pokemon_nom"]) for row in cur.fetchall()]
     conn.close()
     return resultats
+
+
+def obtenir_points_saison(user_id: int, saison: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT points FROM saison_points WHERE user_id = ? AND saison = ?", (user_id, saison))
+    row = cur.fetchone()
+    conn.close()
+    return row["points"] if row else 0
+
+
+def ajouter_points_saison(user_id: int, saison: int, montant: int) -> int:
+    """Ajoute des points de saison, retourne le nouveau total pour cette saison."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO saison_points (user_id, saison, points) VALUES (?, ?, ?)
+        ON CONFLICT(user_id, saison) DO UPDATE SET points = points + excluded.points
+        """,
+        (user_id, saison, montant),
+    )
+    conn.commit()
+    cur.execute("SELECT points FROM saison_points WHERE user_id = ? AND saison = ?", (user_id, saison))
+    total = cur.fetchone()["points"]
+    conn.close()
+    return total
 
 
 def obtenir_record_plus_ou_moins(user_id: int) -> int:

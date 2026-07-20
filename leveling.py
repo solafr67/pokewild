@@ -38,8 +38,12 @@ def gagner_xp(user_id: int, montant: int):
     palier de 5 niveaux franchi (ex: niveau 5, 10, 15...). Retourne (niveau_avant,
     niveau_apres, recompenses_paliers), où recompenses_paliers est une liste de
     (palier, dollars, ball_type) — généralement vide ou avec un seul élément, mais peut
-    en contenir plusieurs si un gros gain d'XP fait franchir plusieurs paliers d'un coup."""
+    en contenir plusieurs si un gros gain d'XP fait franchir plusieurs paliers d'un coup.
+
+    Alimente aussi le passe saisonnier (voir saison.py) — un seul point d'accroche pour
+    toutes les sources d'XP du jeu, pas besoin de modifier chaque système séparément."""
     import database
+    import saison
 
     montant = round(montant * database.multiplicateur_boost(user_id, "xp"))
 
@@ -48,6 +52,8 @@ def gagner_xp(user_id: int, montant: int):
 
     xp_apres = database.ajouter_xp(user_id, montant)
     niveau_apres, _, _ = progression_niveau(xp_apres)
+
+    saison.gagner_points(user_id, montant)
 
     recompenses_paliers = []
     for niveau in range(niveau_avant + 1, niveau_apres + 1):

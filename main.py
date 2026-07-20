@@ -29,6 +29,7 @@ import pnj
 import database
 import etat_jeu
 import leveling
+import saison as saison_module
 import meteo
 import niveaux_pokemon
 from pokemon_data import (
@@ -1569,6 +1570,41 @@ async def gladio_cmd(interaction: discord.Interaction):
     else:
         embed.add_field(name="Prochain palier", value="Tu as atteint le palier maximum !", inline=False)
     embed.set_footer(text="La familiarité décroît lentement en cas de longue inactivité.")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="passe-saison", description="Affiche ta progression dans le passe saisonnier")
+async def passe_saison_cmd(interaction: discord.Interaction):
+    statut = saison_module.obtenir_statut(interaction.user.id)
+    jours_restants = statut["temps_restant"] // 86400
+    heures_restantes = (statut["temps_restant"] % 86400) // 3600
+
+    embed = discord.Embed(
+        title=f"🎫 Passe Saisonnier — Saison {statut['saison']}",
+        color=discord.Color.blurple(),
+    )
+    if statut["palier"] >= statut["palier_max"]:
+        embed.description = f"🏆 Palier maximum atteint ({statut['palier_max']}/{statut['palier_max']}) !"
+    else:
+        embed.description = (
+            f"Palier **{statut['palier']}/{statut['palier_max']}**\n"
+            f"{leveling.barre_progression(statut['points_dans_palier'], statut['points_requis_palier'])} "
+            f"({statut['points_dans_palier']}/{statut['points_requis_palier']} points)"
+        )
+
+    prochain_palier = min(statut["palier"] + 1, statut["palier_max"])
+    if prochain_palier > statut["palier"]:
+        embed.add_field(
+            name=f"Prochaine récompense (palier {prochain_palier})",
+            value=saison_module.texte_recompense_palier(prochain_palier),
+            inline=False,
+        )
+    embed.add_field(
+        name="Fin de la saison",
+        value=f"Dans {jours_restants}j {heures_restantes}h",
+        inline=False,
+    )
+    embed.set_footer(text="Progresse en jouant normalement — toute XP de dresseur gagnée alimente aussi le passe.")
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
