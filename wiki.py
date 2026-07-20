@@ -218,6 +218,21 @@ PAGES = {
             "types, Trivia PokéWild, une question à la fois, premier qui trouve gagne"
         ),
     },
+    "parrainage": {
+        "titre": "Parrainage & Boost du serveur",
+        "emoji": "🤝",
+        "texte": (
+            "**Parrainage** : invite du monde sur le serveur avec ton lien Discord "
+            "habituel — le bot détecte automatiquement qui a invité qui. Un filleul "
+            "doit rester au moins 7 jours sur le serveur pour compter (anti-abus). Tous "
+            "les 3 filleuls confirmés, tu débloques une récompense en Poké Dollars et "
+            "objets. `/parrainage` pour suivre ta progression.\n\n"
+            "**Booster le serveur** (Nitro) : si tu boostes le serveur Discord, tu "
+            "reçois automatiquement un bonus permanent sur l'argent, l'XP et les "
+            "chances de shiny — pas besoin de commande, c'est détecté tout seul dès que "
+            "ton boost est actif."
+        ),
+    },
 }
 
 ORDRE_PAGES = list(PAGES.keys())

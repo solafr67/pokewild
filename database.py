@@ -458,6 +458,33 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS parrainages (
+            filleul_id INTEGER PRIMARY KEY,
+            inviteur_id INTEGER NOT NULL,
+            date_join INTEGER NOT NULL,
+            confirme INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS parrainage_paliers_recus (
+            user_id INTEGER NOT NULL,
+            palier INTEGER NOT NULL,
+            PRIMARY KEY (user_id, palier)
+        )
+        """
+    )
+
+    # Migration pour le statut booster serveur (pré-existant : ajouté à la table users)
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN booster_serveur INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS etat_combat_pokemon (
             user_id INTEGER NOT NULL,
             pokemon_nom TEXT NOT NULL,
@@ -1025,6 +1052,113 @@ def ajouter_points_saison(user_id: int, saison: int, montant: int) -> int:
     total = cur.fetchone()["points"]
     conn.close()
     return total
+
+
+def enregistrer_parrainage(filleul_id: int, inviteur_id: int) -> bool:
+    """Enregistre qu'un nouveau membre (filleul_id) a rejoint via l'invitation de
+    inviteur_id — EN ATTENTE de confirmation (voir confirmer_parrainage), pas encore
+    compté dans les récompenses. Retourne False si ce filleul est déjà enregistré (ne
+    compte jamais deux fois, même s'il quitte et revient)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM parrainages WHERE filleul_id = ?", (filleul_id,))
+    if cur.fetchone() is not None:
+        conn.close()
+        return False
+    cur.execute(
+        "INSERT INTO parrainages (filleul_id, inviteur_id, date_join, confirme) VALUES (?, ?, ?, 0)",
+        (filleul_id, inviteur_id, int(time.time())),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def supprimer_parrainage_non_confirme(filleul_id: int):
+    """À appeler quand un filleul quitte le serveur AVANT d'être confirmé (voir
+    config.PARRAINAGE_DELAI_JOURS) — son parrainage ne doit jamais compter. Ne fait rien
+    si le parrainage est déjà confirmé (aucune reprise après coup)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM parrainages WHERE filleul_id = ? AND confirme = 0", (filleul_id,))
+    conn.commit()
+    conn.close()
+
+
+def obtenir_parrainages_a_confirmer(delai_secondes: int) -> list:
+    """Parrainages encore en attente dont le délai minimum (config.PARRAINAGE_DELAI_JOURS)
+    est écoulé — à vérifier (le filleul est-il toujours là ?) puis confirmer si oui."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    seuil = int(time.time()) - delai_secondes
+    cur.execute(
+        "SELECT filleul_id, inviteur_id FROM parrainages WHERE confirme = 0 AND date_join <= ?",
+        (seuil,),
+    )
+    resultats = [(row["filleul_id"], row["inviteur_id"]) for row in cur.fetchall()]
+    conn.close()
+    return resultats
+
+
+def confirmer_parrainage(filleul_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE parrainages SET confirme = 1 WHERE filleul_id = ?", (filleul_id,))
+    conn.commit()
+    conn.close()
+
+
+def compter_parrainages(inviteur_id: int) -> int:
+    """Ne compte que les parrainages CONFIRMÉS (filleul resté le délai minimum)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT COUNT(*) AS n FROM parrainages WHERE inviteur_id = ? AND confirme = 1",
+        (inviteur_id,),
+    )
+    n = cur.fetchone()["n"]
+    conn.close()
+    return n
+
+
+def obtenir_paliers_parrainage_recus(user_id: int) -> set:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT palier FROM parrainage_paliers_recus WHERE user_id = ?", (user_id,))
+    resultats = {row["palier"] for row in cur.fetchall()}
+    conn.close()
+    return resultats
+
+
+def marquer_palier_parrainage_recu(user_id: int, palier: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT OR IGNORE INTO parrainage_paliers_recus (user_id, palier) VALUES (?, ?)",
+        (user_id, palier),
+    )
+    conn.commit()
+    conn.close()
+
+
+def est_booster_serveur(user_id: int) -> bool:
+    conn = get_connexion()
+    cur = conn.cursor()
+    _assurer_joueur_existe(cur, user_id)
+    conn.commit()
+    cur.execute("SELECT booster_serveur FROM users WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return bool(row["booster_serveur"]) if row else False
+
+
+def definir_booster_serveur(user_id: int, actif: bool):
+    conn = get_connexion()
+    cur = conn.cursor()
+    _assurer_joueur_existe(cur, user_id)
+    cur.execute("UPDATE users SET booster_serveur = ? WHERE user_id = ?", (int(actif), user_id))
+    conn.commit()
+    conn.close()
 
 
 def obtenir_record_plus_ou_moins(user_id: int) -> int:
@@ -2624,9 +2758,10 @@ def obtenir_tous_boosts_actifs(user_id: int) -> dict:
 
 def multiplicateur_boost(user_id: int, type_boost: str) -> float:
     """Retourne le multiplicateur total à appliquer pour ce type ("xp", "argent",
-    "shiny", "capture") : bonus permanent de Race (le principal, en temps normal) combiné
-    multiplicativement à un boost temporaire éventuel (rare, offert par un admin via
-    /give-boost). Retourne 1.0 si ni l'un ni l'autre n'est actif."""
+    "shiny", "capture") : bonus permanent de Race combiné multiplicativement à un boost
+    temporaire éventuel (admin), et au bonus booster serveur (argent/xp/shiny
+    uniquement) si le joueur boost activement le serveur Discord. Retourne 1.0 si rien
+    de tout ça n'est actif."""
     import config
     import races
 
@@ -2640,6 +2775,9 @@ def multiplicateur_boost(user_id: int, type_boost: str) -> float:
 
     if obtenir_boost_actif(user_id, type_boost) is not None:
         multiplicateur *= config.MULTIPLICATEURS_BOOST.get(type_boost, 1.0)
+
+    if type_boost in config.MULTIPLICATEUR_BOOSTER_SERVEUR and est_booster_serveur(user_id):
+        multiplicateur *= config.MULTIPLICATEUR_BOOSTER_SERVEUR[type_boost]
 
     return multiplicateur
 

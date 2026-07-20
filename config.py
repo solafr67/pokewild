@@ -124,6 +124,15 @@ SAISON_NB_PALIERS = 30
 SAISON_XP_PAR_PALIER = 400  # points de saison requis par palier (linéaire, simple à suivre)
 SAISON_RATIO_XP = 1.0  # 1 XP dresseur gagnée (partout dans le jeu) = ce nombre de points de saison
 
+# --- Parrainage ---
+PARRAINAGE_PALIER = 3  # récompense tous les X invitations réussies (3, 6, 9...)
+PARRAINAGE_DELAI_JOURS = 7  # le filleul doit rester au moins ce délai avant que ça compte (anti-abus)
+PARRAINAGE_RECOMPENSE_DOLLARS = 150
+PARRAINAGE_RECOMPENSE_BALLS = [("superball", 3), ("hyperball", 1)]
+
+# --- Bonus des boosters du serveur Discord (argent/xp/shiny uniquement, pas capture) ---
+MULTIPLICATEUR_BOOSTER_SERVEUR = {"argent": 1.15, "xp": 1.15, "shiny": 1.5}
+
 # --- Rival (Gladio) ---
 GLADIO_JOURS_PAR_PALIER_DECAY = 14  # perd 1 palier de familiarité tous les X jours d'inactivité
 GLADIO_COOLDOWN_DEFI = 24 * 3600  # un défi contre Gladio par jour et par joueur

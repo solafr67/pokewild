@@ -32,6 +32,7 @@ import etat_jeu
 import leveling
 import saison as saison_module
 import wiki as wiki_module
+import parrainage as parrainage_module
 import meteo
 import niveaux_pokemon
 from pokemon_data import (
@@ -71,6 +72,7 @@ from views import VueSpawn, construire_embed_spawn
 
 intents = discord.Intents.default()
 intents.message_content = True  # requis pour lire les réponses tapées au quiz (Qui est-ce / Anagramme)
+intents.members = True  # requis pour le suivi des invitations (parrainage) et des boosts serveur
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # --- Diagnostic (/status-bot) : chaque boucle de fond met à jour son horodatage ici à
@@ -1138,6 +1140,10 @@ async def on_ready():
         bot.loop.create_task(quiz_module.boucle_quiz(bot))
         bot.boucle_quiz_lancee = True
 
+    if not getattr(bot, "boucle_parrainage_lancee", False):
+        bot.loop.create_task(parrainage_module.boucle_confirmation_parrainages(bot))
+        bot.boucle_parrainage_lancee = True
+
     if not getattr(bot, "boucle_gladio_lancee", False):
         bot.loop.create_task(boucle_gladio_spontane())
         bot.boucle_gladio_lancee = True
@@ -1168,6 +1174,10 @@ async def on_ready():
     await poster_message_boutique_si_absent()
     await poster_message_maitre_types_si_absent()
     await poster_message_wiki_si_absent()
+
+    for guild in bot.guilds:
+        await parrainage_module.rafraichir_cache(guild)
+        parrainage_module.synchroniser_boosters(guild)
     await poster_message_centre_exploration_si_absent()
     await poster_message_quetes_si_absent()
     await poster_message_profil_si_absent()
@@ -1197,6 +1207,34 @@ async def on_message(message: discord.Message):
         await quiz_module.verifier_reponse_texte(message)
 
     await bot.process_commands(message)
+
+
+@bot.event
+async def on_member_join(member: discord.Member):
+    await parrainage_module.traiter_arrivee(member)
+
+
+@bot.event
+async def on_member_remove(member: discord.Member):
+    await parrainage_module.traiter_depart(member)
+
+
+@bot.event
+async def on_invite_create(invite: discord.Invite):
+    await parrainage_module.rafraichir_cache(invite.guild)
+
+
+@bot.event
+async def on_invite_delete(invite: discord.Invite):
+    await parrainage_module.rafraichir_cache(invite.guild)
+
+
+@bot.event
+async def on_member_update(before: discord.Member, after: discord.Member):
+    """Suit en direct le statut de booster serveur (before.premium_since vs
+    after.premium_since) pour alimenter le bonus argent/xp/shiny correspondant."""
+    if before.premium_since != after.premium_since:
+        database.definir_booster_serveur(after.id, after.premium_since is not None)
 
 
 async def poster_message_pokestop_si_absent():
@@ -1678,6 +1716,29 @@ async def passe_saison_cmd(interaction: discord.Interaction):
 async def wiki_cmd(interaction: discord.Interaction):
     vue = wiki_module.VueWiki()
     await interaction.response.send_message(embed=wiki_module.construire_embed_accueil(), view=vue, ephemeral=True)
+
+
+@bot.tree.command(name="parrainage", description="Vois combien de personnes tu as invitées sur le serveur, et ta prochaine récompense")
+async def parrainage_cmd(interaction: discord.Interaction):
+    total = database.compter_parrainages(interaction.user.id)
+    palier_actuel = total // config.PARRAINAGE_PALIER
+    prochain_seuil = (palier_actuel + 1) * config.PARRAINAGE_PALIER
+    restant = prochain_seuil - total
+
+    objets_txt = ", ".join(f"{q}× {b}" for b, q in config.PARRAINAGE_RECOMPENSE_BALLS)
+    embed = discord.Embed(
+        title="🤝 Parrainage",
+        description=(
+            f"Tu as **{total}** invitation(s) confirmée(s) (le filleul est resté au moins "
+            f"{config.PARRAINAGE_DELAI_JOURS} jours sur le serveur).\n\n"
+            f"Tous les **{config.PARRAINAGE_PALIER}** invitations confirmées, tu débloques : "
+            f"**{config.PARRAINAGE_RECOMPENSE_DOLLARS} Poké Dollars** + {objets_txt}.\n\n"
+            f"Plus que **{restant}** invitation(s) confirmée(s) avant ta prochaine récompense !"
+        ),
+        color=discord.Color.green(),
+    )
+    embed.set_footer(text="Invite avec ton lien personnel Discord habituel — le bot détecte tout seul qui a invité qui.")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(name="pokedex-info", description="Affiche la fiche détaillée d'un Pokémon précis")
