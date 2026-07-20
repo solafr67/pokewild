@@ -77,6 +77,7 @@ ARCHETYPE_GLADIO = {
     "tier": 3,
     "sprite": pnj.IMAGE_RIVAL,
     "taille_equipe": 6,  # équipe complète, plus dure qu'un dresseur normal (4)
+    "raretes_autorisees": {"rare", "hyper_rare", "legendaire"},  # un rival, pas n'importe qui
 }
 
 
@@ -125,12 +126,12 @@ def _niveau_moyen_equipe(user_id: int) -> int:
 def _niveau_pour_pc_cible(pokemon: dict, pc_cible: int, niveau_reference: int = 50) -> int:
     """Trouve le niveau dont le PC dérivé (stats réelles, IV neutres) se rapproche le plus
     de pc_cible — recherche binaire, calculer_pc_derive croît avec le niveau. Bornée à
-    ±20 niveaux autour de niveau_reference (le niveau moyen de l'équipe du joueur) : sans
+    ±10 niveaux autour de niveau_reference (le niveau moyen de l'équipe du joueur) : sans
     ça, une espèce à faibles stats de base (Métamorphe...) grimperait jusqu'à un niveau
     délirant pour égaler la cible de PC, donnant un adversaire artificiellement plus
     costaud niveau pour niveau que toute l'équipe du joueur."""
-    bas = max(1, niveau_reference - 20)
-    haut = min(100, niveau_reference + 20)
+    bas = max(1, niveau_reference - 10)
+    haut = min(100, niveau_reference + 10)
     while bas < haut:
         milieu = (bas + haut) // 2
         if calculer_pc_derive(pokemon, IV_DEFAUT, milieu) < pc_cible:
@@ -154,6 +155,13 @@ def generer_equipe_dresseur(archetype: dict, pc_cible: int, niveau_reference: in
         pool = [p for p in POKEDEX if any(t in p["types"] for t in types_theme)]
     else:
         pool = list(POKEDEX)
+
+    raretes_autorisees = archetype.get("raretes_autorisees")
+    if raretes_autorisees:
+        pool_filtre = [p for p in pool if p["rarete"] in raretes_autorisees]
+        if pool_filtre:
+            pool = pool_filtre
+
     if not pool:
         pool = list(POKEDEX)
 

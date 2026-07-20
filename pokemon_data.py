@@ -139,19 +139,30 @@ EFFICACITE_TYPES = {
 }
 
 
+URL_ARTWORK_OFFICIEL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{prefixe}{numero}.png"
+
+
 def sprite_pokemon(pokemon: dict, shiny: bool = False) -> str | None:
     """URL de sprite ANIMÉ, hébergé sur notre propre dépôt GitHub — ce sont les sprites
     Showdown originaux, mais reencodés avec un disposal de frame correct (voir
     corriger_sprites.py) pour éliminer le bug de "ghosting" (traînée floue) que certains
     fichiers du pack communautaire original provoquaient sur le lecteur GIF de Discord.
-    Repli sur le sprite statique stocké si jamais le numéro du Pokédex est indisponible."""
+
+    Repli sur l'artwork officiel statique (PokéAPI) si `sprite_gif_disponible` vaut
+    explicitement False (renseigné par verifier_sprites_disponibles.py) — certaines
+    espèces très récentes (DLC) n'ont pas encore de sprite animé Showdown du tout, peu
+    importe la correction. Absent (script pas encore lancé) = on suppose le GIF
+    disponible, comportement inchangé."""
     if not pokemon:
         return None
     numero = pokemon.get("numero")
-    if numero:
-        sous_dossier = "shiny/" if shiny else ""
-        return f"https://raw.githubusercontent.com/solafr67/pokewild/main/sprites_corriges/{sous_dossier}{numero}.gif"
-    return pokemon.get("sprite_shiny") if shiny else pokemon.get("sprite")
+    if not numero:
+        return pokemon.get("sprite_shiny") if shiny else pokemon.get("sprite")
+
+    sous_dossier = "shiny/" if shiny else ""
+    if pokemon.get("sprite_gif_disponible") is False:
+        return URL_ARTWORK_OFFICIEL.format(prefixe=sous_dossier, numero=numero)
+    return f"https://raw.githubusercontent.com/solafr67/pokewild/main/sprites_corriges/{sous_dossier}{numero}.gif"
 
 
 def calculer_multiplicateur_type(types_attaquant: list, types_defenseur: list) -> float:

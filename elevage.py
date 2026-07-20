@@ -5,6 +5,7 @@ import discord
 
 import config
 import database
+import niveaux_pokemon
 import leveling
 import quetes_ui
 import race_ui
@@ -14,6 +15,7 @@ from pokemon_data import (
     calculer_pc_derive,
     sprite_pokemon,
     tirer_ivs,
+    tirer_niveau_spawn,
     tirer_pokemon_par_rarete,
 )
 
@@ -186,7 +188,8 @@ def eclore_oeuf(user_id: int) -> discord.Embed:
     rarete_resultat = random.choices(list(distribution.keys()), weights=list(distribution.values()))[0]
     pokemon = tirer_pokemon_par_rarete(rarete_resultat)
     ivs = tirer_ivs()
-    pc = calculer_pc_derive(pokemon, ivs, 1)  # un Pokémon qui éclot commence au niveau 1
+    niveau = tirer_niveau_spawn(pokemon["rarete"])  # même grille que les spawns sauvages, cohérent selon la rareté
+    pc = calculer_pc_derive(pokemon, ivs, niveau)
 
     chance_shiny = (
         config.CHANCE_SHINY_BASE
@@ -197,6 +200,12 @@ def eclore_oeuf(user_id: int) -> discord.Embed:
 
     nouvelle_entree = database.compter_captures_espece(user_id, pokemon["nom"]) == 0
     database.ajouter_capture(user_id, pokemon["nom"], pc, shiny=est_shiny, ivs=ivs)
+
+    # Même règle que pour les captures sauvages : le niveau ne s'applique à l'équipe que
+    # s'il est meilleur que celui déjà acquis (jamais de régression pour un Pokémon déjà entraîné).
+    niveau_actuel, _xp_actuel = database.obtenir_niveau_pokemon(user_id, pokemon["nom"])
+    if niveau > niveau_actuel:
+        database.definir_niveau_xp_pokemon(user_id, pokemon["nom"], niveau, niveaux_pokemon.xp_cumulee_pour_niveau(niveau))
     quetes_completees = database.incrementer_progression_quete(user_id, "capture", {"rarete": pokemon["rarete"]})
 
     xp_gagnee = config.XP_PAR_RARETE[pokemon["rarete"]]

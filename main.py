@@ -158,6 +158,13 @@ class VuePokestop(discord.ui.View):
         custom_id="pokestop_bouton",  # nécessaire pour qu'un bouton persistant survive au redémarrage
     )
     async def tourner(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Acquitte l'interaction TOUT DE SUITE, avant la moindre écriture en base — sur
+        # mobile/réseau lent, la séquence d'écritures qui suit peut dépasser les 3 secondes
+        # que Discord accorde pour répondre, ce qui affiche "Interaction échouée" côté
+        # joueur alors que tout s'est bien exécuté côté serveur (cooldown posé, récompenses
+        # données) sans que le joueur le voie jamais. defer() lève cette limite à 15 minutes.
+        await interaction.response.defer(ephemeral=True)
+
         user_id = interaction.user.id
         peut_jouer, temps_restant = database.peut_utiliser_pokestop(user_id, config.COOLDOWN_POKESTOP)
 
@@ -169,7 +176,7 @@ class VuePokestop(discord.ui.View):
                 description=f"Reviens dans **{minutes}m {secondes}s** pour le retourner à nouveau.",
                 color=discord.Color.orange(),
             )
-            await interaction.response.send_message(embed=embed_attente, ephemeral=True)
+            await interaction.followup.send(embed=embed_attente, ephemeral=True)
             return
 
         database.marquer_pokestop_utilise(user_id)
@@ -320,7 +327,7 @@ class VuePokestop(discord.ui.View):
                 inline=False,
             )
 
-        await interaction.response.send_message(embed=embed_resultat, ephemeral=True)
+        await interaction.followup.send(embed=embed_resultat, ephemeral=True)
 
 
 # ----------------------------------------------------------------------------
