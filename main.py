@@ -1,4 +1,5 @@
 import asyncio
+import json
 import random
 import time
 from datetime import datetime, timedelta
@@ -1570,6 +1571,41 @@ async def defi_gladio_cmd(interaction: discord.Interaction):
     except (discord.NotFound, discord.HTTPException):
         pass
     await dresseurs_module.defier_gladio(bot, interaction.user, interaction.channel, interaction)
+
+
+@bot.tree.command(
+    name="reroll-raids",
+    description="[Admin] Tire un nouveau roster de raid aléatoire (sur toute la base actuelle), palier par palier",
+)
+@app_commands.checks.has_permissions(administrator=True)
+async def reroll_raids_cmd(interaction: discord.Interaction):
+    await interaction.response.defer()
+
+    taille_par_etoile = {1: 5, 2: 5, 3: 5, 4: 3, 5: 3}
+    par_rarete = {}
+    for pokemon in POKEDEX:
+        par_rarete.setdefault(pokemon["rarete"], []).append(pokemon["nom"])
+
+    nouveau_roster = {}
+    lignes_resultat = []
+    for etoiles, taille in taille_par_etoile.items():
+        rarete = config.RARETE_PAR_ETOILES.get(etoiles, "commun")
+        candidats = par_rarete.get(rarete, [])
+        taille_reelle = min(taille, len(candidats))
+        noms = random.sample(candidats, taille_reelle) if candidats else []
+        nouveau_roster[str(etoiles)] = noms
+        lignes_resultat.append(f"{'⭐' * etoiles} : {', '.join(noms) if noms else '*(aucun disponible)*'}")
+
+    database.definir_parametre("roster_raid_json", json.dumps(nouveau_roster, ensure_ascii=False))
+
+    journal.logger(f"🛠️ <@{interaction.user.id}> a relancé le roster de raid (/reroll-raids).")
+    embed = discord.Embed(
+        title="🎲 Nouveau roster de raid",
+        description="\n".join(lignes_resultat),
+        color=discord.Color.gold(),
+    )
+    embed.set_footer(text="Effectif immédiatement pour les prochains raids, aucun redéploiement nécessaire.")
+    await interaction.followup.send(embed=embed)
 
 
 @bot.tree.command(name="reset-cooldown-gladio", description="[Admin] Réinitialise le cooldown de défi contre Gladio d'un joueur")

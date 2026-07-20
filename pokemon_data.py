@@ -511,11 +511,11 @@ def tirer_boss_raid() -> dict:
 # Roster fixe des boss de raid par palier d'étoiles. Les 4★/5★ sont pensés pour
 # être changés régulièrement (ex: tous les mois) afin d'apporter de la nouveauté.
 ROSTER_RAID = {
-    1: ["Rattata", "Roucool", "Chenipan", "Nidoran♂", "Poissirène"],
-    2: ["Ponyta", "Mimitoss", "Nosferalto", "Rapasdepic", "Dodrio"],
-    3: ["Ronflex", "Léviator", "Ectoplasma", "Alakazam", "Lokhlass"],
-    4: ["Dracolosse", "Tyranocif", "Métalosse"],
-    5: ["Mewtwo", "Rayquaza", "Lugia"],
+    1: ["Abo", "Taupiqueur", "Machoc", "Mystherbe", "Nosferapti"],
+    2: ["Feunard", "Smogogo", "Onix", "Voltorbe", "Grotadmorv"],
+    3: ["Dracaufeu", "Tortank", "Florizarre", "Nidoking", "Alakazam"],
+    4: ["Carchacrok", "Drattak", "Tyranocif"],
+    5: ["Suicune", "Dialga", "Giratina"],
 }
 
 
@@ -526,14 +526,32 @@ def tirer_pokemon_par_rarete(rarete: str) -> dict:
     return random.choice(candidats) if candidats else random.choice(POKEDEX)
 
 
+def obtenir_roster_raid(etoiles: int) -> list:
+    """Roster de raid pour ce palier d'étoiles — celui stocké en base (modifié via
+    /reroll-raids) a priorité sur ROSTER_RAID codé en dur, si présent."""
+    import database
+    import json
+
+    brut = database.obtenir_parametre("roster_raid_json")
+    if brut:
+        try:
+            roster_db = json.loads(brut)
+            if str(etoiles) in roster_db:
+                return roster_db[str(etoiles)]
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return ROSTER_RAID.get(etoiles, [])
+
+
 def tirer_boss_raid_par_etoile(etoiles: int) -> dict:
-    """Tire un boss dans le roster fixe correspondant au palier d'étoiles donné.
-    Si aucun nom du roster ne correspond exactement à la base actuelle (ex: régénération
-    du pokédex avec une légère différence de nom), retombe sur un tirage aléatoire
-    dans la bonne rareté pour ne jamais bloquer un raid."""
+    """Tire un boss dans le roster correspondant au palier d'étoiles donné (celui stocké
+    en base si /reroll-raids a été utilisé, sinon ROSTER_RAID codé en dur). Si aucun nom
+    du roster ne correspond exactement à la base actuelle (ex: régénération du pokédex
+    avec une légère différence de nom), retombe sur un tirage aléatoire dans la bonne
+    rareté pour ne jamais bloquer un raid."""
     import config
 
-    noms_roster = ROSTER_RAID.get(etoiles, [])
+    noms_roster = obtenir_roster_raid(etoiles)
     candidats = [obtenir_pokemon_par_nom(nom) for nom in noms_roster]
     candidats = [p for p in candidats if p is not None]
 
