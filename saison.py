@@ -14,23 +14,35 @@ from datetime import datetime, timezone
 import config
 import database
 
-# Début fixe de la Saison 1 — ne JAMAIS changer une fois des joueurs engagés dedans,
-# ça décalerait le calcul du numéro de saison de tout le monde.
-EPOQUE_SAISON_1 = int(datetime(2026, 8, 1, tzinfo=timezone.utc).timestamp())
+# Saison 1 exceptionnelle : du 20 juillet au 30 août 2026 (41 jours, plus longue que les
+# suivantes) pour démarrer tout de suite plutôt que d'attendre le 1er août. À partir de la
+# Saison 2, cadence normale de config.SAISON_DUREE_JOURS (30 jours) depuis cette date de fin.
+DEBUT_SAISON_1 = int(datetime(2026, 7, 20, tzinfo=timezone.utc).timestamp())
+FIN_SAISON_1 = int(datetime(2026, 8, 30, tzinfo=timezone.utc).timestamp())
+
+
+def _fin_saison(numero: int) -> int:
+    if numero <= 1:
+        return FIN_SAISON_1
+    duree_secondes = config.SAISON_DUREE_JOURS * 86400
+    return FIN_SAISON_1 + (numero - 1) * duree_secondes
 
 
 def numero_saison_actuelle() -> int:
-    """Numéro de la saison en cours (1, 2, 3...), calculé depuis une date de référence
-    fixe — aucun état à maintenir, aucune boucle de fond nécessaire pour la transition."""
+    """Numéro de la saison en cours (1, 2, 3...). La Saison 1 est exceptionnelle (durée
+    différente des suivantes) — ne pas re-caler cette logique sur un simple calcul
+    proportionnel, sinon les saisons suivantes seraient mal calées."""
+    maintenant = time.time()
+    if maintenant < FIN_SAISON_1:
+        return 1
     duree_secondes = config.SAISON_DUREE_JOURS * 86400
-    return max(1, int((time.time() - EPOQUE_SAISON_1) // duree_secondes) + 1)
+    return 2 + int((maintenant - FIN_SAISON_1) // duree_secondes)
 
 
 def temps_restant_saison() -> int:
     """Secondes avant le début de la prochaine saison."""
-    duree_secondes = config.SAISON_DUREE_JOURS * 86400
     numero = numero_saison_actuelle()
-    fin = EPOQUE_SAISON_1 + numero * duree_secondes
+    fin = _fin_saison(numero)
     return max(0, round(fin - time.time()))
 
 
