@@ -9,6 +9,7 @@ import database
 import equipe_combat
 import etat_jeu
 import leveling
+import niveaux_pokemon
 import pnj
 import quetes_ui as quetes_ui_module
 from pokemon_data import (
@@ -469,7 +470,8 @@ class VueCaptureRaid(discord.ui.View):
             return
 
         ivs = tirer_ivs()
-        pc = calculer_pc_derive(self.boss, ivs, self.etoiles * 15)  # niveau approximatif selon la difficulté du raid
+        niveau = self.etoiles * 15  # niveau approximatif selon la difficulté du raid
+        pc = calculer_pc_derive(self.boss, ivs, niveau)
         chance_shiny = (
             config.CHANCE_SHINY_BASE
             * etat_jeu.obtenir_multiplicateur_shiny()
@@ -477,6 +479,12 @@ class VueCaptureRaid(discord.ui.View):
         )
         est_shiny = random.random() < chance_shiny
         database.ajouter_capture(user_id, self.boss["nom"], pc, shiny=est_shiny, ivs=ivs)
+
+        # Même règle que pour les captures sauvages/œufs : le niveau ne s'applique à
+        # l'équipe que s'il est meilleur que celui déjà acquis (jamais de régression).
+        niveau_actuel, _xp_actuel = database.obtenir_niveau_pokemon(user_id, self.boss["nom"])
+        if niveau > niveau_actuel:
+            database.definir_niveau_xp_pokemon(user_id, self.boss["nom"], niveau, niveaux_pokemon.xp_cumulee_pour_niveau(niveau))
         database.marquer_capture_reussie_raid(self.raid_id, user_id)
         quetes_completees = database.incrementer_progression_quete(user_id, "capture", {"rarete": self.boss["rarete"]})
 

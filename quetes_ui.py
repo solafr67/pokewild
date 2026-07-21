@@ -106,6 +106,7 @@ def reclamer_toutes_quetes_pretes(user_id: int) -> discord.Embed:
     total_dollars = 0
     total_xp = 0
     total_cristaux = 0
+    objets_bonus = {}  # nom_objet -> quantité, affiché groupé sous l'argent/XP
     lignes = []
 
     for type_quete, catalogue, recompense_base, chance_bonus in (
@@ -127,17 +128,15 @@ def reclamer_toutes_quetes_pretes(user_id: int) -> discord.Embed:
             total_dollars += dollars
             total_xp += xp_affichee
 
-            bonus_txt = ""
             if type_quete == "jour" and random.random() < chance_bonus:
                 objet = random.choice(OBJETS_BONUS_JOUR)
                 database.ajouter_balls(user_id, objet, 1)
-                bonus_txt = f" + {EMOJI_SOINS.get(objet, '')} {NOM_SOIN_AFFICHAGE.get(objet, objet)}"
+                objets_bonus[objet] = objets_bonus.get(objet, 0) + 1
             elif type_quete == "semaine" and random.random() < chance_bonus:
                 database.ajouter_balls(user_id, "cristal_mutation", 1)
                 total_cristaux += 1
-                bonus_txt = " + 🔮 Cristal de Mutation"
 
-            lignes.append(f"{quete['emoji']} {quete['nom']}{bonus_txt}")
+            lignes.append(f"{quete['emoji']} {quete['nom']}")
 
     if not lignes:
         return discord.Embed(
@@ -150,6 +149,10 @@ def reclamer_toutes_quetes_pretes(user_id: int) -> discord.Embed:
         + f"\n\n{EMOJI_POKEDOLLAR} **+{total_dollars}** Poké Dollars\n"
         f"✨ **+{total_xp}** XP"
     )
+    for objet, quantite in objets_bonus.items():
+        emoji = EMOJI_SOINS.get(objet, "")
+        nom = NOM_SOIN_AFFICHAGE.get(objet, objet)
+        description += f"\n{emoji} **+{quantite}** {nom} *(bonus)*"
     if total_cristaux:
         description += f"\n🔮 **+{total_cristaux}** Cristal(aux) de Mutation !"
 

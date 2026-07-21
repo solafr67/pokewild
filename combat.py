@@ -127,11 +127,13 @@ def construire_embeds_combat(combat_id: int, log_tour: list = None, noms: dict =
                 f"{_barre_pv(actif_row['pv_actuels'], actif_row['pv_max'])}\n"
                 f"❤️ **{actif_row['pv_actuels']} / {actif_row['pv_max']} PV**"
             )
-            # Boosts de stats affichés s'ils sont non nuls (📊 Atq +1 • Vit -2)
+            # Boosts de stats affichés s'ils sont non nuls (📊 Atq +1 • Déf Spé -2)
             boosts = database.obtenir_boosts(combat_id, user_id, actif_nom)
             morceaux_boosts = [
                 f"{label} {boosts[stat]:+d}"
-                for stat, label in (("atk", "Atq"), ("def", "Déf"), ("vit", "Vit"))
+                for stat, label in (
+                    ("atk", "Atq"), ("def", "Déf"), ("atk_spe", "Atq Spé"), ("def_spe", "Déf Spé"), ("vit", "Vit")
+                )
                 if boosts[stat] != 0
             ]
             if morceaux_boosts:
@@ -782,50 +784,76 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
         if vainqueur_id is not None:
             database.terminer_combat_pvp(combat_id)
             perdant_id = combat["joueur2_id"] if vainqueur_id == combat["joueur1_id"] else combat["joueur1_id"]
-            journal.logger(f"🥊 <@{vainqueur_id}> a battu <@{perdant_id}> en combat PvP.")
-            mult_repetition = database.enregistrer_victoire_pvp_repetition(vainqueur_id, perdant_id)
-            database.ajouter_poke_dollars(vainqueur_id, round(DOLLARS_VICTOIRE * mult_repetition * database.multiplicateur_boost(vainqueur_id, "argent")))
-            quetes_completees = database.incrementer_progression_quete(vainqueur_id, "pvp_victoire")
-            database.incrementer_victoires_pvp(vainqueur_id)
-            leveling.gagner_xp(vainqueur_id, round(XP_VICTOIRE * mult_repetition))
-            leveling.gagner_xp(perdant_id, XP_DEFAITE)
-
-            serie = database.incrementer_serie_victoires_pvp(vainqueur_id)
-            database.reinitialiser_serie_victoires_pvp(perdant_id)
-            embed_rival = None
-            if serie >= 3 and serie % 3 == 0:
-                embed_rival = pnj.construire_embed_reaction(
-                    "serie_victoires_pvp", user_id=vainqueur_id, joueur=f"<@{vainqueur_id}>"
-                )
-            elif random.random() < 0.2:
-                embed_rival = pnj.construire_embed_reaction(
-                    "defaite_pvp", user_id=perdant_id, joueur=f"<@{perdant_id}>"
-                )
-
-            vainqueur = bot.get_user(vainqueur_id)
-            nom_vainqueur = vainqueur.display_name if vainqueur else f"Joueur…{str(vainqueur_id)[-4:]}"
-            dollars_reels = round(DOLLARS_VICTOIRE * mult_repetition * database.multiplicateur_boost(vainqueur_id, "argent"))
-            # XP réellement créditée (boost de Race/temporaire inclus) — gagner_xp() applique
-            # son propre multiplicateur en interne, on le reproduit ici pour le texte affiché.
-            xp_reels = round(round(XP_VICTOIRE * mult_repetition) * database.multiplicateur_boost(vainqueur_id, "xp"))
-            texte_recompense = f"\n\n🎖️ +{dollars_reels} Poké Dollars & +{xp_reels} XP au vainqueur !"
-            if mult_repetition < 1.0:
-                texte_recompense += "\n*(récompense réduite : déjà battu cet adversaire aujourd'hui)*"
-            embed = discord.Embed(
-                title=f"🏆 {nom_vainqueur} remporte le combat !",
-                description=(
-                    "\n".join(log)
-                    + texte_recompense
-                    + quetes_ui.texte_notifications_completion(quetes_completees)
-                ),
-                color=discord.Color.gold(),
-            )
+            annonce_envoyee = False
             try:
-                msg = await thread.fetch_message(message_id)
-                embeds_a_envoyer = [embed, embed_rival] if embed_rival else [embed]
-                await msg.edit(embeds=embeds_a_envoyer, view=None)
-            except discord.NotFound:
-                await thread.send(embed=embed)
+                journal.logger(f"🥊 <@{vainqueur_id}> a battu <@{perdant_id}> en combat PvP.")
+                mult_repetition = database.enregistrer_victoire_pvp_repetition(vainqueur_id, perdant_id)
+                database.ajouter_poke_dollars(vainqueur_id, round(DOLLARS_VICTOIRE * mult_repetition * database.multiplicateur_boost(vainqueur_id, "argent")))
+                quetes_completees = database.incrementer_progression_quete(vainqueur_id, "pvp_victoire")
+                database.incrementer_victoires_pvp(vainqueur_id)
+                leveling.gagner_xp(vainqueur_id, round(XP_VICTOIRE * mult_repetition))
+                leveling.gagner_xp(perdant_id, XP_DEFAITE)
+
+                serie = database.incrementer_serie_victoires_pvp(vainqueur_id)
+                database.reinitialiser_serie_victoires_pvp(perdant_id)
+                embed_rival = None
+                if serie >= 3 and serie % 3 == 0:
+                    embed_rival = pnj.construire_embed_reaction(
+                        "serie_victoires_pvp", user_id=vainqueur_id, joueur=f"<@{vainqueur_id}>"
+                    )
+                elif random.random() < 0.2:
+                    embed_rival = pnj.construire_embed_reaction(
+                        "defaite_pvp", user_id=perdant_id, joueur=f"<@{perdant_id}>"
+                    )
+
+                vainqueur = bot.get_user(vainqueur_id)
+                nom_vainqueur = vainqueur.display_name if vainqueur else f"Joueur…{str(vainqueur_id)[-4:]}"
+                dollars_reels = round(DOLLARS_VICTOIRE * mult_repetition * database.multiplicateur_boost(vainqueur_id, "argent"))
+                # XP réellement créditée (boost de Race/temporaire inclus) — gagner_xp() applique
+                # son propre multiplicateur en interne, on le reproduit ici pour le texte affiché.
+                xp_reels = round(round(XP_VICTOIRE * mult_repetition) * database.multiplicateur_boost(vainqueur_id, "xp"))
+                texte_recompense = f"\n\n🎖️ +{dollars_reels} Poké Dollars & +{xp_reels} XP au vainqueur !"
+                if mult_repetition < 1.0:
+                    texte_recompense += "\n*(récompense réduite : déjà battu cet adversaire aujourd'hui)*"
+                embed = discord.Embed(
+                    title=f"🏆 {nom_vainqueur} remporte le combat !",
+                    description=(
+                        "\n".join(log)
+                        + texte_recompense
+                        + quetes_ui.texte_notifications_completion(quetes_completees)
+                    ),
+                    color=discord.Color.gold(),
+                )
+                try:
+                    msg = await thread.fetch_message(message_id)
+                    embeds_a_envoyer = [embed, embed_rival] if embed_rival else [embed]
+                    await msg.edit(embeds=embeds_a_envoyer, view=None)
+                except discord.NotFound:
+                    await thread.send(embed=embed)
+                annonce_envoyee = True
+            except Exception:
+                # Le combat est déjà marqué terminé en base à ce stade (ligne ci-dessus) —
+                # une erreur ici ne doit JAMAIS laisser les joueurs sans savoir qui a gagné,
+                # ni empêcher le nettoyage du fil. On journalise pour diagnostiquer la vraie
+                # cause, et on retombe sur une annonce minimale.
+                import traceback
+
+                print(f"⚠️ Erreur en clôturant le combat PvP {combat_id} (déjà marqué terminé en base) :")
+                traceback.print_exc()
+                journal.logger(
+                    f"🔴 Erreur en clôturant le combat PvP {combat_id} (vainqueur : <@{vainqueur_id}>) — "
+                    f"voir les logs serveur pour le détail complet."
+                )
+
+            if not annonce_envoyee:
+                try:
+                    await thread.send(
+                        f"🏆 <@{vainqueur_id}> remporte le combat ! (un souci est survenu pour afficher le "
+                        f"détail complet du dernier tour — les récompenses ont quand même été attribuées)"
+                    )
+                except Exception:
+                    pass
+
             try:
                 await thread.send(f"🗑️ Ce fil sera supprimé automatiquement dans {DELAI_SUPPRESSION_FIL // 60} minutes.")
             except Exception:

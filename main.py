@@ -1754,13 +1754,31 @@ async def defi_draft_cmd(interaction: discord.Interaction, adversaire: discord.M
         await interaction.response.send_message("Tu ne peux pas défier un bot !", ephemeral=True)
         return
 
+    if not isinstance(interaction.channel, (discord.TextChannel, discord.VoiceChannel)):
+        await interaction.response.send_message(
+            "Cette commande doit être utilisée dans un channel classique (pas un fil).", ephemeral=True
+        )
+        return
+
+    try:
+        thread = await interaction.channel.create_thread(
+            name=f"🎯 Draft PvP : {interaction.user.display_name} vs {adversaire.display_name}",
+            type=discord.ChannelType.public_thread,
+        )
+        await thread.add_user(interaction.user)
+        await thread.add_user(adversaire)
+    except discord.HTTPException as e:
+        await interaction.response.send_message(f"❌ Impossible de créer le fil : {e}", ephemeral=True)
+        return
+
     vue = draft_pvp_module.VueInvitationDraft(bot, interaction.user, adversaire, interaction.channel)
-    await interaction.response.send_message(
+    await thread.send(
         f"🎯 {adversaire.mention}, **{interaction.user.display_name}** te défie en **Draft PvP** ! "
         f"Piochez chacun 3 Pokémon dans un pool commun (niveau {config.DRAFT_NIVEAU}, attaques aléatoires) "
         f"et affrontez-vous. Tu acceptes ?",
         view=vue,
     )
+    await interaction.response.send_message(f"Défi envoyé dans {thread.mention} !", ephemeral=True)
 
 
 @bot.tree.command(name="pokedex-info", description="Affiche la fiche détaillée d'un Pokémon précis")

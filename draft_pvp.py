@@ -154,16 +154,24 @@ async def _lancer_combat_draft(bot, joueur1, joueur2, channel_original, picks, m
                 for slot, attaque in enumerate(_tirer_attaques_aleatoires(pokemon), start=1):
                     database.equiper_attaque_draft(combat_id, user_id, nom, slot, attaque)
 
-    await combat_module.lancer_combat_avec_equipes(
+    combat_id = await combat_module.lancer_combat_avec_equipes(
         bot, joueur1, joueur2, channel_original, equipe1, equipe2, avant_lancement=_equiper_attaques_draft
     )
 
+    combat_row = database.obtenir_combat(combat_id)
+    mention_fil = ""
+    if combat_row and combat_row["thread_id"]:
+        mention_fil = f" <#{combat_row['thread_id']}>"
+
     try:
-        await message_draft.reply(f"🎯 Draft terminé, le combat est lancé plus bas dans le channel !")
+        await message_draft.reply(f"🎯 Draft terminé, le combat est lancé !{mention_fil}")
     except discord.HTTPException:
         pass
 
-    bot.loop.create_task(_supprimer_message_apres_delai(message_draft, DELAI_SUPPRESSION_FIL_DRAFT))
+    # Supprime le FIL de draft entier (pas juste ce message) — le combat vit maintenant
+    # dans son propre fil, celui du draft n'a plus d'utilité.
+    fil_draft = message_draft.channel
+    bot.loop.create_task(combat_module.supprimer_fil_apres_delai(fil_draft, DELAI_SUPPRESSION_FIL_DRAFT))
 
 
 async def _supprimer_message_apres_delai(message: discord.Message, delai: int):
@@ -207,5 +215,13 @@ class VueInvitationDraft(discord.ui.View):
             return
         self.clear_items()
         await interaction.response.edit_message(
-            content=f"❌ {self.adversaire.display_name} n'a pas donné suite au Draft.", embed=None, view=None
+            content=f"❌ {self.adversaire.display_name} n'a pas donné suite au Draft. "
+            f"Ce fil sera supprimé dans {DELAI_SUPPRESSION_FIL_DRAFT // 60} minutes.",
+            embed=None,
+            view=None,
         )
+        self.bot.loop.create_task(combat_module.supprimer_fil_apres_delai(interaction.channel, DELAI_SUPPRESSION_FIL_DRAFT))
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
