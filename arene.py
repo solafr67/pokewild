@@ -19,6 +19,7 @@ import combat as combat_module
 import config
 import database
 import dresseurs as dresseurs_module
+import equipe_combat
 import journal
 from pokemon_data import EMOJI_TYPES, POKEDEX
 
@@ -33,15 +34,22 @@ def _nom_champion(type_arene: str) -> str:
 def _archetype_etape(type_arene: str, etape: int) -> dict:
     """etape : 1 = premier Apprenti, 2 = second Apprenti, 3 = Champion."""
     if etape == 1:
-        return {"nom": NOMS_APPRENTI_1, "types_theme": [type_arene], "tier": 1, "taille_equipe": config.ARENE_TAILLE_APPRENTI_1}
+        return {
+            "nom": NOMS_APPRENTI_1, "types_theme": [type_arene], "tier": 1,
+            "taille_equipe": config.ARENE_TAILLE_APPRENTI_1, "recompense_independante": True,
+        }
     if etape == 2:
-        return {"nom": NOMS_APPRENTI_2, "types_theme": [type_arene], "tier": 2, "taille_equipe": config.ARENE_TAILLE_APPRENTI_2}
+        return {
+            "nom": NOMS_APPRENTI_2, "types_theme": [type_arene], "tier": 2,
+            "taille_equipe": config.ARENE_TAILLE_APPRENTI_2, "recompense_independante": True,
+        }
     return {
         "nom": _nom_champion(type_arene),
         "types_theme": [type_arene],
         "tier": 3,
         "taille_equipe": config.ARENE_TAILLE_CHAMPION,
         "raretes_autorisees": config.ARENE_RARETES_CHAMPION,
+        "recompense_independante": True,
     }
 
 
@@ -139,7 +147,7 @@ async def _resoudre_etape(bot, joueur_id, channel, arene_id, type_arene, etape, 
         try:
             await thread.send(
                 f"🏟️ <@{joueur_id}> — victoire ! Prêt·e pour le combat suivant, ou tu préfères "
-                f"soigner ton équipe avant (coûte une potion) ?",
+                f"soigner ton équipe avant (1 potion par Pokémon soigné) ?",
                 view=vue,
             )
         except discord.HTTPException:
@@ -170,7 +178,7 @@ async def _resoudre_etape(bot, joueur_id, channel, arene_id, type_arene, etape, 
 
 
 class VueContinuerArene(discord.ui.View):
-    """Entre deux combats d'un run d'arène : soigner (coûte une potion) ou continuer direct."""
+    """Entre deux combats d'un run d'arène : soin auto (1 potion par Pokémon soigné) ou continuer direct."""
 
     def __init__(self, bot, joueur_id: int, channel: discord.TextChannel, arene_id: int, type_arene: str, etape_terminee: int):
         super().__init__(timeout=300)
@@ -185,7 +193,7 @@ class VueContinuerArene(discord.ui.View):
         bouton_continuer.callback = self._on_continuer
         self.add_item(bouton_continuer)
 
-        bouton_soigner = discord.ui.Button(label="Soigner (1 potion)", emoji="🧪", style=discord.ButtonStyle.success)
+        bouton_soigner = discord.ui.Button(label="Soin auto", emoji="🧪", style=discord.ButtonStyle.success)
         bouton_soigner.callback = self._on_soigner
         self.add_item(bouton_soigner)
 
@@ -206,31 +214,33 @@ class VueContinuerArene(discord.ui.View):
         if not await self._verifier(interaction):
             return
 
-        inventaire = database.obtenir_inventaire_balls(self.joueur_id)
-        potion_choisie = None
-        for potion in ("totalsoin", "hyperpotion", "superpotion", "potion"):
-            if inventaire.get(potion, 0) > 0:
-                potion_choisie = potion
-                break
+        noms_equipe = database.obtenir_equipe_combat_disponible(self.joueur_id)
+        blesses = []
+        for nom in noms_equipe:
+            pv_max = combat_module.stats_combattant_reel(self.joueur_id, nom)["pv"]
+            pv_actuels = database.obtenir_pv_actuels(self.joueur_id, nom, pv_max)
+            if pv_actuels < pv_max:
+                blesses.append((nom, pv_actuels, pv_max))
 
-        if potion_choisie is None:
+        if not blesses:
+            await interaction.response.send_message("Ton équipe est déjà au maximum de ses PV !", ephemeral=True)
+            return
+
+        lignes, total_potions_utilisees = equipe_combat.soigner_toute_equipe_auto(self.joueur_id, blesses)
+        if not lignes:
             await interaction.response.send_message(
-                "Tu n'as plus aucune potion — continue tel quel, ou soigne-toi via `/equipe-combat` "
-                "puis reviens cliquer sur Défier au prochain spawn (ce run reste toutefois perdu si tu abandonnes maintenant).",
+                "Tu n'as aucune potion en stock — continue tel quel, ou reviens au prochain "
+                "spawn une fois réapprovisionné (ce run reste perdu si tu abandonnes maintenant).",
                 ephemeral=True,
             )
             return
 
-        database.retirer_ball(self.joueur_id, potion_choisie)
-        noms_equipe = database.obtenir_equipe_combat_disponible(self.joueur_id)
-        for nom in noms_equipe:
-            pv_max = combat_module.stats_combattant_reel(self.joueur_id, nom)["pv"]
-            delta = max(1, round(pv_max * config.SOIN_POURCENT.get(potion_choisie, 0.5)))
-            database.modifier_pv_pokemon(self.joueur_id, nom, delta, pv_max)
-
         self.clear_items()
         await interaction.response.edit_message(
-            content=f"🧪 Équipe soignée avec 1× {potion_choisie} !", view=self
+            content=(
+                f"🩹 **Soin auto** ({total_potions_utilisees} potion(s) utilisée(s)) :\n" + "\n".join(lignes)
+            ),
+            view=self,
         )
         await _lancer_etape(self.bot, interaction.user, self.channel, self.arene_id, self.type_arene, self.etape_terminee + 1)
 

@@ -494,6 +494,21 @@ def init_db():
         """
     )
 
+    # Table séparée pour les PV persistants EN RAID — auparavant partagée avec
+    # etat_combat_pokemon (PvP/dresseurs/Arène/Gladio), ce qui faisait que combattre en
+    # raid et en dresseur en même temps affectait la même barre de vie. Même structure,
+    # juste un espace de PV totalement indépendant le temps d'un raid.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS etat_combat_pokemon_raid (
+            user_id INTEGER NOT NULL,
+            pokemon_nom TEXT NOT NULL,
+            pv_actuels INTEGER NOT NULL,
+            PRIMARY KEY (user_id, pokemon_nom)
+        )
+        """
+    )
+
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS echanges (
@@ -1818,20 +1833,23 @@ def compter_captures_totales(user_id: int) -> int:
 
 # --- PV de combat (par joueur + espèce, voir raid.py pour la formule de calcul du max) ---
 
-def obtenir_pv_actuels(user_id: int, pokemon_nom: str, pv_max: int) -> int:
+def obtenir_pv_actuels(user_id: int, pokemon_nom: str, pv_max: int, contexte: str = "normal") -> int:
     """Retourne les PV actuels d'une espèce en combat (initialisés au max si jamais vue).
     Si le max a augmenté depuis (meilleur PC capturé), les PV actuels sont juste plafonnés
-    au nouveau max, sans soin gratuit."""
+    au nouveau max, sans soin gratuit. contexte="raid" utilise un pool de PV totalement
+    séparé (voir etat_combat_pokemon_raid) — combattre en raid n'affecte jamais les PV
+    utilisés en PvP/dresseur/Arène/Gladio, et inversement."""
+    table = "etat_combat_pokemon_raid" if contexte == "raid" else "etat_combat_pokemon"
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
-        "SELECT pv_actuels FROM etat_combat_pokemon WHERE user_id = ? AND pokemon_nom = ?",
+        f"SELECT pv_actuels FROM {table} WHERE user_id = ? AND pokemon_nom = ?",
         (user_id, pokemon_nom),
     )
     row = cur.fetchone()
     if row is None:
         cur.execute(
-            "INSERT INTO etat_combat_pokemon (user_id, pokemon_nom, pv_actuels) VALUES (?, ?, ?)",
+            f"INSERT INTO {table} (user_id, pokemon_nom, pv_actuels) VALUES (?, ?, ?)",
             (user_id, pokemon_nom, pv_max),
         )
         conn.commit()
@@ -1843,17 +1861,19 @@ def obtenir_pv_actuels(user_id: int, pokemon_nom: str, pv_max: int) -> int:
     return pv_actuels
 
 
-def modifier_pv_pokemon(user_id: int, pokemon_nom: str, delta: int, pv_max: int) -> int:
+def modifier_pv_pokemon(user_id: int, pokemon_nom: str, delta: int, pv_max: int, contexte: str = "normal") -> int:
     """Applique un delta (positif = soin, négatif = dégâts) aux PV actuels d'une espèce,
-    borné entre 0 et pv_max. Retourne les PV après modification."""
-    pv_actuels = obtenir_pv_actuels(user_id, pokemon_nom, pv_max)
+    borné entre 0 et pv_max. Retourne les PV après modification. Voir obtenir_pv_actuels
+    pour le paramètre contexte."""
+    table = "etat_combat_pokemon_raid" if contexte == "raid" else "etat_combat_pokemon"
+    pv_actuels = obtenir_pv_actuels(user_id, pokemon_nom, pv_max, contexte)
     nouveau_pv = max(0, min(pv_max, pv_actuels + delta))
 
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
-        """
-        INSERT INTO etat_combat_pokemon (user_id, pokemon_nom, pv_actuels) VALUES (?, ?, ?)
+        f"""
+        INSERT INTO {table} (user_id, pokemon_nom, pv_actuels) VALUES (?, ?, ?)
         ON CONFLICT(user_id, pokemon_nom) DO UPDATE SET pv_actuels = excluded.pv_actuels
         """,
         (user_id, pokemon_nom, nouveau_pv),

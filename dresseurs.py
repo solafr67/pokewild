@@ -78,6 +78,7 @@ ARCHETYPE_GLADIO = {
     "sprite": pnj.IMAGE_RIVAL,
     "taille_equipe": 6,  # équipe complète, plus dure qu'un dresseur normal (4)
     "raretes_autorisees": {"rare", "hyper_rare", "legendaire"},  # un rival, pas n'importe qui
+    "recompense_independante": True,
 }
 
 
@@ -461,8 +462,12 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
 
             if vainqueur_id == joueur_id:
                 # Dégression progressive tous dresseurs confondus (voir config) — appliquée
-                # AVANT le bonus de Race, comme pour l'anti-collusion PvP.
-                mult_repetition = database.enregistrer_victoire_dresseur_repetition(joueur_id)
+                # AVANT le bonus de Race, comme pour l'anti-collusion PvP. Les archétypes
+                # marqués "recompense_independante" (Gladio, Arène) n'y participent ni ne
+                # la subissent — sinon enchaîner plusieurs combats d'Arène d'affilée
+                # ferait chuter la récompense du Champion à cause des Apprentis précédents.
+                independant = archetype.get("recompense_independante", False)
+                mult_repetition = 1.0 if independant else database.enregistrer_victoire_dresseur_repetition(joueur_id)
                 journal.logger(f"🥾 <@{joueur_id}> a battu le dresseur **{archetype['nom']}**.")
 
                 if archetype["nom"] == pnj.NOM_RIVAL:
@@ -490,7 +495,7 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
 
                 note_reduction = (
                     "\n*(récompense réduite : plusieurs dresseurs déjà battus aujourd'hui)*"
-                    if mult_repetition < 1.0 and archetype["nom"] != pnj.NOM_RIVAL else ""
+                    if mult_repetition < 1.0 and not independant and archetype["nom"] != pnj.NOM_RIVAL else ""
                 )
                 embed = discord.Embed(
                     title=f"🏆 Victoire contre {archetype['nom']} !",

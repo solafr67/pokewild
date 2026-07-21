@@ -203,6 +203,13 @@ class VueInventaire(discord.ui.View):
     async def _on_soigner(self, interaction: discord.Interaction):
         if not await self._verifier_proprietaire(interaction):
             return
+        if database.combat_en_cours_pour_joueur(self.user_id):
+            await interaction.response.send_message(
+                "❌ Impossible de soigner ton équipe pendant qu'un combat est en cours — "
+                "utilise le bouton Potion directement dans le combat.",
+                ephemeral=True,
+            )
+            return
 
         vue_soin = VueSoinDepuisInventaire(self.user_id, self.objet_selectionne)
         if not vue_soin._lister_blesses():

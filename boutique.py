@@ -33,13 +33,13 @@ class VueBoutique(discord.ui.View):
     @discord.ui.button(label="Balls", emoji="🎯", style=discord.ButtonStyle.primary, custom_id="boutique_categorie_balls")
     async def categorie_balls(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(
-            embed=construire_embed_categorie_balls(), view=VueCategorieBalls(), ephemeral=True
+            embed=construire_embed_categorie_balls(interaction.user.id), view=VueCategorieBalls(), ephemeral=True
         )
 
     @discord.ui.button(label="Potions", emoji="💊", style=discord.ButtonStyle.success, custom_id="boutique_categorie_potions")
     async def categorie_potions(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(
-            embed=construire_embed_categorie_potions(), view=VueCategoriePotions(), ephemeral=True
+            embed=construire_embed_categorie_potions(interaction.user.id), view=VueCategoriePotions(), ephemeral=True
         )
 
     @discord.ui.button(label="Améliorations", emoji="📈", style=discord.ButtonStyle.secondary, custom_id="boutique_categorie_ameliorations")
@@ -53,14 +53,21 @@ class VueBoutique(discord.ui.View):
 # Catégorie Balls
 # ----------------------------------------------------------------------------
 
-def construire_embed_categorie_balls() -> discord.Embed:
+def construire_embed_categorie_balls(user_id: int) -> discord.Embed:
+    inventaire = database.obtenir_inventaire_balls(user_id)
+    objets_actuels = database.compter_objets_totaux(user_id)
+    limite_objets = database.limite_stockage_objets(user_id)
+
     embed = discord.Embed(title="🎯 Boutique — Balls", color=discord.Color.blurple())
+    embed.description = f"🎒 Sac : **{objets_actuels}/{limite_objets}** places utilisées"
     for ball_type, prix in config.PRIX_BALLS.items():
+        possede = inventaire.get(ball_type, 0)
         embed.add_field(
             name=f"{EMOJI_BALLS.get(ball_type, '')} {NOM_BALL_AFFICHAGE[ball_type]}",
-            value=f"{EMOJI_POKEDOLLAR} {prix} chacune",
+            value=f"{EMOJI_POKEDOLLAR} {prix} chacune\nTu en as : **{possede}**",
             inline=True,
         )
+    embed.set_footer(text="Choisis un bouton ci-dessous pour acheter.")
     return embed
 
 
@@ -154,19 +161,26 @@ class VueCategorieBalls(discord.ui.View):
 # Catégorie Potions
 # ----------------------------------------------------------------------------
 
-def construire_embed_categorie_potions() -> discord.Embed:
+def construire_embed_categorie_potions(user_id: int) -> discord.Embed:
+    inventaire = database.obtenir_inventaire_balls(user_id)
+    objets_actuels = database.compter_objets_totaux(user_id)
+    limite_objets = database.limite_stockage_objets(user_id)
+
     embed = discord.Embed(title="💊 Boutique — Potions", color=discord.Color.green())
+    embed.description = f"🎒 Sac : **{objets_actuels}/{limite_objets}** places utilisées"
     for soin_type, prix in config.PRIX_SOINS.items():
         if soin_type == "totalsoin":
             soin_txt = "soigne tous les statuts (brûlure, poison, paralysie...) en combat"
         else:
             pourcent = round(config.SOIN_POURCENT.get(soin_type, 0) * 100)
             soin_txt = "soin complet" if pourcent >= 100 else f"+{pourcent}% des PV max"
+        possede = inventaire.get(soin_type, 0)
         embed.add_field(
             name=f"{EMOJI_SOINS.get(soin_type, '')} {NOM_SOIN_AFFICHAGE[soin_type]}",
-            value=f"{EMOJI_POKEDOLLAR} {prix} chacune — {soin_txt}",
+            value=f"{EMOJI_POKEDOLLAR} {prix} chacune — {soin_txt}\nTu en as : **{possede}**",
             inline=True,
         )
+    embed.set_footer(text="Choisis un bouton ci-dessous pour acheter.")
     return embed
 
 

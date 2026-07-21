@@ -330,6 +330,13 @@ class VueEquipeCombat(discord.ui.View):
     async def _on_soigner(self, interaction: discord.Interaction):
         if not await self._verifier_proprietaire(interaction):
             return
+        if database.combat_en_cours_pour_joueur(self.user_id):
+            await interaction.response.send_message(
+                "❌ Impossible de soigner ton équipe pendant qu'un combat est en cours — "
+                "utilise le bouton Potion directement dans le combat.",
+                ephemeral=True,
+            )
+            return
         vue_soin = VueSoin(self.user_id)
         if not vue_soin._lister_blesses():
             await interaction.response.send_message(
@@ -345,6 +352,13 @@ class VueEquipeCombat(discord.ui.View):
     async def _on_soin_auto(self, interaction: discord.Interaction):
         if not await self._verifier_proprietaire(interaction):
             return
+        if database.combat_en_cours_pour_joueur(self.user_id):
+            await interaction.response.send_message(
+                "❌ Impossible de soigner ton équipe pendant qu'un combat est en cours — "
+                "utilise le bouton Potion directement dans le combat.",
+                ephemeral=True,
+            )
+            return
 
         vue_soin = VueSoin(self.user_id)
         blesses = vue_soin._lister_blesses()
@@ -354,27 +368,7 @@ class VueEquipeCombat(discord.ui.View):
             )
             return
 
-        # Du plus faible au plus fort, pour économiser les Hyper Potions : chaque Pokémon
-        # blessé reçoit d'abord des Potions normales, et on n'utilise une potion plus forte
-        # que si les plus faibles ne suffisent plus (stock épuisé) et qu'il lui manque encore
-        # des PV.
-        ordre_potions = ("potion", "superpotion", "hyperpotion")
-        lignes = []
-        total_potions_utilisees = 0
-
-        for nom, pv_actuels, pv_max in blesses:
-            pv_courant = pv_actuels
-            for potion in ordre_potions:
-                while pv_courant < pv_max:
-                    if not database.retirer_ball(self.user_id, potion):
-                        break  # plus de stock de cette potion, on tente la suivante
-                    delta = max(1, round(pv_max * config.SOIN_POURCENT[potion]))
-                    pv_courant = database.modifier_pv_pokemon(self.user_id, nom, delta, pv_max)
-                    total_potions_utilisees += 1
-                if pv_courant >= pv_max:
-                    break
-            if pv_courant != pv_actuels:
-                lignes.append(f"**{nom}** : {pv_actuels} → {pv_courant}/{pv_max} PV")
+        lignes, total_potions_utilisees = soigner_toute_equipe_auto(self.user_id, blesses)
 
         if not lignes:
             await interaction.response.send_message(
@@ -433,6 +427,33 @@ class VueEquipeCombat(discord.ui.View):
         await interaction.response.edit_message(
             embed=construire_embed_equipe(interaction.user), view=self
         )
+
+
+def soigner_toute_equipe_auto(user_id: int, blesses: list) -> tuple:
+    """Soigne chaque Pokémon blessé de la liste (nom, pv_actuels, pv_max), du plus faible
+    au plus fort côté potion pour économiser les Hyper Potions — 1 potion consommée par
+    palier de soin nécessaire (pas une potion unique pour toute l'équipe). Réutilisée par
+    /equipe-combat (Soin auto) ET par le système d'Arène (arene.py) entre deux combats.
+    Retourne (lignes_resultat, total_potions_utilisees)."""
+    ordre_potions = ("potion", "superpotion", "hyperpotion")
+    lignes = []
+    total_potions_utilisees = 0
+
+    for nom, pv_actuels, pv_max in blesses:
+        pv_courant = pv_actuels
+        for potion in ordre_potions:
+            while pv_courant < pv_max:
+                if not database.retirer_ball(user_id, potion):
+                    break  # plus de stock de cette potion, on tente la suivante
+                delta = max(1, round(pv_max * config.SOIN_POURCENT[potion]))
+                pv_courant = database.modifier_pv_pokemon(user_id, nom, delta, pv_max)
+                total_potions_utilisees += 1
+            if pv_courant >= pv_max:
+                break
+        if pv_courant != pv_actuels:
+            lignes.append(f"**{nom}** : {pv_actuels} → {pv_courant}/{pv_max} PV")
+
+    return lignes, total_potions_utilisees
 
 
 class VueSoin(discord.ui.View):

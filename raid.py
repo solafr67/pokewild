@@ -281,7 +281,7 @@ def calculer_degats(user_id: int) -> int:
         if nom not in especes_possedees:
             continue
         stats = combat_module.stats_combattant_reel(user_id, nom)
-        pv_actuels = database.obtenir_pv_actuels(user_id, nom, stats["pv"])
+        pv_actuels = database.obtenir_pv_actuels(user_id, nom, stats["pv"], contexte="raid")
         if pv_actuels <= 0:
             continue  # K.O., ne participe plus
 
@@ -309,7 +309,7 @@ def appliquer_riposte_boss(user_id: int, etoiles: int):
         if nom not in especes_possedees:
             continue
         pv_max = combat_module.stats_combattant_reel(user_id, nom)["pv"]
-        pv_actuels = database.obtenir_pv_actuels(user_id, nom, pv_max)
+        pv_actuels = database.obtenir_pv_actuels(user_id, nom, pv_max, contexte="raid")
         if pv_actuels > 0:
             vivants.append((nom, pv_max))
 
@@ -321,7 +321,7 @@ def appliquer_riposte_boss(user_id: int, etoiles: int):
     nouveaux_ko = []
     for nom, pv_max in vivants:
         degats = max(1, round(pv_max * pourcent_riposte))
-        nouveau_pv = database.modifier_pv_pokemon(user_id, nom, -degats, pv_max)
+        nouveau_pv = database.modifier_pv_pokemon(user_id, nom, -degats, pv_max, contexte="raid")
         if nouveau_pv <= 0:
             nouveaux_ko.append(nom)
 

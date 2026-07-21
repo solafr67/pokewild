@@ -144,8 +144,8 @@ DRAFT_PICKS_PAR_JOUEUR = 3
 # peuvent tenter la même arène en parallèle, chacun son run indépendant. Une défaite
 # met fin au run entier (retenter au prochain spawn).
 CHANNEL_ARENE_ID = CHANNEL_AVENTURE_ID
-ARENE_INTERVALLE_HEURES = 6
-ARENE_DUREE_DISPONIBLE_MINUTES = 30  # fenêtre pour démarrer un run après le spawn
+ARENE_INTERVALLE_HEURES = 2
+ARENE_DUREE_DISPONIBLE_MINUTES = 20  # fenêtre pour démarrer un run après le spawn
 ARENE_TAILLE_APPRENTI_1 = 3
 ARENE_TAILLE_APPRENTI_2 = 4
 ARENE_TAILLE_CHAMPION = 5
