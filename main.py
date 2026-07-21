@@ -1805,6 +1805,27 @@ async def badges_arene_cmd(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
+@bot.tree.command(name="force-arene", description="[Admin] Force l'ouverture immédiate d'une arène")
+@app_commands.describe(type_pokemon="Type de l'arène (aléatoire si non précisé)")
+@app_commands.checks.has_permissions(administrator=True)
+async def force_arene_cmd(interaction: discord.Interaction, type_pokemon: str = None):
+    if type_pokemon and type_pokemon.lower() not in EMOJI_TYPES:
+        await interaction.response.send_message(
+            f"❌ Type inconnu. Types valides : {', '.join(sorted(EMOJI_TYPES.keys()))}", ephemeral=True
+        )
+        return
+
+    channel_id = getattr(config, "CHANNEL_ARENE_ID", None)
+    channel = bot.get_channel(channel_id) if channel_id else None
+    if channel is None:
+        await interaction.response.send_message("❌ CHANNEL_ARENE_ID introuvable — vérifie l'ID dans config.py.", ephemeral=True)
+        return
+
+    await arene_module.demarrer_nouvelle_arene(bot, channel, type_arene=type_pokemon.lower() if type_pokemon else None)
+    journal.logger(f"🛠️ <@{interaction.user.id}> a forcé l'ouverture d'une arène (/force-arene).")
+    await interaction.response.send_message(f"✅ Arène ouverte dans {channel.mention} !", ephemeral=True)
+
+
 @bot.tree.command(name="pokedex-info", description="Affiche la fiche détaillée d'un Pokémon précis")
 @app_commands.describe(membre="Voir la fiche chez un autre joueur (pratique pour les échanges) — toi par défaut")
 async def pokedex_info(interaction: discord.Interaction, nom: str, membre: discord.Member = None):

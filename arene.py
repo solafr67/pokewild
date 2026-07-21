@@ -240,6 +240,20 @@ class VueContinuerArene(discord.ui.View):
         database.terminer_run_arene(self.arene_id, self.joueur_id, "defaite")
 
 
+async def demarrer_nouvelle_arene(bot, channel, type_arene: str = None) -> int:
+    """Ouvre une nouvelle arène dans ce channel (type aléatoire si non précisé).
+    Retourne l'ID de l'arène créée."""
+    type_arene = type_arene or random.choice(list(EMOJI_TYPES.keys()))
+    date_expiration = int(time.time()) + config.ARENE_DUREE_DISPONIBLE_MINUTES * 60
+    arene_id = database.creer_arene_spawn(type_arene, channel.id, date_expiration)
+
+    embed = construire_embed_spawn(type_arene, date_expiration)
+    vue = VueDefierArene(bot, arene_id)
+    await channel.send(embed=embed, view=vue)
+    journal.logger(f"🏟️ Nouvelle arène {type_arene} ouverte.")
+    return arene_id
+
+
 async def boucle_arene(bot):
     """Toutes les config.ARENE_INTERVALLE_HEURES, ouvre une nouvelle arène d'un type
     aléatoire dans config.CHANNEL_ARENE_ID."""
@@ -257,14 +271,7 @@ async def boucle_arene(bot):
                 print("⚠️ CHANNEL_ARENE_ID introuvable — vérifie l'ID dans config.py.")
                 continue
 
-            type_arene = random.choice(list(EMOJI_TYPES.keys()))
-            date_expiration = int(time.time()) + config.ARENE_DUREE_DISPONIBLE_MINUTES * 60
-            arene_id = database.creer_arene_spawn(type_arene, channel.id, date_expiration)
-
-            embed = construire_embed_spawn(type_arene, date_expiration)
-            vue = VueDefierArene(bot, arene_id)
-            await channel.send(embed=embed, view=vue)
-            journal.logger(f"🏟️ Nouvelle arène {type_arene} ouverte.")
+            await demarrer_nouvelle_arene(bot, channel)
         except Exception:
             import traceback
 
