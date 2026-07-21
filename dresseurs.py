@@ -282,9 +282,11 @@ async def demarrer_combat_dresseur(
     channel: discord.TextChannel,
     interaction: discord.Interaction = None,
     multiplicateur_pc: float = 1.0,
+    apres_combat=None,
+    archetype_direct: dict = None,
 ):
     dresseur_row = database.obtenir_dresseur_actif(dresseur_id)
-    archetype = next(
+    archetype = archetype_direct or next(
         (a for a in ARCHETYPES + [ARCHETYPE_GLADIO] if a["nom"] == dresseur_row["archetype_nom"]), ARCHETYPES[0]
     )
 
@@ -390,7 +392,7 @@ async def demarrer_combat_dresseur(
     await _jouer_tour_ia(combat_id, id_dresseur_combat)
 
     bot.loop.create_task(
-        _boucle_resolution_dresseur(bot, combat_id, thread.id, msg.id, dresseur_id, joueur.id, id_dresseur_combat, archetype, pc_cible)
+        _boucle_resolution_dresseur(bot, combat_id, thread.id, msg.id, dresseur_id, joueur.id, id_dresseur_combat, archetype, pc_cible, apres_combat)
     )
 
 
@@ -422,7 +424,7 @@ async def _jouer_tour_ia(combat_id: int, dresseur_id: int):
     database.enregistrer_action_pvp(combat_id, dresseur_id, action)
 
 
-async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dresseur_id, joueur_id, id_dresseur_combat, archetype, pc_cible):
+async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dresseur_id, joueur_id, id_dresseur_combat, archetype, pc_cible, apres_combat=None):
     import asyncio
 
     while True:
@@ -442,6 +444,13 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
         vainqueur_id = combat_module.verifier_fin_combat(combat_id)
 
         thread = bot.get_channel(int(thread_id))
+        if thread is None:
+            # get_channel ne regarde que le cache local — même correctif que combat.py :
+            # on vérifie pour de vrai auprès de Discord avant de conclure.
+            try:
+                thread = await bot.fetch_channel(int(thread_id))
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                thread = None
         if thread is None:
             database.terminer_combat_pvp(combat_id)
             return
@@ -513,6 +522,15 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
                 await thread.send(embeds=embeds_a_envoyer)
 
             bot.loop.create_task(_supprimer_fil_apres_delai(thread, combat_module.DELAI_SUPPRESSION_FIL))
+
+            if apres_combat is not None:
+                try:
+                    await apres_combat(vainqueur_id == joueur_id, joueur_id, thread)
+                except Exception:
+                    import traceback
+
+                    print("⚠️ Erreur dans le callback apres_combat (combat déjà résolu normalement) :")
+                    traceback.print_exc()
             return
 
         # Tour suivant : l'IA rejoue tout de suite, seul le joueur humain fait attendre

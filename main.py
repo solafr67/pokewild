@@ -34,6 +34,7 @@ import saison as saison_module
 import wiki as wiki_module
 import parrainage as parrainage_module
 import draft_pvp as draft_pvp_module
+import arene as arene_module
 import meteo
 import niveaux_pokemon
 from pokemon_data import (
@@ -42,6 +43,7 @@ from pokemon_data import (
     EMOJI_OBJETS_DIVERS,
     EMOJI_POKEDOLLAR,
     EMOJI_RARETE,
+    EMOJI_TYPES,
     EMOJI_SOINS,
     NOM_BALL_AFFICHAGE,
     NOM_OBJETS_DIVERS,
@@ -1145,6 +1147,10 @@ async def on_ready():
         bot.loop.create_task(parrainage_module.boucle_confirmation_parrainages(bot))
         bot.boucle_parrainage_lancee = True
 
+    if not getattr(bot, "boucle_arene_lancee", False):
+        bot.loop.create_task(arene_module.boucle_arene(bot))
+        bot.boucle_arene_lancee = True
+
     if not getattr(bot, "boucle_gladio_lancee", False):
         bot.loop.create_task(boucle_gladio_spontane())
         bot.boucle_gladio_lancee = True
@@ -1779,6 +1785,24 @@ async def defi_draft_cmd(interaction: discord.Interaction, adversaire: discord.M
         view=vue,
     )
     await interaction.response.send_message(f"Défi envoyé dans {thread.mention} !", ephemeral=True)
+
+
+@bot.tree.command(name="badges-arene", description="Vois les badges d'Arène que tu as débloqués")
+async def badges_arene_cmd(interaction: discord.Interaction):
+    badges = database.obtenir_badges_arene(interaction.user.id)
+    bonus_pourcent = round(config.ARENE_BONUS_DEGATS_PAR_BADGE * 100)
+
+    embed = discord.Embed(
+        title=f"🎖️ Badges d'Arène — {len(badges)}/18",
+        color=discord.Color.orange(),
+    )
+    if badges:
+        texte = ", ".join(f"{EMOJI_TYPES.get(t, '')} {t.capitalize()}" for t in sorted(badges))
+        embed.add_field(name="Débloqués", value=texte, inline=False)
+    else:
+        embed.description = "Aucun badge débloqué pour l'instant — bats un Champion d'Arène pour commencer !"
+    embed.set_footer(text=f"Chaque badge donne +{bonus_pourcent}% de dégâts permanents avec les attaques de ce type.")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(name="pokedex-info", description="Affiche la fiche détaillée d'un Pokémon précis")

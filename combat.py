@@ -520,9 +520,15 @@ async def resoudre_tour(combat_id: int) -> list:
             cle_boost_def = "def_spe" if est_special else "def"
             stat_def_boostee = max(1, stat_def / mult_stage(boosts_def[cle_boost_def]))
             stat_off_boostee = max(1, stat_off * mult_stage(boosts_atk[cle_boost_off]))
+            # Bonus permanent d'Arène : +X% si l'attaquant a débloqué le badge du type de
+            # cette attaque (voir arene.py / config.ARENE_BONUS_DEGATS_PAR_BADGE).
+            bonus_badge = 1.0
+            if user_id > 0 and database.possede_badge_arene(user_id, attaque["type"]):
+                bonus_badge = 1.0 + config.ARENE_BONUS_DEGATS_PAR_BADGE
+
             degats = max(1, round(
                 ((2 * row_atk["niveau"] / 5 + 2) * attaque["puissance"] * stat_off_boostee / stat_def_boostee / 50 + 2)
-                * multi_type * stab * variance
+                * multi_type * stab * variance * bonus_badge
             ))
 
             pv_restants = database.appliquer_degats_pvp(combat_id, adversaire_id, nom_def, degats)

@@ -139,6 +139,22 @@ DRAFT_NIVEAU = 50
 DRAFT_TAILLE_POOL = 8
 DRAFT_PICKS_PAR_JOUEUR = 3
 
+# --- Arène (PvE) : spawn à intervalle fixe dans le channel Aventure, 3 combats
+# (2 Apprentis + le Champion), type tiré au hasard à chaque spawn. Plusieurs joueurs
+# peuvent tenter la même arène en parallèle, chacun son run indépendant. Une défaite
+# met fin au run entier (retenter au prochain spawn).
+CHANNEL_ARENE_ID = CHANNEL_AVENTURE_ID
+ARENE_INTERVALLE_HEURES = 6
+ARENE_DUREE_DISPONIBLE_MINUTES = 30  # fenêtre pour démarrer un run après le spawn
+ARENE_TAILLE_APPRENTI_1 = 3
+ARENE_TAILLE_APPRENTI_2 = 4
+ARENE_TAILLE_CHAMPION = 5
+ARENE_MULTIPLICATEUR_CHAMPION = 1.15  # comme Gladio : légèrement plus fort que le joueur
+ARENE_RARETES_CHAMPION = {"rare", "hyper_rare", "legendaire"}
+ARENE_RECOMPENSE_DOLLARS_APPRENTI = (80, 150)
+ARENE_RECOMPENSE_DOLLARS_CHAMPION = (250, 400)
+ARENE_BONUS_DEGATS_PAR_BADGE = 0.03  # +3% de dégâts pour les attaques du type d'un badge obtenu
+
 # --- Rival (Gladio) ---
 GLADIO_JOURS_PAR_PALIER_DECAY = 14  # perd 1 palier de familiarité tous les X jours d'inactivité
 GLADIO_COOLDOWN_DEFI = 24 * 3600  # un défi contre Gladio par jour et par joueur

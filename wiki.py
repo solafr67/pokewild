@@ -218,6 +218,22 @@ PAGES = {
             "types, Trivia PokéWild, une question à la fois, premier qui trouve gagne"
         ),
     },
+    "arene": {
+        "titre": "Arène",
+        "emoji": "🏟️",
+        "texte": (
+            "Une arène d'un type aléatoire ouvre régulièrement dans le channel Aventure. "
+            "Clique sur **Défier l'Arène** pour enchaîner 3 combats : 2 Apprentis puis le "
+            "**Champion** (Rare et au-dessus, tous du type de l'arène).\n\n"
+            "Entre chaque combat, tu peux soigner ton équipe (coûte une potion) ou "
+            "enchaîner directement. **Une défaite met fin à ta tentative** — retente ta "
+            "chance à la prochaine ouverture. Plusieurs joueurs peuvent tenter la même "
+            "arène en parallèle, chacun son run.\n\n"
+            "Vaincre un Champion pour la première fois débloque son **badge**, "
+            "définitif — `/badges-arene` pour voir ta collection (18 possibles). Chaque "
+            "badge donne un petit bonus de dégâts permanent avec les attaques de ce type."
+        ),
+    },
     "draft_pvp": {
         "titre": "Draft PvP",
         "emoji": "🎯",

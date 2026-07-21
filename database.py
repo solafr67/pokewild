@@ -604,6 +604,40 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS arene_spawn (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type_arene TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            date_expiration INTEGER NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS arene_runs (
+            arene_spawn_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            etape INTEGER NOT NULL DEFAULT 0,
+            statut TEXT NOT NULL DEFAULT 'en_cours',
+            PRIMARY KEY (arene_spawn_id, user_id)
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS arene_badges (
+            user_id INTEGER NOT NULL,
+            type_pokemon TEXT NOT NULL,
+            date_obtenu INTEGER NOT NULL,
+            PRIMARY KEY (user_id, type_pokemon)
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS combat_boosts (
             combat_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
@@ -1573,6 +1607,111 @@ def definir_ivs_capture(capture_id: int, ivs: dict):
     )
     conn.commit()
     conn.close()
+
+
+def creer_arene_spawn(type_arene: str, channel_id: int, date_expiration: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO arene_spawn (type_arene, channel_id, date_expiration) VALUES (?, ?, ?)",
+        (type_arene, str(channel_id), date_expiration),
+    )
+    arene_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return arene_id
+
+
+def obtenir_arene_spawn(arene_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM arene_spawn WHERE id = ?", (arene_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def obtenir_run_arene(arene_id: int, user_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM arene_runs WHERE arene_spawn_id = ? AND user_id = ?", (arene_id, user_id))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def creer_run_arene(arene_id: int, user_id: int) -> bool:
+    """Crée le run d'un joueur pour cette arène — retourne False s'il en a déjà un
+    (une seule tentative par joueur et par spawn, gagnée ou perdue)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM arene_runs WHERE arene_spawn_id = ? AND user_id = ?", (arene_id, user_id))
+    if cur.fetchone() is not None:
+        conn.close()
+        return False
+    cur.execute(
+        "INSERT INTO arene_runs (arene_spawn_id, user_id, etape, statut) VALUES (?, ?, 0, 'en_cours')",
+        (arene_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def avancer_run_arene(arene_id: int, user_id: int, nouvelle_etape: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE arene_runs SET etape = ? WHERE arene_spawn_id = ? AND user_id = ?",
+        (nouvelle_etape, arene_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def terminer_run_arene(arene_id: int, user_id: int, statut: str):
+    """statut : 'victoire' (Champion battu) ou 'defaite'."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE arene_runs SET statut = ? WHERE arene_spawn_id = ? AND user_id = ?",
+        (statut, arene_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def possede_badge_arene(user_id: int, type_pokemon: str) -> bool:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM arene_badges WHERE user_id = ? AND type_pokemon = ?", (user_id, type_pokemon))
+    trouve = cur.fetchone() is not None
+    conn.close()
+    return trouve
+
+
+def accorder_badge_arene(user_id: int, type_pokemon: str) -> bool:
+    """Retourne True si c'est un NOUVEAU badge (première fois), False s'il l'avait déjà."""
+    if possede_badge_arene(user_id, type_pokemon):
+        return False
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT OR IGNORE INTO arene_badges (user_id, type_pokemon, date_obtenu) VALUES (?, ?, ?)",
+        (user_id, type_pokemon, int(time.time())),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def obtenir_badges_arene(user_id: int) -> set:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT type_pokemon FROM arene_badges WHERE user_id = ?", (user_id,))
+    resultats = {row["type_pokemon"] for row in cur.fetchall()}
+    conn.close()
+    return resultats
 
 
 def obtenir_meilleures_ivs(user_id: int, pokemon_nom: str) -> dict:
