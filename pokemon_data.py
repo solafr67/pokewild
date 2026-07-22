@@ -269,6 +269,8 @@ def pp_max_attaque(attaque: dict) -> int:
     """PP maximum d'une attaque. Utilise la vraie valeur PokéAPI si disponible (relancer
     maj_attaques.py pour la récupérer), sinon un repli raisonnable basé sur la puissance
     (les attaques puissantes ont moins de PP dans les vrais jeux)."""
+    if not attaque:
+        return 20  # attaque introuvable (nom mal formé/absent des données) : repli neutre
     pp = attaque.get("pp")
     if pp:
         return pp

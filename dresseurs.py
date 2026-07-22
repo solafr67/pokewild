@@ -394,8 +394,22 @@ async def demarrer_combat_dresseur(
         view=vue,
     )
 
-    # L'IA joue immédiatement son premier tour (le joueur n'attend jamais après elle)
-    await _jouer_tour_ia(combat_id, id_dresseur_combat)
+    # L'IA joue immédiatement son premier tour (le joueur n'attend jamais après elle).
+    # Protégé : si CE tour-ci plante pour une raison imprévue, le combat ne doit jamais
+    # rester bloqué en silence — on journalise l'erreur et on force une action de
+    # secours (Lutte) plutôt que de ne jamais programmer la boucle de résolution.
+    try:
+        await _jouer_tour_ia(combat_id, id_dresseur_combat)
+    except Exception:
+        import traceback
+
+        print(f"⚠️ Erreur dans _jouer_tour_ia au démarrage du combat {combat_id} (Lutte forcée en secours) :")
+        traceback.print_exc()
+        journal.logger(f"🔴 Erreur au 1er tour du combat dresseur {combat_id} — voir logs serveur (Lutte forcée).")
+        try:
+            database.enregistrer_action_pvp(combat_id, id_dresseur_combat, f"attaque:{combat_module.NOM_LUTTE}")
+        except Exception:
+            pass
 
     bot.loop.create_task(
         _boucle_resolution_dresseur(bot, combat_id, thread.id, msg.id, dresseur_id, joueur.id, id_dresseur_combat, archetype, pc_cible, apres_combat, gerer_suppression_fil)
@@ -430,11 +444,13 @@ async def _jouer_tour_ia(combat_id: int, dresseur_id: int):
     statut = []
     for nom in equipees.values():
         attaque = combat_module.obtenir_attaque(nom)
+        if not attaque:
+            continue  # nom d'attaque introuvable dans les données : on l'ignore plutôt que planter
         pp_max = pp_max_attaque(attaque)
         pp_restant = database.obtenir_pp(combat_id, dresseur_id, actif_nom, nom, pp_max)
         if pp_restant <= 0:
             continue
-        if attaque and attaque.get("puissance", 0) > 0:
+        if attaque.get("puissance", 0) > 0:
             offensives.append(nom)
         else:
             statut.append(nom)

@@ -208,6 +208,7 @@ class VuePokestop(discord.ui.View):
         texte_bonus_ball = None
         texte_bonus_potion = None
         texte_bonus_rare = None
+        texte_bonus_oeuf = None
 
         if place_disponible <= 0:
             texte_bonus_ball = "🎒 Ton sac est plein, pas de bonus objets cette fois !"
@@ -271,7 +272,6 @@ class VuePokestop(discord.ui.View):
             # --- Tirage Œuf (indépendant) : palier tiré parmi OEUF_POIDS_POKESTOP,
             # Légendaire volontairement écrasé de rareté ---
             objets_actuels_apres_rare = database.compter_objets_totaux(user_id)
-            texte_bonus_oeuf = None
             if objets_actuels_apres_rare < limite_objets:
                 # Diviser le tirage par le multiplicateur resserre la plage vers le bas,
                 # ce qui augmente la chance de tomber sous un des seuils — sans changer
@@ -1591,6 +1591,12 @@ async def pokedex(
     description="Défie Gladio, ton rival — un vrai combat, équipe légèrement plus forte que la tienne",
 )
 async def defi_gladio_cmd(interaction: discord.Interaction):
+    if not isinstance(interaction.channel, (discord.TextChannel, discord.VoiceChannel)):
+        await interaction.response.send_message(
+            "Cette commande doit être utilisée dans un channel classique (pas un fil).", ephemeral=True
+        )
+        return
+
     if database.combat_en_cours_pour_joueur(interaction.user.id):
         await interaction.response.send_message("❌ Tu as déjà un combat en cours !", ephemeral=True)
         return

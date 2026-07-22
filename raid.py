@@ -88,6 +88,21 @@ class VueSalleAttente(discord.ui.View):
         embed = construire_embed_salle_attente(self.boss, self.etoiles, self.date_debut_combat, nb_joueurs)
         await interaction.response.edit_message(embed=embed, view=self)
 
+        # Avertit si une partie de l'équipe est indisponible (partie en exploration, ou
+        # exploration terminée mais pas encore récupérée — les Pokémon restent "verrouillés"
+        # jusqu'à la récupération) : sinon le joueur participe pour 0 dégât sans le savoir.
+        equipe_complete = database.obtenir_equipe_combat(interaction.user.id)
+        equipe_dispo = set(database.obtenir_equipe_combat_disponible(interaction.user.id))
+        indisponibles = [nom for nom in equipe_complete if nom not in equipe_dispo]
+        if indisponibles:
+            await interaction.followup.send(
+                f"⚠️ {', '.join(indisponibles)} de ton équipe {'est' if len(indisponibles) == 1 else 'sont'} "
+                f"actuellement indisponible(s) (partie(s) en exploration, ou exploration terminée mais pas "
+                f"encore récupérée) — il(s) ne participera(ont) pas à ce raid tant que tu ne l'auras/les "
+                f"auras pas récupéré(s) (`/exploration`).",
+                ephemeral=True,
+            )
+
     @discord.ui.button(label="Équipe la plus forte", style=discord.ButtonStyle.secondary, emoji="🛡️")
     async def equipe_auto(self, interaction: discord.Interaction, button: discord.ui.Button):
         noms = equipe_combat.equiper_meilleure_equipe(interaction.user.id)
@@ -271,24 +286,34 @@ def calculer_degats(user_id: int) -> int:
     indépendante). Un Pokémon K.O. (0 PV) ne contribue plus tant qu'il n'est pas soigné."""
     noms_equipe = database.obtenir_equipe_combat_disponible(user_id)
     if not noms_equipe:
+        print(f"[RAID DEBUG] user {user_id} : obtenir_equipe_combat_disponible vide (équipe non configurée, ou tout en exploration)")
         return 0
 
     captures = database.obtenir_pokedex_joueur(user_id)
     especes_possedees = {row["pokemon_nom"] for row in captures}
 
     degats_total = 0
+    details = []
     for nom in noms_equipe:
         if nom not in especes_possedees:
+            details.append(f"{nom}: absent de especes_possedees (pokedex)")
             continue
         stats = combat_module.stats_combattant_reel(user_id, nom)
         pv_actuels = database.obtenir_pv_actuels(user_id, nom, stats["pv"], contexte="raid")
         if pv_actuels <= 0:
+            details.append(f"{nom}: K.O. en contexte raid (pv_actuels={pv_actuels}/{stats['pv']})")
             continue  # K.O., ne participe plus
 
         stat_offensive = (stats["attaque"] + stats["attaque_spe"]) / 2
         degats_pokemon = stat_offensive * config.FACTEUR_DEGATS_RAID
         variance = random.uniform(config.DEGATS_VARIANCE_MIN, config.DEGATS_VARIANCE_MAX)
-        degats_total += round(degats_pokemon * variance)
+        d = round(degats_pokemon * variance)
+        details.append(f"{nom}: +{d} (stat_off={stat_offensive:.0f}, atq={stats['attaque']}, atq_spe={stats['attaque_spe']})")
+        degats_total += d
+
+    if degats_total == 0:
+        print(f"[RAID DEBUG] user {user_id} : dégâts totaux = 0. Détail par Pokémon : {details}")
+
     return degats_total
 
 

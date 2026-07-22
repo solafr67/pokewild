@@ -2954,7 +2954,7 @@ def activer_boost(user_id: int, type_boost: str, duree_secondes: int) -> int:
     )
     row = cur.fetchone()
     maintenant = int(time.time())
-    base = row["date_expiration"] if row and row["date_expiration"] > maintenant else maintenant
+    base = row["date_expiration"] if row and row["date_expiration"] is not None and row["date_expiration"] > maintenant else maintenant
     nouvelle_expiration = base + duree_secondes
 
     cur.execute(
@@ -2980,7 +2980,7 @@ def obtenir_boost_actif(user_id: int, type_boost: str):
     )
     row = cur.fetchone()
     conn.close()
-    if row and row["date_expiration"] > int(time.time()):
+    if row and row["date_expiration"] is not None and row["date_expiration"] > int(time.time()):
         return row["date_expiration"]
     return None
 
@@ -2991,7 +2991,11 @@ def obtenir_tous_boosts_actifs(user_id: int) -> dict:
     cur = conn.cursor()
     cur.execute("SELECT type_boost, date_expiration FROM boosts_actifs WHERE user_id = ?", (user_id,))
     maintenant = int(time.time())
-    resultat = {row["type_boost"]: row["date_expiration"] for row in cur.fetchall() if row["date_expiration"] > maintenant}
+    resultat = {
+        row["type_boost"]: row["date_expiration"]
+        for row in cur.fetchall()
+        if row["date_expiration"] is not None and row["date_expiration"] > maintenant
+    }
     conn.close()
     return resultat
 
