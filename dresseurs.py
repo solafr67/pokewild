@@ -450,7 +450,11 @@ async def _jouer_tour_ia(combat_id: int, dresseur_id: int):
         pp_restant = database.obtenir_pp(combat_id, dresseur_id, actif_nom, nom, pp_max)
         if pp_restant <= 0:
             continue
-        if attaque.get("puissance", 0) > 0:
+        # ATTENTION : pour une attaque de statut, "puissance" vaut None dans les données
+        # (la clé EXISTE, donc .get("puissance", 0) renvoie None, pas 0) — comparer None > 0
+        # levait un TypeError qui tuait silencieusement la boucle de résolution à partir du
+        # tour 2 (combat figé pour toujours sur l'affichage du tour précédent).
+        if (attaque.get("puissance") or 0) > 0:
             offensives.append(nom)
         else:
             statut.append(nom)
@@ -471,17 +475,70 @@ async def _jouer_tour_ia(combat_id: int, dresseur_id: int):
 async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dresseur_id, joueur_id, id_dresseur_combat, archetype, pc_cible, apres_combat=None, gerer_suppression_fil=True):
     import asyncio
 
+    # Toute exception non prévue dans le corps de la boucle tuait la tâche asyncio EN
+    # SILENCE : le combat restait figé pour toujours sur l'affichage du dernier tour
+    # (c'était la cause des combats dresseur/Arène/Gladio "bloqués"). On protège donc
+    # chaque tick : erreur → journalisée + nouvelle tentative au tick suivant ; et si
+    # l'erreur persiste plusieurs ticks d'affilée, on clôture proprement le combat avec
+    # un message de secours plutôt que de laisser le joueur coincé indéfiniment.
+    echecs_consecutifs = 0
+
     while True:
         await asyncio.sleep(5)
 
+        try:
+            await _tick_resolution_dresseur(
+                bot, combat_id, thread_id, message_id, dresseur_id, joueur_id,
+                id_dresseur_combat, archetype, pc_cible, apres_combat, gerer_suppression_fil,
+            )
+            echecs_consecutifs = 0
+        except _CombatTermine:
+            return
+        except Exception:
+            import traceback
+
+            echecs_consecutifs += 1
+            print(f"⚠️ Erreur au tick de résolution du combat dresseur {combat_id} (tentative {echecs_consecutifs}/3) :")
+            traceback.print_exc()
+            if echecs_consecutifs == 1:
+                journal.logger(
+                    f"🔴 Erreur dans la résolution du combat dresseur {combat_id} "
+                    f"(**{archetype['nom']}** vs <@{joueur_id}>) — nouvelle tentative au prochain tick, voir logs serveur."
+                )
+            if echecs_consecutifs >= 3:
+                # Fin de secours : on rend la main au joueur plutôt que de le bloquer.
+                database.terminer_combat_pvp(combat_id)
+                journal.logger(
+                    f"🔴 Combat dresseur {combat_id} clôturé de force après 3 erreurs consécutives "
+                    f"— <@{joueur_id}> n'est plus bloqué (aucune récompense distribuée)."
+                )
+                try:
+                    thread = bot.get_channel(int(thread_id)) or await bot.fetch_channel(int(thread_id))
+                    if thread is not None:
+                        await thread.send(
+                            f"⚠️ <@{joueur_id}> — une erreur répétée a interrompu ce combat contre "
+                            f"**{archetype['nom']}**. Il a été annulé (ni victoire ni défaite), tu peux en relancer un."
+                        )
+                        if gerer_suppression_fil:
+                            bot.loop.create_task(_supprimer_fil_apres_delai(thread, combat_module.DELAI_SUPPRESSION_FIL))
+                except Exception:
+                    pass
+                return
+
+
+class _CombatTermine(Exception):
+    """Signal interne : le combat est fini (ou son fil a disparu), la boucle doit s'arrêter."""
+
+
+async def _tick_resolution_dresseur(bot, combat_id, thread_id, message_id, dresseur_id, joueur_id, id_dresseur_combat, archetype, pc_cible, apres_combat=None, gerer_suppression_fil=True):
         combat = database.obtenir_combat(combat_id)
         if not combat or not combat["actif"]:
-            return
+            raise _CombatTermine
 
         deux_prets = combat["action1"] is not None and combat["action2"] is not None
         timer_expire = int(time.time()) >= combat["date_limite_tour"]
         if not deux_prets and not timer_expire:
-            continue
+            return  # rien à résoudre ce tick-ci
 
         log = await combat_module.resoudre_tour(combat_id)
         log = _nettoyer_log_dresseur(log, id_dresseur_combat, archetype["nom"])
@@ -497,7 +554,7 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
                 thread = None
         if thread is None:
             database.terminer_combat_pvp(combat_id)
-            return
+            raise _CombatTermine
 
         if vainqueur_id is not None:
             database.terminer_combat_pvp(combat_id)
@@ -562,12 +619,17 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
             elif vainqueur_id == joueur_id and archetype["nom"] == pnj.NOM_RIVAL:
                 embed_rival = pnj.construire_embed_reaction("victoire_gladio", user_id=joueur_id, joueur=f"<@{joueur_id}>")
 
+            embeds_a_envoyer = [embed, embed_rival] if embed_rival else [embed]
             try:
                 msg = await thread.fetch_message(message_id)
-                embeds_a_envoyer = [embed, embed_rival] if embed_rival else [embed]
                 await msg.edit(embeds=embeds_a_envoyer, view=None)
-            except discord.NotFound:
-                await thread.send(embeds=embeds_a_envoyer)
+            except discord.HTTPException:
+                # Message introuvable OU édition refusée (embed trop long, erreur API...) :
+                # on renvoie l'annonce dans le fil plutôt que de laisser mourir la boucle.
+                try:
+                    await thread.send(embeds=embeds_a_envoyer)
+                except discord.HTTPException:
+                    await thread.send(f"🏁 Combat terminé — vainqueur : <@{vainqueur_id}> !")
 
             if gerer_suppression_fil:
                 bot.loop.create_task(_supprimer_fil_apres_delai(thread, combat_module.DELAI_SUPPRESSION_FIL))
@@ -580,7 +642,7 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
 
                     print("⚠️ Erreur dans le callback apres_combat (combat déjà résolu normalement) :")
                     traceback.print_exc()
-            return
+            raise _CombatTermine
 
         # Tour suivant : l'IA rejoue tout de suite, seul le joueur humain fait attendre
         nouvelle_limite = int(time.time()) + combat_module.DUREE_TOUR
@@ -595,8 +657,8 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
         try:
             msg = await thread.fetch_message(message_id)
             await msg.edit(embeds=embeds, view=vue)
-        except discord.NotFound:
-            pass
+        except discord.HTTPException:
+            pass  # message disparu ou édition refusée : le prochain tick retentera
 
 
 async def _supprimer_fil_apres_delai(thread, delai):

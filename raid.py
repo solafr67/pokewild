@@ -8,6 +8,7 @@ import config
 import database
 import equipe_combat
 import etat_jeu
+import journal
 import leveling
 import niveaux_pokemon
 import pnj
@@ -280,6 +281,12 @@ class VueConfirmerQuitterRaidEnCombat(discord.ui.View):
         await interaction.response.edit_message(content="Tu restes dans le raid !", view=None)
 
 
+# Joueurs pour lesquels un diagnostic "0 dégât" a déjà été remonté dans le channel de
+# logs Discord depuis le démarrage du bot — évite d'y répéter le même message à chaque
+# tick (le print, lui, reste à chaque tick dans journalctl pour le détail).
+_debug_zero_deja_signale = set()
+
+
 def calculer_degats(user_id: int) -> int:
     """Calcule les dégâts d'un tick pour un joueur : chaque Pokémon de son équipe de combat
     ENCORE EN VIE (PV > 0) inflige ses propres dégâts (stat offensive réelle × variance
@@ -287,6 +294,12 @@ def calculer_degats(user_id: int) -> int:
     noms_equipe = database.obtenir_equipe_combat_disponible(user_id)
     if not noms_equipe:
         print(f"[RAID DEBUG] user {user_id} : obtenir_equipe_combat_disponible vide (équipe non configurée, ou tout en exploration)")
+        if user_id not in _debug_zero_deja_signale:
+            _debug_zero_deja_signale.add(user_id)
+            journal.logger(
+                f"⚠️ [RAID] <@{user_id}> contribue 0 dégât : équipe de combat vide "
+                f"(non configurée, ou entièrement en exploration)."
+            )
         return 0
 
     captures = database.obtenir_pokedex_joueur(user_id)
@@ -313,6 +326,12 @@ def calculer_degats(user_id: int) -> int:
 
     if degats_total == 0:
         print(f"[RAID DEBUG] user {user_id} : dégâts totaux = 0. Détail par Pokémon : {details}")
+        if user_id not in _debug_zero_deja_signale:
+            _debug_zero_deja_signale.add(user_id)
+            journal.logger(
+                f"⚠️ [RAID] <@{user_id}> contribue 0 dégât ce raid. Détail : "
+                + " • ".join(details)[:900]
+            )
 
     return degats_total
 

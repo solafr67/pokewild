@@ -133,6 +133,16 @@ def init_db():
     # des captures ENCORE en base au moment de la migration, pour ne pas remettre tout le monde
     # à zéro sur les classements concernés. Les captures relâchées avant cette migration restent
     # malheureusement perdues pour ce compteur (elles n'existent plus nulle part pour les compter).
+    # La table settings est créée plus bas dans init_db : sur une base VIERGE, la lire ici
+    # plantait (no such table) et empêchait tout démarrage. On s'assure qu'elle existe, et
+    # s'il n'y a pas encore de table captures (installation neuve), il n'y a tout simplement
+    # rien à rattraper : on pose le marqueur et on passe.
+    cur.execute("CREATE TABLE IF NOT EXISTS settings (cle TEXT PRIMARY KEY, valeur TEXT)")
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='captures'")
+    if cur.fetchone() is None:
+        cur.execute(
+            "INSERT OR IGNORE INTO settings (cle, valeur) VALUES ('backfill_captures_totales_fait', '1')"
+        )
     cur.execute("SELECT valeur FROM settings WHERE cle = 'backfill_captures_totales_fait'")
     if cur.fetchone() is None:
         cur.execute(
@@ -1096,6 +1106,24 @@ def obtenir_toutes_paires_capturees() -> list:
     resultats = [(row["user_id"], row["pokemon_nom"]) for row in cur.fetchall()]
     conn.close()
     return resultats
+
+
+def reinitialiser_pool_raid_joueur(user_id: int):
+    """Remet à neuf le pool de PV séparé du raid pour ce joueur (voir
+    etat_combat_pokemon_raid) — appelé au démarrage du combat de CHAQUE raid.
+
+    Sans cette réinitialisation, une équipe mise K.O. par la riposte d'un raid précédent
+    restait K.O. à vie dans le contexte raid (hors raid, tous les soins ciblent le pool
+    normal, et rien d'autre ne touchait jamais ce pool) : le joueur infligeait 0 dégât au
+    boss ET ne subissait aucune riposte, alors que son équipe s'affichait full vie partout
+    (l'affichage lit le pool normal). C'était LA cause du "boss qui n'encaisse rien".
+    Supprimer les lignes suffit : obtenir_pv_actuels ré-initialise au max à la prochaine
+    lecture."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM etat_combat_pokemon_raid WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
 
 
 def joueur_dans_raid_actif(user_id: int) -> bool:

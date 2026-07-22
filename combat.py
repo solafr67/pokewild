@@ -148,7 +148,13 @@ def construire_embeds_combat(combat_id: int, log_tour: list = None, noms: dict =
     dernier = discord.Embed(color=discord.Color.dark_grey())
     dernier.set_author(name=f"⚔️ Tour {combat['tour']}")
     if log_tour:
-        dernier.description = "\n".join(log_tour)
+        # Limite Discord : 4096 caractères par description d'embed — un tour très bavard
+        # (multi-K.O., pièges, statuts...) pouvait dépasser et faire échouer l'édition du
+        # message (erreur 400), ce qui tuait la boucle de résolution. On tronque proprement.
+        texte_log = "\n".join(log_tour)
+        if len(texte_log) > 4000:
+            texte_log = texte_log[:4000] + "\n… *(log du tour tronqué)*"
+        dernier.description = texte_log
     temps_restant = max(0, combat["date_limite_tour"] - int(time.time()))
     dernier.set_footer(text=f"Tour résolu quand les deux joueurs ont joué, ou dans ~{temps_restant}s")
     embeds.append(dernier)
@@ -743,15 +749,62 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
 
 
 async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id: int, duree: int):
-    """Attend la fin du timer ou que les deux joueurs aient joué, puis résout le tour."""
+    """Attend la fin du timer ou que les deux joueurs aient joué, puis résout le tour.
+
+    Toute exception imprévue dans un tick tuait la tâche asyncio EN SILENCE et laissait
+    le combat figé pour toujours (même famille de bug que les combats dresseur bloqués).
+    Chaque tick est donc protégé : erreur → journalisée + retentée au tick suivant, et si
+    l'erreur persiste 3 ticks d'affilée, le combat est clôturé proprement plutôt que de
+    bloquer les deux joueurs indéfiniment."""
     import asyncio
+
+    echecs_consecutifs = 0
 
     while True:
         await asyncio.sleep(5)
 
+        try:
+            fini = await _tick_resolution_pvp(bot, combat_id, thread_id, message_id, duree)
+            if fini:
+                return
+            echecs_consecutifs = 0
+            continue
+        except Exception:
+            import traceback
+
+            echecs_consecutifs += 1
+            print(f"⚠️ Erreur au tick de résolution du combat PvP {combat_id} (tentative {echecs_consecutifs}/3) :")
+            traceback.print_exc()
+            if echecs_consecutifs == 1:
+                journal.logger(
+                    f"🔴 Erreur dans la résolution du combat PvP {combat_id} — nouvelle tentative "
+                    f"au prochain tick, voir logs serveur."
+                )
+            if echecs_consecutifs >= 3:
+                database.terminer_combat_pvp(combat_id)
+                journal.logger(
+                    f"🔴 Combat PvP {combat_id} clôturé de force après 3 erreurs consécutives — "
+                    f"les joueurs ne sont plus bloqués (aucune récompense distribuée)."
+                )
+                try:
+                    thread = bot.get_channel(int(thread_id)) or await bot.fetch_channel(int(thread_id))
+                    if thread is not None:
+                        await thread.send(
+                            "⚠️ Une erreur répétée a interrompu ce combat. Il a été annulé "
+                            "(ni victoire ni défaite), vous pouvez en relancer un."
+                        )
+                        bot.loop.create_task(supprimer_fil_apres_delai(thread, DELAI_SUPPRESSION_FIL))
+                except Exception:
+                    pass
+                return
+
+
+async def _tick_resolution_pvp(bot, combat_id: int, thread_id: int, message_id: int, duree: int) -> bool:
+    """Un tick de résolution. Retourne True si le combat est terminé (la boucle s'arrête)."""
+    if True:
         combat = database.obtenir_combat(combat_id)
         if not combat or not combat["actif"]:
-            return
+            return True
 
         # Un joueur en pleine charge/recharge (attaque à deux tours) n'a rien à choisir ce
         # tour-ci — son action reste NULL à raison, mais ça ne doit pas forcer à attendre le
@@ -767,7 +820,7 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
         timer_expire = int(time.time()) >= combat["date_limite_tour"]
 
         if not deux_joueurs_prets and not timer_expire:
-            continue
+            return False  # rien à résoudre ce tick-ci
 
         # Résoudre le tour
         log = await resoudre_tour(combat_id)
@@ -785,7 +838,7 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
 
         if thread is None:
             database.terminer_combat_pvp(combat_id)
-            return
+            return True
 
         if vainqueur_id is not None:
             database.terminer_combat_pvp(combat_id)
@@ -865,7 +918,7 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
             except Exception:
                 pass
             bot.loop.create_task(supprimer_fil_apres_delai(thread, DELAI_SUPPRESSION_FIL))
-            return
+            return True
 
         # Passer au tour suivant
         nouvelle_limite = int(time.time()) + duree
@@ -884,8 +937,9 @@ async def boucle_resolution_tour(bot, combat_id: int, thread_id: int, message_id
         try:
             msg = await thread.fetch_message(message_id)
             await msg.edit(embeds=embeds, view=vue)
-        except discord.NotFound:
-            pass
+        except discord.HTTPException:
+            pass  # message disparu ou édition refusée : le prochain tick retentera
+        return False
 
 
 # ----------------------------------------------------------------------------

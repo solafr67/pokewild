@@ -819,6 +819,13 @@ async def activer_combat_raid(raid_id: int, channel_id: int, message_id: int, bo
         pv_max_reel = round(pv_base * (1 + (nb_joueurs - 1) * config.FACTEUR_PV_PAR_JOUEUR_SUPPLEMENTAIRE))
         database.redefinir_pv_max_raid(raid_id, pv_max_reel)
 
+        # Chaque raid est un combat neuf : on remet à plein le pool de PV séparé du raid
+        # pour tous les participants. Sans ça, une équipe K.O. par la riposte d'un raid
+        # précédent restait K.O. à vie dans ce pool (jamais soignée hors raid) → 0 dégât
+        # infligé au boss ET 0 riposte subie, équipe pourtant affichée full vie partout.
+        for row in database.obtenir_participants_raid(raid_id):
+            database.reinitialiser_pool_raid_joueur(row["user_id"])
+
         date_fin_combat = int(time.time()) + config.DUREE_RAID_MINUTES * 60
         database.definir_date_fin_raid(raid_id, date_fin_combat)
 
@@ -836,13 +843,32 @@ async def boucle_combat_raid(raid_id: int, channel_id: int, message_id: int, bos
     """Toutes les quelques secondes, applique automatiquement les dégâts de TOUS les
     participants inscrits d'un coup — plus besoin de cliquer pour attaquer, et personne
     n'est exclu si le boss tombe pendant un tick puisque tout le monde est traité ensemble."""
+    # get_channel ne lit que le cache local et a déjà retourné None à tort par le passé
+    # (même correctif que combat.py/dresseurs.py) : on vérifie pour de vrai auprès de
+    # Discord, et surtout on ne sort plus JAMAIS en silence — un raid dont la boucle ne
+    # démarre pas reste sinon figé 15 min sans aucun dégât ni riposte, sans aucune trace.
     channel = bot.get_channel(channel_id)
     if channel is None:
+        try:
+            channel = await bot.fetch_channel(channel_id)
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            channel = None
+    if channel is None:
+        database.terminer_raid(raid_id)
+        journal.logger(
+            f"🔴 Raid {raid_id} : channel {channel_id} introuvable au démarrage du combat — "
+            f"raid annulé (la boucle de combat n'a pas pu démarrer)."
+        )
         return
 
     try:
         message = await channel.fetch_message(message_id)
     except discord.NotFound:
+        database.terminer_raid(raid_id)
+        journal.logger(
+            f"🔴 Raid {raid_id} : message de raid introuvable au démarrage du combat — "
+            f"raid annulé (la boucle de combat n'a pas pu démarrer)."
+        )
         return
 
     while True:
