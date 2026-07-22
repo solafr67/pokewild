@@ -285,6 +285,8 @@ async def demarrer_combat_dresseur(
     multiplicateur_pc: float = 1.0,
     apres_combat=None,
     archetype_direct: dict = None,
+    thread_existant: discord.Thread = None,
+    gerer_suppression_fil: bool = True,
 ):
     dresseur_row = database.obtenir_dresseur_actif(dresseur_id)
     archetype = archetype_direct or next(
@@ -366,12 +368,15 @@ async def demarrer_combat_dresseur(
     database.enregistrer_defi_dresseur(dresseur_id, joueur.id)
 
     try:
-        thread = await channel.create_thread(
-            name=f"⚔️ {joueur.display_name} vs {archetype['nom']}",
-            type=discord.ChannelType.private_thread,
-            invitable=False,
-        )
-        await thread.add_user(joueur)
+        if thread_existant is not None:
+            thread = thread_existant
+        else:
+            thread = await channel.create_thread(
+                name=f"⚔️ {joueur.display_name} vs {archetype['nom']}",
+                type=discord.ChannelType.private_thread,
+                invitable=False,
+            )
+            await thread.add_user(joueur)
     except discord.HTTPException as e:
         await channel.send(f"❌ Impossible de créer le fil de combat : {e}")
         database.terminer_combat_pvp(combat_id)
@@ -393,7 +398,7 @@ async def demarrer_combat_dresseur(
     await _jouer_tour_ia(combat_id, id_dresseur_combat)
 
     bot.loop.create_task(
-        _boucle_resolution_dresseur(bot, combat_id, thread.id, msg.id, dresseur_id, joueur.id, id_dresseur_combat, archetype, pc_cible, apres_combat)
+        _boucle_resolution_dresseur(bot, combat_id, thread.id, msg.id, dresseur_id, joueur.id, id_dresseur_combat, archetype, pc_cible, apres_combat, gerer_suppression_fil)
     )
 
 
@@ -407,25 +412,47 @@ def _nettoyer_log_dresseur(log: list, id_dresseur_combat: int, nom_dresseur: str
 async def _jouer_tour_ia(combat_id: int, dresseur_id: int):
     """L'IA choisit une action pour son tour : privilégie l'attaque (avec PP restant),
     ne switch/soigne jamais volontairement (seulement l'auto-switch sur K.O. déjà géré
-    par resoudre_tour). Reste simple par choix, pour ne pas créer un adversaire frustrant."""
+    par resoudre_tour). Reste simple par choix, pour ne pas créer un adversaire frustrant.
+
+    Parmi ses attaques disponibles, priorité aux attaques OFFENSIVES (puissance > 0) —
+    un choix uniformément aléatoire pouvait, par pur hasard, enchaîner plusieurs attaques
+    de boost de stats d'affilée avant de daigner attaquer, accumulant des stages énormes
+    (+3/+3 vus en jeu) qui rendaient le coup suivant totalement disproportionné. Les
+    attaques de statut/boost restent possibles (pour ne pas être 100% prévisible), mais
+    minoritaires."""
     combat = database.obtenir_combat(combat_id)
     if not combat or not combat["actif"]:
         return
     actif_nom = combat["actif2_nom"] if combat["joueur2_id"] == dresseur_id else combat["actif1_nom"]
 
     equipees = database.obtenir_attaques_equipees(dresseur_id, actif_nom)
-    dispo = []
+    offensives = []
+    statut = []
     for nom in equipees.values():
-        pp_max = pp_max_attaque(combat_module.obtenir_attaque(nom))
+        attaque = combat_module.obtenir_attaque(nom)
+        pp_max = pp_max_attaque(attaque)
         pp_restant = database.obtenir_pp(combat_id, dresseur_id, actif_nom, nom, pp_max)
-        if pp_restant > 0:
-            dispo.append(nom)
+        if pp_restant <= 0:
+            continue
+        if attaque and attaque.get("puissance", 0) > 0:
+            offensives.append(nom)
+        else:
+            statut.append(nom)
 
-    action = f"attaque:{random.choice(dispo)}" if dispo else f"attaque:{combat_module.NOM_LUTTE}"
+    if offensives and (not statut or random.random() < 0.8):
+        choix = random.choice(offensives)
+    elif statut:
+        choix = random.choice(statut)
+    elif offensives:
+        choix = random.choice(offensives)
+    else:
+        choix = None
+
+    action = f"attaque:{choix}" if choix else f"attaque:{combat_module.NOM_LUTTE}"
     database.enregistrer_action_pvp(combat_id, dresseur_id, action)
 
 
-async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dresseur_id, joueur_id, id_dresseur_combat, archetype, pc_cible, apres_combat=None):
+async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dresseur_id, joueur_id, id_dresseur_combat, archetype, pc_cible, apres_combat=None, gerer_suppression_fil=True):
     import asyncio
 
     while True:
@@ -526,7 +553,8 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
             except discord.NotFound:
                 await thread.send(embeds=embeds_a_envoyer)
 
-            bot.loop.create_task(_supprimer_fil_apres_delai(thread, combat_module.DELAI_SUPPRESSION_FIL))
+            if gerer_suppression_fil:
+                bot.loop.create_task(_supprimer_fil_apres_delai(thread, combat_module.DELAI_SUPPRESSION_FIL))
 
             if apres_combat is not None:
                 try:

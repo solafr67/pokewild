@@ -1098,6 +1098,26 @@ def obtenir_toutes_paires_capturees() -> list:
     return resultats
 
 
+def joueur_dans_raid_actif(user_id: int) -> bool:
+    """True si ce joueur est actuellement inscrit à un raid en cours — sert à savoir si
+    le soin depuis le profil doit cibler le pool de PV du raid (voir contexte="raid" sur
+    obtenir_pv_actuels/modifier_pv_pokemon) plutôt que le pool normal."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT 1 FROM raid_participants rp
+        JOIN raid_actuel r ON r.id = rp.raid_id
+        WHERE rp.user_id = ? AND r.actif = 1
+        LIMIT 1
+        """,
+        (user_id,),
+    )
+    trouve = cur.fetchone() is not None
+    conn.close()
+    return trouve
+
+
 def obtenir_points_saison(user_id: int, saison: int) -> int:
     conn = get_connexion()
     cur = conn.cursor()

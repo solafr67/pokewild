@@ -114,7 +114,7 @@ class VueDefierArene(discord.ui.View):
         await _lancer_etape(self.bot, interaction.user, interaction.channel, self.arene_id, spawn["type_arene"], etape=1)
 
 
-async def _lancer_etape(bot, joueur: discord.Member, channel: discord.TextChannel, arene_id: int, type_arene: str, etape: int):
+async def _lancer_etape(bot, joueur: discord.Member, channel: discord.TextChannel, arene_id: int, type_arene: str, etape: int, thread_existant: discord.Thread = None):
     archetype = _archetype_etape(type_arene, etape)
     multiplicateur = config.ARENE_MULTIPLICATEUR_CHAMPION if etape == 3 else 1.0
 
@@ -126,6 +126,7 @@ async def _lancer_etape(bot, joueur: discord.Member, channel: discord.TextChanne
     await dresseurs_module.demarrer_combat_dresseur(
         bot, joueur, dresseur_id, channel,
         multiplicateur_pc=multiplicateur, apres_combat=_apres_combat, archetype_direct=archetype,
+        thread_existant=thread_existant, gerer_suppression_fil=False,
     )
 
 
@@ -134,16 +135,18 @@ async def _resoudre_etape(bot, joueur_id, channel, arene_id, type_arene, etape, 
         database.terminer_run_arene(arene_id, joueur_id, "defaite")
         try:
             await thread.send(
-                f"💀 <@{joueur_id}> — ta tentative d'arène s'arrête là. Retente ta chance à la prochaine ouverture !"
+                f"💀 <@{joueur_id}> — ta tentative d'arène s'arrête là. Retente ta chance à la prochaine ouverture ! "
+                f"(Ce fil sera supprimé dans {combat_module.DELAI_SUPPRESSION_FIL // 60} minutes.)"
             )
         except discord.HTTPException:
             pass
+        bot.loop.create_task(dresseurs_module._supprimer_fil_apres_delai(thread, combat_module.DELAI_SUPPRESSION_FIL))
         return
 
     database.avancer_run_arene(arene_id, joueur_id, etape)
 
     if etape < 3:
-        vue = VueContinuerArene(bot, joueur_id, channel, arene_id, type_arene, etape)
+        vue = VueContinuerArene(bot, joueur_id, channel, arene_id, type_arene, etape, thread)
         try:
             await thread.send(
                 f"🏟️ <@{joueur_id}> — victoire ! Prêt·e pour le combat suivant, ou tu préfères "
@@ -172,15 +175,18 @@ async def _resoudre_etape(bot, joueur_id, channel, arene_id, type_arene, etape, 
             f"permanents avec les attaques de ce type."
         )
     try:
-        await thread.send(texte)
+        await thread.send(
+            texte + f"\n\n🗑️ Ce fil sera supprimé dans {combat_module.DELAI_SUPPRESSION_FIL // 60} minutes."
+        )
     except discord.HTTPException:
         pass
+    bot.loop.create_task(dresseurs_module._supprimer_fil_apres_delai(thread, combat_module.DELAI_SUPPRESSION_FIL))
 
 
 class VueContinuerArene(discord.ui.View):
     """Entre deux combats d'un run d'arène : soin auto (1 potion par Pokémon soigné) ou continuer direct."""
 
-    def __init__(self, bot, joueur_id: int, channel: discord.TextChannel, arene_id: int, type_arene: str, etape_terminee: int):
+    def __init__(self, bot, joueur_id: int, channel: discord.TextChannel, arene_id: int, type_arene: str, etape_terminee: int, thread: discord.Thread):
         super().__init__(timeout=300)
         self.bot = bot
         self.joueur_id = joueur_id
@@ -188,6 +194,7 @@ class VueContinuerArene(discord.ui.View):
         self.arene_id = arene_id
         self.type_arene = type_arene
         self.etape_terminee = etape_terminee
+        self.thread = thread
 
         bouton_continuer = discord.ui.Button(label="Continuer", emoji="⚔️", style=discord.ButtonStyle.primary)
         bouton_continuer.callback = self._on_continuer
@@ -208,7 +215,7 @@ class VueContinuerArene(discord.ui.View):
             return
         self.clear_items()
         await interaction.response.edit_message(view=self)
-        await _lancer_etape(self.bot, interaction.user, self.channel, self.arene_id, self.type_arene, self.etape_terminee + 1)
+        await _lancer_etape(self.bot, interaction.user, self.channel, self.arene_id, self.type_arene, self.etape_terminee + 1, thread_existant=self.thread)
 
     async def _on_soigner(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
@@ -242,12 +249,20 @@ class VueContinuerArene(discord.ui.View):
             ),
             view=self,
         )
-        await _lancer_etape(self.bot, interaction.user, self.channel, self.arene_id, self.type_arene, self.etape_terminee + 1)
+        await _lancer_etape(self.bot, interaction.user, self.channel, self.arene_id, self.type_arene, self.etape_terminee + 1, thread_existant=self.thread)
 
     async def on_timeout(self):
         for item in self.children:
             item.disabled = True
         database.terminer_run_arene(self.arene_id, self.joueur_id, "defaite")
+        try:
+            await self.thread.send(
+                f"⏳ <@{self.joueur_id}> — plus de réponse, ton run d'arène s'arrête là. "
+                f"Ce fil sera supprimé dans {combat_module.DELAI_SUPPRESSION_FIL // 60} minutes."
+            )
+        except discord.HTTPException:
+            pass
+        self.bot.loop.create_task(dresseurs_module._supprimer_fil_apres_delai(self.thread, combat_module.DELAI_SUPPRESSION_FIL))
 
 
 async def demarrer_nouvelle_arene(bot, channel, type_arene: str = None) -> int:
@@ -259,9 +274,22 @@ async def demarrer_nouvelle_arene(bot, channel, type_arene: str = None) -> int:
 
     embed = construire_embed_spawn(type_arene, date_expiration)
     vue = VueDefierArene(bot, arene_id)
-    await channel.send(embed=embed, view=vue)
+    message = await channel.send(embed=embed, view=vue)
     journal.logger(f"🏟️ Nouvelle arène {type_arene} ouverte.")
+
+    bot.loop.create_task(_supprimer_message_spawn_apres_delai(message, config.ARENE_DUREE_DISPONIBLE_MINUTES * 60))
     return arene_id
+
+
+async def _supprimer_message_spawn_apres_delai(message: discord.Message, delai_secondes: int):
+    """Supprime le message d'annonce de l'arène une fois sa fenêtre de disponibilité
+    écoulée — les runs déjà en cours vivent dans leur propre fil de combat et ne sont
+    pas affectés par cette suppression."""
+    await asyncio.sleep(delai_secondes)
+    try:
+        await message.delete()
+    except discord.HTTPException:
+        pass
 
 
 async def boucle_arene(bot):

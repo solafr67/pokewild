@@ -80,6 +80,9 @@ class VueSoinDepuisInventaire(discord.ui.View):
         super().__init__(timeout=60)
         self.user_id = user_id
         self.potion = potion
+        # Voir equipe_combat.VueSoin : cible le pool de PV du raid si le joueur est
+        # actuellement engagé dedans, sinon ça n'aurait aucun effet sur ses vrais PV en raid.
+        self.contexte = "raid" if database.joueur_dans_raid_actif(user_id) else "normal"
         self._construire_composants()
 
     def _lister_blesses(self):
@@ -90,7 +93,7 @@ class VueSoinDepuisInventaire(discord.ui.View):
             if nom not in stats:
                 continue
             pv_max = combat_module.stats_combattant_reel(self.user_id, nom)["pv"]
-            pv_actuels = database.obtenir_pv_actuels(self.user_id, nom, pv_max)
+            pv_actuels = database.obtenir_pv_actuels(self.user_id, nom, pv_max, contexte=self.contexte)
             if pv_actuels < pv_max:
                 blesses.append((nom, pv_actuels, pv_max))
         return blesses
@@ -125,7 +128,7 @@ class VueSoinDepuisInventaire(discord.ui.View):
 
         pv_max = combat_module.stats_combattant_reel(self.user_id, nom)["pv"]
         delta = max(1, round(pv_max * config.SOIN_POURCENT[self.potion]))
-        nouveau_pv = database.modifier_pv_pokemon(self.user_id, nom, delta, pv_max)
+        nouveau_pv = database.modifier_pv_pokemon(self.user_id, nom, delta, pv_max, contexte=self.contexte)
 
         await interaction.response.edit_message(
             content=f"✅ **{nom}** soigné avec {NOMS_OBJETS[self.potion]} ! ({nouveau_pv}/{pv_max} PV)",

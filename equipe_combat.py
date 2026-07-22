@@ -368,7 +368,7 @@ class VueEquipeCombat(discord.ui.View):
             )
             return
 
-        lignes, total_potions_utilisees = soigner_toute_equipe_auto(self.user_id, blesses)
+        lignes, total_potions_utilisees = soigner_toute_equipe_auto(self.user_id, blesses, contexte=vue_soin.contexte)
 
         if not lignes:
             await interaction.response.send_message(
@@ -429,11 +429,14 @@ class VueEquipeCombat(discord.ui.View):
         )
 
 
-def soigner_toute_equipe_auto(user_id: int, blesses: list) -> tuple:
+def soigner_toute_equipe_auto(user_id: int, blesses: list, contexte: str = "normal") -> tuple:
     """Soigne chaque Pokémon blessé de la liste (nom, pv_actuels, pv_max), du plus faible
     au plus fort côté potion pour économiser les Hyper Potions — 1 potion consommée par
     palier de soin nécessaire (pas une potion unique pour toute l'équipe). Réutilisée par
     /equipe-combat (Soin auto) ET par le système d'Arène (arene.py) entre deux combats.
+    contexte="raid" cible le pool de PV séparé utilisé pendant un raid (voir
+    database.obtenir_pv_actuels) — sinon soigner depuis le profil pendant un raid en
+    cours n'aurait aucun effet sur les PV réellement utilisés par ce raid.
     Retourne (lignes_resultat, total_potions_utilisees)."""
     ordre_potions = ("potion", "superpotion", "hyperpotion")
     lignes = []
@@ -446,7 +449,7 @@ def soigner_toute_equipe_auto(user_id: int, blesses: list) -> tuple:
                 if not database.retirer_ball(user_id, potion):
                     break  # plus de stock de cette potion, on tente la suivante
                 delta = max(1, round(pv_max * config.SOIN_POURCENT[potion]))
-                pv_courant = database.modifier_pv_pokemon(user_id, nom, delta, pv_max)
+                pv_courant = database.modifier_pv_pokemon(user_id, nom, delta, pv_max, contexte=contexte)
                 total_potions_utilisees += 1
             if pv_courant >= pv_max:
                 break
@@ -463,6 +466,10 @@ class VueSoin(discord.ui.View):
         super().__init__(timeout=120)
         self.user_id = user_id
         self.pokemon_selectionne = None
+        # Si le joueur est actuellement en raid, soigner depuis le profil doit cibler le
+        # pool de PV séparé du raid (voir database.obtenir_pv_actuels) — sinon ça n'a
+        # aucun effet sur les PV réellement utilisés par le raid en cours.
+        self.contexte = "raid" if database.joueur_dans_raid_actif(user_id) else "normal"
         self._construire_composants()
 
     def _lister_blesses(self):
@@ -473,7 +480,7 @@ class VueSoin(discord.ui.View):
             if nom not in stats:
                 continue
             pv_max = combat_module.stats_combattant_reel(self.user_id, nom)["pv"]
-            pv_actuels = database.obtenir_pv_actuels(self.user_id, nom, pv_max)
+            pv_actuels = database.obtenir_pv_actuels(self.user_id, nom, pv_max, contexte=self.contexte)
             if pv_actuels < pv_max:
                 blesses.append((nom, pv_actuels, pv_max))
         return blesses
@@ -547,7 +554,7 @@ class VueSoin(discord.ui.View):
 
         pv_max = combat_module.stats_combattant_reel(self.user_id, nom)["pv"]
         delta = max(1, round(pv_max * config.SOIN_POURCENT[potion]))
-        nouveau_pv = database.modifier_pv_pokemon(self.user_id, nom, delta, pv_max)
+        nouveau_pv = database.modifier_pv_pokemon(self.user_id, nom, delta, pv_max, contexte=self.contexte)
 
         self.pokemon_selectionne = None
         self._construire_composants()

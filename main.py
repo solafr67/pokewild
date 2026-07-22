@@ -54,6 +54,7 @@ from pokemon_data import (
     generer_pc,
     obtenir_pokemon_par_nom,
     tirer_boss_raid_par_etoile,
+    obtenir_roster_raid,
     tirer_ivs,
     tirer_niveau_spawn,
     tirer_pokemon_aleatoire,
@@ -1651,6 +1652,22 @@ async def reroll_raids_cmd(interaction: discord.Interaction):
     )
     embed.set_footer(text="Effectif immédiatement pour les prochains raids, aucun redéploiement nécessaire.")
     await interaction.followup.send(embed=embed)
+
+
+@bot.tree.command(name="roster-raids", description="Vois quels Pokémon peuvent apparaître en raid actuellement, par palier d'étoiles")
+async def roster_raids_cmd(interaction: discord.Interaction):
+    lignes = []
+    for etoiles in (1, 2, 3, 4, 5):
+        noms = obtenir_roster_raid(etoiles)
+        lignes.append(f"{'⭐' * etoiles} : {', '.join(noms) if noms else '*(aucun défini pour ce palier)*'}")
+
+    embed = discord.Embed(
+        title="🐲 Pokémon actuellement en raid",
+        description="\n".join(lignes),
+        color=discord.Color.gold(),
+    )
+    embed.set_footer(text="Le boss précis d'un raid est tiré au hasard parmi ceux de son palier d'étoiles.")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(name="reset-cooldown-gladio", description="[Admin] Réinitialise le cooldown de défi contre Gladio d'un joueur")
