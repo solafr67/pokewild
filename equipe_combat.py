@@ -63,6 +63,11 @@ def charger_preset_combat(user_id: int, nom_preset: str) -> tuple:
 def construire_embed_equipe(user: discord.abc.User) -> discord.Embed:
     noms_equipe = database.obtenir_equipe_combat(user.id)
     stats = _stats_par_espece(user.id)
+    # Si le joueur est actuellement en raid, afficher les PV du pool de RAID (séparé) —
+    # sinon la barre de vie affichée ici ne bougeait jamais pendant un raid (elle lisait
+    # toujours le pool normal, jamais touché par un combat de raid), rendant impossible
+    # de voir un Pokémon K.O. dans son équipe pendant un raid en cours.
+    contexte = "raid" if database.joueur_dans_raid_actif(user.id) else "normal"
 
     lignes = []
     for i in range(TAILLE_MAX_EQUIPE):
@@ -79,7 +84,7 @@ def construire_embed_equipe(user: discord.abc.User) -> discord.Embed:
             niveau_txt = f"Niv. {niveau}" + (" (MAX)" if niveau >= niveau_max else f"/{niveau_max}")
 
             pv_max = combat_module.stats_combattant_reel(user.id, nom)["pv"] if info else 1
-            pv_actuels = database.obtenir_pv_actuels(user.id, nom, pv_max)
+            pv_actuels = database.obtenir_pv_actuels(user.id, nom, pv_max, contexte=contexte)
             ko_txt = " 💀 K.O." if pv_actuels <= 0 else ""
 
             lignes.append(
@@ -94,10 +99,10 @@ def construire_embed_equipe(user: discord.abc.User) -> discord.Embed:
         description="\n".join(lignes),
         color=discord.Color.dark_red(),
     )
-    embed.set_footer(
-        text=f"{len(noms_equipe)}/{TAILLE_MAX_EQUIPE} emplacements utilisés — "
-        f"soigne tes Pokémon blessés avec le bouton Soigner !"
-    )
+    texte_footer = f"{len(noms_equipe)}/{TAILLE_MAX_EQUIPE} emplacements utilisés — soigne tes Pokémon blessés avec le bouton Soigner !"
+    if contexte == "raid":
+        texte_footer = f"⚔️ Raid en cours — PV affichés = ceux du raid. {texte_footer}"
+    embed.set_footer(text=texte_footer)
     return embed
 
 
