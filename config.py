@@ -19,6 +19,7 @@ CHANNEL_LOGS_ID = 1527415638371598526  # channel dédié aux logs bot + joueurs
 
 # --- Dresseurs PvE (combat contre une IA, PV liés au même pool persistant que les raids) ---
 INTERVALLE_DRESSEUR = 20 * 60  # 20 min entre deux spawns (plus rare qu'un raid pour limiter le farming solo)
+CHANCE_DUO_DRESSEUR = 0.2  # ~1 spawn sur 5 est un combat DUO 2v2 (voir combat_2v2.py) plutôt qu'un dresseur solo
 DUREE_DISPONIBILITE_DRESSEUR = 10 * 60  # le dresseur repart si personne ne le défie dans ce délai
 DRESSEUR_VARIANCE_PC = 0.15  # l'équipe adverse vise le PC cumulé du joueur, ± cette variance
 DRESSEUR_FACTEUR_DOLLARS = 0.015  # récompense = PC cible de l'équipe adverse × ce facteur

@@ -571,6 +571,21 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS combat_2v2_joueurs (
+            combat_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            equipe INTEGER NOT NULL,
+            actif_nom TEXT,
+            action TEXT,
+            abandonne INTEGER NOT NULL DEFAULT 0,
+            potions_soin INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (combat_id, user_id)
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS combat_choix_ko (
             combat_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
@@ -720,6 +735,12 @@ def init_db():
         )
         """
     )
+
+    # Migration 2v2 : cible mémorisée au tour de charge (NULL en 1v1, ciblage implicite)
+    try:
+        cur.execute("ALTER TABLE combat_charge ADD COLUMN cible_user_id INTEGER")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
 
     cur.execute(
         """
@@ -2732,6 +2753,93 @@ def supprimer_choix_ko(combat_id: int, user_id: int) -> bool:
     return supprime
 
 
+def creer_joueurs_2v2(combat_id: int, inscriptions: list):
+    """inscriptions = [(user_id, equipe, actif_nom), ...] — les 4 joueurs d'un combat 2v2.
+    Le combat_id est celui de la ligne d'ancrage dans combat_pvp (même espace d'IDs que
+    toutes les tables annexes : combat_equipe, combat_pp, combat_boosts...)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    for user_id, equipe, actif_nom in inscriptions:
+        cur.execute(
+            "INSERT INTO combat_2v2_joueurs (combat_id, user_id, equipe, actif_nom) VALUES (?, ?, ?, ?)",
+            (combat_id, user_id, equipe, actif_nom),
+        )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_joueurs_2v2(combat_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT user_id, equipe, actif_nom, action, abandonne, potions_soin FROM combat_2v2_joueurs "
+        "WHERE combat_id = ? ORDER BY equipe, user_id",
+        (combat_id,),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def definir_action_2v2(combat_id: int, user_id: int, action: str) -> bool:
+    """Enregistre l'action du tour pour ce joueur. False si une action était déjà posée
+    (protection double-clic, comme enregistrer_action_pvp en 1v1)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_2v2_joueurs SET action = ? WHERE combat_id = ? AND user_id = ? AND action IS NULL",
+        (action, combat_id, user_id),
+    )
+    ok = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return ok
+
+
+def vider_actions_2v2(combat_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE combat_2v2_joueurs SET action = NULL WHERE combat_id = ?", (combat_id,))
+    conn.commit()
+    conn.close()
+
+
+def definir_actif_2v2(combat_id: int, user_id: int, actif_nom: str):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_2v2_joueurs SET actif_nom = ? WHERE combat_id = ? AND user_id = ?",
+        (actif_nom, combat_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def marquer_abandon_2v2(combat_id: int, user_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_2v2_joueurs SET abandonne = 1, action = NULL WHERE combat_id = ? AND user_id = ?",
+        (combat_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def incrementer_potions_2v2(combat_id: int, user_id: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_2v2_joueurs SET potions_soin = potions_soin + 1 WHERE combat_id = ? AND user_id = ?",
+        (combat_id, user_id),
+    )
+    cur.execute("SELECT potions_soin FROM combat_2v2_joueurs WHERE combat_id = ? AND user_id = ?", (combat_id, user_id))
+    row = cur.fetchone()
+    conn.commit()
+    conn.close()
+    return row["potions_soin"] if row else 0
+
+
 def obtenir_combats_pvp_actifs():
     """Tous les combats (PvP, dresseur, Arène, Gladio) encore marqués actifs — utilisé
     uniquement par le nettoyage au démarrage : après un redémarrage, leurs boucles de
@@ -2763,6 +2871,7 @@ def terminer_combat_pvp(combat_id: int):
     cur = conn.cursor()
     cur.execute("UPDATE combat_pvp SET actif = 0 WHERE id = ?", (combat_id,))
     cur.execute("DELETE FROM combat_choix_ko WHERE combat_id = ?", (combat_id,))
+    cur.execute("DELETE FROM combat_2v2_joueurs WHERE combat_id = ?", (combat_id,))
     conn.commit()
     conn.close()
 
@@ -2786,6 +2895,20 @@ def combat_en_cours_pour_joueur(user_id: int):
         (user_id, user_id),
     )
     row = cur.fetchone()
+    if row is None:
+        # Combats 2v2 : seuls 2 des 4 joueurs figurent sur la ligne d'ancrage combat_pvp
+        # (capitaines) — les deux autres sont dans combat_2v2_joueurs. Sans cette jointure,
+        # ils pourraient s'inscrire à un 2e combat en parallèle.
+        cur.execute(
+            """
+            SELECT c.* FROM combat_pvp c
+            JOIN combat_2v2_joueurs j ON j.combat_id = c.id
+            WHERE c.actif = 1 AND j.user_id = ?
+            LIMIT 1
+            """,
+            (user_id,),
+        )
+        row = cur.fetchone()
     conn.close()
     return row
 
@@ -2939,32 +3062,41 @@ def reinitialiser_boosts(combat_id: int, user_id: int, pokemon_nom: str):
 # --- Charge / recharge (attaques à deux tours type Lance-Soleil, Ultimaton) ---
 
 def obtenir_charge(combat_id: int, user_id: int, pokemon_nom: str) -> dict:
-    """Retourne {'attaque_en_charge': str|None, 'doit_recharger': bool}."""
+    """Retourne {'attaque_en_charge': str|None, 'doit_recharger': bool, 'cible_user_id': int|None}.
+    cible_user_id n'est utilisé qu'en 2v2 : la cible choisie au tour de charge, relâchée
+    dessus au tour suivant (redirigée si elle est tombée entre-temps). En 1v1 le ciblage
+    est implicite, la colonne reste NULL."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
-        "SELECT attaque_en_charge, doit_recharger FROM combat_charge "
+        "SELECT attaque_en_charge, doit_recharger, cible_user_id FROM combat_charge "
         "WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
         (combat_id, user_id, pokemon_nom),
     )
     row = cur.fetchone()
     conn.close()
     if row is None:
-        return {"attaque_en_charge": None, "doit_recharger": False}
-    return {"attaque_en_charge": row["attaque_en_charge"], "doit_recharger": bool(row["doit_recharger"])}
+        return {"attaque_en_charge": None, "doit_recharger": False, "cible_user_id": None}
+    return {
+        "attaque_en_charge": row["attaque_en_charge"],
+        "doit_recharger": bool(row["doit_recharger"]),
+        "cible_user_id": row["cible_user_id"],
+    }
 
 
-def definir_charge(combat_id: int, user_id: int, pokemon_nom: str, attaque_en_charge: str | None, doit_recharger: bool):
+def definir_charge(combat_id: int, user_id: int, pokemon_nom: str, attaque_en_charge: str | None, doit_recharger: bool, cible_user_id: int | None = None):
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         """
-        INSERT INTO combat_charge (combat_id, user_id, pokemon_nom, attaque_en_charge, doit_recharger)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO combat_charge (combat_id, user_id, pokemon_nom, attaque_en_charge, doit_recharger, cible_user_id)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(combat_id, user_id, pokemon_nom) DO UPDATE SET
-            attaque_en_charge = excluded.attaque_en_charge, doit_recharger = excluded.doit_recharger
+            attaque_en_charge = excluded.attaque_en_charge,
+            doit_recharger = excluded.doit_recharger,
+            cible_user_id = excluded.cible_user_id
         """,
-        (combat_id, user_id, pokemon_nom, attaque_en_charge, int(doit_recharger)),
+        (combat_id, user_id, pokemon_nom, attaque_en_charge, int(doit_recharger), cible_user_id),
     )
     conn.commit()
     conn.close()

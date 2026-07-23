@@ -13,6 +13,7 @@ import config
 import classement as classement_module
 import raid as raid_module
 import combat as combat_module
+import combat_2v2 as combat_2v2_module
 import echanges as echanges_module
 import maitre_types as maitre_types_module
 import exploration as exploration_module
@@ -66,6 +67,7 @@ from profil import (
     construire_embed_profil,
     construire_apercu_relacher,
     effectuer_relacher_tous,
+    url_avatar_fiable,
     VueConfirmationRelacher,
     VueOuvrirPokedex,
     VueProfil,
@@ -1923,7 +1925,7 @@ async def pokedex_info(interaction: discord.Interaction, nom: str, membre: disco
         await interaction.response.send_message(f"❌ Pokémon **{nom}** introuvable dans la base.", ephemeral=True)
         return
     if membre:
-        embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url=membre.display_avatar.with_size(256).url)
+        embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url=url_avatar_fiable(membre))
     await interaction.response.send_message(embed=embed)
 
 
@@ -2562,7 +2564,7 @@ async def voir_joueur(interaction: discord.Interaction, membre: discord.Member):
         ),
         color=discord.Color.blurple(),
     )
-    embed.set_thumbnail(url=membre.display_avatar.with_size(256).url)
+    embed.set_thumbnail(url=url_avatar_fiable(membre))
 
     embed.add_field(name="Poké Dollars", value=f"{EMOJI_POKEDOLLAR} {dollars}", inline=True)
     embed.add_field(name="📖 Pokédex", value=f"{nb_especes} espèces • {nb_total} captures", inline=True)
@@ -2705,6 +2707,11 @@ async def ping_raid_toggle(interaction: discord.Interaction):
         await interaction.response.send_message(
             "🔔 Tu recevras désormais un ping à chaque nouveau raid !", ephemeral=True
         )
+
+
+@bot.tree.command(name="combat-2v2", description="Lance un lobby de combat 2v2 (4 joueurs, 2 équipes)")
+async def combat_2v2(interaction: discord.Interaction):
+    await combat_2v2_module.lancer_lobby_2v2(bot, interaction)
 
 
 @bot.tree.command(name="defier", description="Défie un autre joueur en combat Pokémon")

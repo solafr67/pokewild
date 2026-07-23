@@ -68,6 +68,33 @@ ARCHETYPES = [
 
 TAILLE_EQUIPE_DRESSEUR = 4
 
+# --- Dresseurs DUO (combat 2v2 PvE — voir combat_2v2.py) -------------------------------
+# Chaque entrée représente DEUX dresseurs qui combattent ensemble contre un seul joueur
+# (double combat, comme dans les jeux officiels). "sous_noms" donne un nom individuel à
+# chacun des deux (affiché dans le log de combat) ; "taille_equipe" est volontairement
+# plus généreuse que le 4 des dresseurs solo (6 chacun) car il n'y a pas de contrainte de
+# temps de jeu d'un second joueur humain à ménager ici.
+TAILLE_EQUIPE_DUO_DRESSEUR = 6
+
+ARCHETYPES_DUO = [
+    {
+        "nom": "Duo Cyclone",  # sprite : Lévy & Tatia (RS)
+        "sous_noms": ("Lévy", "Tatia"),
+        "types_theme": ["insecte", "vol"], "emoji": "🦋", "tier": 2,
+        "sprite": "https://www.pokepedia.fr/images/b/b0/Sprite_L%C3%A9vy_%26_Tatia_RS.png",
+        "taille_equipe": TAILLE_EQUIPE_DUO_DRESSEUR,
+        "duo": True,
+    },
+    {
+        "nom": "Duo Belladone",  # sprite : Percila & Parsley (Pt)
+        "sous_noms": ("Percila", "Parsley"),
+        "types_theme": ["poison", "fee"], "emoji": "🥀", "tier": 2,
+        "sprite": "https://www.pokepedia.fr/images/5/5b/Sprite_Percila_et_Parsley_Pt.gif",
+        "taille_equipe": TAILLE_EQUIPE_DUO_DRESSEUR,
+        "duo": True,
+    },
+]
+
 # Gladio n'est PAS dans ARCHETYPES : il ne doit jamais apparaître comme dresseur spontané
 # aléatoire, seulement via /defi-gladio (voir defier_gladio ci-dessous).
 ARCHETYPE_GLADIO = {
@@ -105,9 +132,13 @@ def _pc_cumule_equipe(user_id: int) -> int:
 
 def choisir_archetype(nom_force: str | None = None) -> dict:
     if nom_force:
-        for archetype in ARCHETYPES:
+        for archetype in ARCHETYPES + ARCHETYPES_DUO:
             if archetype["nom"] == nom_force:
                 return archetype
+    # Un spawn sur ~config.CHANCE_DUO_DRESSEUR est un combat DUO (2v2 PvE, voir
+    # combat_2v2.py) plutôt qu'un dresseur solo classique.
+    if ARCHETYPES_DUO and random.random() < config.CHANCE_DUO_DRESSEUR:
+        return random.choice(ARCHETYPES_DUO)
     return random.choice(ARCHETYPES)
 
 
@@ -202,16 +233,30 @@ def _equiper_attaques_aleatoires(dresseur_id: int, pokemon_nom: str):
 
 
 def construire_embed_spawn(archetype: dict) -> discord.Embed:
-    embed = discord.Embed(
-        title=f"{archetype['emoji']} {archetype['nom']} veut se battre !",
-        description=(
+    est_duo = archetype.get("duo", False)
+    if est_duo:
+        sous_noms = archetype.get("sous_noms", ("Dresseur 1", "Dresseur 2"))
+        description = (
+            f"**{sous_noms[0]}** et **{sous_noms[1]}** apparaissent ensemble, prêts pour un "
+            f"**double combat** !\n\n"
+            f"⚔️ Tu affrontes les DEUX en même temps, en 2v2 — tu contrôles tes 2 Pokémon actifs, "
+            f"eux les leurs (6 chacun).\n"
+            f"Tout le monde peut les défier — chacun son propre combat, une seule fois par apparition.\n"
+            f"⚠️ Tes PV restent ceux de ton pool habituel (les mêmes qu'en raid) — "
+            f"soigne ton équipe avant si besoin !"
+        )
+    else:
+        description = (
             "Un dresseur apparaît sur la route, prêt à en découdre.\n\n"
             "**Puissance de son équipe** : s'adapte à celle de chaque adversaire "
             "(calculée au moment où tu le défies).\n"
             "⚔️ Tout le monde peut le défier — chacun son propre combat, une seule fois par apparition.\n"
             "⚠️ Tes PV restent ceux de ton pool habituel (les mêmes qu'en raid) — "
             "soigne ton équipe avant si besoin !"
-        ),
+        )
+    embed = discord.Embed(
+        title=f"{archetype['emoji']} {archetype['nom']} {'veulent' if est_duo else 'veut'} se battre !",
+        description=description,
         color=discord.Color.dark_orange(),
     )
     embed.set_footer(text=f"Repart dans {config.DUREE_DISPONIBILITE_DRESSEUR // 60} minutes.")
@@ -259,6 +304,18 @@ class VueDefiDresseur(discord.ui.View):
             # Interaction expirée (bot ralenti/redémarré entre le clic et la réponse) — pas
             # grave en soi, mais il ne faut surtout pas que ça empêche le combat de démarrer.
             pass
+
+        archetype = next((a for a in ARCHETYPES_DUO if a["nom"] == dresseur["archetype_nom"]), None)
+        if archetype is not None:
+            # Import différé : combat_2v2.py importe déjà dresseurs.py, un import en tête
+            # de fichier créerait un import circulaire.
+            import combat_2v2 as combat_2v2_module
+
+            await combat_2v2_module.demarrer_duo_dresseur(
+                interaction.client, interaction.user, self.dresseur_id, archetype, interaction.channel, interaction
+            )
+            return
+
         await demarrer_combat_dresseur(interaction.client, interaction.user, self.dresseur_id, interaction.channel, interaction)
 
 
