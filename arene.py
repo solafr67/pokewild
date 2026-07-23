@@ -37,11 +37,13 @@ def _archetype_etape(type_arene: str, etape: int) -> dict:
         return {
             "nom": NOMS_APPRENTI_1, "types_theme": [type_arene], "tier": 1,
             "taille_equipe": config.ARENE_TAILLE_APPRENTI_1, "recompense_independante": True,
+            "sans_recompense_dollars": True,  # les PD viennent de l'arène elle-même (sinon double gain)
         }
     if etape == 2:
         return {
             "nom": NOMS_APPRENTI_2, "types_theme": [type_arene], "tier": 2,
             "taille_equipe": config.ARENE_TAILLE_APPRENTI_2, "recompense_independante": True,
+            "sans_recompense_dollars": True,
         }
     return {
         "nom": _nom_champion(type_arene),
@@ -50,6 +52,7 @@ def _archetype_etape(type_arene: str, etape: int) -> dict:
         "taille_equipe": config.ARENE_TAILLE_CHAMPION,
         "raretes_autorisees": config.ARENE_RARETES_CHAMPION,
         "recompense_independante": True,
+        "sans_recompense_dollars": True,
     }
 
 
@@ -146,11 +149,24 @@ async def _resoudre_etape(bot, joueur_id, channel, arene_id, type_arene, etape, 
     database.avancer_run_arene(arene_id, joueur_id, etape)
 
     if etape < 3:
+        # Récompense d'Apprenti : c'est LA récompense en PD de ce combat (le moteur dresseur
+        # n'en crédite plus pour l'arène — flag sans_recompense_dollars — sinon double gain).
+        # La dégression journalière est lue sans incrémenter : le compteur ne monte qu'au
+        # run complété (champion battu).
+        mini, maxi = config.ARENE_RECOMPENSE_DOLLARS_APPRENTI
+        mult_jour = database.multiplicateur_arene_du_jour(joueur_id)
+        dollars_apprenti = round(
+            random.randint(mini, maxi) * mult_jour * database.multiplicateur_boost(joueur_id, "argent")
+        )
+        database.ajouter_poke_dollars(joueur_id, dollars_apprenti)
+        note_apprenti = " *(récompense réduite : plusieurs runs déjà complétés aujourd'hui)*" if mult_jour < 1.0 else ""
+
         vue = VueContinuerArene(bot, joueur_id, channel, arene_id, type_arene, etape, thread)
         try:
             await thread.send(
-                f"🏟️ <@{joueur_id}> — victoire ! Prêt·e pour le combat suivant, ou tu préfères "
-                f"soigner ton équipe avant (1 potion par Pokémon soigné) ?",
+                f"🏟️ <@{joueur_id}> — victoire ! **+{dollars_apprenti} Poké Dollars**{note_apprenti}\n"
+                f"Prêt·e pour le combat suivant, ou tu préfères soigner ton équipe avant "
+                f"(1 potion par Pokémon soigné) ?",
                 view=vue,
             )
         except discord.HTTPException:
@@ -160,7 +176,8 @@ async def _resoudre_etape(bot, joueur_id, channel, arene_id, type_arene, etape, 
     # Étape 3 = Champion battu : récompense + badge
     database.terminer_run_arene(arene_id, joueur_id, "victoire")
     mini, maxi = config.ARENE_RECOMPENSE_DOLLARS_CHAMPION
-    dollars = round(random.randint(mini, maxi) * database.multiplicateur_boost(joueur_id, "argent"))
+    mult_jour = database.enregistrer_victoire_arene_repetition(joueur_id)
+    dollars = round(random.randint(mini, maxi) * mult_jour * database.multiplicateur_boost(joueur_id, "argent"))
     database.ajouter_poke_dollars(joueur_id, dollars)
 
     nouveau_badge = database.accorder_badge_arene(joueur_id, type_arene)
@@ -168,6 +185,8 @@ async def _resoudre_etape(bot, joueur_id, channel, arene_id, type_arene, etape, 
 
     emoji = EMOJI_TYPES.get(type_arene, "")
     texte = f"🏆 <@{joueur_id}> a vaincu le **{_nom_champion(type_arene)}** ! +{dollars} Poké Dollars"
+    if mult_jour < 1.0:
+        texte += " *(récompense réduite : plusieurs runs déjà complétés aujourd'hui)*"
     if nouveau_badge:
         bonus_pourcent = round(config.ARENE_BONUS_DEGATS_PAR_BADGE * 100)
         texte += (
@@ -214,6 +233,7 @@ class VueContinuerArene(discord.ui.View):
         if not await self._verifier(interaction):
             return
         self.clear_items()
+        self.stop()  # sans ça, on_timeout se déclenchait 5 min plus tard EN PLEIN combat suivant et tuait le run
         await interaction.response.edit_message(view=self)
         await _lancer_etape(self.bot, interaction.user, self.channel, self.arene_id, self.type_arene, self.etape_terminee + 1, thread_existant=self.thread)
 
@@ -243,6 +263,7 @@ class VueContinuerArene(discord.ui.View):
             return
 
         self.clear_items()
+        self.stop()  # même fix que _on_continuer : ne jamais laisser le timeout fantôme tuer le run
         await interaction.response.edit_message(
             content=(
                 f"🩹 **Soin auto** ({total_potions_utilisees} potion(s) utilisée(s)) :\n" + "\n".join(lignes)

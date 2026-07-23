@@ -153,6 +153,10 @@ ARENE_MULTIPLICATEUR_CHAMPION = 1.15  # comme Gladio : légèrement plus fort qu
 ARENE_RARETES_CHAMPION = {"rare", "hyper_rare", "legendaire"}
 ARENE_RECOMPENSE_DOLLARS_APPRENTI = (80, 150)
 ARENE_RECOMPENSE_DOLLARS_CHAMPION = (250, 400)
+# Dégression journalière des Poké Dollars d'arène par RUN COMPLÉTÉ (champion battu) :
+# 1er run du jour plein tarif, puis ×0.6, puis ×0.35 pour tous les suivants. Badges, XP
+# et plaisir de jeu non concernés — seule la récompense économique est contenue.
+ARENE_MULTIPLICATEURS_REPETITION_JOUR = [1.0, 0.6, 0.35]
 ARENE_BONUS_DEGATS_PAR_BADGE = 0.03  # +3% de dégâts pour les attaques du type d'un badge obtenu
 
 # --- Rival (Gladio) ---
@@ -171,12 +175,14 @@ PC_MULTIPLICATEUR_AFFICHAGE = 3.4
 # Pokémon n'a pas encore débloquée par son niveau (ou qui ne se débloque jamais par
 # niveau — CT/tuteur/œuf uniquement dans les vrais jeux). Une attaque déjà débloquée par
 # le niveau reste gratuite à équiper, comme dans les jeux (le Pokémon la connaît déjà).
-PRIX_CT_STATUT = 150  # attaque sans dégâts (statut, buff/debuff...)
+PRIX_CT_STATUT = 100  # attaque sans dégâts (statut, buff/debuff...)
+# Paliers utiles baissés de ~25-30% (équilibrage éco : builder une équipe de 6 coûtait
+# 1500-3000 PD d'entrée de jeu) — le palier 120+ reste cher : c'est le luxe de fin de partie.
 PRIX_CT_PAR_PUISSANCE = {  # puissance minimale -> prix (le seuil le plus haut atteint s'applique)
-    0: 120,
-    40: 200,
-    70: 350,
-    90: 550,
+    0: 80,
+    40: 150,
+    70: 250,
+    90: 450,
     120: 900,
 }
 
@@ -184,11 +190,11 @@ PRIX_CT_PAR_PUISSANCE = {  # puissance minimale -> prix (le seuil le plus haut a
 LIMITE_STOCKAGE_POKEMON_BASE = 300
 LIMITE_STOCKAGE_OBJETS_BASE = 50
 
-EXTENSION_STOCKAGE_POKEMON = 10  # slots ajoutés PAR ACHAT
-PRIX_EXTENSION_STOCKAGE_POKEMON = 400  # prix par achat de +10 (même tarif au slot qu'avant : 40 PD/slot)
+EXTENSION_STOCKAGE_POKEMON = 20  # slots ajoutés PAR ACHAT (doublé — équilibrage éco : 20 PD/slot au lieu de 40)
+PRIX_EXTENSION_STOCKAGE_POKEMON = 400  # prix par achat de +20
 
-EXTENSION_STOCKAGE_OBJETS = 10  # slots ajoutés PAR ACHAT
-PRIX_EXTENSION_STOCKAGE_OBJETS = 400  # prix par achat de +10 (même tarif au slot qu'avant : 40 PD/slot)
+EXTENSION_STOCKAGE_OBJETS = 20  # slots ajoutés PAR ACHAT (doublé — équilibrage éco : 20 PD/slot au lieu de 40)
+PRIX_EXTENSION_STOCKAGE_OBJETS = 400  # prix par achat de +20
 
 RECOMPENSE_RELACHER = 5  # fixe, peu importe la rareté
 
@@ -268,7 +274,11 @@ FACTEUR_DEGATS_RAID = 1.1  # dégâts d'un tick = (Atq + Atq Spé)/2 × ce facte
 # Calibré pour ~180 tours possibles sur la durée max d'un raid (15 min / tick de 5s,
 # DUREE_RAID_MINUTES × 60 / INTERVALLE_TICK_COMBAT_RAID) — un pourcentage qui semble
 # raisonnable par coup devient vite fatal une fois répété autant de fois, d'où ces valeurs basses.
-RIPOSTE_POURCENT_PAR_ETOILE = {1: 0.004, 2: 0.007, 3: 0.011, 4: 0.016, 5: 0.022}
+# Divisée par ~2 (équilibrage éco) : aux anciennes valeurs, un raid 3★ complet infligeait
+# ~198% des PV max de l'équipe sur 15 min — soigner devenait OBLIGATOIRE et coûtait plus
+# cher en potions (jusqu'à ~840 PD) que la récompense du raid. Désormais l'équipe tient
+# ~toute la durée sans soin ; soigner redevient une optimisation volontaire.
+RIPOSTE_POURCENT_PAR_ETOILE = {1: 0.002, 2: 0.0035, 3: 0.0055, 4: 0.008, 5: 0.011}
 
 # Nombre d'Honor Ball reçues par CHAQUE participant à la victoire (peu importe les dégâts infligés)
 # Chaque participant a le même nombre de tentatives de capture (Honor Ball), peu importe
@@ -279,7 +289,9 @@ TENTATIVES_CAPTURE_RAID = 5
 DUREE_AFFICHAGE_VICTOIRE_RAID = 180  # 3 minutes avant suppression automatique du message de résumé
 
 # Récompenses Poké Dollars / XP par participant, selon le nombre d'étoiles du raid vaincu
-DOLLARS_RAID_PAR_ETOILE = {1: 50, 2: 100, 3: 150, 4: 250, 5: 400}
+# Relevées (équilibrage éco) : couvre une ou deux potions même quand on choisit de soigner
+# en cours de raid — un raid ne doit jamais être une perte nette d'argent.
+DOLLARS_RAID_PAR_ETOILE = {1: 75, 2: 150, 3: 250, 4: 400, 5: 600}
 
 # --- PV des Pokémon personnels (utilisés en raid) ---
 FACTEUR_PV_PAR_PC = 0.8  # PV max = PC × ce facteur (raids uniquement — ticks automatiques, gros PV OK)
@@ -403,7 +415,9 @@ EXPLORATION_CHANCE_CRISTAL = {
     "6h":  {"base": 0.15, "bonus_max": 0.20, "max": 0.35},
     "24h": {"base": 0.30, "bonus_max": 0.30, "max": 0.60},
 }
-EXTENSION_SLOT_EXPLORATION_PRIX = 3000  # achat unique du 2e emplacement d'exploration
+# Relevé (équilibrage éco) : à 3000 PD, ce ×2 permanent des revenus d'exploration se
+# remboursait en une seule journée au plafond — c'est désormais un vrai objectif long terme.
+EXTENSION_SLOT_EXPLORATION_PRIX = 10000  # achat unique du 2e emplacement d'exploration
 
 # --- Œufs (Laboratoire) ---
 # Pas achetables — uniquement en drop (PokéStop, Exploration) pour l'instant. Éclosion =

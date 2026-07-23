@@ -652,6 +652,17 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS arene_victoires_jour (
+            user_id INTEGER NOT NULL,
+            jour_id INTEGER NOT NULL,
+            compteur INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, jour_id)
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS arene_badges (
             user_id INTEGER NOT NULL,
             type_pokemon TEXT NOT NULL,
@@ -3696,6 +3707,59 @@ def enregistrer_victoire_pvp_repetition(vainqueur_id: int, perdant_id: int) -> f
         ON CONFLICT(vainqueur_id, perdant_id, jour_id) DO UPDATE SET compteur = compteur + 1
         """,
         (vainqueur_id, perdant_id, jour_id),
+    )
+    conn.commit()
+    conn.close()
+    return multiplicateur
+
+
+def multiplicateur_arene_du_jour(user_id: int) -> float:
+    """Multiplicateur de dégression économique d'arène applicable MAINTENANT, sans rien
+    incrémenter — utilisé pour les récompenses d'Apprentis en cours de run (le compteur
+    ne monte qu'au run complété, voir enregistrer_victoire_arene_repetition)."""
+    import config
+
+    jour_id = int(time.time()) // 86400
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT compteur FROM arene_victoires_jour WHERE user_id = ? AND jour_id = ?",
+        (user_id, jour_id),
+    )
+    row = cur.fetchone()
+    conn.close()
+    compteur = row["compteur"] if row else 0
+    paliers = config.ARENE_MULTIPLICATEURS_REPETITION_JOUR
+    return paliers[min(compteur, len(paliers) - 1)]
+
+
+def enregistrer_victoire_arene_repetition(user_id: int) -> float:
+    """Enregistre un run d'arène COMPLÉTÉ (champion battu) pour la journée en cours, et
+    retourne le multiplicateur à appliquer sur la récompense économique de CE run —
+    dégression progressive au fil des runs du jour (config.ARENE_MULTIPLICATEURS_REPETITION_JOUR).
+    Un run perdu avant le champion n'incrémente rien : on peut retenter au plein tarif."""
+    import config
+
+    jour_id = int(time.time()) // 86400
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT compteur FROM arene_victoires_jour WHERE user_id = ? AND jour_id = ?",
+        (user_id, jour_id),
+    )
+    row = cur.fetchone()
+    compteur_avant = row["compteur"] if row else 0
+
+    paliers = config.ARENE_MULTIPLICATEURS_REPETITION_JOUR
+    multiplicateur = paliers[min(compteur_avant, len(paliers) - 1)]
+
+    cur.execute(
+        """
+        INSERT INTO arene_victoires_jour (user_id, jour_id, compteur)
+        VALUES (?, ?, 1)
+        ON CONFLICT(user_id, jour_id) DO UPDATE SET compteur = compteur + 1
+        """,
+        (user_id, jour_id),
     )
     conn.commit()
     conn.close()

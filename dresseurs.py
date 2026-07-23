@@ -578,6 +578,12 @@ async def _tick_resolution_dresseur(bot, combat_id, thread_id, message_id, dress
                         random.randint(config.GLADIO_RECOMPENSE_MIN, config.GLADIO_RECOMPENSE_MAX)
                         * database.multiplicateur_boost(joueur_id, "argent")
                     )
+                elif archetype.get("sans_recompense_dollars"):
+                    # Arène : les Poké Dollars sont crédités par l'arène elle-même (Apprenti/
+                    # Champion, avec sa propre dégression journalière) — le moteur de combat
+                    # n'en donne plus, sinon chaque victoire payait DEUX fois. L'XP, elle,
+                    # reste acquise ici comme pour tout combat.
+                    dollars = 0
                 else:
                     dollars = round(
                         pc_cible * config.DRESSEUR_FACTEUR_DOLLARS * mult_repetition
@@ -588,7 +594,8 @@ async def _tick_resolution_dresseur(bot, combat_id, thread_id, message_id, dress
                 # applique son propre multiplicateur en interne, donc on le reproduit ici seulement
                 # pour le texte, sans le compter deux fois en base.
                 xp_affichee = round(xp * database.multiplicateur_boost(joueur_id, "xp"))
-                database.ajouter_poke_dollars(joueur_id, dollars)
+                if dollars > 0:
+                    database.ajouter_poke_dollars(joueur_id, dollars)
                 leveling.gagner_xp(joueur_id, xp)
                 database.incrementer_victoires_pve(joueur_id)
                 quetes_completees = database.incrementer_progression_quete(joueur_id, "pve_victoire")
@@ -601,7 +608,11 @@ async def _tick_resolution_dresseur(bot, combat_id, thread_id, message_id, dress
                     title=f"🏆 Victoire contre {archetype['nom']} !",
                     description=(
                         "\n".join(log)
-                        + f"\n\n🎖️ +{dollars} Poké Dollars & +{xp_affichee} XP !{note_reduction}"
+                        + (
+                            f"\n\n🎖️ +{xp_affichee} XP !{note_reduction}"
+                            if dollars == 0
+                            else f"\n\n🎖️ +{dollars} Poké Dollars & +{xp_affichee} XP !{note_reduction}"
+                        )
                         + quetes_ui.texte_notifications_completion(quetes_completees)
                     ),
                     color=discord.Color.gold(),
