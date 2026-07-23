@@ -2657,6 +2657,32 @@ def passer_tour_pvp(combat_id: int, date_limite: int):
     conn.close()
 
 
+def obtenir_combats_pvp_actifs():
+    """Tous les combats (PvP, dresseur, Arène, Gladio) encore marqués actifs — utilisé
+    uniquement par le nettoyage au démarrage : après un redémarrage, leurs boucles de
+    résolution n'existent plus dans le nouveau process, ils doivent être clôturés en
+    forfait pour ne pas bloquer les joueurs ("déjà en combat")."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT id, joueur1_id, joueur2_id, thread_id FROM combat_pvp WHERE actif = 1")
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def marquer_runs_arene_en_cours_defaite() -> int:
+    """Marque perdus tous les runs d'arène encore 'en_cours' (nettoyage au démarrage :
+    leur combat a été clôturé en forfait, le run ne peut plus continuer). Retourne le
+    nombre de runs concernés."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE arene_runs SET statut = 'defaite' WHERE statut = 'en_cours'")
+    nb = cur.rowcount
+    conn.commit()
+    conn.close()
+    return nb
+
+
 def terminer_combat_pvp(combat_id: int):
     conn = get_connexion()
     cur = conn.cursor()

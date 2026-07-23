@@ -1106,11 +1106,50 @@ async def nettoyer_etats_orphelins_au_demarrage():
         if row["message_id"] and await _supprimer_message_orphelin(row["channel_id"], row["message_id"]):
             compte += 1
         database.terminer_raid(row["id"])
+        # Prévenir les participants : sans ce message, le raid disparaissait sans explication.
+        try:
+            channel = bot.get_channel(int(row["channel_id"])) or await bot.fetch_channel(int(row["channel_id"]))
+            await channel.send(
+                "⚠️ Le serveur a redémarré : le raid en cours a été annulé (aucune récompense, "
+                "aucune pénalité). Un nouveau raid apparaîtra au prochain cycle."
+            )
+        except (discord.HTTPException, ValueError, TypeError):
+            pass
 
     for row in database.obtenir_dresseurs_actifs_toutes():
         if row["message_id"] and await _supprimer_message_orphelin(row["channel_id"], row["message_id"]):
             compte += 1
         database.terminer_dresseur(row["id"])
+
+    # Combats (dresseur/Arène/Gladio/PvP) encore actifs : leurs boucles de résolution sont
+    # mortes avec l'ancien process — sans clôture, les joueurs restaient "déjà en combat"
+    # (bloqués jusqu'au garde-fou de 10 min) dans des fils aux boutons morts. On les
+    # termine en forfait (ni vainqueur ni récompense), on prévient dans le fil, et on
+    # programme la suppression du fil comme pour une fin de combat normale.
+    combats_annules = 0
+    for row in database.obtenir_combats_pvp_actifs():
+        database.terminer_combat_pvp(row["id"])
+        combats_annules += 1
+        if row["thread_id"]:
+            try:
+                thread = bot.get_channel(int(row["thread_id"])) or await bot.fetch_channel(int(row["thread_id"]))
+                await thread.send(
+                    "⚠️ Le serveur a redémarré : ce combat est annulé en forfait — ni vainqueur, "
+                    "ni récompense, personne n'est pénalisé. Vous pouvez relancer un combat dès "
+                    f"maintenant. Ce fil sera supprimé dans {combat_module.DELAI_SUPPRESSION_FIL // 60} minutes."
+                )
+                bot.loop.create_task(
+                    dresseurs_module._supprimer_fil_apres_delai(thread, combat_module.DELAI_SUPPRESSION_FIL)
+                )
+            except (discord.HTTPException, ValueError, TypeError):
+                pass
+
+    runs_arene_perdus = database.marquer_runs_arene_en_cours_defaite()
+    if combats_annules or runs_arene_perdus:
+        journal.logger(
+            f"🧹 Redémarrage : {combats_annules} combat(s) clôturé(s) en forfait"
+            + (f", {runs_arene_perdus} run(s) d'arène interrompu(s)." if runs_arene_perdus else ".")
+        )
 
     if compte:
         print(f"🧹 {compte} message(s) orphelin(s) (spawn/raid/dresseur) nettoyé(s) après redémarrage.")

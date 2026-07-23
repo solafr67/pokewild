@@ -384,6 +384,14 @@ async def demarrer_combat_dresseur(
         # joueur ne doit pas le retirer pour les autres.
         return
 
+    # Mémoriser le fil du combat (comme le fait déjà le PvP) : indispensable au nettoyage
+    # de redémarrage pour prévenir les joueurs dans le bon fil et le supprimer proprement.
+    conn = database.get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE combat_pvp SET thread_id = ? WHERE id = ?", (str(thread.id), combat_id))
+    conn.commit()
+    conn.close()
+
     noms = {joueur.id: joueur.display_name, id_dresseur_combat: archetype["nom"]}
     embeds = combat_module.construire_embeds_combat(combat_id, noms=noms)
     vue = combat_module.VueActionCombat(combat_id, 1)
