@@ -1923,7 +1923,7 @@ async def pokedex_info(interaction: discord.Interaction, nom: str, membre: disco
         await interaction.response.send_message(f"❌ Pokémon **{nom}** introuvable dans la base.", ephemeral=True)
         return
     if membre:
-        embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url=membre.display_avatar.url)
+        embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url=membre.display_avatar.with_size(256).url)
     await interaction.response.send_message(embed=embed)
 
 
@@ -2562,7 +2562,7 @@ async def voir_joueur(interaction: discord.Interaction, membre: discord.Member):
         ),
         color=discord.Color.blurple(),
     )
-    embed.set_thumbnail(url=membre.display_avatar.url)
+    embed.set_thumbnail(url=membre.display_avatar.with_size(256).url)
 
     embed.add_field(name="Poké Dollars", value=f"{EMOJI_POKEDOLLAR} {dollars}", inline=True)
     embed.add_field(name="📖 Pokédex", value=f"{nb_especes} espèces • {nb_total} captures", inline=True)

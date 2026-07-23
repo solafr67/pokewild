@@ -741,7 +741,11 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
     database.terminer_combat_pvp(combat_id)
     mult_repetition = database.enregistrer_victoire_pvp_repetition(vainqueur_id, perdant_id)
     database.ajouter_poke_dollars(vainqueur_id, round(DOLLARS_VICTOIRE * mult_repetition * database.multiplicateur_boost(vainqueur_id, "argent")))
-    quetes_completees = database.incrementer_progression_quete(vainqueur_id, "pvp_victoire")
+    # La quête "gagner un combat PvP" ne compte QUE les victoires jouées jusqu'au bout —
+    # une victoire par abandon (forfait) ne progresse plus la quête. Sans ça, deux joueurs
+    # pouvaient s'échanger des abandons pour la compléter à volonté sans jamais vraiment
+    # se battre. Les Poké Dollars, l'XP et les stats de victoire restent inchangés (le
+    # perdant y perd déjà de son côté : XP de consolation réduite, série remise à zéro).
     database.incrementer_victoires_pvp(vainqueur_id)
     leveling.gagner_xp(vainqueur_id, round(XP_VICTOIRE * mult_repetition))
     leveling.gagner_xp(perdant_id, XP_DEFAITE)
@@ -777,7 +781,6 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
             f"<@{vainqueur_id}> remporte le combat par forfait.\n\n"
             f"🎖️ +{dollars_reels} Poké Dollars & +{xp_reels} XP au vainqueur.{note_reduction}\n"
             f"+{xp_defaite_reelle} XP de consolation pour <@{perdant_id}>."
-            f"{quetes_ui.texte_notifications_completion(quetes_completees)}"
         ),
         color=discord.Color.orange(),
     )

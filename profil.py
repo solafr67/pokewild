@@ -70,7 +70,12 @@ def construire_embed_profil(user: discord.abc.User) -> discord.Embed:
         description=(f"🏅 *{titre_txt}*\n" if titre_txt else "") + f"**Niveau {niveau}**",
         color=discord.Color.blue(),
     )
-    embed.set_thumbnail(url=user.display_avatar.url)
+    # Taille réduite (256 au lieu du défaut 1024) : un avatar GIF animé en 1024px produit
+    # un fichier trop lourd, que le proxy d'embed de Discord échoue souvent à charger —
+    # le thumbnail restait alors vide pour les joueurs avec une pp animée. En 256px (bien
+    # suffisant pour un thumbnail, qui est de toute façon affiché en petit), le GIF passe
+    # de façon fiable. Les avatars statiques ne sont pas affectés (même image, plus légère).
+    embed.set_thumbnail(url=user.display_avatar.with_size(256).url)
 
     embed.add_field(name="✨ Progression", value=f"{barre_xp}\n`{xp_dans_niveau}/{xp_requise} XP`", inline=False)
 

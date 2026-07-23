@@ -77,6 +77,21 @@ class SelectionBallView(discord.ui.View):
     async def _traiter_capture(self, interaction: discord.Interaction, ball_type: str):
         user_id = interaction.user.id
 
+        # Le menu de sélection de ball a son propre timeout (20s), séparé de celui du
+        # spawn lui-même — un joueur pouvait l'ouvrir juste avant que le Pokémon ne
+        # s'enfuie, puis cliquer une ball APRÈS coup : la capture était quand même traitée
+        # sur un spawn déjà disparu (vue_spawn.stop() a été appelé par
+        # faire_disparaitre_apres_delai, mais rien ne le revérifiait ici). On bloque donc
+        # toute tentative si le spawn n'est plus actif, sans consommer de ball.
+        if self.vue_spawn.is_finished():
+            try:
+                await interaction.response.edit_message(
+                    content=f"💨 Trop tard — **{self.pokemon['nom']}** s'est déjà enfui !", view=None
+                )
+            except (discord.NotFound, discord.HTTPException):
+                pass
+            return
+
         succes_retrait = database.retirer_ball(user_id, ball_type)
         if not succes_retrait:
             try:
@@ -287,6 +302,16 @@ class VueSpawn(discord.ui.View):
     @discord.ui.button(label="Capturer", style=discord.ButtonStyle.primary, emoji="🎯")
     async def capturer(self, interaction: discord.Interaction, button: discord.ui.Button):
         user_id = interaction.user.id
+
+        # Même faille que _traiter_capture ci-dessus, fenêtre plus courte mais bien réelle :
+        # un clic peut arriver à Discord juste avant que faire_disparaitre_apres_delai()
+        # n'appelle self.stop() (le Pokémon a fui) — sans cette vérification, le clic
+        # ouvrait quand même le menu de ball sur un spawn déjà envolé.
+        if self.is_finished():
+            await interaction.response.send_message(
+                f"💨 Trop tard — **{self.pokemon['nom']}** s'est déjà enfui !", ephemeral=True
+            )
+            return
 
         if user_id in self.tentatives:
             await interaction.response.send_message(
