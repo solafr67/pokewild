@@ -163,12 +163,32 @@ async def _resoudre_etape(bot, joueur_id, channel, arene_id, type_arene, etape, 
 
         vue = VueContinuerArene(bot, joueur_id, channel, arene_id, type_arene, etape, thread)
         try:
-            await thread.send(
-                f"🏟️ <@{joueur_id}> — victoire ! **+{dollars_apprenti} Poké Dollars**{note_apprenti}\n"
-                f"Prêt·e pour le combat suivant, ou tu préfères soigner ton équipe avant "
-                f"(1 potion par Pokémon soigné) ?",
-                view=vue,
-            )
+            if etape == 2:
+                # Transition spéciale avant le Champion : grande image "VS" + mise en scène
+                nom_champion = _nom_champion(type_arene)
+                emoji = EMOJI_TYPES.get(type_arene, "🏟️")
+                embed = discord.Embed(
+                    title=f"{emoji} Le {nom_champion} t'attendait...",
+                    description=(
+                        f"L'écho de tes victoires a traversé les gradins — le maître des lieux "
+                        f"se lève de son trône.\n\n"
+                        f"**+{dollars_apprenti} Poké Dollars**{note_apprenti}\n\n"
+                        f"⚔️ Derrière cette porte, le **{nom_champion}** défend son badge. "
+                        f"Soigne ton équipe si besoin... puis entre dans la lumière."
+                    ),
+                    color=discord.Color.gold(),
+                )
+                image = config.ARENE_IMAGES_CHAMPION.get(type_arene, config.ARENE_IMAGE_CHAMPION_DEFAUT)
+                if image:
+                    embed.set_image(url=image)
+                await thread.send(content=f"<@{joueur_id}>", embed=embed, view=vue)
+            else:
+                await thread.send(
+                    f"🏟️ <@{joueur_id}> — victoire ! **+{dollars_apprenti} Poké Dollars**{note_apprenti}\n"
+                    f"Prêt·e pour le combat suivant, ou tu préfères soigner ton équipe avant "
+                    f"(1 potion par Pokémon soigné) ?",
+                    view=vue,
+                )
         except discord.HTTPException:
             pass
         return

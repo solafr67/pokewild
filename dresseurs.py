@@ -543,6 +543,12 @@ async def _tick_resolution_dresseur(bot, combat_id, thread_id, message_id, dress
         if not combat or not combat["actif"]:
             raise _CombatTermine
 
+        # Le joueur doit choisir son remplaçant après un K.O. : la résolution attend
+        # (envoi automatique géré par traiter_choix_ko une fois le délai anti-AFK écoulé).
+        thread_choix = bot.get_channel(int(thread_id))
+        if await combat_module.traiter_choix_ko(bot, combat_id, thread_choix):
+            return
+
         deux_prets = combat["action1"] is not None and combat["action2"] is not None
         timer_expire = int(time.time()) >= combat["date_limite_tour"]
         if not deux_prets and not timer_expire:
@@ -672,7 +678,9 @@ async def _tick_resolution_dresseur(bot, combat_id, thread_id, message_id, dress
         utilisateur = bot.get_user(joueur_id)
         noms = {joueur_id: (utilisateur.display_name if utilisateur else "Toi"), id_dresseur_combat: archetype["nom"]}
         embeds = combat_module.construire_embeds_combat(combat_id, log_tour=log, noms=noms)
-        vue = combat_module.VueActionCombat(combat_id, combat["tour"])
+        vue = combat_module.VueActionCombat(
+            combat_id, combat["tour"], avec_choix_ko=bool(database.obtenir_choix_ko(combat_id))
+        )
         try:
             msg = await thread.fetch_message(message_id)
             await msg.edit(embeds=embeds, view=vue)

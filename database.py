@@ -569,6 +569,17 @@ def init_db():
         """
     )
 
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_choix_ko (
+            combat_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            date_limite INTEGER NOT NULL,
+            PRIMARY KEY (combat_id, user_id)
+        )
+        """
+    )
+
     # Migration pour les combats déjà en base avant l'ajout de la limite de potions de soin
     for colonne in ("potions_soin1", "potions_soin2"):
         try:
@@ -1120,19 +1131,32 @@ def obtenir_toutes_paires_capturees() -> list:
 
 
 def reinitialiser_pool_raid_joueur(user_id: int):
-    """Remet à neuf le pool de PV séparé du raid pour ce joueur (voir
-    etat_combat_pokemon_raid) — appelé au démarrage du combat de CHAQUE raid.
+    """(Re)synchronise le pool de PV du raid (etat_combat_pokemon_raid) sur l'état RÉEL et
+    ACTUEL du joueur (etat_combat_pokemon, le pool "normal") — appelé au démarrage du
+    combat de CHAQUE raid.
 
-    Sans cette réinitialisation, une équipe mise K.O. par la riposte d'un raid précédent
-    restait K.O. à vie dans le contexte raid (hors raid, tous les soins ciblent le pool
-    normal, et rien d'autre ne touchait jamais ce pool) : le joueur infligeait 0 dégât au
-    boss ET ne subissait aucune riposte, alors que son équipe s'affichait full vie partout
-    (l'affichage lit le pool normal). C'était LA cause du "boss qui n'encaisse rien".
-    Supprimer les lignes suffit : obtenir_pv_actuels ré-initialise au max à la prochaine
-    lecture."""
+    Historique : la 1ère version de cette fonction se contentait de VIDER le pool raid
+    (donc, faute de ligne, obtenir_pv_actuels le lisait comme "plein" par défaut). Ça
+    corrigeait bien le bug du boss increvable (une équipe K.O. par un raid précédent ne
+    restait plus bloquée à vie), MAIS ça soignait aussi gratuitement, sans potion,
+    n'importe quel dégât pris juste avant en combat dresseur/Arène/PvP (signalé par un
+    joueur : "je sors d'un combat dresseur, je lance un raid, mon équipe est full vie").
+    En copiant l'état RÉEL du pool normal au lieu de tout remettre à plein, on corrige les
+    deux bugs à la fois : l'équipe entre dans le raid dans l'état où elle était vraiment
+    (blessée si elle l'était, pleine sinon), sans jamais rester bloquée par une VIEILLE
+    riposte de raid oubliée. Les dégâts pris PENDANT ce raid sont resynchronisés vers le
+    pool normal à la fin du raid (voir terminer_raid) : la blessure persiste après,
+    comme n'importe quel autre combat — plus de soin gratuit d'un côté ni de l'autre."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute("DELETE FROM etat_combat_pokemon_raid WHERE user_id = ?", (user_id,))
+    cur.execute(
+        """
+        INSERT INTO etat_combat_pokemon_raid (user_id, pokemon_nom, pv_actuels)
+        SELECT user_id, pokemon_nom, pv_actuels FROM etat_combat_pokemon WHERE user_id = ?
+        """,
+        (user_id,),
+    )
     conn.commit()
     conn.close()
 
@@ -2279,8 +2303,25 @@ def redefinir_pv_max_raid(raid_id: int, nouveau_pv_max: int):
 
 
 def terminer_raid(raid_id: int):
+    """Termine le raid (victoire, timeout, ou annulation) ET resynchronise les dégâts pris
+    par chaque participant pendant CE raid vers son pool de PV normal (persistant, partagé
+    avec les combats dresseur/Arène/PvP) — sinon les dégâts de riposte s'évaporaient à la
+    fin du raid : l'équipe réapparaissait full vie ailleurs, sans avoir rien soigné. Seul
+    point d'appel pour toute fin de raid (victoire/timeout/annulation), donc un seul
+    endroit à maintenir."""
     conn = get_connexion()
     cur = conn.cursor()
+    cur.execute("SELECT DISTINCT user_id FROM raid_participants WHERE raid_id = ?", (raid_id,))
+    participants = [row["user_id"] for row in cur.fetchall()]
+    for user_id in participants:
+        cur.execute(
+            """
+            INSERT INTO etat_combat_pokemon (user_id, pokemon_nom, pv_actuels)
+            SELECT user_id, pokemon_nom, pv_actuels FROM etat_combat_pokemon_raid WHERE user_id = ?
+            ON CONFLICT(user_id, pokemon_nom) DO UPDATE SET pv_actuels = excluded.pv_actuels
+            """,
+            (user_id,),
+        )
     cur.execute("UPDATE raid_actuel SET actif = 0 WHERE id = ?", (raid_id,))
     conn.commit()
     conn.close()
@@ -2657,6 +2698,40 @@ def passer_tour_pvp(combat_id: int, date_limite: int):
     conn.close()
 
 
+def creer_choix_ko(combat_id: int, user_id: int, date_limite: int):
+    """Le Pokémon actif de ce joueur vient de tomber K.O. : on attend son choix de
+    remplaçant jusqu'à date_limite (au-delà, envoi automatique — anti-AFK)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT OR REPLACE INTO combat_choix_ko (combat_id, user_id, date_limite) VALUES (?, ?, ?)",
+        (combat_id, user_id, date_limite),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_choix_ko(combat_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT user_id, date_limite FROM combat_choix_ko WHERE combat_id = ?", (combat_id,))
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def supprimer_choix_ko(combat_id: int, user_id: int) -> bool:
+    """Retire le choix en attente (le joueur a choisi, ou l'envoi auto a eu lieu).
+    Retourne False si la ligne n'existait plus (déjà traitée — évite les doubles envois)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM combat_choix_ko WHERE combat_id = ? AND user_id = ?", (combat_id, user_id))
+    supprime = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return supprime
+
+
 def obtenir_combats_pvp_actifs():
     """Tous les combats (PvP, dresseur, Arène, Gladio) encore marqués actifs — utilisé
     uniquement par le nettoyage au démarrage : après un redémarrage, leurs boucles de
@@ -2687,6 +2762,7 @@ def terminer_combat_pvp(combat_id: int):
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute("UPDATE combat_pvp SET actif = 0 WHERE id = ?", (combat_id,))
+    cur.execute("DELETE FROM combat_choix_ko WHERE combat_id = ?", (combat_id,))
     conn.commit()
     conn.close()
 

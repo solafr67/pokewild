@@ -643,7 +643,7 @@ async def resoudre_tour(combat_id: int) -> list:
             if pv_apres <= 0:
                 log.append(f"  💀 **{nom_actif}** est K.O. !")
 
-    # --- Vérifier les K.O. et changer auto si nécessaire ---
+    # --- Vérifier les K.O. et gérer le remplacement ---
     combat = database.obtenir_combat(combat_id)
     for user_id in (j1, j2):
         nom_actif = combat["actif1_nom"] if user_id == j1 else combat["actif2_nom"]
@@ -651,13 +651,59 @@ async def resoudre_tour(combat_id: int) -> list:
         actif_row = next((r for r in eq if r["pokemon_nom"] == nom_actif), None)
         if actif_row and actif_row["pv_actuels"] <= 0:
             database.reinitialiser_boosts(combat_id, user_id, nom_actif)
-            suivant = next((r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0), None)
-            if suivant:
+            vivants = [r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0]
+            if not vivants:
+                continue  # équipe entière K.O. : verifier_fin_combat tranchera
+            if user_id > 0 and len(vivants) >= 2:
+                # Joueur humain avec un vrai choix : comme dans les jeux, c'est LUI qui
+                # décide qui entre — la résolution du tour suivant attend son choix
+                # (bouton "Envoyer un Pokémon"), avec envoi auto au bout du délai anti-AFK.
+                database.creer_choix_ko(combat_id, user_id, int(time.time()) + config.CHOIX_KO_DUREE_SECONDES)
+                log.append(
+                    f"  🔁 <@{user_id}> — choisis ton prochain Pokémon avec le bouton "
+                    f"**Envoyer un Pokémon** ({config.CHOIX_KO_DUREE_SECONDES}s, sinon envoi automatique) !"
+                )
+            else:
+                # IA (dresseur/Arène/Gladio) ou un seul survivant : envoi automatique
+                suivant = vivants[0]
                 database.changer_pokemon_actif_pvp(combat_id, user_id, suivant)
-                log.append(f"  → <@{user_id}> envoie **{suivant}** !")
+                log.append(f"  → <@{user_id}> envoie **{suivant}** !" if user_id > 0 else f"  → **{suivant}** entre en jeu !")
                 _appliquer_hazards_entree(combat_id, user_id, suivant, log)
 
     return log
+
+
+async def traiter_choix_ko(bot, combat_id: int, thread) -> bool:
+    """Gère les choix de remplaçant en attente pour ce combat. Envoie automatiquement le
+    premier vivant pour chaque choix expiré (anti-AFK), en le signalant dans le fil.
+    Retourne True s'il reste au moins un choix EN ATTENTE (la résolution doit patienter)."""
+    rows = database.obtenir_choix_ko(combat_id)
+    if not rows:
+        return False
+
+    maintenant = int(time.time())
+    reste = False
+    for row in rows:
+        if maintenant < row["date_limite"]:
+            reste = True
+            continue
+        # Délai écoulé : envoi automatique (supprimer_choix_ko protège contre le double
+        # traitement si le joueur clique exactement au même moment)
+        if not database.supprimer_choix_ko(combat_id, row["user_id"]):
+            continue
+        eq = database.obtenir_equipe_pvp(combat_id, row["user_id"])
+        suivant = next((r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0), None)
+        if suivant is None:
+            continue
+        database.changer_pokemon_actif_pvp(combat_id, row["user_id"], suivant)
+        mini_log = [f"⏳ <@{row['user_id']}> n'a pas choisi à temps — **{suivant}** est envoyé automatiquement !"]
+        _appliquer_hazards_entree(combat_id, row["user_id"], suivant, mini_log)
+        if thread is not None:
+            try:
+                await thread.send("\n".join(mini_log))
+            except discord.HTTPException:
+                pass
+    return reste
 
 
 def verifier_fin_combat(combat_id: int) -> int | None:
@@ -806,6 +852,12 @@ async def _tick_resolution_pvp(bot, combat_id: int, thread_id: int, message_id: 
         if not combat or not combat["actif"]:
             return True
 
+        # Un joueur doit choisir son remplaçant après un K.O. : la résolution attend
+        # (envoi automatique géré par traiter_choix_ko une fois le délai anti-AFK écoulé).
+        thread_choix = bot.get_channel(int(thread_id))
+        if await traiter_choix_ko(bot, combat_id, thread_choix):
+            return False
+
         # Un joueur en pleine charge/recharge (attaque à deux tours) n'a rien à choisir ce
         # tour-ci — son action reste NULL à raison, mais ça ne doit pas forcer à attendre le
         # timer complet si l'adversaire, lui, a déjà joué.
@@ -933,7 +985,7 @@ async def _tick_resolution_pvp(bot, combat_id: int, thread_id: int, message_id: 
             j2: (bot.get_user(j2).display_name if bot.get_user(j2) else f"Joueur {str(j2)[-4:]}"),
         }
         embeds = construire_embeds_combat(combat_id, log_tour=log, noms=noms)
-        vue = VueActionCombat(combat_id, nouveau_tour)
+        vue = VueActionCombat(combat_id, nouveau_tour, avec_choix_ko=bool(database.obtenir_choix_ko(combat_id)))
         try:
             msg = await thread.fetch_message(message_id)
             await msg.edit(embeds=embeds, view=vue)
@@ -951,10 +1003,34 @@ class VueActionCombat(discord.ui.View):
     Chaque joueur clique sur le même panneau ; les vérifications se font en base :
     seul un des deux combattants peut agir, une seule fois par tour."""
 
-    def __init__(self, combat_id: int, tour: int):
+    def __init__(self, combat_id: int, tour: int, avec_choix_ko: bool = False):
         super().__init__(timeout=None)  # le message est édité à chaque tour, pas de timeout
         self.combat_id = combat_id
         self.tour = tour
+        if avec_choix_ko:
+            bouton = discord.ui.Button(label="Envoyer un Pokémon", emoji="🔁", style=discord.ButtonStyle.primary, row=1)
+            bouton.callback = self._on_envoyer_remplacant
+            self.add_item(bouton)
+
+    async def _on_envoyer_remplacant(self, interaction: discord.Interaction):
+        combat = database.obtenir_combat(self.combat_id)
+        if not combat or not combat["actif"]:
+            await interaction.response.send_message("Ce combat est terminé.", ephemeral=True)
+            return
+        if not any(r["user_id"] == interaction.user.id for r in database.obtenir_choix_ko(self.combat_id)):
+            await interaction.response.send_message(
+                "Tu n'as pas de Pokémon K.O. à remplacer (ou l'envoi automatique a déjà eu lieu).",
+                ephemeral=True,
+            )
+            return
+        nom_actif = combat["actif1_nom"] if combat["joueur1_id"] == interaction.user.id else combat["actif2_nom"]
+        equipe = database.obtenir_equipe_pvp(self.combat_id, interaction.user.id)
+        vivants = [r for r in equipe if r["pv_actuels"] > 0 and r["pokemon_nom"] != nom_actif]
+        if not vivants:
+            await interaction.response.send_message("Tu n'as plus d'autres Pokémon vivants !", ephemeral=True)
+            return
+        vue = VueChoixRemplacantKO(self.combat_id, interaction.user.id, vivants)
+        await interaction.response.send_message("Quel Pokémon envoyer au combat ?", view=vue, ephemeral=True)
 
     async def _verifier(self, interaction: discord.Interaction) -> bool:
         combat = database.obtenir_combat(self.combat_id)
@@ -974,6 +1050,13 @@ class VueActionCombat(discord.ui.View):
         )
         if deja_joue:
             await interaction.response.send_message("Tu as déjà choisi ton action pour ce tour !", ephemeral=True)
+            return False
+        if any(r["user_id"] == interaction.user.id for r in database.obtenir_choix_ko(self.combat_id)):
+            await interaction.response.send_message(
+                "🔁 Ton Pokémon est K.O. — choisis d'abord ton remplaçant avec le bouton "
+                "**Envoyer un Pokémon** !",
+                ephemeral=True,
+            )
             return False
         return True
 
@@ -1067,6 +1150,46 @@ class VueActionCombat(discord.ui.View):
             return
         await interaction.response.send_message("🏳️ Tu as abandonné. Défaite enregistrée.", ephemeral=True)
         await resoudre_abandon(interaction.client, self.combat_id, interaction.user.id)
+
+
+class VueChoixRemplacantKO(discord.ui.View):
+    """Sous-menu éphémère : choisir le Pokémon envoyé après un K.O. — changement GRATUIT
+    (ne consomme pas le tour), comme dans les jeux officiels."""
+
+    def __init__(self, combat_id: int, user_id: int, vivants: list):
+        super().__init__(timeout=config.CHOIX_KO_DUREE_SECONDES)
+        self.combat_id = combat_id
+        self.user_id = user_id
+        options = [
+            discord.SelectOption(label=r["pokemon_nom"], description=f"{r['pv_actuels']}/{r['pv_max']} PV")
+            for r in vivants[:25]
+        ]
+        select = discord.ui.Select(placeholder="Choisis ton prochain Pokémon…", options=options)
+        select.callback = self._on_choix
+        self.add_item(select)
+        self._select = select
+
+    async def _on_choix(self, interaction: discord.Interaction):
+        # supprimer_choix_ko sert de verrou : si l'envoi auto (anti-AFK) est passé entre
+        # temps, la ligne n'existe plus et on ne change rien une deuxième fois.
+        if not database.supprimer_choix_ko(self.combat_id, self.user_id):
+            await interaction.response.edit_message(
+                content="⏳ Trop tard — l'envoi automatique a déjà eu lieu !", view=None
+            )
+            return
+        combat = database.obtenir_combat(self.combat_id)
+        if not combat or not combat["actif"]:
+            await interaction.response.edit_message(content="Ce combat est terminé.", view=None)
+            return
+        nouveau_nom = self._select.values[0]
+        database.changer_pokemon_actif_pvp(self.combat_id, self.user_id, nouveau_nom)
+        mini_log = [f"🔁 <@{self.user_id}> envoie **{nouveau_nom}** !"]
+        _appliquer_hazards_entree(self.combat_id, self.user_id, nouveau_nom, mini_log)
+        await interaction.response.edit_message(content=f"✅ **{nouveau_nom}** entre en jeu !", view=None)
+        try:
+            await interaction.channel.send("\n".join(mini_log))
+        except discord.HTTPException:
+            pass
 
 
 class VueChoixPotion(discord.ui.View):

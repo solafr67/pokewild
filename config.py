@@ -157,6 +157,36 @@ ARENE_RECOMPENSE_DOLLARS_CHAMPION = (250, 400)
 # 1er run du jour plein tarif, puis ×0.6, puis ×0.35 pour tous les suivants. Badges, XP
 # et plaisir de jeu non concernés — seule la récompense économique est contenue.
 ARENE_MULTIPLICATEURS_REPETITION_JOUR = [1.0, 0.6, 0.35]
+
+# Image de transition affichée entre le 2e Apprenti et le Champion (style "VS" des jeux).
+# Clé = type d'arène (mêmes clés que EMOJI_TYPES) ; les 18 types sont couverts —
+# ARENE_IMAGE_CHAMPION_DEFAUT reste le filet de sécurité si une clé venait à manquer.
+ARENE_IMAGES_CHAMPION = {
+    "normal":   "https://www.pokepedia.fr/images/9/9f/VS_Tcheren_NB.png",
+    "feu":      "https://www.pokepedia.fr/images/a/a2/VS_Auguste_HGSS.png",
+    "eau":      "https://www.pokepedia.fr/images/e/ef/Sprite_Donna_EB.png",
+    "electrik": "https://www.pokepedia.fr/images/8/8e/VS_Tanguy_Pt.png",
+    "plante":   "https://www.pokepedia.fr/images/5/56/VS_Flo_Pt.png",
+    "glace":    "https://www.pokepedia.fr/images/7/77/VS_Watson_NB.png",
+    "combat":   "https://www.pokepedia.fr/images/d/d2/Sprite_Fa%C3%AFza_EB.png",
+    "poison":   "https://www.pokepedia.fr/images/c/c6/VS_Koga_HGSS.png",
+    "sol":      "https://www.pokepedia.fr/images/8/84/VS_Bardane_NB.png",
+    "vol":      "https://www.pokepedia.fr/images/f/f5/VS_Carolina_NB.png",
+    "psy":      "https://www.pokepedia.fr/images/5/5b/VS_Morgane_HGSS.png",
+    "insecte":  "https://www.pokepedia.fr/images/3/31/VS_Hector_HGSS.png",
+    "roche":    "https://www.pokepedia.fr/images/1/10/VS_Pierrick_Pt.png",
+    "spectre":  "https://www.pokepedia.fr/images/0/0d/Sprite_Mystimaniac_XY.png",
+    "dragon":   "https://www.pokepedia.fr/images/6/60/VS_Cynthia_Pt.png",
+    "tenebres": "https://www.pokepedia.fr/images/3/38/VS_Marion_HGSS.png",
+    "acier":    "https://www.pokepedia.fr/images/6/6a/Sprite_Thym%C3%A9o_XY.png",
+    "fee":      "https://www.pokepedia.fr/images/a/a2/Sprite_Val%C3%A9riane_XY.png",
+}
+ARENE_IMAGE_CHAMPION_DEFAUT = "https://www.pokepedia.fr/images/8/8e/VS_Tanguy_Pt.png"
+
+# Temps laissé à un joueur pour choisir son prochain Pokémon quand le sien tombe K.O.
+# en combat (dresseur/Arène/Gladio/PvP) — au-delà, le premier vivant est envoyé
+# automatiquement (anti-AFK, même durée qu'un tour de combat).
+CHOIX_KO_DUREE_SECONDES = 45
 ARENE_BONUS_DEGATS_PAR_BADGE = 0.03  # +3% de dégâts pour les attaques du type d'un badge obtenu
 
 # --- Rival (Gladio) ---
