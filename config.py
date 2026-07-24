@@ -311,7 +311,7 @@ FACTEUR_DEGATS_RAID = 1.1  # dégâts d'un tick = (Atq + Atq Spé)/2 × ce facte
 # potion de soin sur un clear normal, 4★/5★ montent en vraie difficulté (plusieurs
 # potions, un vrai effort de groupe) — sans revenir à l'excès d'avant (~198% cumulé sur
 # la durée max d'un 3★, qui rendait le soin obligatoire ET plus cher que la récompense).
-RIPOSTE_POURCENT_PAR_ETOILE = {1: 0.002, 2: 0.004, 3: 0.009, 4: 0.015, 5: 0.024}
+RIPOSTE_POURCENT_PAR_ETOILE = {1: 0.0028, 2: 0.0055, 3: 0.013, 4: 0.021, 5: 0.033}
 
 # Nombre d'Honor Ball reçues par CHAQUE participant à la victoire (peu importe les dégâts infligés)
 # Chaque participant a le même nombre de tentatives de capture (Honor Ball), peu importe

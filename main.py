@@ -67,6 +67,7 @@ from profil import (
     construire_embed_profil,
     construire_apercu_relacher,
     effectuer_relacher_tous,
+    fichier_avatar_fiable,
     url_avatar_fiable,
     VueConfirmationRelacher,
     VueOuvrirPokedex,
@@ -1924,9 +1925,15 @@ async def pokedex_info(interaction: discord.Interaction, nom: str, membre: disco
     if embed is None:
         await interaction.response.send_message(f"❌ Pokémon **{nom}** introuvable dans la base.", ephemeral=True)
         return
+    fichiers_pokedex_info = []
     if membre:
-        embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url=url_avatar_fiable(membre))
-    await interaction.response.send_message(embed=embed)
+        fichier_avatar = await fichier_avatar_fiable(membre)
+        if fichier_avatar:
+            embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url="attachment://avatar.png")
+            fichiers_pokedex_info.append(fichier_avatar)
+        else:
+            embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url=url_avatar_fiable(membre))
+    await interaction.response.send_message(embed=embed, files=fichiers_pokedex_info)
 
 
 @bot.tree.command(
@@ -1998,8 +2005,8 @@ async def relacher(interaction: discord.Interaction):
 
 @bot.tree.command(name="profil", description="Affiche tes statistiques de dresseur")
 async def profil(interaction: discord.Interaction):
-    embed = construire_embed_profil(interaction.user)
-    await interaction.response.send_message(embed=embed, view=VueOuvrirPokedex())
+    embed, fichier = await construire_embed_profil(interaction.user)
+    await interaction.response.send_message(embed=embed, view=VueOuvrirPokedex(), files=[fichier] if fichier else [])
 
 
 @bot.tree.command(name="setup-boutique", description="[Admin] Poste ou remet à jour le message fixe de la boutique dans ce channel")
@@ -2564,7 +2571,11 @@ async def voir_joueur(interaction: discord.Interaction, membre: discord.Member):
         ),
         color=discord.Color.blurple(),
     )
-    embed.set_thumbnail(url=url_avatar_fiable(membre))
+    fichier_avatar_membre = await fichier_avatar_fiable(membre)
+    if fichier_avatar_membre:
+        embed.set_thumbnail(url="attachment://avatar.png")
+    else:
+        embed.set_thumbnail(url=url_avatar_fiable(membre))
 
     embed.add_field(name="Poké Dollars", value=f"{EMOJI_POKEDOLLAR} {dollars}", inline=True)
     embed.add_field(name="📖 Pokédex", value=f"{nb_especes} espèces • {nb_total} captures", inline=True)
@@ -2600,7 +2611,9 @@ async def voir_joueur(interaction: discord.Interaction, membre: discord.Member):
     )
     embed.add_field(name="🚀 Boost temporaire", value=boosts_txt, inline=True)
 
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.response.send_message(
+        embed=embed, ephemeral=True, files=[fichier_avatar_membre] if fichier_avatar_membre else []
+    )
 
 
 @bot.tree.command(name="reset-joueur", description="[Admin] Réinitialise complètement le profil d'un joueur (irréversible)")
@@ -2709,7 +2722,7 @@ async def ping_raid_toggle(interaction: discord.Interaction):
         )
 
 
-@bot.tree.command(name="combat-2v2", description="Lance un lobby de combat 2v2 (4 joueurs, 2 équipes)")
+@bot.tree.command(name="combat-2v2-equipe", description="Lance un lobby de combat 2v2 en équipe (4 joueurs, 2 équipes de 2)")
 async def combat_2v2(interaction: discord.Interaction):
     await combat_2v2_module.lancer_lobby_2v2(bot, interaction)
 
@@ -2786,7 +2799,7 @@ class VueDefiDouble(discord.ui.View):
                 pass
 
 
-@bot.tree.command(name="defier-double", description="Défie un joueur en 1v1 format double combat (équipe de 6, 2 actifs chacun)")
+@bot.tree.command(name="combat-2v2", description="Défie un joueur en 1v1 format double combat (équipe de 6, 2 actifs chacun)")
 async def defier_double(interaction: discord.Interaction, adversaire: discord.Member):
     if adversaire.bot or adversaire.id == interaction.user.id:
         await interaction.response.send_message("❌ Cible invalide.", ephemeral=True)

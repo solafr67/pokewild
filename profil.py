@@ -1,4 +1,8 @@
+import io
+
+import aiohttp
 import discord
+from PIL import Image
 
 import config
 import database
@@ -42,8 +46,35 @@ def url_avatar_fiable(user: discord.abc.User) -> str:
     return url
 
 
-def construire_embed_profil(user: discord.abc.User) -> discord.Embed:
-    """Construit la carte de profil complète d'un joueur (réutilisée par /profil et le bouton du channel)."""
+async def fichier_avatar_fiable(user: discord.abc.User, taille: int = 256) -> discord.File | None:
+    """Version "impossible à rater" de url_avatar_fiable : télécharge l'avatar (animé ou
+    non) et le convertit nous-mêmes en PNG STATIQUE, attaché au message plutôt que
+    référencé par une URL Discord — plus aucune dépendance au comportement (parfois
+    capricieux, voir url_avatar_fiable) du client Discord pour charger un GIF en embed.
+    Coût assumé (demandé explicitement) : plus jamais animé, même pour un GIF.
+    Retourne None si le téléchargement échoue (l'appelant doit alors se rabattre sur
+    url_avatar_fiable() comme filet de sécurité)."""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(user.display_avatar.url, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.read()
+        img = Image.open(io.BytesIO(data)).convert("RGBA")
+        img.thumbnail((taille, taille), Image.LANCZOS)
+        tampon = io.BytesIO()
+        img.save(tampon, format="PNG")
+        tampon.seek(0)
+        return discord.File(tampon, filename="avatar.png")
+    except Exception:
+        return None
+
+
+async def construire_embed_profil(user: discord.abc.User) -> tuple:
+    """Construit la carte de profil complète d'un joueur (réutilisée par /profil et le bouton du channel).
+    Retourne (embed, fichier) — fichier (peut être None) doit être joint au message
+    (files=[fichier] pour un envoi) si présent ; l'embed y fait référence via
+    "attachment://avatar.png"."""
     especes, total = database.obtenir_stats_joueur(user.id)
     poke_dollars = database.obtenir_poke_dollars(user.id)
     inventaire = database.obtenir_inventaire_balls(user.id)
@@ -88,12 +119,15 @@ def construire_embed_profil(user: discord.abc.User) -> discord.Embed:
         description=(f"🏅 *{titre_txt}*\n" if titre_txt else "") + f"**Niveau {niveau}**",
         color=discord.Color.blue(),
     )
-    # Taille réduite (256 au lieu du défaut 1024) : un avatar GIF animé en 1024px produit
-    # un fichier trop lourd, que le proxy d'embed de Discord échoue souvent à charger —
-    # le thumbnail restait alors vide pour les joueurs avec une pp animée. En 256px (bien
-    # suffisant pour un thumbnail, qui est de toute façon affiché en petit), le GIF passe
-    # de façon fiable. Les avatars statiques ne sont pas affectés (même image, plus légère).
-    embed.set_thumbnail(url=url_avatar_fiable(user))
+    # Avatar converti en PNG statique et joint au message (voir fichier_avatar_fiable) —
+    # garantit l'affichage même pour les avatars GIF animés, au prix de l'animation
+    # (demandé explicitement : "au pire que ce soit l'image fixe, c'est pas grave").
+    # Filet de sécurité : si le téléchargement échoue, on retombe sur l'URL directe.
+    fichier_avatar = await fichier_avatar_fiable(user)
+    if fichier_avatar:
+        embed.set_thumbnail(url="attachment://avatar.png")
+    else:
+        embed.set_thumbnail(url=url_avatar_fiable(user))
 
     embed.add_field(name="✨ Progression", value=f"{barre_xp}\n`{xp_dans_niveau}/{xp_requise} XP`", inline=False)
 
@@ -123,7 +157,7 @@ def construire_embed_profil(user: discord.abc.User) -> discord.Embed:
         embed.add_field(name="Divers", value=_ligne(divers, NOM_OBJETS_DIVERS, EMOJI_OBJETS_DIVERS), inline=True)
 
     embed.set_footer(text="💡 /pokedex • /exploration • /ma-race • /equipe-combat")
-    return embed
+    return embed, fichier_avatar
 
 
 def construire_embed_fixe() -> discord.Embed:
@@ -642,5 +676,7 @@ class VueProfil(discord.ui.View):
         custom_id="profil_voir_bouton",  # requis pour la persistance après redémarrage
     )
     async def voir_profil(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = construire_embed_profil(interaction.user)
-        await interaction.response.send_message(embed=embed, view=VueOuvrirPokedex(), ephemeral=True)
+        embed, fichier = await construire_embed_profil(interaction.user)
+        await interaction.response.send_message(
+            embed=embed, view=VueOuvrirPokedex(), files=[fichier] if fichier else [], ephemeral=True
+        )
