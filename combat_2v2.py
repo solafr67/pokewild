@@ -274,13 +274,18 @@ async def _telecharger_image(session: aiohttp.ClientSession, url: str) -> Image.
         return None
 
 
-async def _composer_sprites_equipe(nom1: str, nom2: str) -> bytes | None:
+async def _composer_sprites_equipe(nom1: str, nom2: str, couleur_equipe: tuple = (54, 57, 63)) -> bytes | None:
     """Une image STATIQUE unique avec les 2 sprites actifs d'une équipe côte à côte —
     c'est le seul moyen fiable d'avoir 2 sprites sur UNE rangée : Discord n'affiche
     jamais deux embeds côte à côte (ils s'empilent toujours verticalement), donc on
     fusionne les deux images nous-mêmes plutôt que de compter sur la mise en page Discord.
-    Contrepartie assumée : image fixe (première frame), plus animée."""
-    cle = tuple(sorted((nom1, nom2)))
+    Contrepartie assumée : image fixe (première frame), plus animée.
+
+    Esthétique : chaque sprite repose sur une carte arrondie légèrement teintée de la
+    couleur de l'équipe (les sprites à fond transparent flottaient sans contraste sur le
+    fond de l'embed sinon), séparés par une fine ligne verticale, avec une marge autour
+    de l'ensemble pour ne pas coller aux bords de l'embed."""
+    cle = (tuple(sorted((nom1, nom2))), couleur_equipe)
     if cle in _cache_sprites_composes:
         return _cache_sprites_composes[cle]
 
@@ -301,11 +306,38 @@ async def _composer_sprites_equipe(nom1: str, nom2: str) -> bytes | None:
         return img.resize((max(1, round(img.width * ratio)), TAILLE_SPRITE_COMPOSE), Image.LANCZOS)
 
     img1, img2 = _redimensionner(img1), _redimensionner(img2)
-    marge = 12
-    largeur_totale = img1.width + marge + img2.width
-    canevas = Image.new("RGBA", (largeur_totale, TAILLE_SPRITE_COMPOSE), (0, 0, 0, 0))
-    canevas.paste(img1, (0, 0), img1)
-    canevas.paste(img2, (img1.width + marge, 0), img2)
+
+    from PIL import ImageDraw
+
+    marge_ext = 16  # respiration autour de l'ensemble, pour ne pas coller aux bords de l'embed
+    marge_carte = 14  # espace entre le sprite et le bord de sa carte
+    ecart_cartes = 10  # espace entre les 2 cartes
+    hauteur_carte = TAILLE_SPRITE_COMPOSE + marge_carte * 2
+    largeur_carte_1 = img1.width + marge_carte * 2
+    largeur_carte_2 = img2.width + marge_carte * 2
+    largeur_totale = marge_ext * 2 + largeur_carte_1 + ecart_cartes + largeur_carte_2
+    hauteur_totale = marge_ext * 2 + hauteur_carte
+
+    canevas = Image.new("RGBA", (largeur_totale, hauteur_totale), (0, 0, 0, 0))
+    dessin = ImageDraw.Draw(canevas)
+
+    r, g, b = couleur_equipe
+    fond_carte = (r, g, b, 60)  # carte très subtile, juste assez pour détacher le sprite du fond
+    contour_carte = (r, g, b, 130)
+
+    x1 = marge_ext
+    dessin.rounded_rectangle(
+        [x1, marge_ext, x1 + largeur_carte_1, marge_ext + hauteur_carte],
+        radius=14, fill=fond_carte, outline=contour_carte, width=2,
+    )
+    canevas.paste(img1, (x1 + marge_carte, marge_ext + marge_carte), img1)
+
+    x2 = x1 + largeur_carte_1 + ecart_cartes
+    dessin.rounded_rectangle(
+        [x2, marge_ext, x2 + largeur_carte_2, marge_ext + hauteur_carte],
+        radius=14, fill=fond_carte, outline=contour_carte, width=2,
+    )
+    canevas.paste(img2, (x2 + marge_carte, marge_ext + marge_carte), img2)
 
     tampon = io.BytesIO()
     canevas.save(tampon, format="PNG")
@@ -315,13 +347,19 @@ async def _composer_sprites_equipe(nom1: str, nom2: str) -> bytes | None:
 
 
 async def construire_embeds_2v2(combat_id: int, noms: dict, log_tour: list = None) -> tuple:
-    """Un embed PAR ÉQUIPE (donc 2 rangées, comme demandé) plutôt qu'un embed par siège —
-    avec les 2 sprites actifs de l'équipe COMPOSÉS en une seule image statique côte à
-    côte (voir _composer_sprites_equipe : Discord n'aligne jamais deux embeds côte à
-    côte, chaque embed n'accepte qu'UNE image, donc c'est la seule façon fiable d'avoir
-    les 2 sprites visibles ensemble sur une rangée). Contrepartie assumée : sprites figés
-    (première frame), plus animés — chaque Pokémon garde son propre champ texte (nom,
-    PV, réserve) à côté de l'autre dans le même embed.
+    """Un embed PAR ÉQUIPE (2 rangées), avec les 2 sprites actifs composés en une seule
+    image côte à côte (voir _composer_sprites_equipe — Discord n'aligne jamais deux
+    embeds côte à côte et un embed n'accepte qu'UNE image, donc c'est la seule façon
+    fiable d'avoir les 2 sprites ensemble sur une rangée).
+
+    Affichage à deux visages selon QUI contrôle l'équipe :
+    - 2 sièges du MÊME joueur réel (double combat solo, ou l'un des 2 dresseurs d'un duo
+      vu de son propre côté — non, en pratique ça ne concerne que le joueur humain,
+      jamais 2 dresseurs IA qui restent 2 entités distinctes) → une seule bannière avec
+      SON nom (pas de "Joueur (2)"), 2 champs "Pokémon" sobres, réserve FUSIONNÉE en une
+      seule liste — c'est visuellement UNE équipe de 6, pas deux équipes de 3.
+    - 2 sièges de contrôleurs DIFFÉRENTS (lobby 2v2 à 4 joueurs, ou les 2 dresseurs d'un
+      duo) → inchangé, un champ par personne avec son nom et sa propre réserve.
 
     Retourne (embeds, fichiers) — fichiers doit être joint au message (files= pour un
     envoi, attachments= pour une édition), les embeds y font référence via
@@ -335,21 +373,44 @@ async def construire_embeds_2v2(combat_id: int, noms: dict, log_tour: list = Non
     fichiers = []
     for equipe, couleur, prefixe in ((1, discord.Color.blue(), "🔵"), (2, discord.Color.red(), "🔴")):
         membres = [j for j in joueurs if j["equipe"] == equipe]
-        embed = discord.Embed(color=couleur, title=f"{prefixe} Équipe {equipe}")
+        controleurs = {controleur_reel(j["user_id"]) for j in membres}
+        equipe_unifiee = len(controleurs) == 1 and len(membres) == 2
+
+        if equipe_unifiee:
+            reel_id = next(iter(controleurs))
+            nom_capitaine = noms.get(reel_id, f"Joueur…{str(reel_id)[-4:]}")
+            prets = sum(1 for j in membres if j["action"] is not None and not j["abandonne"])
+            actifs_ok = sum(1 for j in membres if not j["abandonne"] and not _joueur_hors_combat(combat_id, j))
+            if any(j["abandonne"] for j in membres) and actifs_ok == 0:
+                statut_txt = "🏳️ a abandonné"
+            elif actifs_ok == 0:
+                statut_txt = "💀 équipe K.O."
+            elif prets == actifs_ok:
+                statut_txt = "✅ prêt"
+            else:
+                statut_txt = f"⏳ {prets}/{actifs_ok} prêt"
+            embed = discord.Embed(color=couleur, title=f"{prefixe} {nom_capitaine} — {statut_txt}")
+        else:
+            embed = discord.Embed(color=couleur, title=f"{prefixe} Équipe {equipe}")
 
         actifs_pour_image = []
+        reserve_fusionnee = []
         for j in membres:
             nom_joueur = noms.get(j["user_id"], f"Joueur…{str(j['user_id'])[-4:]}")
+            en_tete_champ = j["actif_nom"] or nom_joueur  # unifiée : juste le nom du Pokémon
+
             if j["abandonne"]:
-                embed.add_field(name=f"🏳️ {nom_joueur}", value="*A abandonné*", inline=True)
+                if not equipe_unifiee:
+                    embed.add_field(name=f"🏳️ {nom_joueur}", value="*A abandonné*", inline=True)
                 continue
 
             eq = database.obtenir_equipe_pvp(combat_id, j["user_id"])
             row = _row_actif(combat_id, j["user_id"], j["actif_nom"])
-            statut_txt = "✅ prêt" if j["action"] else "⏳ choisit..."
+            statut_solo = "✅" if j["action"] else "⏳"
 
             if row is None or all(r["pv_actuels"] <= 0 for r in eq):
-                embed.add_field(name=f"💀 {nom_joueur}", value="*Équipe entière K.O.*", inline=True)
+                if not equipe_unifiee:
+                    embed.add_field(name=f"💀 {nom_joueur}", value="*Équipe entière K.O.*", inline=True)
                 continue
 
             statut_actif = database.obtenir_statut(combat_id, j["user_id"], j["actif_nom"])
@@ -358,17 +419,28 @@ async def construire_embeds_2v2(combat_id: int, noms: dict, log_tour: list = Non
                 if statut_actif and statut_actif[0] in STATUTS_INFO
                 else ""
             )
-            valeur = (
-                f"**{j['actif_nom']}**{emoji_statut}\n"
-                f"{_barre_pv(row['pv_actuels'], row['pv_max'], longueur=8)}\n"
-                f"❤️ {row['pv_actuels']}/{row['pv_max']} PV\n"
-                f"{_bloc_reserve(eq, j['actif_nom'])}"
-            )
-            embed.add_field(name=f"{nom_joueur} — {statut_txt}", value=valeur[:1024], inline=True)
+            barre = f"{_barre_pv(row['pv_actuels'], row['pv_max'], longueur=8)}\n❤️ {row['pv_actuels']}/{row['pv_max']} PV"
+
+            if equipe_unifiee:
+                nom_champ = f"{statut_solo} {j['actif_nom']}{emoji_statut}"
+                embed.add_field(name=nom_champ, value=barre, inline=True)
+                reserve_fusionnee.append(_bloc_reserve(eq, j["actif_nom"]))
+            else:
+                statut_txt = "✅ prêt" if j["action"] else "⏳ choisit..."
+                valeur = f"**{j['actif_nom']}**{emoji_statut}\n{barre}\n{_bloc_reserve(eq, j['actif_nom'])}"
+                embed.add_field(name=f"{nom_joueur} — {statut_txt}", value=valeur[:1024], inline=True)
+
             actifs_pour_image.append(j["actif_nom"])
 
+        if equipe_unifiee and reserve_fusionnee:
+            reserve_texte = " • ".join(r for r in reserve_fusionnee if r and r != "*Aucune réserve*")
+            embed.add_field(
+                name="Réserve", value=(reserve_texte or "*Aucune*")[:1024], inline=False
+            )
+
         if len(actifs_pour_image) == 2:
-            image_bytes = await _composer_sprites_equipe(*actifs_pour_image)
+            couleur_rgb = (52, 120, 246) if equipe == 1 else (237, 66, 69)
+            image_bytes = await _composer_sprites_equipe(*actifs_pour_image, couleur_equipe=couleur_rgb)
             if image_bytes:
                 nom_fichier = f"equipe{equipe}_{combat_id}_{combat['tour']}.png"
                 fichiers.append(discord.File(io.BytesIO(image_bytes), filename=nom_fichier))

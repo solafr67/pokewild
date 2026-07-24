@@ -50,10 +50,12 @@ GUILD_ID = 1496856137583296562
 CHANCE_SHINY_BASE = 1 / 200  # ~0.5% de base, indépendant pour chaque joueur à chaque tentative
 
 # --- Boutique (Poké Dollars) ---
+# Prix relevés légèrement (2e passe d'équilibrage éco, en miroir du nerf d'exploration) —
+# la Master Ball ne bouge pas : déjà calibrée comme objectif de fin de partie.
 PRIX_BALLS = {
-    "pokeball": 15,
-    "superball": 35,
-    "hyperball": 70,
+    "pokeball": 18,
+    "superball": 40,
+    "hyperball": 80,
     "masterball": 2500,
 }
 
@@ -221,11 +223,11 @@ PRIX_CT_PAR_PUISSANCE = {  # puissance minimale -> prix (le seuil le plus haut a
 LIMITE_STOCKAGE_POKEMON_BASE = 300
 LIMITE_STOCKAGE_OBJETS_BASE = 50
 
-EXTENSION_STOCKAGE_POKEMON = 20  # slots ajoutés PAR ACHAT (doublé — équilibrage éco : 20 PD/slot au lieu de 40)
-PRIX_EXTENSION_STOCKAGE_POKEMON = 400  # prix par achat de +20
+EXTENSION_STOCKAGE_POKEMON = 20  # slots ajoutés PAR ACHAT
+PRIX_EXTENSION_STOCKAGE_POKEMON = 450  # relevé légèrement (2e passe d'équilibrage, ~22 PD/slot)
 
-EXTENSION_STOCKAGE_OBJETS = 20  # slots ajoutés PAR ACHAT (doublé — équilibrage éco : 20 PD/slot au lieu de 40)
-PRIX_EXTENSION_STOCKAGE_OBJETS = 400  # prix par achat de +20
+EXTENSION_STOCKAGE_OBJETS = 20  # slots ajoutés PAR ACHAT
+PRIX_EXTENSION_STOCKAGE_OBJETS = 450  # relevé légèrement (2e passe d'équilibrage, ~22 PD/slot)
 
 RECOMPENSE_RELACHER = 5  # fixe, peu importe la rareté
 
@@ -302,14 +304,14 @@ DEGATS_DIVISEUR_RAID = 12  # conservé pour compat historique, plus utilisé par
 FACTEUR_DEGATS_RAID = 1.1  # dégâts d'un tick = (Atq + Atq Spé)/2 × ce facteur — à retendre après test en jeu
 # Riposte du boss = pourcentage des PV MAX réels du Pokémon touché (pas un nombre fixe) :
 # reste cohérent quelle que soit l'échelle de PV en vigueur (IV/niveau réels désormais).
-# Calibré pour ~180 tours possibles sur la durée max d'un raid (15 min / tick de 5s,
-# DUREE_RAID_MINUTES × 60 / INTERVALLE_TICK_COMBAT_RAID) — un pourcentage qui semble
-# raisonnable par coup devient vite fatal une fois répété autant de fois, d'où ces valeurs basses.
-# Divisée par ~2 (équilibrage éco) : aux anciennes valeurs, un raid 3★ complet infligeait
-# ~198% des PV max de l'équipe sur 15 min — soigner devenait OBLIGATOIRE et coûtait plus
-# cher en potions (jusqu'à ~840 PD) que la récompense du raid. Désormais l'équipe tient
-# ~toute la durée sans soin ; soigner redevient une optimisation volontaire.
-RIPOSTE_POURCENT_PAR_ETOILE = {1: 0.002, 2: 0.0035, 3: 0.0055, 4: 0.008, 5: 0.011}
+# RE-CALIBRÉ (2e passe d'équilibrage) : la division par ~2 de la session précédente avait
+# rendu les raids trop faciles à l'usage — un 3★ se terminait souvent sans qu'aucune
+# potion ne soit nécessaire. Remontée ciblée : 1★/2★ restent quasi anodins (raids
+# d'initiation, jamais de soin obligatoire), 3★ doit typiquement coûter au moins UNE
+# potion de soin sur un clear normal, 4★/5★ montent en vraie difficulté (plusieurs
+# potions, un vrai effort de groupe) — sans revenir à l'excès d'avant (~198% cumulé sur
+# la durée max d'un 3★, qui rendait le soin obligatoire ET plus cher que la récompense).
+RIPOSTE_POURCENT_PAR_ETOILE = {1: 0.002, 2: 0.004, 3: 0.009, 4: 0.015, 5: 0.024}
 
 # Nombre d'Honor Ball reçues par CHAQUE participant à la victoire (peu importe les dégâts infligés)
 # Chaque participant a le même nombre de tentatives de capture (Honor Ball), peu importe
@@ -320,9 +322,10 @@ TENTATIVES_CAPTURE_RAID = 5
 DUREE_AFFICHAGE_VICTOIRE_RAID = 180  # 3 minutes avant suppression automatique du message de résumé
 
 # Récompenses Poké Dollars / XP par participant, selon le nombre d'étoiles du raid vaincu
-# Relevées (équilibrage éco) : couvre une ou deux potions même quand on choisit de soigner
-# en cours de raid — un raid ne doit jamais être une perte nette d'argent.
-DOLLARS_RAID_PAR_ETOILE = {1: 75, 2: 150, 3: 250, 4: 400, 5: 600}
+# Relevées une 1ère fois, puis réajustées ici (2e passe) pour les paliers 3-5★ dont la
+# riposte remonte : la récompense doit rester nettement positive même après 1-3 potions
+# de soin, sans pour autant annuler la difficulté qu'on vient de réintroduire.
+DOLLARS_RAID_PAR_ETOILE = {1: 75, 2: 150, 3: 280, 4: 450, 5: 650}
 
 # --- PV des Pokémon personnels (utilisés en raid) ---
 FACTEUR_PV_PAR_PC = 0.8  # PV max = PC × ce facteur (raids uniquement — ticks automatiques, gros PV OK)
@@ -338,11 +341,13 @@ FACTEUR_PV_COMBAT_PVP = 0.4  # PV en combat PvP = PC × ce facteur
 DEGATS_BOSS_PAR_ETOILE = {1: 40, 2: 90, 3: 180, 4: 350, 5: 650}  # OBSOLÈTE — remplacé par RIPOSTE_POURCENT_PAR_ETOILE
 
 # --- Objets de soin (boutique) ---
+# Prix relevés légèrement (2e passe d'équilibrage éco) — restent couverts par une
+# récompense de raid 3-5★ typique, mais pèsent un peu plus sur le budget quotidien.
 PRIX_SOINS = {
-    "potion": 20,
-    "superpotion": 55,
-    "hyperpotion": 140,
-    "totalsoin": 80,
+    "potion": 24,
+    "superpotion": 65,
+    "hyperpotion": 160,
+    "totalsoin": 90,
 }
 SOIN_POURCENT = {
     "potion": 0.20,       # soigne 20% des PV max
@@ -434,10 +439,10 @@ EXPLORATION_PLAFOND_PC = 6000
 # Récompense = min(pc_total_equipe, PLAFOND) × facteur, par durée (plus long = meilleur taux)
 # Récompense = min(pc_total_equipe, PLAFOND) × facteur, par durée. Facteurs recalibrés
 # pour que le rendement PAR HEURE augmente avec la durée (avant : le 1h était 5x plus
-# rentable par heure que le 24h, ce qui poussait à spammer des explorations courtes au
-# lieu de vraiment s'engager sur la durée — l'inverse de l'intention). Désormais, au
-# plafond de PC : 1h ≈ 80 PD/h, 6h ≈ 100 PD/h, 24h ≈ 120 PD/h (croissant).
-EXPLORATION_FACTEUR_DOLLARS = {"1h": 0.0133, "6h": 0.10, "24h": 0.48}
+# rentable par heure que le 24h). RE-NERFÉS (2e passe) : encore jugés trop forts en
+# pratique — ×0,7 sur les 3 facteurs, forme (croissance par durée) conservée à l'identique.
+# Au plafond de PC : 1h ≈ 56 PD/h, 6h ≈ 70 PD/h, 24h ≈ 84 PD/h (toujours croissant).
+EXPLORATION_FACTEUR_DOLLARS = {"1h": 0.0093, "6h": 0.07, "24h": 0.336}
 EXPLORATION_FACTEUR_XP = {"1h": 0.00833, "6h": 0.065, "24h": 0.32}
 # Chance d'obtenir un Cristal de Mutation (objet de reroll de race) : base + bonus selon
 # la puissance de l'équipe (jusqu'au plafond), plafonnée à CHANCE_MAX
