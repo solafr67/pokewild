@@ -2571,11 +2571,12 @@ async def voir_joueur(interaction: discord.Interaction, membre: discord.Member):
         ),
         color=discord.Color.blurple(),
     )
-    fichier_avatar_membre = await fichier_avatar_fiable(membre)
-    if fichier_avatar_membre:
-        embed.set_thumbnail(url="attachment://avatar.png")
-    else:
-        embed.set_thumbnail(url=url_avatar_fiable(membre))
+    # Toujours en pièce jointe classique (pas attachment://) : cette fiche reste
+    # éphémère volontairement (infos d'un autre joueur, réservées à l'admin qui consulte)
+    # — hors, un message éphémère n'affiche jamais une image attachée via attachment://
+    # (bug Discord confirmé, voir fichier_avatar_fiable/voir_profil pour le détail). On
+    # se rabat donc directement sur l'URL fiable plutôt que de générer un fichier inutile.
+    embed.set_thumbnail(url=url_avatar_fiable(membre))
 
     embed.add_field(name="Poké Dollars", value=f"{EMOJI_POKEDOLLAR} {dollars}", inline=True)
     embed.add_field(name="📖 Pokédex", value=f"{nb_especes} espèces • {nb_total} captures", inline=True)
@@ -2611,9 +2612,7 @@ async def voir_joueur(interaction: discord.Interaction, membre: discord.Member):
     )
     embed.add_field(name="🚀 Boost temporaire", value=boosts_txt, inline=True)
 
-    await interaction.response.send_message(
-        embed=embed, ephemeral=True, files=[fichier_avatar_membre] if fichier_avatar_membre else []
-    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(name="reset-joueur", description="[Admin] Réinitialise complètement le profil d'un joueur (irréversible)")

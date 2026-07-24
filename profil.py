@@ -676,7 +676,13 @@ class VueProfil(discord.ui.View):
         custom_id="profil_voir_bouton",  # requis pour la persistance après redémarrage
     )
     async def voir_profil(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Non-éphémère volontairement : Discord a un bug documenté et confirmé (voir
+        # github.com/discord/discord-api-docs/issues/3842) où une image jointe via
+        # "attachment://" dans un embed ne s'affiche JAMAIS correctement dans un message
+        # éphémère (elle reste vide, peu importe le bot) — seuls les messages publics
+        # affichent correctement ce type de pièce jointe. /profil (la commande directe)
+        # est déjà public pour la même raison.
         embed, fichier = await construire_embed_profil(interaction.user)
         await interaction.response.send_message(
-            embed=embed, view=VueOuvrirPokedex(), files=[fichier] if fichier else [], ephemeral=True
+            embed=embed, view=VueOuvrirPokedex(), files=[fichier] if fichier else []
         )
