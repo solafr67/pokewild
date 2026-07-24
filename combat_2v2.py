@@ -15,8 +15,12 @@ automatique).
 """
 
 import asyncio
+import io
 import random
 import time
+
+import aiohttp
+from PIL import Image
 
 import discord
 
@@ -249,54 +253,134 @@ def _equipe_entierement_ko(combat_id: int, joueurs: list, equipe: int) -> bool:
 # Embeds
 # ----------------------------------------------------------------------------
 
-def construire_embeds_2v2(combat_id: int, noms: dict, log_tour: list = None) -> list:
-    """Un embed PAR SIÈGE actif (comme en 1v1) — c'est ce qui permet à chacun d'avoir sa
-    propre miniature de sprite (un seul embed ne peut avoir qu'UN thumbnail, d'où le
-    passage d'un embed groupé par équipe à un embed par Pokémon)."""
+# Cache en mémoire des images d'équipe déjà composées (clé = paire de Pokémon actifs,
+# peu importe l'ordre) — un double combat rejoue souvent plusieurs tours de suite SANS
+# que les actifs changent (juste des attaques) : sans ce cache, on retéléchargerait et
+# recomposerait la même image à CHAQUE tick (~5s) pour rien. Se vide tout seul avec le
+# process (pas de TTL — la mémoire prise reste minime, quelques Ko par paire vue).
+_cache_sprites_composes: dict[tuple[str, str], bytes] = {}
+
+TAILLE_SPRITE_COMPOSE = 96  # hauteur en px de chaque sprite dans l'image composée
+
+
+async def _telecharger_image(session: aiohttp.ClientSession, url: str) -> Image.Image | None:
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+            if resp.status != 200:
+                return None
+            data = await resp.read()
+        return Image.open(io.BytesIO(data)).convert("RGBA")
+    except Exception:
+        return None
+
+
+async def _composer_sprites_equipe(nom1: str, nom2: str) -> bytes | None:
+    """Une image STATIQUE unique avec les 2 sprites actifs d'une équipe côte à côte —
+    c'est le seul moyen fiable d'avoir 2 sprites sur UNE rangée : Discord n'affiche
+    jamais deux embeds côte à côte (ils s'empilent toujours verticalement), donc on
+    fusionne les deux images nous-mêmes plutôt que de compter sur la mise en page Discord.
+    Contrepartie assumée : image fixe (première frame), plus animée."""
+    cle = tuple(sorted((nom1, nom2)))
+    if cle in _cache_sprites_composes:
+        return _cache_sprites_composes[cle]
+
+    pokemon1, pokemon2 = obtenir_pokemon_par_nom(nom1), obtenir_pokemon_par_nom(nom2)
+    url1, url2 = sprite_anime(pokemon1), sprite_anime(pokemon2)
+    if not url1 or not url2:
+        return None
+
+    async with aiohttp.ClientSession() as session:
+        img1, img2 = await asyncio.gather(
+            _telecharger_image(session, url1), _telecharger_image(session, url2)
+        )
+    if img1 is None or img2 is None:
+        return None
+
+    def _redimensionner(img: Image.Image) -> Image.Image:
+        ratio = TAILLE_SPRITE_COMPOSE / img.height
+        return img.resize((max(1, round(img.width * ratio)), TAILLE_SPRITE_COMPOSE), Image.LANCZOS)
+
+    img1, img2 = _redimensionner(img1), _redimensionner(img2)
+    marge = 12
+    largeur_totale = img1.width + marge + img2.width
+    canevas = Image.new("RGBA", (largeur_totale, TAILLE_SPRITE_COMPOSE), (0, 0, 0, 0))
+    canevas.paste(img1, (0, 0), img1)
+    canevas.paste(img2, (img1.width + marge, 0), img2)
+
+    tampon = io.BytesIO()
+    canevas.save(tampon, format="PNG")
+    resultat = tampon.getvalue()
+    _cache_sprites_composes[cle] = resultat
+    return resultat
+
+
+async def construire_embeds_2v2(combat_id: int, noms: dict, log_tour: list = None) -> tuple:
+    """Un embed PAR ÉQUIPE (donc 2 rangées, comme demandé) plutôt qu'un embed par siège —
+    avec les 2 sprites actifs de l'équipe COMPOSÉS en une seule image statique côte à
+    côte (voir _composer_sprites_equipe : Discord n'aligne jamais deux embeds côte à
+    côte, chaque embed n'accepte qu'UNE image, donc c'est la seule façon fiable d'avoir
+    les 2 sprites visibles ensemble sur une rangée). Contrepartie assumée : sprites figés
+    (première frame), plus animés — chaque Pokémon garde son propre champ texte (nom,
+    PV, réserve) à côté de l'autre dans le même embed.
+
+    Retourne (embeds, fichiers) — fichiers doit être joint au message (files= pour un
+    envoi, attachments= pour une édition), les embeds y font référence via
+    "attachment://<nom_du_fichier>"."""
     combat = database.obtenir_combat(combat_id)
     joueurs = _joueurs(combat_id)
     if combat is None or not joueurs:
-        return [discord.Embed(description="Combat introuvable.", color=discord.Color.red())]
+        return [discord.Embed(description="Combat introuvable.", color=discord.Color.red())], []
 
     embeds = []
-    for j in joueurs:  # déjà triés par équipe puis user_id (voir obtenir_joueurs_2v2)
-        couleur = discord.Color.blue() if j["equipe"] == 1 else discord.Color.red()
-        prefixe_equipe = "🔵" if j["equipe"] == 1 else "🔴"
-        nom_joueur = noms.get(j["user_id"], f"Joueur…{str(j['user_id'])[-4:]}")
-        embed = discord.Embed(color=couleur)
+    fichiers = []
+    for equipe, couleur, prefixe in ((1, discord.Color.blue(), "🔵"), (2, discord.Color.red(), "🔴")):
+        membres = [j for j in joueurs if j["equipe"] == equipe]
+        embed = discord.Embed(color=couleur, title=f"{prefixe} Équipe {equipe}")
 
-        if j["abandonne"]:
-            embed.set_author(name=f"{prefixe_equipe} 🏳️ {nom_joueur}")
-            embed.description = "*A abandonné*"
-            embeds.append(embed)
-            continue
+        actifs_pour_image = []
+        for j in membres:
+            nom_joueur = noms.get(j["user_id"], f"Joueur…{str(j['user_id'])[-4:]}")
+            if j["abandonne"]:
+                embed.add_field(name=f"🏳️ {nom_joueur}", value="*A abandonné*", inline=True)
+                continue
 
-        eq = database.obtenir_equipe_pvp(combat_id, j["user_id"])
-        row = _row_actif(combat_id, j["user_id"], j["actif_nom"])
-        statut_txt = "✅ prêt" if j["action"] else "⏳ choisit..."
-        embed.set_author(name=f"{prefixe_equipe} {nom_joueur} — {statut_txt}")
+            eq = database.obtenir_equipe_pvp(combat_id, j["user_id"])
+            row = _row_actif(combat_id, j["user_id"], j["actif_nom"])
+            statut_txt = "✅ prêt" if j["action"] else "⏳ choisit..."
 
-        if row is None or all(r["pv_actuels"] <= 0 for r in eq):
-            embed.title = "💀 Équipe entière K.O."
-            embeds.append(embed)
-            continue
+            if row is None or all(r["pv_actuels"] <= 0 for r in eq):
+                embed.add_field(name=f"💀 {nom_joueur}", value="*Équipe entière K.O.*", inline=True)
+                continue
 
-        statut_actif = database.obtenir_statut(combat_id, j["user_id"], j["actif_nom"])
-        emoji_statut = (
-            f" {STATUTS_INFO[statut_actif[0]]['emoji']}"
-            if statut_actif and statut_actif[0] in STATUTS_INFO
-            else ""
-        )
-        embed.title = f"{j['actif_nom']}{emoji_statut}"
-        embed.description = (
-            f"{_barre_pv(row['pv_actuels'], row['pv_max'], longueur=8)}\n"
-            f"❤️ {row['pv_actuels']}/{row['pv_max']} PV"
-        )
-        pokemon = obtenir_pokemon_par_nom(j["actif_nom"])
-        url_sprite = sprite_anime(pokemon)
-        if url_sprite:
-            embed.set_thumbnail(url=url_sprite)
-        embed.add_field(name="Réserve", value=_bloc_reserve(eq, j["actif_nom"])[:1024], inline=False)
+            statut_actif = database.obtenir_statut(combat_id, j["user_id"], j["actif_nom"])
+            emoji_statut = (
+                f" {STATUTS_INFO[statut_actif[0]]['emoji']}"
+                if statut_actif and statut_actif[0] in STATUTS_INFO
+                else ""
+            )
+            valeur = (
+                f"**{j['actif_nom']}**{emoji_statut}\n"
+                f"{_barre_pv(row['pv_actuels'], row['pv_max'], longueur=8)}\n"
+                f"❤️ {row['pv_actuels']}/{row['pv_max']} PV\n"
+                f"{_bloc_reserve(eq, j['actif_nom'])}"
+            )
+            embed.add_field(name=f"{nom_joueur} — {statut_txt}", value=valeur[:1024], inline=True)
+            actifs_pour_image.append(j["actif_nom"])
+
+        if len(actifs_pour_image) == 2:
+            image_bytes = await _composer_sprites_equipe(*actifs_pour_image)
+            if image_bytes:
+                nom_fichier = f"equipe{equipe}_{combat_id}_{combat['tour']}.png"
+                fichiers.append(discord.File(io.BytesIO(image_bytes), filename=nom_fichier))
+                embed.set_image(url=f"attachment://{nom_fichier}")
+        elif len(actifs_pour_image) == 1:
+            # Un seul actif encore debout côté équipe : son sprite seul suffit, pas besoin
+            # de composition (évite un aller-retour réseau pour une image à un seul sprite).
+            pokemon = obtenir_pokemon_par_nom(actifs_pour_image[0])
+            url_sprite = sprite_anime(pokemon)
+            if url_sprite:
+                embed.set_thumbnail(url=url_sprite)
+
         embeds.append(embed)
 
     dernier = discord.Embed(color=discord.Color.dark_grey())
@@ -309,7 +393,7 @@ def construire_embeds_2v2(combat_id: int, noms: dict, log_tour: list = None) -> 
     temps_restant = max(0, combat["date_limite_tour"] - int(time.time()))
     dernier.set_footer(text=f"Tour résolu quand tout le monde a joué, ou dans ~{temps_restant}s")
     embeds.append(dernier)
-    return embeds
+    return embeds, fichiers
 
 
 # ----------------------------------------------------------------------------
@@ -868,10 +952,10 @@ async def _tick_resolution_2v2(bot, combat_id: int, thread_id: int, message_id: 
             for uid in [j["user_id"] for j in joueurs]:
                 pass  # PvP : pas de synchronisation vers le pool persistant, comme en 1v1
             log_propre = _nettoyer_log_2v2(log, joueurs, noms_ia)
-            embeds = construire_embeds_2v2(combat_id, noms, log_tour=log_propre)
+            embeds, fichiers = await construire_embeds_2v2(combat_id, noms, log_tour=log_propre)
             try:
                 msg = await thread.fetch_message(message_id)
-                await msg.edit(embeds=embeds, view=None)
+                await msg.edit(embeds=embeds, view=None, attachments=fichiers)
             except discord.HTTPException:
                 pass
             await _annoncer_victoire(bot, combat_id, thread, joueurs, equipe_gagnante, noms, par_abandon)
@@ -881,11 +965,11 @@ async def _tick_resolution_2v2(bot, combat_id: int, thread_id: int, message_id: 
     database.vider_actions_2v2(combat_id)
     database.passer_tour_pvp(combat_id, int(time.time()) + DUREE_TOUR_2V2)
     log_propre = _nettoyer_log_2v2(log, joueurs, noms_ia)
-    embeds = construire_embeds_2v2(combat_id, noms, log_tour=log_propre)
+    embeds, fichiers = await construire_embeds_2v2(combat_id, noms, log_tour=log_propre)
     vue = VueAction2v2(combat_id, avec_choix_ko=bool(database.obtenir_choix_ko(combat_id)))
     try:
         msg = await thread.fetch_message(message_id)
-        await msg.edit(embeds=embeds, view=vue)
+        await msg.edit(embeds=embeds, view=vue, attachments=fichiers)
     except discord.HTTPException:
         pass
     return False
@@ -1460,9 +1544,9 @@ async def demarrer_combat_2v2(bot, channel, inscrits: dict, noms: dict, message_
     conn.close()
 
     mentions = " ".join(f"<@{u}>" for u in inscrits)
-    embeds = construire_embeds_2v2(combat_id, noms)
+    embeds, fichiers = await construire_embeds_2v2(combat_id, noms)
     vue = VueAction2v2(combat_id)
-    msg = await thread.send(content=f"{mentions} — le combat 2v2 commence ! Choisissez vos actions.", embeds=embeds, view=vue)
+    msg = await thread.send(content=f"{mentions} — le combat 2v2 commence ! Choisissez vos actions.", embeds=embeds, view=vue, files=fichiers)
 
     if message_lobby is not None:
         try:
@@ -1626,11 +1710,11 @@ async def demarrer_duo_dresseur(bot, joueur: discord.Member, dresseur_id: int, a
         print(f"⚠️ Erreur au 1er tour IA du duo dresseur {combat_id} :")
         traceback.print_exc()
 
-    embeds = construire_embeds_2v2(combat_id, noms)
+    embeds, fichiers = await construire_embeds_2v2(combat_id, noms)
     vue = VueAction2v2(combat_id)
     msg = await thread.send(
         content=f"{joueur.mention} ⚔️ **{sous_noms[0]}** et **{sous_noms[1]}** ({archetype['nom']}) vous défient en double combat !",
-        embeds=embeds, view=vue,
+        embeds=embeds, view=vue, files=fichiers,
     )
 
     if interaction is not None:
@@ -1711,12 +1795,12 @@ async def demarrer_combat_double(bot, joueur1: discord.Member, joueur2: discord.
         joueur2.id: joueur2.display_name, id2_delegue: f"{joueur2.display_name} (2)",
     }
 
-    embeds = construire_embeds_2v2(combat_id, noms)
+    embeds, fichiers = await construire_embeds_2v2(combat_id, noms)
     vue = VueAction2v2(combat_id)
     msg = await thread.send(
         content=f"{joueur1.mention} {joueur2.mention} — le combat 1v1 en double commence ! "
                 f"Chacun contrôle 2 Pokémon actifs.",
-        embeds=embeds, view=vue,
+        embeds=embeds, view=vue, files=fichiers,
     )
 
     journal.logger(f"⚔️ Combat double lancé : <@{joueur1.id}> vs <@{joueur2.id}> (1v1, format 2v2, équipes de 6).")
