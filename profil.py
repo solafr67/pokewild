@@ -70,11 +70,17 @@ async def fichier_avatar_fiable(user: discord.abc.User, taille: int = 256) -> di
         return None
 
 
-async def construire_embed_profil(user: discord.abc.User) -> tuple:
+async def construire_embed_profil(user: discord.abc.User, autoriser_piece_jointe: bool = True) -> tuple:
     """Construit la carte de profil complète d'un joueur (réutilisée par /profil et le bouton du channel).
     Retourne (embed, fichier) — fichier (peut être None) doit être joint au message
     (files=[fichier] pour un envoi) si présent ; l'embed y fait référence via
-    "attachment://avatar.png"."""
+    "attachment://avatar.png".
+
+    autoriser_piece_jointe=False : à utiliser pour tout message ÉPHÉMÈRE — Discord a un
+    bug confirmé (github.com/discord/discord-api-docs/issues/3842) où une image jointe via
+    "attachment://" ne s'affiche JAMAIS dans un message éphémère. Dans ce cas, on retombe
+    directement sur l'URL fiable (sans télécharger de fichier pour rien) ; l'avatar animé
+    peut alors ne pas s'afficher (limite de Discord, acceptée pour ce contexte)."""
     especes, total = database.obtenir_stats_joueur(user.id)
     poke_dollars = database.obtenir_poke_dollars(user.id)
     inventaire = database.obtenir_inventaire_balls(user.id)
@@ -120,10 +126,10 @@ async def construire_embed_profil(user: discord.abc.User) -> tuple:
         color=discord.Color.blue(),
     )
     # Avatar converti en PNG statique et joint au message (voir fichier_avatar_fiable) —
-    # garantit l'affichage même pour les avatars GIF animés, au prix de l'animation
-    # (demandé explicitement : "au pire que ce soit l'image fixe, c'est pas grave").
-    # Filet de sécurité : si le téléchargement échoue, on retombe sur l'URL directe.
-    fichier_avatar = await fichier_avatar_fiable(user)
+    # garantit l'affichage même pour les avatars GIF animés, au prix de l'animation.
+    # Uniquement pour les messages PUBLICS (voir autoriser_piece_jointe ci-dessus) : un
+    # message éphémère n'affichera jamais cette pièce jointe, autant ne pas la télécharger.
+    fichier_avatar = await fichier_avatar_fiable(user) if autoriser_piece_jointe else None
     if fichier_avatar:
         embed.set_thumbnail(url="attachment://avatar.png")
     else:
@@ -676,13 +682,9 @@ class VueProfil(discord.ui.View):
         custom_id="profil_voir_bouton",  # requis pour la persistance après redémarrage
     )
     async def voir_profil(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Non-éphémère volontairement : Discord a un bug documenté et confirmé (voir
-        # github.com/discord/discord-api-docs/issues/3842) où une image jointe via
-        # "attachment://" dans un embed ne s'affiche JAMAIS correctement dans un message
-        # éphémère (elle reste vide, peu importe le bot) — seuls les messages publics
-        # affichent correctement ce type de pièce jointe. /profil (la commande directe)
-        # est déjà public pour la même raison.
-        embed, fichier = await construire_embed_profil(interaction.user)
-        await interaction.response.send_message(
-            embed=embed, view=VueOuvrirPokedex(), files=[fichier] if fichier else []
-        )
+        # Reste éphémère (demandé) — Discord n'affiche jamais une image jointe via
+        # "attachment://" dans un message éphémère (voir construire_embed_profil), donc
+        # on ne tente pas la conversion PNG ici : l'avatar retombe sur l'ancienne méthode
+        # (URL directe), avec le comportement d'avant pour les pp animées.
+        embed, _ = await construire_embed_profil(interaction.user, autoriser_piece_jointe=False)
+        await interaction.response.send_message(embed=embed, view=VueOuvrirPokedex(), ephemeral=True)

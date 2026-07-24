@@ -2005,8 +2005,11 @@ async def relacher(interaction: discord.Interaction):
 
 @bot.tree.command(name="profil", description="Affiche tes statistiques de dresseur")
 async def profil(interaction: discord.Interaction):
-    embed, fichier = await construire_embed_profil(interaction.user)
-    await interaction.response.send_message(embed=embed, view=VueOuvrirPokedex(), files=[fichier] if fichier else [])
+    # Éphémère (comme le bouton "Voir mon profil") : Discord n'affiche jamais une image
+    # jointe via "attachment://" dans un message éphémère (voir profil.fichier_avatar_fiable),
+    # donc pas de tentative de pièce jointe ici non plus — retombe sur l'URL directe.
+    embed, _ = await construire_embed_profil(interaction.user, autoriser_piece_jointe=False)
+    await interaction.response.send_message(embed=embed, view=VueOuvrirPokedex(), ephemeral=True)
 
 
 @bot.tree.command(name="setup-boutique", description="[Admin] Poste ou remet à jour le message fixe de la boutique dans ce channel")
