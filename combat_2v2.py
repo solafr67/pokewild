@@ -1591,6 +1591,86 @@ async def demarrer_duo_dresseur(bot, joueur: discord.Member, dresseur_id: int, a
     bot.loop.create_task(boucle_resolution_2v2(bot, combat_id, thread.id, msg.id, noms, noms_ia))
 
 
+async def demarrer_combat_double(bot, joueur1: discord.Member, joueur2: discord.Member, channel):
+    """1v1 en FORMAT double combat : 2 joueurs humains, une équipe COMPLÈTE (jusqu'à 6)
+    chacun, répartie en 2 moitiés (2 Pokémon actifs simultanés par joueur — voir
+    id_delegue/DELEGUE_OFFSET en tête de fichier). Contrairement au double combat contre
+    un duo de dresseurs (PvE, PV persistants), ce mode est du PvP classique : équipes à
+    pleine vie à chaque combat, comme /defier (voir combat.demarrer_combat)."""
+    equipe1 = preparer_equipe_pour_combat(joueur1.id)
+    equipe2 = preparer_equipe_pour_combat(joueur2.id)
+    if len(equipe1) < 2 or len(equipe2) < 2:
+        manquant = joueur1.display_name if len(equipe1) < 2 else joueur2.display_name
+        await channel.send(
+            f"❌ {manquant} a besoin d'au moins **2 Pokémon** dans son équipe de combat pour "
+            f"un 1v1 en double (2 actifs simultanés) — configure `/equipe-combat` !"
+        )
+        return
+
+    milieu1 = len(equipe1) // 2 + len(equipe1) % 2
+    moitie1_a, moitie1_b = equipe1[:milieu1], equipe1[milieu1:] or [equipe1[-1]]
+    milieu2 = len(equipe2) // 2 + len(equipe2) % 2
+    moitie2_a, moitie2_b = equipe2[:milieu2], equipe2[milieu2:] or [equipe2[-1]]
+
+    id1_delegue = id_delegue(joueur1.id)
+    id2_delegue = id_delegue(joueur2.id)
+
+    date_limite = int(time.time()) + DUREE_TOUR_2V2
+    combat_id = database.creer_combat(joueur1.id, joueur2.id, moitie1_a[0]["nom"], moitie2_a[0]["nom"], date_limite)
+
+    database.creer_joueurs_2v2(combat_id, [
+        (joueur1.id, 1, moitie1_a[0]["nom"]),
+        (id1_delegue, 1, moitie1_b[0]["nom"]),
+        (joueur2.id, 2, moitie2_a[0]["nom"]),
+        (id2_delegue, 2, moitie2_b[0]["nom"]),
+    ])
+    database.initialiser_equipe_combat_pvp(combat_id, joueur1.id, moitie1_a)
+    database.initialiser_equipe_combat_pvp(combat_id, id1_delegue, moitie1_b)
+    database.initialiser_equipe_combat_pvp(combat_id, joueur2.id, moitie2_a)
+    database.initialiser_equipe_combat_pvp(combat_id, id2_delegue, moitie2_b)
+
+    try:
+        thread = await channel.create_thread(
+            name=f"⚔️ {joueur1.display_name} vs {joueur2.display_name} (double)"[:100],
+            type=discord.ChannelType.private_thread,
+            invitable=False,
+        )
+        for j in (joueur1, joueur2):
+            try:
+                await thread.add_user(j)
+            except discord.HTTPException:
+                pass
+    except discord.HTTPException as e:
+        database.terminer_combat_pvp(combat_id)
+        try:
+            await channel.send(f"❌ Impossible de créer le fil de combat : {e}")
+        except discord.HTTPException:
+            pass
+        return
+
+    conn = database.get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE combat_pvp SET thread_id = ? WHERE id = ?", (str(thread.id), combat_id))
+    conn.commit()
+    conn.close()
+
+    noms = {
+        joueur1.id: joueur1.display_name, id1_delegue: f"{joueur1.display_name} (2)",
+        joueur2.id: joueur2.display_name, id2_delegue: f"{joueur2.display_name} (2)",
+    }
+
+    embeds = construire_embeds_2v2(combat_id, noms)
+    vue = VueAction2v2(combat_id)
+    msg = await thread.send(
+        content=f"{joueur1.mention} {joueur2.mention} — le combat 1v1 en double commence ! "
+                f"Chacun contrôle 2 Pokémon actifs.",
+        embeds=embeds, view=vue,
+    )
+
+    journal.logger(f"⚔️ Combat double lancé : <@{joueur1.id}> vs <@{joueur2.id}> (1v1, format 2v2, équipes de 6).")
+    bot.loop.create_task(boucle_resolution_2v2(bot, combat_id, thread.id, msg.id, noms))
+
+
 async def lancer_lobby_2v2(bot, interaction: discord.Interaction):
     """Point d'entrée de la commande /combat-2v2."""
     if database.combat_en_cours_pour_joueur(interaction.user.id) is not None:

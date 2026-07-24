@@ -24,6 +24,24 @@ from pokemon_data import (
 )
 
 
+def url_avatar_fiable(user: discord.abc.User) -> str:
+    """URL d'avatar à utiliser dans un embed (thumbnail/author icon).
+
+    Bug de plateforme Discord documenté (github.com/discord/discord-api-docs/issues/467) :
+    un avatar GIF animé ne s'anime pas — et dans les faits ne se charge souvent pas du
+    tout dans un embed — si l'URL comporte un paramètre après l'extension .gif (le
+    ?size=... que discord.py ajoute systématiquement). L'URL doit se terminer
+    littéralement par ".gif" pour que Discord le traite correctement. On retire donc le
+    paramètre de taille uniquement pour les avatars animés (une baisse de taille demandée
+    ne suffisait pas — la vraie cause est la présence même du paramètre, pas sa valeur).
+    Les avatars statiques ne sont pas concernés."""
+    avatar = user.display_avatar
+    url = avatar.url
+    if avatar.is_animated() and "?" in url:
+        url = url.split("?", 1)[0]
+    return url
+
+
 def construire_embed_profil(user: discord.abc.User) -> discord.Embed:
     """Construit la carte de profil complète d'un joueur (réutilisée par /profil et le bouton du channel)."""
     especes, total = database.obtenir_stats_joueur(user.id)
@@ -75,7 +93,7 @@ def construire_embed_profil(user: discord.abc.User) -> discord.Embed:
     # le thumbnail restait alors vide pour les joueurs avec une pp animée. En 256px (bien
     # suffisant pour un thumbnail, qui est de toute façon affiché en petit), le GIF passe
     # de façon fiable. Les avatars statiques ne sont pas affectés (même image, plus légère).
-    embed.set_thumbnail(url=user.display_avatar.with_size(256).url)
+    embed.set_thumbnail(url=url_avatar_fiable(user))
 
     embed.add_field(name="✨ Progression", value=f"{barre_xp}\n`{xp_dans_niveau}/{xp_requise} XP`", inline=False)
 

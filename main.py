@@ -2714,7 +2714,111 @@ async def combat_2v2(interaction: discord.Interaction):
     await combat_2v2_module.lancer_lobby_2v2(bot, interaction)
 
 
-@bot.tree.command(name="defier", description="Défie un autre joueur en combat Pokémon")
+class VueDefiDouble(discord.ui.View):
+    """1v1 en format double combat (2 Pokémon actifs chacun, équipe complète) — même
+    principe que VueDefi, adversaire ciblé seul habilité à répondre."""
+
+    def __init__(self, challenger: discord.Member, adversaire: discord.Member):
+        super().__init__(timeout=60)
+        self.challenger = challenger
+        self.adversaire = adversaire
+        self.resolu = False
+        self.message = None
+
+    @discord.ui.button(label="Accepter", style=discord.ButtonStyle.success, emoji="✅")
+    async def accepter(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.adversaire.id:
+            await interaction.response.send_message("Ce défi ne te concerne pas !", ephemeral=True)
+            return
+        if self.resolu:
+            await interaction.response.send_message("Ce défi n'est plus disponible.", ephemeral=True)
+            return
+
+        equipe_adv = combat_module.preparer_equipe_pour_combat(self.adversaire.id)
+        if len(equipe_adv) < 2:
+            self.resolu = True
+            await interaction.response.edit_message(
+                content=(
+                    f"❌ {self.adversaire.display_name} a besoin d'au moins 2 Pokémon dans son "
+                    f"équipe de combat pour un 1v1 en double."
+                ),
+                view=None,
+            )
+            return
+
+        self.resolu = True
+        for item in self.children:
+            item.disabled = True
+        await interaction.response.edit_message(
+            content=f"✅ {self.adversaire.mention} accepte le défi en double ! Le combat commence...",
+            view=self,
+        )
+        await combat_2v2_module.demarrer_combat_double(bot, self.challenger, self.adversaire, interaction.channel)
+        self.stop()
+
+    @discord.ui.button(label="Refuser", style=discord.ButtonStyle.secondary, emoji="❌")
+    async def refuser(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.adversaire.id:
+            await interaction.response.send_message("Ce défi ne te concerne pas !", ephemeral=True)
+            return
+        if self.resolu:
+            await interaction.response.send_message("Ce défi n'est plus disponible.", ephemeral=True)
+            return
+        self.resolu = True
+        for item in self.children:
+            item.disabled = True
+        await interaction.response.edit_message(
+            content=f"❌ {self.adversaire.display_name} a refusé le défi.",
+            view=self,
+        )
+        self.stop()
+
+    async def on_timeout(self):
+        if self.resolu:
+            return
+        self.resolu = True
+        for item in self.children:
+            item.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(content="⌛ Défi expiré — personne n'a répondu à temps.", view=self)
+            except discord.HTTPException:
+                pass
+
+
+@bot.tree.command(name="defier-double", description="Défie un joueur en 1v1 format double combat (équipe de 6, 2 actifs chacun)")
+async def defier_double(interaction: discord.Interaction, adversaire: discord.Member):
+    if adversaire.bot or adversaire.id == interaction.user.id:
+        await interaction.response.send_message("❌ Cible invalide.", ephemeral=True)
+        return
+
+    if database.combat_en_cours_pour_joueur(interaction.user.id):
+        await interaction.response.send_message("❌ Tu as déjà un combat en cours !", ephemeral=True)
+        return
+
+    if database.combat_en_cours_pour_joueur(adversaire.id):
+        await interaction.response.send_message(f"❌ {adversaire.mention} a déjà un combat en cours !", ephemeral=True)
+        return
+
+    equipe_challenger = combat_module.preparer_equipe_pour_combat(interaction.user.id)
+    if len(equipe_challenger) < 2:
+        await interaction.response.send_message(
+            "❌ Il te faut au moins 2 Pokémon dans ton équipe de combat pour un 1v1 en double "
+            "(`/equipe-combat`) !",
+            ephemeral=True,
+        )
+        return
+
+    vue_defi = VueDefiDouble(interaction.user, adversaire)
+    await interaction.response.send_message(
+        f"⚔️ {adversaire.mention}, **{interaction.user.display_name}** te défie en **1v1 double combat** "
+        f"(équipe complète, 2 Pokémon actifs chacun) ! Tu as 60 secondes pour accepter.",
+        view=vue_defi,
+    )
+    vue_defi.message = await interaction.original_response()
+
+
+
 async def defier(interaction: discord.Interaction, adversaire: discord.Member):
     if adversaire.bot or adversaire.id == interaction.user.id:
         await interaction.response.send_message("❌ Cible invalide.", ephemeral=True)
@@ -2855,7 +2959,8 @@ async def abandonner_combat(interaction: discord.Interaction):
 @app_commands.checks.has_permissions(administrator=True)
 @app_commands.choices(
     archetype=[
-        app_commands.Choice(name=a["nom"], value=a["nom"]) for a in dresseurs_module.ARCHETYPES
+        app_commands.Choice(name=a["nom"], value=a["nom"])
+        for a in dresseurs_module.ARCHETYPES + dresseurs_module.ARCHETYPES_DUO
     ]
 )
 async def force_dresseur(interaction: discord.Interaction, archetype: app_commands.Choice[str] | None = None):
