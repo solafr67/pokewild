@@ -71,10 +71,10 @@ TAILLE_EQUIPE_DRESSEUR = 4
 # --- Dresseurs DUO (combat 2v2 PvE — voir combat_2v2.py) -------------------------------
 # Chaque entrée représente DEUX dresseurs qui combattent ensemble contre un seul joueur
 # (double combat, comme dans les jeux officiels). "sous_noms" donne un nom individuel à
-# chacun des deux (affiché dans le log de combat) ; "taille_equipe" est volontairement
-# plus généreuse que le 4 des dresseurs solo (6 chacun) car il n'y a pas de contrainte de
-# temps de jeu d'un second joueur humain à ménager ici.
-TAILLE_EQUIPE_DUO_DRESSEUR = 6
+# chacun des deux (affiché dans le log de combat) ; "taille_equipe" est le nombre de
+# Pokémon PAR dresseur — 3 chacun, donc 6 au total pour le duo (même total que ce que le
+# joueur amène lui-même dans ce mode : 3+3 répartis sur ses 2 actifs).
+TAILLE_EQUIPE_DUO_DRESSEUR = 3
 
 ARCHETYPES_DUO = [
     {
@@ -240,7 +240,7 @@ def construire_embed_spawn(archetype: dict) -> discord.Embed:
             f"**{sous_noms[0]}** et **{sous_noms[1]}** apparaissent ensemble, prêts pour un "
             f"**double combat** !\n\n"
             f"⚔️ Tu affrontes les DEUX en même temps, en 2v2 — tu contrôles tes 2 Pokémon actifs, "
-            f"eux les leurs (6 chacun).\n"
+            f"eux les leurs (3 chacun, 6 au total).\n"
             f"Tout le monde peut les défier — chacun son propre combat, une seule fois par apparition.\n"
             f"⚠️ Tes PV restent ceux de ton pool habituel (les mêmes qu'en raid) — "
             f"soigne ton équipe avant si besoin !"

@@ -44,6 +44,7 @@ from combat import (
     _bloc_reserve,
     _texte_efficacite,
     preparer_equipe_pour_combat,
+    sprite_anime,
     stats_combattant_reel,
     supprimer_fil_apres_delai,
 )
@@ -215,6 +216,23 @@ def _equipe_vaincue(combat_id: int, joueurs: list, equipe: int) -> bool:
     return all(_joueur_hors_combat(combat_id, j) for j in joueurs if j["equipe"] == equipe)
 
 
+def _reste_a_jouer(combat_id: int, siege_id: int) -> str | None:
+    """Double combat uniquement : après avoir enregistré l'action de ce siège, le MÊME
+    joueur a-t-il encore un autre Pokémon qui doit agir ce tour ? Retourne son nom (pour
+    un rappel dans le message de confirmation), ou None si tout est déjà joué — évite la
+    confusion "je ne peux attaquer qu'avec un seul Pokémon" (il faut recliquer un bouton
+    d'action pour le second, comme dans les vrais doubles combats)."""
+    reel = controleur_reel(siege_id)
+    for j in _joueurs(combat_id):
+        if j["user_id"] == siege_id or controleur_reel(j["user_id"]) != reel:
+            continue
+        if j["abandonne"] or _joueur_hors_combat(combat_id, j):
+            continue
+        if j["action"] is None and not any(r["user_id"] == j["user_id"] for r in database.obtenir_choix_ko(combat_id)):
+            return j["actif_nom"]
+    return None
+
+
 def _equipe_entierement_ko(combat_id: int, joueurs: list, equipe: int) -> bool:
     """True si TOUS les Pokémon de l'équipe sont K.O. (victoire "réelle", par opposition
     à une victoire obtenue uniquement par abandons — qui ne compte pas pour les quêtes)."""
@@ -232,38 +250,53 @@ def _equipe_entierement_ko(combat_id: int, joueurs: list, equipe: int) -> bool:
 # ----------------------------------------------------------------------------
 
 def construire_embeds_2v2(combat_id: int, noms: dict, log_tour: list = None) -> list:
+    """Un embed PAR SIÈGE actif (comme en 1v1) — c'est ce qui permet à chacun d'avoir sa
+    propre miniature de sprite (un seul embed ne peut avoir qu'UN thumbnail, d'où le
+    passage d'un embed groupé par équipe à un embed par Pokémon)."""
     combat = database.obtenir_combat(combat_id)
     joueurs = _joueurs(combat_id)
     if combat is None or not joueurs:
         return [discord.Embed(description="Combat introuvable.", color=discord.Color.red())]
 
     embeds = []
-    for equipe, couleur in ((1, discord.Color.blue()), (2, discord.Color.red())):
-        embed = discord.Embed(title=f"{'🔵' if equipe == 1 else '🔴'} Équipe {equipe}", color=couleur)
-        for j in [x for x in joueurs if x["equipe"] == equipe]:
-            nom_joueur = noms.get(j["user_id"], f"Joueur…{str(j['user_id'])[-4:]}")
-            if j["abandonne"]:
-                embed.add_field(name=f"🏳️ {nom_joueur}", value="*A abandonné*", inline=True)
-                continue
-            eq = database.obtenir_equipe_pvp(combat_id, j["user_id"])
-            row = _row_actif(combat_id, j["user_id"], j["actif_nom"])
-            statut_txt = "✅ prêt" if j["action"] else "⏳ choisit..."
-            if row is None or all(r["pv_actuels"] <= 0 for r in eq):
-                embed.add_field(name=f"💀 {nom_joueur}", value="*Équipe entière K.O.*", inline=True)
-                continue
-            statut_actif = database.obtenir_statut(combat_id, j["user_id"], j["actif_nom"])
-            emoji_statut = (
-                f" {STATUTS_INFO[statut_actif[0]]['emoji']}"
-                if statut_actif and statut_actif[0] in STATUTS_INFO
-                else ""
-            )
-            valeur = (
-                f"**{j['actif_nom']}**{emoji_statut}\n"
-                f"{_barre_pv(row['pv_actuels'], row['pv_max'], longueur=8)}\n"
-                f"❤️ {row['pv_actuels']}/{row['pv_max']} PV\n"
-                f"{_bloc_reserve(eq, j['actif_nom'])}"
-            )
-            embed.add_field(name=f"{nom_joueur} — {statut_txt}", value=valeur[:1024], inline=True)
+    for j in joueurs:  # déjà triés par équipe puis user_id (voir obtenir_joueurs_2v2)
+        couleur = discord.Color.blue() if j["equipe"] == 1 else discord.Color.red()
+        prefixe_equipe = "🔵" if j["equipe"] == 1 else "🔴"
+        nom_joueur = noms.get(j["user_id"], f"Joueur…{str(j['user_id'])[-4:]}")
+        embed = discord.Embed(color=couleur)
+
+        if j["abandonne"]:
+            embed.set_author(name=f"{prefixe_equipe} 🏳️ {nom_joueur}")
+            embed.description = "*A abandonné*"
+            embeds.append(embed)
+            continue
+
+        eq = database.obtenir_equipe_pvp(combat_id, j["user_id"])
+        row = _row_actif(combat_id, j["user_id"], j["actif_nom"])
+        statut_txt = "✅ prêt" if j["action"] else "⏳ choisit..."
+        embed.set_author(name=f"{prefixe_equipe} {nom_joueur} — {statut_txt}")
+
+        if row is None or all(r["pv_actuels"] <= 0 for r in eq):
+            embed.title = "💀 Équipe entière K.O."
+            embeds.append(embed)
+            continue
+
+        statut_actif = database.obtenir_statut(combat_id, j["user_id"], j["actif_nom"])
+        emoji_statut = (
+            f" {STATUTS_INFO[statut_actif[0]]['emoji']}"
+            if statut_actif and statut_actif[0] in STATUTS_INFO
+            else ""
+        )
+        embed.title = f"{j['actif_nom']}{emoji_statut}"
+        embed.description = (
+            f"{_barre_pv(row['pv_actuels'], row['pv_max'], longueur=8)}\n"
+            f"❤️ {row['pv_actuels']}/{row['pv_max']} PV"
+        )
+        pokemon = obtenir_pokemon_par_nom(j["actif_nom"])
+        url_sprite = sprite_anime(pokemon)
+        if url_sprite:
+            embed.set_thumbnail(url=url_sprite)
+        embed.add_field(name="Réserve", value=_bloc_reserve(eq, j["actif_nom"])[:1024], inline=False)
         embeds.append(embed)
 
     dernier = discord.Embed(color=discord.Color.dark_grey())
@@ -946,7 +979,14 @@ class VueAction2v2(discord.ui.View):
                 ephemeral=True,
             )
             return
-        equipees = database.obtenir_attaques_equipees(j["user_id"], j["actif_nom"], combat_id=self.combat_id)
+        # Les attaques équipées sont un réglage PERMANENT du joueur (table attaques_equipees,
+        # clé = son vrai ID Discord + nom d'espèce — configuré via /equipe-combat) : jamais
+        # stocké sous un ID de siège délégué. Sans controleur_reel() ici, le 2e Pokémon d'un
+        # double combat ne trouvait jamais ses attaques équipées et retombait toujours sur
+        # Lutte, quel que soit son moveset réel.
+        equipees = database.obtenir_attaques_equipees(
+            controleur_reel(j["user_id"]), j["actif_nom"], combat_id=self.combat_id
+        )
         equipees_dispo = {}
         for slot, nom in equipees.items():
             pp_max = pp_max_attaque(obtenir_attaque(nom))
@@ -978,6 +1018,9 @@ class VueAction2v2(discord.ui.View):
             cible_id = cibles[0][0]
             if database.definir_action_2v2(self.combat_id, j["user_id"], f"attaque:{nom_attaque}@{cible_id}"):
                 contenu = f"⚔️ Action enregistrée : **{nom_attaque}** sur **{cibles[0][1]}** !"
+                autre = _reste_a_jouer(self.combat_id, j["user_id"])
+                if autre:
+                    contenu += f"\n🔁 Il te reste **{autre}** à faire agir ce tour — reclique sur un bouton d'action !"
             else:
                 contenu = "Tu as déjà choisi ton action pour ce tour !"
             if depuis_selection:
@@ -1103,8 +1146,9 @@ class _VueChoixAttaque2v2(discord.ui.View):
         options = []
         for slot, (nom, pp_restant, pp_max) in sorted(equipees_dispo.items()):
             attaque = obtenir_attaque(nom)
+            emoji = EMOJI_TYPES.get(attaque["type"], "⚔️")
             desc = f"{attaque['puissance'] or '—'} pcs — préc. {attaque.get('precision') or '∞'}% — {pp_restant}/{pp_max} PP"
-            options.append(discord.SelectOption(label=nom, description=desc[:100]))
+            options.append(discord.SelectOption(label=nom, description=desc[:100], emoji=emoji))
         select = discord.ui.Select(placeholder="Choisis ton attaque…", options=options[:25])
         select.callback = self._on_choix
         self.add_item(select)
@@ -1138,9 +1182,11 @@ class _VueChoixCible2v2(discord.ui.View):
     def _creer_callback(self, cible_id: int, cible_nom: str):
         async def callback(interaction: discord.Interaction):
             if database.definir_action_2v2(self.combat_id, self.user_id, f"attaque:{self.nom_attaque}@{cible_id}"):
-                await interaction.response.edit_message(
-                    content=f"⚔️ Action enregistrée : **{self.nom_attaque}** sur **{cible_nom}** !", view=None
-                )
+                contenu = f"⚔️ Action enregistrée : **{self.nom_attaque}** sur **{cible_nom}** !"
+                autre = _reste_a_jouer(self.combat_id, self.user_id)
+                if autre:
+                    contenu += f"\n🔁 Il te reste **{autre}** à faire agir ce tour — reclique sur un bouton d'action !"
+                await interaction.response.edit_message(content=contenu, view=None)
             else:
                 await interaction.response.edit_message(content="Tu as déjà choisi ton action pour ce tour !", view=None)
         return callback
@@ -1180,7 +1226,11 @@ class _VueChoixPotion2v2(discord.ui.View):
                 return
             if type_potion != "totalsoin":
                 database.incrementer_potions_2v2(self.combat_id, self.user_id)
-            await interaction.response.edit_message(content="💊 Action enregistrée : potion !", view=None)
+            contenu = "💊 Action enregistrée : potion !"
+            autre = _reste_a_jouer(self.combat_id, self.user_id)
+            if autre:
+                contenu += f"\n🔁 Il te reste **{autre}** à faire agir ce tour — reclique sur un bouton d'action !"
+            await interaction.response.edit_message(content=contenu, view=None)
         return callback
 
 
@@ -1200,9 +1250,11 @@ class _VueChoixChangement2v2(discord.ui.View):
 
     async def _on_choix(self, interaction: discord.Interaction):
         if database.definir_action_2v2(self.combat_id, self.user_id, f"changer:{self._select.values[0]}"):
-            await interaction.response.edit_message(
-                content=f"🔄 Action enregistrée : envoyer **{self._select.values[0]}** !", view=None
-            )
+            contenu = f"🔄 Action enregistrée : envoyer **{self._select.values[0]}** !"
+            autre = _reste_a_jouer(self.combat_id, self.user_id)
+            if autre:
+                contenu += f"\n🔁 Il te reste **{autre}** à faire agir ce tour — reclique sur un bouton d'action !"
+            await interaction.response.edit_message(content=contenu, view=None)
         else:
             await interaction.response.edit_message(content="Tu as déjà choisi ton action pour ce tour !", view=None)
 
