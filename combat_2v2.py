@@ -731,6 +731,25 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                     if database.definir_statut(combat_id, adversaire_id, nom_def, ailment, compteur):
                         info = STATUTS_INFO[ailment]
                         log.append(f"  {info['emoji']} **{nom_def}** est {info['nom']} !")
+
+            # Effet secondaire de stat éventuel (ex: Nitrocharge +1 Vitesse sur soi
+            # garanti, Griffe Acier +1 Attaque sur soi à 10%, Étreinte -1 Défense sur la
+            # cible à 20%...) — jusqu'ici totalement ignoré sur les attaques qui infligent
+            # aussi des dégâts (seules les attaques de statut PURES géraient "stats").
+            changements_secondaires = attaque.get("stats", [])
+            if changements_secondaires and (attaque.get("cible") == "soi" or pv_restants > 0):
+                chance_stat = attaque.get("stat_chance", 0) or 100
+                if random.random() * 100 < chance_stat:
+                    if attaque.get("cible") == "soi":
+                        cible_stat_id, cible_stat_nom = user_id, nom_atk
+                    else:
+                        cible_stat_id, cible_stat_nom = adversaire_id, nom_def
+                    morceaux = []
+                    for stat, delta in changements_secondaires:
+                        nouveau_stage = database.modifier_boost(combat_id, cible_stat_id, cible_stat_nom, stat, delta)
+                        signe = "+" if delta > 0 else ""
+                        morceaux.append(f"{signe}{delta} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
+                    log.append(f"  📊 **{cible_stat_nom}** : {', '.join(morceaux)}")
         else:
             # --- Pièges de terrain : posés du côté des DEUX adversaires en 2v2 ---
             if nom_attaque in ATTAQUES_TERRAIN:

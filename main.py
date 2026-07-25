@@ -2135,6 +2135,48 @@ async def give_xp(interaction: discord.Interaction, membre: discord.Member, mont
     await interaction.response.send_message(texte)
 
 
+@bot.tree.command(name="niveau-pokemon", description="[Admin] Définit le niveau d'un Pokémon précis chez un joueur")
+@app_commands.checks.has_permissions(administrator=True)
+@app_commands.describe(
+    membre="Le joueur concerné",
+    pokemon="Nom de l'espèce (doit être dans son Pokédex)",
+    niveau="Niveau à définir",
+)
+async def niveau_pokemon(interaction: discord.Interaction, membre: discord.Member, pokemon: str, niveau: int):
+    pokemon_info = obtenir_pokemon_par_nom(pokemon)
+    if pokemon_info is None:
+        await interaction.response.send_message(f"❌ Pokémon **{pokemon}** introuvable dans la base.", ephemeral=True)
+        return
+
+    especes_possedees = {row["pokemon_nom"] for row in database.obtenir_pokedex_joueur(membre.id)}
+    if pokemon_info["nom"] not in especes_possedees:
+        await interaction.response.send_message(
+            f"❌ {membre.mention} ne possède aucun **{pokemon_info['nom']}** dans son Pokédex.", ephemeral=True
+        )
+        return
+
+    niveau_max = niveaux_pokemon.niveau_max_pour_rarete(pokemon_info["rarete"])
+    if not (1 <= niveau <= niveau_max):
+        await interaction.response.send_message(
+            f"❌ Niveau invalide : doit être compris entre 1 et {niveau_max} pour un Pokémon "
+            f"**{pokemon_info['rarete']}**.",
+            ephemeral=True,
+        )
+        return
+
+    ancien_niveau, _ = database.obtenir_niveau_pokemon(membre.id, pokemon_info["nom"])
+    database.definir_niveau_xp_pokemon(
+        membre.id, pokemon_info["nom"], niveau, niveaux_pokemon.xp_cumulee_pour_niveau(niveau)
+    )
+    journal.logger(
+        f"🛠️ <@{interaction.user.id}> a mis **{pokemon_info['nom']}** de <@{membre.id}> au niveau {niveau} "
+        f"(était {ancien_niveau}) via /niveau-pokemon."
+    )
+    await interaction.response.send_message(
+        f"✅ **{pokemon_info['nom']}** de {membre.mention} est maintenant **niveau {niveau}** (était niveau {ancien_niveau})."
+    )
+
+
 @bot.tree.command(
     name="backfill-niveaux",
     description="[Admin] Attribue un niveau (grille de rareté) aux Pokémon capturés avant le système de niveau",
