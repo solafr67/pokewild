@@ -1,4 +1,5 @@
 import random
+import time
 
 import discord
 
@@ -354,7 +355,7 @@ class VueSpawn(discord.ui.View):
         )
 
 
-def construire_embed_spawn(pokemon: dict, pc: int, niveau: int, force_shiny: bool = False) -> discord.Embed:
+def construire_embed_spawn(pokemon: dict, pc: int, niveau: int, force_shiny: bool = False, duree_avant_disparition: int = None) -> discord.Embed:
     from pokemon_data import COULEUR_RARETE, EMOJI_RARETE, affichage_types
 
     emoji_rarete = EMOJI_RARETE[pokemon["rarete"]]
@@ -376,6 +377,13 @@ def construire_embed_spawn(pokemon: dict, pc: int, niveau: int, force_shiny: boo
         embed.add_field(name="✨ Événement spécial", value="Ce Pokémon est garanti shiny pour qui le capture !", inline=False)
     else:
         embed.add_field(name="💡 Astuce", value=ASTUCE_RARETE[pokemon["rarete"]], inline=False)
+
+    if duree_avant_disparition is not None:
+        # Timestamp Discord natif (style "R" = relatif) : le client l'affiche en direct
+        # ("s'enfuit dans X min") et le tient à jour tout seul, sans que le bot ait besoin
+        # de rééditer le message toutes les secondes.
+        date_expiration = int(time.time()) + duree_avant_disparition
+        embed.add_field(name="⏳ Disparition", value=f"S'enfuit <t:{date_expiration}:R>", inline=False)
 
     sprite_url = sprite_pokemon(pokemon, shiny=force_shiny)
     if sprite_url:

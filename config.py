@@ -23,7 +23,8 @@ CHANNEL_ROGUELIKE_ID = 1530873209245663302  # mini-jeu roguelike (catégorie min
 # --- Roguelike (mini-jeu, salon dédié, aucune récompense liée au bot principal) ---
 ROGUELIKE_NB_SALLES_MIN = 8
 ROGUELIKE_NB_SALLES_MAX = 12
-ROGUELIKE_TAILLE_EQUIPE = 3
+ROGUELIKE_TAILLE_EQUIPE_DEPART = 1  # 1 seul starter choisi au lancement (parmi 6 candidats)
+ROGUELIKE_TAILLE_EQUIPE_MAX = 3  # nombre max de coéquipiers recrutables en cours de run
 ROGUELIKE_NIVEAU_DEPART = 15
 ROGUELIKE_NIVEAU_PAR_ETAGE = 2  # le niveau des ennemis (et donc la difficulté) monte avec l'étage
 ROGUELIKE_SOIN_REPOS_POURCENT = 0.45
@@ -51,7 +52,7 @@ INTERVALLE_SPAWN_CLASSIQUE = 60
 INTERVALLE_SPAWN_VIP = 45
 
 # --- Disparition d'un spawn non capturé (en secondes) ---
-DUREE_AVANT_DISPARITION = 45
+DUREE_AVANT_DISPARITION = 180  # 3 minutes (relevé de 45s)
 
 # --- PokéStop ---
 COOLDOWN_POKESTOP = 300  # 5 minutes, en secondes
@@ -311,7 +312,7 @@ POIDS_ETOILES_RAID = {1: 40, 2: 25, 3: 20, 4: 10, 5: 5}
 PV_BASE_PAR_ETOILE = {1: 8000, 2: 16000, 3: 35000, 4: 70000, 5: 110000}
 FACTEUR_PV_PAR_JOUEUR_SUPPLEMENTAIRE = 0.35  # réduit : le facteur 0.6 rendait les gros raids impossibles même en groupe
 
-DUREE_SALLE_ATTENTE_RAID = 90  # secondes avant que le combat ne démarre vraiment
+DUREE_SALLE_ATTENTE_RAID = 180  # secondes avant que le combat ne démarre vraiment (relevé de 90s à 180s)
 DUREE_RAID_MINUTES = 15  # temps de combat avant que le boss ne s'échappe si non vaincu
 INTERVALLE_TICK_COMBAT_RAID = 5  # secondes entre chaque attaque automatique de tous les participants
 

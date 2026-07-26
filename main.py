@@ -393,7 +393,7 @@ async def envoyer_spawn(
     ivs = tirer_ivs()
     pc = calculer_pc_derive(pokemon, ivs, niveau)
 
-    embed = construire_embed_spawn(pokemon, pc, niveau, force_shiny=force_shiny)
+    embed = construire_embed_spawn(pokemon, pc, niveau, force_shiny=force_shiny, duree_avant_disparition=config.DUREE_AVANT_DISPARITION)
     vue = VueSpawn(pokemon, pc, niveau, ivs, force_shiny=force_shiny)
     message = await channel.send(embed=embed, view=vue)
 
