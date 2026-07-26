@@ -93,6 +93,19 @@ class SelectionBallView(discord.ui.View):
                 pass
             return
 
+        # Verrou réel "une seule tentative par spawn" : posé ICI (juste avant de retirer la
+        # ball), pas à l'ouverture du menu — voir VueSpawn.capturer pour le contexte du bug
+        # corrigé (naviguer vers la boutique sans lancer de ball grillait la tentative).
+        if user_id in self.vue_spawn.tentatives:
+            try:
+                await interaction.response.edit_message(
+                    content="Tu as déjà tenté ta chance sur ce Pokémon !", view=None
+                )
+            except (discord.NotFound, discord.HTTPException):
+                pass
+            return
+        self.vue_spawn.tentatives.add(user_id)
+
         succes_retrait = database.retirer_ball(user_id, ball_type)
         if not succes_retrait:
             try:
@@ -101,6 +114,7 @@ class SelectionBallView(discord.ui.View):
                 )
             except (discord.NotFound, discord.HTTPException):
                 pass  # interaction expirée, rien de plus à faire
+            self.vue_spawn.tentatives.discard(user_id)  # aucune ball réellement jetée, on ne bloque pas
             return
 
         taux = min(1.0, TAUX_CAPTURE[self.pokemon["rarete"]][ball_type] * database.multiplicateur_boost(user_id, "capture"))
@@ -336,10 +350,11 @@ class VueSpawn(discord.ui.View):
             )
             return  # stockage plein = pas de vraie tentative, on ne verrouille pas ce spawn pour lui
 
-        # Verrouillé immédiatement : plusieurs clics rapides ne peuvent plus ouvrir
-        # plusieurs menus de sélection en parallèle pour tenter plusieurs fois.
-        self.tentatives.add(user_id)
-
+        # Le verrou "une seule tentative par spawn" se pose maintenant au moment où une
+        # ball est VRAIMENT lancée (voir SelectionBallView._traiter_capture), pas ici —
+        # sinon, ouvrir ce menu puis repartir sans rien choisir (ex: aller acheter des
+        # balls en boutique avant de revenir) grillait la tentative pour rien, alors
+        # qu'aucune ball n'avait été jetée.
         vue_selection = SelectionBallView(self.pokemon, self.pc, self.niveau, self.ivs, self, user_id)
 
         nb_possedes = database.compter_captures_espece(user_id, self.pokemon["nom"])
