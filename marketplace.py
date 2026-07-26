@@ -15,7 +15,7 @@ import discord
 import config
 import database
 import journal
-from pokemon_data import cle_tri_alphabetique_fr, obtenir_pokemon_par_nom, sprite_pokemon
+from pokemon_data import EMOJI_POKEDOLLAR, cle_tri_alphabetique_fr, obtenir_pokemon_par_nom, sprite_pokemon
 
 CAPTURES_PAR_PAGE = 25
 DELAI_SUPPRESSION_MESSAGE = 300  # 5 min après vente/retrait/expiration, comme les fils de combat/échange
@@ -59,7 +59,7 @@ def construire_embed_annonce(annonce, vendeur_nom: str, pokemon_nom: str, pc: in
     pokemon = obtenir_pokemon_par_nom(pokemon_nom)
     shiny_txt = " ✨" if shiny else ""
     embed = discord.Embed(
-        title=f"🛒 {pokemon_nom}{shiny_txt} — {annonce['prix']} 🪙",
+        title=f"🛒 {pokemon_nom}{shiny_txt} — {annonce['prix']} {EMOJI_POKEDOLLAR}",
         description=(
             f"Vendu par **{vendeur_nom}**\n"
             f"**{pc} PC**\n\n"
@@ -118,7 +118,7 @@ class VueAnnonce(discord.ui.View):
 
         vue_confirmation = VueConfirmationAchat(annonce_id)
         await interaction.response.send_message(
-            f"Confirmer l'achat pour **{annonce['prix']} 🪙** ? Cette action est définitive.",
+            f"Confirmer l'achat pour **{annonce['prix']} {EMOJI_POKEDOLLAR}** ? Cette action est définitive.",
             view=vue_confirmation,
             ephemeral=True,
         )
@@ -163,7 +163,7 @@ class VueConfirmationAchat(discord.ui.View):
 
         annonce = database.obtenir_annonce_marketplace(self.annonce_id)
         await interaction.response.edit_message(
-            content=f"✅ Achat conclu pour **{annonce['prix']} 🪙** ! Le Pokémon est maintenant dans ta collection.",
+            content=f"✅ Achat conclu pour **{annonce['prix']} {EMOJI_POKEDOLLAR}** ! Le Pokémon est maintenant dans ta collection.",
             view=None,
         )
         journal.logger(
@@ -334,7 +334,7 @@ class _ModalPrixVente(discord.ui.Modal, title="Prix de vente"):
             if self.dernier_exemplaire else ""
         )
         await interaction.response.send_message(
-            f"✅ **{self.pokemon_nom}** mis en vente pour **{prix_int} 🪙** dans {channel.mention} "
+            f"✅ **{self.pokemon_nom}** mis en vente pour **{prix_int} {EMOJI_POKEDOLLAR}** dans {channel.mention} "
             f"— disponible 7 jours.{avertissement}",
             ephemeral=True,
         )
