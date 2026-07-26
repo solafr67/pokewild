@@ -1,3 +1,4 @@
+import json
 import sqlite3
 import time
 
@@ -549,6 +550,59 @@ def init_db():
             statut TEXT NOT NULL DEFAULT 'active',
             message_id TEXT,
             acheteur_id INTEGER
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS roguelike_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            joueur_id INTEGER NOT NULL,
+            actif INTEGER NOT NULL DEFAULT 1,
+            salle_index INTEGER NOT NULL DEFAULT 0,
+            chemin TEXT NOT NULL,
+            reliques TEXT NOT NULL DEFAULT '[]',
+            thread_id TEXT,
+            message_id TEXT,
+            date_creation INTEGER NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS roguelike_equipe (
+            run_id INTEGER NOT NULL,
+            position INTEGER NOT NULL,
+            pokemon_nom TEXT NOT NULL,
+            niveau INTEGER NOT NULL,
+            pv_max INTEGER NOT NULL,
+            pv_actuels INTEGER NOT NULL,
+            PRIMARY KEY (run_id, position)
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS roguelike_combat (
+            run_id INTEGER PRIMARY KEY,
+            ennemi_nom TEXT NOT NULL,
+            ennemi_niveau INTEGER NOT NULL,
+            ennemi_pv_max INTEGER NOT NULL,
+            ennemi_pv_actuels INTEGER NOT NULL,
+            actif_position INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS roguelike_records (
+            joueur_id INTEGER PRIMARY KEY,
+            meilleur_etage INTEGER NOT NULL DEFAULT 0,
+            date_record INTEGER
         )
         """
     )
@@ -4210,6 +4264,226 @@ def executer_echange(echange_id: int) -> tuple:
     conn.commit()
     conn.close()
     return True, None
+
+
+def creer_run_roguelike(joueur_id: int, chemin: list) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO roguelike_runs (joueur_id, chemin, date_creation) VALUES (?, ?, ?)",
+        (joueur_id, json.dumps(chemin), int(time.time())),
+    )
+    run_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return run_id
+
+
+def obtenir_run_roguelike_actif(joueur_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM roguelike_runs WHERE joueur_id = ? AND actif = 1", (joueur_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def obtenir_run_roguelike_par_thread(thread_id: int):
+    """Chaque run vit dans son propre fil dédié — c'est la clé la plus fiable pour
+    retrouver la bonne run après un redémarrage du bot (une seule instance de vue
+    générique est ré-enregistrée pour TOUS les fils actifs, self.run_id serait donc faux
+    pour n'importe quelle run sauf celle qui a créé cette instance dans la session en cours)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM roguelike_runs WHERE thread_id = ? AND actif = 1", (str(thread_id),))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def obtenir_run_roguelike(run_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM roguelike_runs WHERE id = ?", (run_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def definir_message_run_roguelike(run_id: int, thread_id: int, message_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE roguelike_runs SET thread_id = ?, message_id = ? WHERE id = ?",
+        (str(thread_id), str(message_id), run_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def avancer_salle_roguelike(run_id: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE roguelike_runs SET salle_index = salle_index + 1 WHERE id = ?", (run_id,))
+    conn.commit()
+    cur.execute("SELECT salle_index FROM roguelike_runs WHERE id = ?", (run_id,))
+    nouvel_index = cur.fetchone()["salle_index"]
+    conn.close()
+    return nouvel_index
+
+
+def ajouter_relique_roguelike(run_id: int, relique_id: str):
+    run = obtenir_run_roguelike(run_id)
+    reliques = json.loads(run["reliques"])
+    reliques.append(relique_id)
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE roguelike_runs SET reliques = ? WHERE id = ?", (json.dumps(reliques), run_id))
+    conn.commit()
+    conn.close()
+
+
+def terminer_run_roguelike(run_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE roguelike_runs SET actif = 0 WHERE id = ?", (run_id,))
+    cur.execute("DELETE FROM roguelike_combat WHERE run_id = ?", (run_id,))
+    conn.commit()
+    conn.close()
+
+
+def creer_equipe_roguelike(run_id: int, equipe: list):
+    """equipe = [{'pokemon_nom':.., 'niveau':.., 'pv_max':..}, ...] — insère à pleine vie."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    for position, mon in enumerate(equipe):
+        cur.execute(
+            """
+            INSERT INTO roguelike_equipe (run_id, position, pokemon_nom, niveau, pv_max, pv_actuels)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (run_id, position, mon["pokemon_nom"], mon["niveau"], mon["pv_max"], mon["pv_max"]),
+        )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_equipe_roguelike(run_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM roguelike_equipe WHERE run_id = ? ORDER BY position", (run_id,))
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def definir_pv_roguelike(run_id: int, position: int, pv_actuels: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE roguelike_equipe SET pv_actuels = ? WHERE run_id = ? AND position = ?",
+        (max(0, pv_actuels), run_id, position),
+    )
+    conn.commit()
+    conn.close()
+
+
+def soigner_equipe_roguelike(run_id: int, pourcentage: float):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT position, pv_max, pv_actuels FROM roguelike_equipe WHERE run_id = ?", (run_id,))
+    for row in cur.fetchall():
+        if row["pv_actuels"] <= 0:
+            continue  # un Pokémon K.O. ne se réveille pas tout seul au repos, il faut le relique/l'objet adapté
+        nouveau_pv = min(row["pv_max"], row["pv_actuels"] + round(row["pv_max"] * pourcentage))
+        cur.execute(
+            "UPDATE roguelike_equipe SET pv_actuels = ? WHERE run_id = ? AND position = ?",
+            (nouveau_pv, run_id, row["position"]),
+        )
+    conn.commit()
+    conn.close()
+
+
+def creer_combat_roguelike(run_id: int, ennemi_nom: str, ennemi_niveau: int, ennemi_pv_max: int, actif_position: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO roguelike_combat (run_id, ennemi_nom, ennemi_niveau, ennemi_pv_max, ennemi_pv_actuels, actif_position)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(run_id) DO UPDATE SET
+            ennemi_nom = excluded.ennemi_nom, ennemi_niveau = excluded.ennemi_niveau,
+            ennemi_pv_max = excluded.ennemi_pv_max, ennemi_pv_actuels = excluded.ennemi_pv_max,
+            actif_position = excluded.actif_position
+        """,
+        (run_id, ennemi_nom, ennemi_niveau, ennemi_pv_max, ennemi_pv_max, actif_position),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_combat_roguelike(run_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM roguelike_combat WHERE run_id = ?", (run_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def definir_pv_ennemi_roguelike(run_id: int, pv_actuels: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE roguelike_combat SET ennemi_pv_actuels = ? WHERE run_id = ?", (max(0, pv_actuels), run_id))
+    conn.commit()
+    conn.close()
+
+
+def definir_actif_position_roguelike(run_id: int, position: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE roguelike_combat SET actif_position = ? WHERE run_id = ?", (position, run_id))
+    conn.commit()
+    conn.close()
+
+
+def terminer_combat_roguelike(run_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM roguelike_combat WHERE run_id = ?", (run_id,))
+    conn.commit()
+    conn.close()
+
+
+def enregistrer_record_roguelike(joueur_id: int, etage_atteint: int) -> bool:
+    """Met à jour le record du joueur SI cet étage dépasse son ancien record. Retourne
+    True si c'est un nouveau record."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT meilleur_etage FROM roguelike_records WHERE joueur_id = ?", (joueur_id,))
+    row = cur.fetchone()
+    if row is None or etage_atteint > row["meilleur_etage"]:
+        cur.execute(
+            """
+            INSERT INTO roguelike_records (joueur_id, meilleur_etage, date_record) VALUES (?, ?, ?)
+            ON CONFLICT(joueur_id) DO UPDATE SET meilleur_etage = excluded.meilleur_etage, date_record = excluded.date_record
+            """,
+            (joueur_id, etage_atteint, int(time.time())),
+        )
+        conn.commit()
+        conn.close()
+        return True
+    conn.close()
+    return False
+
+
+def classement_roguelike(limite: int = 10):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT joueur_id, meilleur_etage FROM roguelike_records ORDER BY meilleur_etage DESC LIMIT ?", (limite,))
+    rows = cur.fetchall()
+    conn.close()
+    return rows
 
 
 def creer_annonce_marketplace(vendeur_id: int, capture_id: int, prix: int, duree_secondes: int) -> int:

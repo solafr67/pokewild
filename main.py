@@ -16,6 +16,7 @@ import combat as combat_module
 import combat_2v2 as combat_2v2_module
 import echanges as echanges_module
 import marketplace as marketplace_module
+import roguelike as roguelike_module
 import maitre_types as maitre_types_module
 import exploration as exploration_module
 import race_ui as race_ui_module
@@ -1186,6 +1187,8 @@ async def on_ready():
     bot.add_view(elevage_module.VueLaboratoire())  # idem pour le Laboratoire
     bot.add_view(VuePingRaid())  # idem pour le bouton de ping raid
     bot.add_view(marketplace_module.VueAnnonce())  # idem pour les annonces marketplace (générique, voir la classe)
+    bot.add_view(roguelike_module.VueRoom())  # idem pour le bouton "Continuer" (générique, voir la classe)
+    bot.add_view(roguelike_module.VueCombatRoguelike())  # idem pour le bouton "Attaquer"
     # Note : VueRaid n'est plus enregistrée en persistante (elle a besoin d'un raid_id précis,
     # comme les spawns classiques un raid en cours au moment d'un redémarrage sera perdu)
 
@@ -2847,6 +2850,21 @@ async def ping_raid_toggle(interaction: discord.Interaction):
         await interaction.response.send_message(
             "🔔 Tu recevras désormais un ping à chaque nouveau raid !", ephemeral=True
         )
+
+
+@bot.tree.command(name="roguelike", description="Lance une run du mini-jeu roguelike (mini-jeu indépendant, aucune récompense liée au bot)")
+async def roguelike_cmd(interaction: discord.Interaction):
+    await roguelike_module.lancer_run(bot, interaction)
+
+
+@bot.tree.command(name="roguelike-abandonner", description="Abandonne ta run roguelike en cours")
+async def roguelike_abandonner_cmd(interaction: discord.Interaction):
+    await roguelike_module.abandonner_run(interaction)
+
+
+@bot.tree.command(name="roguelike-classement", description="Classement du meilleur étage atteint en roguelike")
+async def roguelike_classement_cmd(interaction: discord.Interaction):
+    await roguelike_module.afficher_classement(interaction)
 
 
 @bot.tree.command(name="vendre-pokemon", description="Met un de tes Pokémon en vente sur le marketplace (prix fixe)")

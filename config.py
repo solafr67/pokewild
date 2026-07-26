@@ -18,6 +18,15 @@ CHANNEL_LABORATOIRE_ID = 1526365279855054952  # Incubateur + Race, regroupés da
 CHANNEL_LOGS_ID = 1527415638371598526  # channel dédié aux logs bot + joueurs
 CHANNEL_PING_RAID_ID = 1530858928731193374  # message fixe pour (dés)activer le rôle de ping raid
 CHANNEL_MARKETPLACE_ID = 1530862635967582208  # annonces de vente de Pokémon entre joueurs
+CHANNEL_ROGUELIKE_ID = 1530873209245663302  # mini-jeu roguelike (catégorie mini-jeux, indépendant de l'économie principale)
+
+# --- Roguelike (mini-jeu, salon dédié, aucune récompense liée au bot principal) ---
+ROGUELIKE_NB_SALLES_MIN = 8
+ROGUELIKE_NB_SALLES_MAX = 12
+ROGUELIKE_TAILLE_EQUIPE = 3
+ROGUELIKE_NIVEAU_DEPART = 15
+ROGUELIKE_NIVEAU_PAR_ETAGE = 2  # le niveau des ennemis (et donc la difficulté) monte avec l'étage
+ROGUELIKE_SOIN_REPOS_POURCENT = 0.45
 
 # --- Marketplace (vente à prix fixe entre joueurs, pas d'enchères pour l'instant) ---
 MARKETPLACE_DUREE_ANNONCE_SECONDES = 7 * 86400  # 1 semaine avant disparition automatique
