@@ -15,6 +15,7 @@ import raid as raid_module
 import combat as combat_module
 import combat_2v2 as combat_2v2_module
 import echanges as echanges_module
+import marketplace as marketplace_module
 import maitre_types as maitre_types_module
 import exploration as exploration_module
 import race_ui as race_ui_module
@@ -518,6 +519,16 @@ async def boucle_classement():
     except Exception as e:
         print(f"⚠️ Erreur dans boucle_classement (la boucle continue) : {e}")
         journal.logger(f"🔴 Erreur dans `boucle_classement` : {e}")
+
+
+@tasks.loop(seconds=config.MARKETPLACE_INTERVALLE_VERIFICATION_SECONDES)
+async def boucle_marketplace():
+    DERNIERE_ACTIVITE_BOUCLES["marketplace"] = time.time()
+    try:
+        await marketplace_module.purger_annonces_expirees(bot)
+    except Exception as e:
+        print(f"⚠️ Erreur dans boucle_marketplace (la boucle continue) : {e}")
+        journal.logger(f"🔴 Erreur dans `boucle_marketplace` : {e}")
 
 
 @tasks.loop(hours=24)
@@ -1173,6 +1184,8 @@ async def on_ready():
     bot.add_view(quetes_ui_module.VueCentreQuetes())  # idem pour les Quêtes
     bot.add_view(classement_module.VueClassements())  # idem pour les classements
     bot.add_view(elevage_module.VueLaboratoire())  # idem pour le Laboratoire
+    bot.add_view(VuePingRaid())  # idem pour le bouton de ping raid
+    bot.add_view(marketplace_module.VueAnnonce())  # idem pour les annonces marketplace (générique, voir la classe)
     # Note : VueRaid n'est plus enregistrée en persistante (elle a besoin d'un raid_id précis,
     # comme les spawns classiques un raid en cours au moment d'un redémarrage sera perdu)
 
@@ -1246,6 +1259,9 @@ async def on_ready():
     if not boucle_snapshot_economie.is_running():
         boucle_snapshot_economie.start()
 
+    if not boucle_marketplace.is_running():
+        boucle_marketplace.start()
+
     await poster_message_pokestop_si_absent()
     await poster_message_boutique_si_absent()
     await poster_message_maitre_types_si_absent()
@@ -1258,6 +1274,7 @@ async def on_ready():
     await poster_message_quetes_si_absent()
     await poster_message_profil_si_absent()
     await poster_message_laboratoire_si_absent()
+    await poster_message_ping_raid_si_absent()
 
     print(f"✅ Connecté en tant que {bot.user} — spawns et base de données prêts.")
 
@@ -1496,6 +1513,71 @@ async def poster_message_profil_si_absent():
 
     message = await channel.send(embed=embed, view=VueProfil())
     database.definir_parametre("profil_message_id", str(message.id))
+
+
+class VuePingRaid(discord.ui.View):
+    """Message fixe (channel dédié) permettant à chacun d'activer/désactiver le rôle de
+    ping raid sans passer par la commande /ping-raid — même logique, juste un bouton."""
+
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Notifications Raid", emoji="🔔", style=discord.ButtonStyle.primary, custom_id="pokewild:toggle_ping_raid")
+    async def basculer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role_id = getattr(config, "ROLE_PING_RAID_ID", None)
+        if not role_id:
+            await interaction.response.send_message(
+                "⚠️ Le rôle de ping raid n'a pas encore été configuré par un admin.", ephemeral=True
+            )
+            return
+
+        role = interaction.guild.get_role(role_id)
+        if role is None:
+            await interaction.response.send_message(
+                "⚠️ Le rôle configuré (ROLE_PING_RAID_ID) est introuvable sur ce serveur.", ephemeral=True
+            )
+            return
+
+        if role in interaction.user.roles:
+            await interaction.user.remove_roles(role)
+            await interaction.response.send_message("🔕 Tu ne recevras plus les notifications de raid.", ephemeral=True)
+        else:
+            await interaction.user.add_roles(role)
+            await interaction.response.send_message("🔔 Tu recevras désormais un ping à chaque nouveau raid !", ephemeral=True)
+
+
+async def poster_message_ping_raid_si_absent():
+    """Poste (ou met à jour) le message fixe du channel dédié au ping raid — même
+    principe que poster_message_profil_si_absent/poster_message_laboratoire_si_absent."""
+    channel = bot.get_channel(config.CHANNEL_PING_RAID_ID)
+    if channel is None:
+        print(
+            "⚠️ CHANNEL_PING_RAID_ID introuvable — vérifie l'ID dans config.py. "
+            "Le message de ping raid n'a pas pu être posté automatiquement."
+        )
+        return
+
+    embed = discord.Embed(
+        title="🔔 Notifications de raid",
+        description=(
+            "Clique sur le bouton ci-dessous pour être notifié·e à chaque nouveau raid — "
+            "reclique pour te désabonner à tout moment.\n\n"
+            "Ça revient au même que la commande `/ping-raid`, en plus rapide."
+        ),
+        color=discord.Color.blue(),
+    )
+    message_id = database.obtenir_parametre("ping_raid_message_id")
+
+    if message_id:
+        try:
+            message_existant = await channel.fetch_message(int(message_id))
+            await message_existant.edit(embed=embed, view=VuePingRaid())
+            return
+        except discord.NotFound:
+            pass  # le message a été supprimé manuellement, on va en recréer un ci-dessous
+
+    message = await channel.send(embed=embed, view=VuePingRaid())
+    database.definir_parametre("ping_raid_message_id", str(message.id))
 
 
 async def poster_message_laboratoire_si_absent():
@@ -2531,6 +2613,7 @@ async def status_bot(interaction: discord.Interaction):
         _ligne_boucle("Notifications MP", "notifications", 30),
         _ligne_boucle("Envoi des logs", "logs", 5),
         _ligne_boucle("Snapshot économie", "snapshot_economie", 24 * 3600),
+        _ligne_boucle("Marketplace (purge)", "marketplace", config.MARKETPLACE_INTERVALLE_VERIFICATION_SECONDES),
     ]
 
     compteurs = database.obtenir_compteurs_activite()
@@ -2764,6 +2847,11 @@ async def ping_raid_toggle(interaction: discord.Interaction):
         await interaction.response.send_message(
             "🔔 Tu recevras désormais un ping à chaque nouveau raid !", ephemeral=True
         )
+
+
+@bot.tree.command(name="vendre-pokemon", description="Met un de tes Pokémon en vente sur le marketplace (prix fixe)")
+async def vendre_pokemon(interaction: discord.Interaction):
+    await marketplace_module.lancer_vente(interaction)
 
 
 @bot.tree.command(name="combat-2v2-equipe", description="Lance un lobby de combat 2v2 en équipe (4 joueurs, 2 équipes de 2)")

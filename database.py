@@ -539,6 +539,22 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS marketplace_annonces (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vendeur_id INTEGER NOT NULL,
+            capture_id INTEGER NOT NULL,
+            prix INTEGER NOT NULL,
+            date_creation INTEGER NOT NULL,
+            date_expiration INTEGER NOT NULL,
+            statut TEXT NOT NULL DEFAULT 'active',
+            message_id TEXT,
+            acheteur_id INTEGER
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS echange_pokemon (
             echange_id INTEGER NOT NULL,
             capture_id INTEGER NOT NULL,
@@ -4193,6 +4209,135 @@ def executer_echange(echange_id: int) -> tuple:
     cur.execute("UPDATE echanges SET actif = 0 WHERE id = ?", (echange_id,))
     conn.commit()
     conn.close()
+    return True, None
+
+
+def creer_annonce_marketplace(vendeur_id: int, capture_id: int, prix: int, duree_secondes: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    maintenant = int(time.time())
+    cur.execute(
+        """
+        INSERT INTO marketplace_annonces (vendeur_id, capture_id, prix, date_creation, date_expiration, statut)
+        VALUES (?, ?, ?, ?, ?, 'active')
+        """,
+        (vendeur_id, capture_id, prix, maintenant, maintenant + duree_secondes),
+    )
+    annonce_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return annonce_id
+
+
+def definir_message_annonce_marketplace(annonce_id: int, message_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE marketplace_annonces SET message_id = ? WHERE id = ?", (str(message_id), annonce_id))
+    conn.commit()
+    conn.close()
+
+
+def obtenir_annonce_marketplace(annonce_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM marketplace_annonces WHERE id = ?", (annonce_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def capture_deja_en_vente(capture_id: int) -> bool:
+    """Empêche de mettre en vente un Pokémon déjà listé activement ailleurs."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT 1 FROM marketplace_annonces WHERE capture_id = ? AND statut = 'active' LIMIT 1",
+        (capture_id,),
+    )
+    trouve = cur.fetchone() is not None
+    conn.close()
+    return trouve
+
+
+def obtenir_annonces_marketplace_joueur(vendeur_id: int, actives_seulement: bool = True):
+    conn = get_connexion()
+    cur = conn.cursor()
+    if actives_seulement:
+        cur.execute(
+            "SELECT * FROM marketplace_annonces WHERE vendeur_id = ? AND statut = 'active' ORDER BY date_creation DESC",
+            (vendeur_id,),
+        )
+    else:
+        cur.execute(
+            "SELECT * FROM marketplace_annonces WHERE vendeur_id = ? ORDER BY date_creation DESC",
+            (vendeur_id,),
+        )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def obtenir_annonces_marketplace_expirees(maintenant: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT * FROM marketplace_annonces WHERE statut = 'active' AND date_expiration <= ?",
+        (maintenant,),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def marquer_annonce_marketplace(annonce_id: int, statut: str):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE marketplace_annonces SET statut = ? WHERE id = ?", (statut, annonce_id))
+    conn.commit()
+    conn.close()
+
+
+def executer_achat_marketplace(annonce_id: int, acheteur_id: int) -> tuple:
+    """Exécute l'achat de façon atomique : re-vérifie que l'annonce est toujours active,
+    que le vendeur possède toujours le Pokémon, et que l'acheteur a les fonds — puis
+    transfère le Pokémon et les Poké Dollars. Retourne (succes, message_erreur)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM marketplace_annonces WHERE id = ?", (annonce_id,))
+    annonce = cur.fetchone()
+    if annonce is None or annonce["statut"] != "active":
+        conn.close()
+        return False, "Cette annonce n'est plus disponible (déjà vendue, retirée ou expirée)."
+    if annonce["vendeur_id"] == acheteur_id:
+        conn.close()
+        return False, "Tu ne peux pas acheter ton propre Pokémon !"
+
+    cur.execute("SELECT user_id FROM captures WHERE id = ?", (annonce["capture_id"],))
+    capture = cur.fetchone()
+    if capture is None or capture["user_id"] != annonce["vendeur_id"]:
+        cur.execute("UPDATE marketplace_annonces SET statut = 'annulee' WHERE id = ?", (annonce_id,))
+        conn.commit()
+        conn.close()
+        return False, "Le vendeur ne possède plus ce Pokémon (déjà échangé, relâché...) — annonce annulée."
+    conn.close()
+
+    # Solde vérifié via une connexion séparée (même convention que executer_echange).
+    solde_acheteur = obtenir_poke_dollars(acheteur_id)
+    if solde_acheteur < annonce["prix"]:
+        return False, f"Il te manque des Poké Dollars pour cet achat ({solde_acheteur}/{annonce['prix']})."
+
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE captures SET user_id = ? WHERE id = ?", (acheteur_id, annonce["capture_id"]))
+    cur.execute(
+        "UPDATE marketplace_annonces SET statut = 'vendue', acheteur_id = ? WHERE id = ?",
+        (acheteur_id, annonce_id),
+    )
+    conn.commit()
+    conn.close()
+
+    ajouter_poke_dollars(acheteur_id, -annonce["prix"])
+    ajouter_poke_dollars(annonce["vendeur_id"], annonce["prix"])
     return True, None
 
 

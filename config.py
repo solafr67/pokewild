@@ -16,6 +16,14 @@ CHANNEL_QUETES_ID = 1525970082264514730
 CHANNEL_AVENTURE_ID = 1526201523867226192
 CHANNEL_LABORATOIRE_ID = 1526365279855054952  # Incubateur + Race, regroupés dans un seul channel
 CHANNEL_LOGS_ID = 1527415638371598526  # channel dédié aux logs bot + joueurs
+CHANNEL_PING_RAID_ID = 1530858928731193374  # message fixe pour (dés)activer le rôle de ping raid
+CHANNEL_MARKETPLACE_ID = 1530862635967582208  # annonces de vente de Pokémon entre joueurs
+
+# --- Marketplace (vente à prix fixe entre joueurs, pas d'enchères pour l'instant) ---
+MARKETPLACE_DUREE_ANNONCE_SECONDES = 7 * 86400  # 1 semaine avant disparition automatique
+MARKETPLACE_PRIX_MIN = 1
+MARKETPLACE_PRIX_MAX = 1_000_000  # garde-fou anti-erreur de saisie (pas une vraie limite de jeu)
+MARKETPLACE_INTERVALLE_VERIFICATION_SECONDES = 15 * 60  # fréquence de la purge des annonces expirées
 
 # --- Dresseurs PvE (combat contre une IA, PV liés au même pool persistant que les raids) ---
 INTERVALLE_DRESSEUR = 20 * 60  # 20 min entre deux spawns (plus rare qu'un raid pour limiter le farming solo)
