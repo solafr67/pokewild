@@ -119,7 +119,6 @@ class VueEchange(discord.ui.View):
         if echange_pret:
             succes, erreur = database.executer_echange(self.echange_id)
             echange = database.obtenir_echange(self.echange_id)
-            noms = await _obtenir_noms(interaction.client, echange["joueur1_id"], echange["joueur2_id"])
             if succes:
                 journal.logger(f"🔄 Échange conclu entre <@{echange['joueur1_id']}> et <@{echange['joueur2_id']}>.")
                 embed = discord.Embed(
@@ -130,7 +129,20 @@ class VueEchange(discord.ui.View):
                 embed.set_footer(text=f"🗑️ Ce fil sera supprimé automatiquement dans {DELAI_SUPPRESSION_FIL // 60} minutes.")
                 for item in self.children:
                     item.disabled = True
-                await interaction.response.edit_message(embed=embed, view=self)
+                # L'échange est déjà bien conclu en base à ce stade (executer_echange a
+                # réussi) — cet edit_message n'est plus qu'un AFFICHAGE de confirmation.
+                # S'il échoue pour une raison ou une autre (interaction expirée après un
+                # aller-retour trop long, etc.), on ne doit JAMAIS laisser le fil figé sur
+                # l'ancien état "Échange en cours" sans explication — d'où le repli sur un
+                # message classique dans le salon, qui fonctionne indépendamment de
+                # l'état de l'interaction d'origine.
+                try:
+                    await interaction.response.edit_message(embed=embed, view=self)
+                except discord.HTTPException:
+                    try:
+                        await interaction.channel.send(embed=embed)
+                    except discord.HTTPException:
+                        pass
                 if interaction.channel:
                     interaction.client.loop.create_task(_programmer_suppression_fil(interaction.channel))
             else:
@@ -143,7 +155,13 @@ class VueEchange(discord.ui.View):
                 embed.set_footer(text=f"🗑️ Ce fil sera supprimé automatiquement dans {DELAI_SUPPRESSION_FIL // 60} minutes.")
                 for item in self.children:
                     item.disabled = True
-                await interaction.response.edit_message(embed=embed, view=self)
+                try:
+                    await interaction.response.edit_message(embed=embed, view=self)
+                except discord.HTTPException:
+                    try:
+                        await interaction.channel.send(embed=embed)
+                    except discord.HTTPException:
+                        pass
                 if interaction.channel:
                     interaction.client.loop.create_task(_programmer_suppression_fil(interaction.channel))
         else:
