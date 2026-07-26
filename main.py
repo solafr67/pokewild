@@ -2981,7 +2981,7 @@ async def defier_double(interaction: discord.Interaction, adversaire: discord.Me
     vue_defi.message = await interaction.original_response()
 
 
-
+@bot.tree.command(name="defier", description="Défie un autre joueur en combat Pokémon")
 async def defier(interaction: discord.Interaction, adversaire: discord.Member):
     if adversaire.bot or adversaire.id == interaction.user.id:
         await interaction.response.send_message("❌ Cible invalide.", ephemeral=True)
