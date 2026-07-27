@@ -2010,15 +2010,12 @@ async def pokedex_info(interaction: discord.Interaction, nom: str, membre: disco
     if embed is None:
         await interaction.response.send_message(f"❌ Pokémon **{nom}** introuvable dans la base.", ephemeral=True)
         return
-    fichiers_pokedex_info = []
     if membre:
-        fichier_avatar = await fichier_avatar_fiable(membre)
-        if fichier_avatar:
-            embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url="attachment://avatar.png")
-            fichiers_pokedex_info.append(fichier_avatar)
-        else:
-            embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url=url_avatar_fiable(membre))
-    await interaction.response.send_message(embed=embed, files=fichiers_pokedex_info)
+        # Message désormais éphémère : une image jointe via "attachment://" ne s'affiche
+        # JAMAIS dans un message éphémère (bug Discord confirmé, voir profil.py) — on
+        # retombe directement sur l'URL fiable, sans tenter de pièce jointe pour rien.
+        embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url=url_avatar_fiable(membre))
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(
@@ -2870,6 +2867,16 @@ async def roguelike_classement_cmd(interaction: discord.Interaction):
 @bot.tree.command(name="vendre-pokemon", description="Met un de tes Pokémon en vente sur le marketplace (prix fixe)")
 async def vendre_pokemon(interaction: discord.Interaction):
     await marketplace_module.lancer_vente(interaction)
+
+
+@bot.tree.command(name="marketplace-recherche", description="Cherche une annonce active du marketplace par nom de Pokémon")
+async def marketplace_recherche_cmd(interaction: discord.Interaction, nom: str):
+    await marketplace_module.rechercher_annonces(interaction, nom)
+
+
+@bot.tree.command(name="marketplace-historique", description="Affiche ton historique personnel de ventes et d'achats sur le marketplace")
+async def marketplace_historique_cmd(interaction: discord.Interaction):
+    await marketplace_module.afficher_historique(interaction)
 
 
 @bot.tree.command(name="combat-2v2-equipe", description="Lance un lobby de combat 2v2 en équipe (4 joueurs, 2 équipes de 2)")

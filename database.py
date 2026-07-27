@@ -4368,6 +4368,25 @@ def creer_equipe_roguelike(run_id: int, equipe: list):
     conn.close()
 
 
+def ajouter_membre_equipe_roguelike(run_id: int, pokemon_nom: str, niveau: int, pv_max: int) -> int:
+    """Recrute UN nouveau membre en cours de run (salle recrutement) — prend la 1ère
+    position libre. Retourne la position attribuée."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT COALESCE(MAX(position), -1) + 1 AS prochaine_position FROM roguelike_equipe WHERE run_id = ?", (run_id,))
+    position = cur.fetchone()["prochaine_position"]
+    cur.execute(
+        """
+        INSERT INTO roguelike_equipe (run_id, position, pokemon_nom, niveau, pv_max, pv_actuels)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (run_id, position, pokemon_nom, niveau, pv_max, pv_max),
+    )
+    conn.commit()
+    conn.close()
+    return position
+
+
 def obtenir_equipe_roguelike(run_id: int):
     conn = get_connexion()
     cur = conn.cursor()
@@ -4613,6 +4632,49 @@ def executer_achat_marketplace(annonce_id: int, acheteur_id: int) -> tuple:
     ajouter_poke_dollars(acheteur_id, -annonce["prix"])
     ajouter_poke_dollars(annonce["vendeur_id"], annonce["prix"])
     return True, None
+
+
+def rechercher_annonces_marketplace_actives(terme: str, limite: int = 15):
+    """Recherche par nom d'espèce (insensible à la casse, sous-chaîne) parmi les
+    annonces ACTIVES uniquement."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT m.*, c.pokemon_nom, c.pc, c.shiny
+        FROM marketplace_annonces m
+        JOIN captures c ON c.id = m.capture_id
+        WHERE m.statut = 'active' AND c.pokemon_nom LIKE ? COLLATE NOCASE
+        ORDER BY m.date_creation DESC
+        LIMIT ?
+        """,
+        (f"%{terme}%", limite),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def obtenir_historique_marketplace_joueur(user_id: int, limite: int = 15):
+    """Toutes les annonces où le joueur est vendeur OU acheteur (tous statuts confondus),
+    les plus récentes d'abord. LEFT JOIN : reste correct même si la capture a depuis été
+    relâchée/re-échangée (pokemon_nom devient None dans ce cas plutôt qu'une ligne perdue)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT m.*, c.pokemon_nom
+        FROM marketplace_annonces m
+        LEFT JOIN captures c ON c.id = m.capture_id
+        WHERE m.vendeur_id = ? OR m.acheteur_id = ?
+        ORDER BY m.date_creation DESC
+        LIMIT ?
+        """,
+        (user_id, user_id, limite),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
 
 
 def incrementer_explorations_terminees(user_id: int):

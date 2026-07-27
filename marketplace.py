@@ -43,27 +43,21 @@ async def _supprimer_message_apres_delai(message: discord.Message, delai: int):
         pass
 
 
-def _texte_temps_restant(date_expiration: int) -> str:
-    restant = date_expiration - int(time.time())
-    if restant <= 0:
-        return "expire d'un instant à l'autre"
-    jours = restant // 86400
-    heures = (restant % 86400) // 3600
-    if jours > 0:
-        return f"expire dans {jours}j {heures}h"
-    minutes = (restant % 3600) // 60
-    return f"expire dans {heures}h {minutes}min"
-
-
 def construire_embed_annonce(annonce, vendeur_nom: str, pokemon_nom: str, pc: int, shiny: bool) -> discord.Embed:
     pokemon = obtenir_pokemon_par_nom(pokemon_nom)
     shiny_txt = " ✨" if shiny else ""
+    # Timestamp Discord natif (style "R" = relatif) plutôt qu'un texte calculé une fois à
+    # la création de l'annonce : le client Discord l'affiche et le met à jour tout seul en
+    # direct ("expire dans 3 jours", puis "dans 2 jours"...) — sans ça, le texte restait
+    # figé sur la valeur du moment de la création tant que le message n'était pas réédité
+    # pour une autre raison (achat, retrait), donnant l'impression à tort d'un problème de
+    # redémarrage du bot alors que ce n'était qu'un texte jamais recalculé.
     embed = discord.Embed(
         title=f"🛒 {pokemon_nom}{shiny_txt} — {annonce['prix']} {EMOJI_POKEDOLLAR}",
         description=(
             f"Vendu par **{vendeur_nom}**\n"
             f"**{pc} PC**\n\n"
-            f"⏳ {_texte_temps_restant(annonce['date_expiration'])}"
+            f"⏳ Expire <t:{annonce['date_expiration']}:R>"
         ),
         color=discord.Color.gold(),
     )
@@ -378,3 +372,62 @@ async def purger_annonces_expirees(bot):
             pass
 
     return len(expirees)
+
+
+LIBELLE_STATUT = {
+    "vendue": "✅ Vendu",
+    "annulee": "🚫 Retiré",
+    "expiree": "⌛ Expiré",
+    "active": "🛒 En vente",
+}
+
+
+async def rechercher_annonces(interaction: discord.Interaction, nom: str):
+    """Point d'entrée de la commande /marketplace-recherche."""
+    resultats = database.rechercher_annonces_marketplace_actives(nom)
+    if not resultats:
+        await interaction.response.send_message(f"Aucune annonce active pour « {nom} ».", ephemeral=True)
+        return
+
+    lignes = []
+    for r in resultats:
+        shiny_txt = " ✨" if r["shiny"] else ""
+        ligne = f"**{r['pokemon_nom']}{shiny_txt}** ({r['pc']} PC) — {r['prix']} {EMOJI_POKEDOLLAR} — vendu par <@{r['vendeur_id']}>"
+        if r["message_id"] and interaction.guild_id:
+            lien = f"https://discord.com/channels/{interaction.guild_id}/{config.CHANNEL_MARKETPLACE_ID}/{r['message_id']}"
+            ligne += f" — [Voir l'annonce]({lien})"
+        lignes.append(ligne)
+
+    embed = discord.Embed(
+        title=f"🔍 Marketplace — résultats pour « {nom} »",
+        description="\n".join(lignes),
+        color=discord.Color.gold(),
+    )
+    if len(resultats) == 15:
+        embed.set_footer(text="15 résultats les plus récents affichés — affine ta recherche si besoin.")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+async def afficher_historique(interaction: discord.Interaction):
+    """Point d'entrée de la commande /marketplace-historique."""
+    lignes_data = database.obtenir_historique_marketplace_joueur(interaction.user.id)
+    if not lignes_data:
+        await interaction.response.send_message("Tu n'as encore aucune activité sur le marketplace.", ephemeral=True)
+        return
+
+    lignes = []
+    for r in lignes_data:
+        nom = r["pokemon_nom"] or "*Pokémon introuvable*"
+        if r["vendeur_id"] == interaction.user.id:
+            lignes.append(f"{LIBELLE_STATUT.get(r['statut'], r['statut'])} — **{nom}** ({r['prix']} {EMOJI_POKEDOLLAR}) — mis en vente")
+        else:
+            lignes.append(f"🟢 Acheté — **{nom}** ({r['prix']} {EMOJI_POKEDOLLAR})")
+
+    embed = discord.Embed(
+        title="📜 Ton historique marketplace",
+        description="\n".join(lignes),
+        color=discord.Color.blurple(),
+    )
+    if len(lignes_data) == 15:
+        embed.set_footer(text="15 entrées les plus récentes affichées.")
+    await interaction.response.send_message(embed=embed, ephemeral=True)

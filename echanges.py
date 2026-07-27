@@ -417,12 +417,19 @@ class VueChoixOffre(discord.ui.View):
         self.user_id = user_id
         self.page = page
         self.tri = "alphabetique"
+        self.recherche = None
 
         captures_actuelles = {row["id"] for row in database.obtenir_offre_echange(echange_id, user_id)}
         self.selection = captures_actuelles
         self.toutes_captures = database.obtenir_toutes_captures_detaillees(user_id)
         self._trier_captures()
         self._construire_composants()
+
+    def _captures_affichees(self) -> list:
+        if not self.recherche:
+            return self.toutes_captures
+        terme = self.recherche.lower()
+        return [row for row in self.toutes_captures if terme in row["pokemon_nom"].lower()]
 
     def _trier_captures(self):
         if self.tri == "rarete":
@@ -440,8 +447,9 @@ class VueChoixOffre(discord.ui.View):
 
     def _construire_composants(self):
         self.clear_items()
+        captures_affichees = self._captures_affichees()
         debut = self.page * CAPTURES_PAR_PAGE
-        page_captures = self.toutes_captures[debut : debut + CAPTURES_PAR_PAGE]
+        page_captures = captures_affichees[debut : debut + CAPTURES_PAR_PAGE]
 
         options = []
         for row in page_captures:
@@ -464,6 +472,10 @@ class VueChoixOffre(discord.ui.View):
             )
             select.callback = self._on_select
             self.add_item(select)
+        elif self.recherche:
+            # Aucun résultat pour cette recherche — pas de select vide, juste les
+            # boutons de recherche/effacement restent disponibles plus bas.
+            pass
 
         select_tri = discord.ui.Select(
             placeholder="Trier par...",
@@ -476,7 +488,7 @@ class VueChoixOffre(discord.ui.View):
         select_tri.callback = self._on_select_tri
         self.add_item(select_tri)
 
-        nb_pages = max(1, (len(self.toutes_captures) + CAPTURES_PAR_PAGE - 1) // CAPTURES_PAR_PAGE)
+        nb_pages = max(1, (len(captures_affichees) + CAPTURES_PAR_PAGE - 1) // CAPTURES_PAR_PAGE)
         if nb_pages > 1:
             bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=2, disabled=self.page == 0)
             bouton_prec.callback = self._page_prec
@@ -484,6 +496,19 @@ class VueChoixOffre(discord.ui.View):
             bouton_suiv = discord.ui.Button(label="▶", style=discord.ButtonStyle.secondary, row=2, disabled=self.page >= nb_pages - 1)
             bouton_suiv.callback = self._page_suiv
             self.add_item(bouton_suiv)
+
+        bouton_recherche = discord.ui.Button(
+            label=f"Recherche : {self.recherche}" if self.recherche else "Rechercher",
+            emoji="🔍",
+            style=discord.ButtonStyle.primary if self.recherche else discord.ButtonStyle.secondary,
+            row=2,
+        )
+        bouton_recherche.callback = self._on_rechercher
+        self.add_item(bouton_recherche)
+        if self.recherche:
+            bouton_effacer = discord.ui.Button(label="Effacer", emoji="❌", style=discord.ButtonStyle.secondary, row=2)
+            bouton_effacer.callback = self._on_effacer_recherche
+            self.add_item(bouton_effacer)
 
         bouton_pd = discord.ui.Button(label="Définir les Poké Dollars", emoji="💰", style=discord.ButtonStyle.secondary, row=3)
         bouton_pd.callback = self._on_definir_pd
@@ -502,8 +527,9 @@ class VueChoixOffre(discord.ui.View):
     async def _on_select(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
             return
+        captures_affichees = self._captures_affichees()
         debut = self.page * CAPTURES_PAR_PAGE
-        ids_page = {row["id"] for row in self.toutes_captures[debut : debut + CAPTURES_PAR_PAGE]}
+        ids_page = {row["id"] for row in captures_affichees[debut : debut + CAPTURES_PAR_PAGE]}
         nouvelle_selection_page = {int(v) for v in interaction.data["values"]}
         self.selection = (self.selection - ids_page) | nouvelle_selection_page
         self._construire_composants()
@@ -537,6 +563,19 @@ class VueChoixOffre(discord.ui.View):
             return
         await interaction.response.send_modal(ModalMontantPD(self))
 
+    async def _on_rechercher(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        await interaction.response.send_modal(ModalRechercheOffre(self))
+
+    async def _on_effacer_recherche(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.recherche = None
+        self.page = 0
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
     async def _on_confirmer(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
             return
@@ -548,6 +587,22 @@ class VueChoixOffre(discord.ui.View):
             view=None,
         )
         await _rafraichir_message_principal(interaction.client, self.echange_id)
+
+
+class ModalRechercheOffre(discord.ui.Modal, title="Rechercher un Pokémon"):
+    recherche_input = discord.ui.TextInput(label="Nom (ou partie du nom)", placeholder="Ex : Rat", required=False)
+
+    def __init__(self, vue_parente: VueChoixOffre):
+        super().__init__()
+        self.vue_parente = vue_parente
+        self.recherche_input.default = vue_parente.recherche or ""
+
+    async def on_submit(self, interaction: discord.Interaction):
+        terme = self.recherche_input.value.strip()
+        self.vue_parente.recherche = terme or None
+        self.vue_parente.page = 0
+        self.vue_parente._construire_composants()
+        await interaction.response.edit_message(view=self.vue_parente)
 
 
 class ModalMontantPD(discord.ui.Modal, title="Poké Dollars à ajouter à l'offre"):

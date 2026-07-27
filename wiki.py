@@ -69,6 +69,11 @@ PAGES = {
             "formule officielle des jeux (type, STAB, stats réelles, niveau).\n\n"
             "**Attaques** : à équiper au Maître des Types (voir cette page) — 4 "
             "emplacements par Pokémon, débloquées par niveau ou par CT.\n\n"
+            "**Trois formats disponibles :**\n"
+            "• `/defier` — 1v1 classique, 1 Pokémon actif chacun\n"
+            "• `/combat-2v2` — 1v1 en **double combat** : équipe complète (jusqu'à 6), "
+            "2 Pokémon actifs simultanément chacun\n"
+            "• `/combat-2v2-equipe` — lobby à 4 joueurs, 2 équipes de 2, 3 Pokémon chacun\n\n"
             "Enchaîne les victoires pour faire grimper ta **série de victoires PvP** "
             "(visible au classement, et Gladio le remarque)."
         ),
@@ -86,7 +91,9 @@ PAGES = {
             "Vaincu, il devient capturable pour chaque participant (plusieurs tentatives "
             "possibles).\n\n"
             "Plus il y a d'étoiles, plus le boss est costaud et les récompenses "
-            "généreuses."
+            "généreuses.\n\n"
+            "Envie d'être prévenu à chaque nouveau raid ? Clique sur **🔔 Notifications "
+            "Raid** dans le channel dédié pour (dés)activer le rôle de ping."
         ),
     },
     "dresseurs_gladio": {
@@ -96,6 +103,9 @@ PAGES = {
             "Des **dresseurs PNJ** apparaissent spontanément dans certains channels — "
             "clique sur **Défier** pour un combat contre une équipe calibrée sur la "
             "puissance actuelle de la tienne.\n\n"
+            "Environ 1 apparition sur 5 est un **Duo** (Duo Cyclone, Duo Belladone...) "
+            "— deux dresseurs affrontés en même temps, en double combat : tu contrôles "
+            "alors 2 Pokémon actifs simultanément face à leurs 6 Pokémon chacun.\n\n"
             "**Gladio, ton rival**, est différent : \n"
             "• `/defi-gladio` — un vrai combat, une fois par jour, équipe de 6 Pokémon "
             "Rare et au-dessus, légèrement plus forte que la tienne, récompense fixe de "
@@ -163,11 +173,49 @@ PAGES = {
         "texte": (
             "Propose un échange à un autre joueur — une grille visuelle avec les "
             "sprites de vos Pokémon respectifs pour choisir facilement quoi donner et "
-            "recevoir. Les deux joueurs doivent confirmer avant que l'échange soit "
-            "définitif.\n\n"
+            "recevoir, avec un bouton de recherche pour retrouver vite un Pokémon "
+            "précis dans une grosse collection. Les deux joueurs doivent confirmer "
+            "avant que l'échange soit définitif.\n\n"
             "`/pokedex membre:@quelqu'un` et `/pokedex-info ... membre:@quelqu'un` "
             "permettent de vérifier ce que possède un autre joueur avant de proposer un "
             "échange."
+        ),
+    },
+    "marketplace": {
+        "titre": "Marketplace",
+        "emoji": "🛒",
+        "texte": (
+            "Vends un de tes Pokémon à **prix fixe** (pas d'enchères) — `/vendre-pokemon` "
+            "pour choisir lequel et fixer ton prix, l'annonce est postée automatiquement "
+            "dans le channel marketplace avec son sprite, son prix et un compte à "
+            "rebours.\n\n"
+            "N'importe qui peut l'acheter en un clic (confirmation demandée avant "
+            "l'achat définitif). Tu peux retirer ton annonce à tout moment tant qu'elle "
+            "n'est pas vendue — ton Pokémon ne bouge jamais avant une vente effective. "
+            "Sans acheteur, une annonce disparaît automatiquement au bout de **7 jours**.\n\n"
+            "`/marketplace-recherche <nom>` pour retrouver vite une annonce active, "
+            "`/marketplace-historique` pour revoir tes ventes et achats passés."
+        ),
+    },
+    "roguelike": {
+        "titre": "Mini-jeu Roguelike",
+        "emoji": "🎲",
+        "texte": (
+            "Un mini-jeu **indépendant** du reste de PokéWild (aucune récompense liée à "
+            "ton profil, ton Pokédex ou ton économie) — `/roguelike` lance une run dans "
+            "un fil privé.\n\n"
+            "Tu choisis un **starter** parmi 6 Pokémon génériques proposés au hasard, "
+            "puis avances dans un chemin de 8 à 12 salles (combats, salles élite, "
+            "trésors, repos, événements, recrutement) jusqu'à un boss final. Les "
+            "salles de **recrutement** te permettent d'ajouter jusqu'à 2 coéquipiers "
+            "supplémentaires en cours de route (3 Pokémon max).\n\n"
+            "Tes PV **ne se restaurent pas automatiquement** entre les combats — gère "
+            "tes ressources ! Les trésors offrent des **reliques** (bonus propres à la "
+            "run : dégâts, résistance, soin après victoire...). **Mort = run perdue "
+            "intégralement**, retour à zéro pour la suivante. Accès illimité, aucun "
+            "cooldown.\n\n"
+            "Seule trace qui reste : `/roguelike-classement`, le meilleur étage jamais "
+            "atteint. `/roguelike-abandonner` pour repartir de zéro à tout moment."
         ),
     },
     "classements_clans": {
@@ -215,7 +263,9 @@ PAGES = {
             "• `/plus-ou-moins` — solo, devine si le PC du prochain Pokémon est plus "
             "haut ou plus bas, enchaîne ta série\n"
             "• **Quiz communautaire** (channel dédié) — Qui est-ce, Anagramme, Quiz de "
-            "types, Trivia PokéWild, une question à la fois, premier qui trouve gagne"
+            "types, Trivia PokéWild, une question à la fois, premier qui trouve gagne\n"
+            "• `/roguelike` — mini-jeu à part entière avec sa propre page dans ce "
+            "wiki (voir \"Mini-jeu Roguelike\"), permadeath et classement dédié"
         ),
     },
     "arene": {
