@@ -3,6 +3,7 @@ import time
 
 import discord
 
+import capacites as capacites_module
 import config
 import database
 import journal
@@ -77,6 +78,18 @@ def _barre_pv(pv_actuel: int, pv_max: int, longueur: int = 12) -> str:
 def sprite_anime(pokemon: dict) -> str | None:
     """Alias local vers pokemon_data.sprite_pokemon (couvre toutes les générations)."""
     return sprite_pokemon(pokemon)
+
+
+def _verifier_baie_statut(combat_id: int, user_id: int, pokemon_nom: str, code_statut: str, log: list):
+    """À appeler juste après tout database.definir_statut(...) réussi : si le Pokémon qui
+    vient de recevoir ce statut tient une baie qui le guérit (Pêcha/Chéri/Kika...), elle se
+    déclenche immédiatement et se consomme — comme dans les vrais jeux."""
+    objet = database.obtenir_objet_tenu_reel(user_id, pokemon_nom)
+    info_baie = capacites_module.guerison_statut_objet(objet, code_statut)
+    if info_baie:
+        database.retirer_statut(combat_id, user_id, pokemon_nom)
+        database.definir_objet_tenu_reel(user_id, pokemon_nom, None)
+        log.append(f"  {info_baie['emoji']} **{pokemon_nom}** guérit aussitôt grâce à sa **{info_baie['nom']}** !")
 
 
 def _bloc_reserve(equipe, actif_nom: str) -> str:
@@ -318,6 +331,44 @@ def _appliquer_hazards_entree(combat_id: int, user_id: int, pokemon_nom: str, lo
     if "toxic_spikes" in hazards:
         if database.definir_statut(combat_id, user_id, pokemon_nom, "poison"):
             log.append(f"  ☠️ **{pokemon_nom}** est empoisonné par les Pics Toxik !")
+            _verifier_baie_statut(combat_id, user_id, pokemon_nom, "poison", log)
+
+
+def _declencher_talent_entree(combat_id: int, user_id: int, pokemon_nom: str, adversaire_id: int, log: list):
+    """Déclenche l'effet d'entrée en jeu du talent (ex: Intimidation) — v1, uniquement sur
+    un CHANGEMENT explicite en cours de combat (pas encore sur l'envoi initial du tout
+    premier tour, limite connue de cette v1)."""
+    eq = database.obtenir_equipe_pvp(combat_id, user_id)
+    row = next((r for r in eq if r["pokemon_nom"] == pokemon_nom), None)
+    if row is None or row["pv_actuels"] <= 0:
+        return
+    capacite = database.obtenir_capacite_reelle(user_id, pokemon_nom)
+    info = capacites_module.infos_capacite(capacite) if capacite else None
+    if not info or not info.get("sur_entree"):
+        return
+
+    cible_entree = info.get("cible_entree", "soi")
+    stat, delta = info.get("stat_entree", (None, 0))
+    if not stat:
+        return
+
+    if cible_entree == "adversaire":
+        eq_adv = database.obtenir_equipe_pvp(combat_id, adversaire_id)
+        combat_actuel = database.obtenir_combat(combat_id)
+        nom_actif_adv = combat_actuel["actif1_nom"] if adversaire_id == combat_actuel["joueur1_id"] else combat_actuel["actif2_nom"]
+        row_adv = next((r for r in eq_adv if r["pokemon_nom"] == nom_actif_adv), None)
+        if row_adv is None or row_adv["pv_actuels"] <= 0:
+            return
+        nouveau_stage = database.modifier_boost(combat_id, adversaire_id, nom_actif_adv, stat, delta)
+        signe = "+" if delta > 0 else ""
+        log.append(
+            f"  {info['emoji']} **{pokemon_nom}** ({info['nom']}) fait baisser la garde de "
+            f"**{nom_actif_adv}** ! ({signe}{delta} {stat.upper()}, stage {nouveau_stage:+d})"
+        )
+    else:
+        nouveau_stage = database.modifier_boost(combat_id, user_id, pokemon_nom, stat, delta)
+        signe = "+" if delta > 0 else ""
+        log.append(f"  {info['emoji']} **{pokemon_nom}** ({info['nom']}) : {signe}{delta} {stat.upper()} (stage {nouveau_stage:+d})")
 
 
 async def resoudre_tour(combat_id: int) -> list:
@@ -359,9 +410,11 @@ async def resoudre_tour(combat_id: int) -> list:
             nouveau = action.split(":", 1)[1]
             database.reinitialiser_boosts(combat_id, user_id, ancien_nom)
             database.reinitialiser_charge(combat_id, user_id, ancien_nom)
+            database.reinitialiser_verrouillage_choix(combat_id, user_id, ancien_nom)
             database.changer_pokemon_actif_pvp(combat_id, user_id, nouveau)
             log.append(f"<@{user_id}> rappelle **{ancien_nom}** et envoie **{nouveau}** !")
             _appliquer_hazards_entree(combat_id, user_id, nouveau, log)
+            _declencher_talent_entree(combat_id, user_id, nouveau, j1 if user_id == j2 else j2, log)
 
     # --- Phase 2 : potions ---
     for user_id, action in ((j1, a1), (j2, a2)):
@@ -394,11 +447,25 @@ async def resoudre_tour(combat_id: int) -> list:
         if row is None or row["pv_actuels"] <= 0:
             continue
         boosts = database.obtenir_boosts(combat_id, user_id, nom)
-        vitesse = row["vit"] * mult_stage(boosts["vit"])
+        objet_vitesse = database.obtenir_objet_tenu_reel(user_id, nom)
+        vitesse = row["vit"] * mult_stage(boosts["vit"]) * capacites_module.multiplicateur_stat_objet(objet_vitesse, "vit")
         statut_actuel = database.obtenir_statut(combat_id, user_id, nom)
         if statut_actuel and statut_actuel[0] == "paralysis":
             vitesse /= 2  # la paralysie ralentit
-        attaquants.append((vitesse + random.random(), user_id, adversaire_id, action.split(":", 1)[1]))
+
+        # Objet Choix : force à répéter la même attaque tant que ce Pokémon reste sur le
+        # terrain — remplace silencieusement le choix du joueur par l'attaque déjà
+        # verrouillée s'il y en a une (comme les vrais jeux, où le menu ne propose même
+        # plus les autres attaques une fois verrouillé).
+        nom_attaque_demandee = action.split(":", 1)[1]
+        if capacites_module.verrouille_attaque(objet_vitesse):
+            attaque_verrouillee = database.obtenir_attaque_verrouillee(combat_id, user_id, nom)
+            if attaque_verrouillee and attaque_verrouillee != nom_attaque_demandee:
+                nom_attaque_demandee = attaque_verrouillee
+            else:
+                database.definir_attaque_verrouillee(combat_id, user_id, nom, nom_attaque_demandee)
+
+        attaquants.append((vitesse + random.random(), user_id, adversaire_id, nom_attaque_demandee))
 
     attaquants.sort(reverse=True)  # le plus rapide agit en premier
 
@@ -501,6 +568,27 @@ async def resoudre_tour(combat_id: int) -> list:
                 multi_type = calculer_multiplicateur_type([attaque["type"]], types_def)
                 stab = 1.5 if attaque["type"] in types_atk_pokemon else 1.0
 
+            # Immunité de TALENT (ex: Lévitation contre Sol, Absorb Volt contre Électrik)
+            # — prioritaire sur l'immunité de type-chart classique, et peut soigner au
+            # lieu de bloquer sèchement (Absorb Volt/Eau).
+            capacite_def = database.obtenir_capacite_reelle(adversaire_id, nom_def)
+            info_immunite = capacites_module.immunite_type(capacite_def, attaque["type"]) if attaque["type"] else None
+            if info_immunite:
+                log.append(
+                    f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** sur **{nom_def}**..."
+                )
+                soin_pourcent = info_immunite.get("immunite_type_soin")
+                if soin_pourcent:
+                    soin = max(1, round(row_def["pv_max"] * soin_pourcent))
+                    pv_apres_absorb = database.soigner_pvp(combat_id, adversaire_id, nom_def, soin)
+                    log.append(
+                        f"  {info_immunite['emoji']} **{nom_def}** absorbe l'attaque grâce à "
+                        f"**{info_immunite['nom']}** et récupère {soin} PV ! ({pv_apres_absorb}/{row_def['pv_max']} PV)"
+                    )
+                else:
+                    log.append(f"  {info_immunite['emoji']} **{nom_def}** est immunisé grâce à **{info_immunite['nom']}** !")
+                continue
+
             # Immunité totale : aucun dégât (plus jamais de "-1 PV / aucun effet")
             if multi_type == 0.0:
                 log.append(
@@ -524,31 +612,113 @@ async def resoudre_tour(combat_id: int) -> list:
             variance = random.uniform(0.85, 1.15)
             cle_boost_off = "atk_spe" if est_special else "atk"
             cle_boost_def = "def_spe" if est_special else "def"
+            objet_atk = database.obtenir_objet_tenu_reel(user_id, nom_atk)
+            mult_stat_choix = capacites_module.multiplicateur_stat_objet(objet_atk, cle_boost_off)
             stat_def_boostee = max(1, stat_def / mult_stage(boosts_def[cle_boost_def]))
-            stat_off_boostee = max(1, stat_off * mult_stage(boosts_atk[cle_boost_off]))
+            stat_off_boostee = max(1, stat_off * mult_stage(boosts_atk[cle_boost_off]) * mult_stat_choix)
             # Bonus permanent d'Arène : +X% si l'attaquant a débloqué le badge du type de
             # cette attaque (voir arene.py / config.ARENE_BONUS_DEGATS_PAR_BADGE).
             bonus_badge = 1.0
             if user_id > 0 and database.possede_badge_arene(user_id, attaque["type"]):
                 bonus_badge = 1.0 + config.ARENE_BONUS_DEGATS_PAR_BADGE
 
+            # Multiplicateurs de talent/objet — attaquant (Cran, Torrent/Brasier..., Orbe
+            # Vie) et défenseur (Solide Roc/Filtre, -25% sur un coup super efficace).
+            capacite_atk = database.obtenir_capacite_reelle(user_id, nom_atk)
+            mult_talent_objet = capacites_module.multiplicateur_degats_infliges(
+                capacite_atk, objet_atk, row_atk["pv_actuels"], row_atk["pv_max"], attaque["type"], attaque.get("classe")
+            )
+            if capacite_atk == "cran" and attaque.get("classe") == "physical" and statut_atk:
+                mult_talent_objet *= 1.5  # Cran : +50% physique si l'attaquant a un statut
+
+            capacite_def = database.obtenir_capacite_reelle(adversaire_id, nom_def)
+            mult_talent_objet *= capacites_module.multiplicateur_degats_subis(capacite_def, multi_type)
+
             degats = max(1, round(
                 ((2 * row_atk["niveau"] / 5 + 2) * attaque["puissance"] * stat_off_boostee / stat_def_boostee / 50 + 2)
-                * multi_type * stab * variance * bonus_badge
+                * multi_type * stab * variance * bonus_badge * mult_talent_objet
             ))
+
+            # Ceinture Force (objet à usage unique) : si le défenseur est encore à pleine
+            # vie et que ce coup l'aurait achevé, il survit avec 1 PV — puis l'objet se
+            # consomme (comme une vraie baie/objet à usage unique).
+            objet_def = database.obtenir_objet_tenu_reel(adversaire_id, nom_def)
+            info_objet_def = capacites_module.infos_objet(objet_def)
+            sturdy_declenche = (
+                bool(info_objet_def and info_objet_def.get("sturdy_like"))
+                and row_def["pv_actuels"] == row_def["pv_max"]
+                and degats >= row_def["pv_actuels"]
+            )
+            if sturdy_declenche:
+                degats = row_def["pv_actuels"] - 1
 
             pv_restants = database.appliquer_degats_pvp(combat_id, adversaire_id, nom_def, degats)
             pp_txt = "" if nom_attaque == NOM_LUTTE else f" ({pp_restant}/{pp_max} PP)"
             log.append(
                 f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** sur **{nom_def}** → -{degats} PV{pp_txt}"
             )
+            if sturdy_declenche:
+                database.definir_objet_tenu_reel(adversaire_id, nom_def, None)
+                log.append(f"  🥊 **{nom_def}** s'accroche grâce à sa **{info_objet_def['nom']}** et survit avec 1 PV !")
             efficacite = _texte_efficacite(multi_type)
             if efficacite:
                 log.append(f"  {efficacite}")
             if pv_restants <= 0:
                 log.append(f"  💀 **{nom_def}** est K.O. !")
 
-            if nom_attaque in ATTAQUES_RECHARGE:
+            # Riposte au contact (Peau Dure, Statik, Corps Ardent...) — approximation :
+            # toute attaque de classe "physical" est considérée comme un contact.
+            if pv_restants > 0 and attaque.get("classe") == "physical":
+                info_capacite_def = capacites_module.infos_capacite(capacite_def)
+                if info_capacite_def and info_capacite_def.get("contact_riposte"):
+                    if "riposte_pourcent" in info_capacite_def:
+                        recul_contact = max(1, round(row_atk["pv_max"] * info_capacite_def["riposte_pourcent"]))
+                        pv_apres_contact = database.appliquer_degats_pvp(combat_id, user_id, nom_atk, recul_contact)
+                        log.append(
+                            f"  {info_capacite_def['emoji']} **{nom_atk}** est blessé au contact par "
+                            f"**{info_capacite_def['nom']}** de **{nom_def}** ! (-{recul_contact} PV)"
+                        )
+                        if pv_apres_contact <= 0:
+                            log.append(f"  💀 **{nom_atk}** est K.O. !")
+                    elif "riposte_statut" in info_capacite_def:
+                        if random.random() < info_capacite_def.get("riposte_chance", 0.3):
+                            statut_riposte = info_capacite_def["riposte_statut"]
+                            if not capacites_module.bloque_statut(capacite_atk, statut_riposte):
+                                if database.definir_statut(combat_id, user_id, nom_atk, statut_riposte):
+                                    info_statut = STATUTS_INFO[statut_riposte]
+                                    log.append(
+                                        f"  {info_capacite_def['emoji']} **{nom_atk}** est {info_statut['nom']} au "
+                                        f"contact de **{info_capacite_def['nom']}** !"
+                                    )
+                                    _verifier_baie_statut(combat_id, user_id, nom_atk, statut_riposte, log)
+
+            # Orbe Vie : recul de 10% des PV max de l'attaquant après chaque attaque
+            # offensive réussie (indépendant de l'issue du coup).
+            info_objet_atk = capacites_module.infos_objet(objet_atk)
+            if info_objet_atk and "recul_pourcent" in info_objet_atk:
+                recul_objet = max(1, round(row_atk["pv_max"] * info_objet_atk["recul_pourcent"]))
+                pv_apres_recul = database.appliquer_degats_pvp(combat_id, user_id, nom_atk, recul_objet)
+                log.append(f"  🔮 **{nom_atk}** est affaibli par son **{info_objet_atk['nom']}** ! (-{recul_objet} PV)")
+                if pv_apres_recul <= 0:
+                    log.append(f"  💀 **{nom_atk}** est K.O. !")
+
+            # Baie du défenseur : soin/guérison de statut à usage unique, déclenchée sous
+            # un certain seuil de PV — se consomme une fois utilisée.
+            if pv_restants > 0:
+                objet_def_actuel = database.obtenir_objet_tenu_reel(adversaire_id, nom_def)
+                info_baie = capacites_module.infos_objet(objet_def_actuel)
+                if info_baie and "guerison_pv_seuil" in info_baie and pv_restants / row_def["pv_max"] <= info_baie["guerison_pv_seuil"]:
+                    soin_baie = max(1, round(row_def["pv_max"] * info_baie["guerison_pv_pourcent"]))
+                    pv_apres_baie = database.soigner_pvp(combat_id, adversaire_id, nom_def, soin_baie)
+                    database.definir_objet_tenu_reel(adversaire_id, nom_def, None)
+                    log.append(f"  {info_baie['emoji']} **{nom_def}** grignote sa **{info_baie['nom']}** et récupère {soin_baie} PV !")
+
+            # Tour de récupération pour les attaques à RECHARGE (ex: Ultimaton) — distinct
+            # des attaques à CHARGE gérées plus haut (qui chargent AVANT de frapper).
+            # ⚠️ CORRECTIF : cette condition manquait, forçant à tort une récupération après
+            # N'IMPORTE QUELLE attaque qui touchait. Comme dans les vrais jeux, si le coup
+            # met K.O. la cible, aucune récupération n'est nécessaire (pv_restants > 0).
+            if pv_restants > 0 and nom_attaque in ATTAQUES_RECHARGE:
                 database.definir_charge(combat_id, user_id, nom_atk, None, True)
                 log.append(f"  😵‍💫 **{nom_atk}** doit maintenant récupérer !")
 
@@ -572,6 +742,7 @@ async def resoudre_tour(combat_id: int) -> list:
                     if database.definir_statut(combat_id, adversaire_id, nom_def, ailment, compteur):
                         info = STATUTS_INFO[ailment]
                         log.append(f"  {info['emoji']} **{nom_def}** est {info['nom']} !")
+                        _verifier_baie_statut(combat_id, adversaire_id, nom_def, ailment, log)
 
             # Effet secondaire de stat éventuel (ex: Nitrocharge +1 Vitesse sur soi
             # garanti, Griffe Acier +1 Attaque sur soi à 10%, Étreinte -1 Défense sur la
@@ -586,10 +757,13 @@ async def resoudre_tour(combat_id: int) -> list:
                     else:
                         cible_stat_id, cible_stat_nom = adversaire_id, nom_def
                     morceaux = []
+                    capacite_cible_stat = database.obtenir_capacite_reelle(cible_stat_id, cible_stat_nom)
+                    double_stat = capacites_module.double_les_boosts(capacite_cible_stat)
                     for stat, delta in changements_secondaires:
-                        nouveau_stage = database.modifier_boost(combat_id, cible_stat_id, cible_stat_nom, stat, delta)
-                        signe = "+" if delta > 0 else ""
-                        morceaux.append(f"{signe}{delta} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
+                        delta_reel = delta * 2 if double_stat else delta
+                        nouveau_stage = database.modifier_boost(combat_id, cible_stat_id, cible_stat_nom, stat, delta_reel)
+                        signe = "+" if delta_reel > 0 else ""
+                        morceaux.append(f"{signe}{delta_reel} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
                     log.append(f"  📊 **{cible_stat_nom}** : {', '.join(morceaux)}")
         else:
             # --- Attaque de terrain (Piège de Roc, Picots, Pics Toxik) ---
@@ -622,10 +796,13 @@ async def resoudre_tour(combat_id: int) -> list:
                     cible_id, cible_nom = adversaire_id, nom_def
 
                 morceaux = []
+                capacite_cible = database.obtenir_capacite_reelle(cible_id, cible_nom)
+                double_stat = capacites_module.double_les_boosts(capacite_cible)
                 for stat, delta in changements:
-                    nouveau_stage = database.modifier_boost(combat_id, cible_id, cible_nom, stat, delta)
-                    signe = "+" if delta > 0 else ""
-                    morceaux.append(f"{signe}{delta} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
+                    delta_reel = delta * 2 if double_stat else delta
+                    nouveau_stage = database.modifier_boost(combat_id, cible_id, cible_nom, stat, delta_reel)
+                    signe = "+" if delta_reel > 0 else ""
+                    morceaux.append(f"{signe}{delta_reel} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
                 log.append(f"  📊 **{cible_nom}** : {', '.join(morceaux)}")
 
             # Altération de statut pure (Hypnose → sommeil, Para-Spore → paralysie...)
@@ -638,6 +815,7 @@ async def resoudre_tour(combat_id: int) -> list:
                 if database.definir_statut(combat_id, adversaire_id, nom_def, ailment, compteur):
                     info = STATUTS_INFO[ailment]
                     log.append(f"  {info['emoji']} **{nom_def}** est {info['nom']} !")
+                    _verifier_baie_statut(combat_id, adversaire_id, nom_def, ailment, log)
                 else:
                     log.append(f"  ❌ **{nom_def}** a déjà une altération de statut !")
 

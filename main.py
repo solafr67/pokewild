@@ -76,6 +76,7 @@ from profil import (
     VueProfil,
 )
 import pokedex as pokedex_module
+import capacites as capacites_module
 import equipe_combat as equipe_combat_module
 from views import VueSpawn, construire_embed_spawn
 
@@ -2015,6 +2016,52 @@ async def pokedex_info(interaction: discord.Interaction, nom: str, membre: disco
         # JAMAIS dans un message éphémère (bug Discord confirmé, voir profil.py) — on
         # retombe directement sur l'URL fiable, sans tenter de pièce jointe pour rien.
         embed.set_author(name=f"Fiche consultée chez {membre.display_name}", icon_url=url_avatar_fiable(membre))
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+_CHOIX_OBJETS_TENUS = [
+    app_commands.Choice(name=f"{info['nom']} — {info['description']}"[:100], value=cle)
+    for cle, info in capacites_module.OBJETS_TENUS.items()
+]
+
+
+@bot.tree.command(name="equiper-objet", description="Équipe (ou retire) l'objet tenu d'un de tes Pokémon pour le combat")
+@app_commands.describe(
+    pokemon="Nom de l'espèce (le meilleur exemplaire que tu possèdes la représente en combat)",
+    objet="Objet à équiper — laisse vide pour retirer l'objet actuel",
+)
+@app_commands.choices(objet=_CHOIX_OBJETS_TENUS)
+async def equiper_objet(interaction: discord.Interaction, pokemon: str, objet: app_commands.Choice[str] = None):
+    especes_possedees = {row["pokemon_nom"] for row in database.obtenir_pokedex_joueur(interaction.user.id)}
+    pokemon_info = obtenir_pokemon_par_nom(pokemon)
+    if pokemon_info is None or pokemon_info["nom"] not in especes_possedees:
+        await interaction.response.send_message(f"❌ Tu ne possèdes aucun **{pokemon}**.", ephemeral=True)
+        return
+
+    if objet is None:
+        database.definir_objet_tenu_reel(interaction.user.id, pokemon_info["nom"], None)
+        await interaction.response.send_message(f"✅ **{pokemon_info['nom']}** ne tient plus aucun objet.", ephemeral=True)
+        return
+
+    info_objet = capacites_module.infos_objet(objet.value)
+    database.definir_objet_tenu_reel(interaction.user.id, pokemon_info["nom"], objet.value)
+    await interaction.response.send_message(
+        f"✅ **{pokemon_info['nom']}** tient maintenant {info_objet['emoji']} **{info_objet['nom']}** — {info_objet['description']}",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(name="objets-disponibles", description="Liste tous les objets tenus équipables en combat")
+async def objets_disponibles_cmd(interaction: discord.Interaction):
+    lignes = [
+        f"{info['emoji']} **{info['nom']}** — {info['description']}"
+        for info in capacites_module.OBJETS_TENUS.values()
+    ]
+    embed = discord.Embed(
+        title="🎒 Objets tenus disponibles",
+        description="\n".join(lignes) + "\n\nÉquipe-les avec `/equiper-objet`.",
+        color=discord.Color.blurple(),
+    )
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 

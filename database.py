@@ -380,6 +380,16 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # la colonne n'existe déjà plus (ou base neuve)
 
+    # Migration : talent (capacité) et objet tenu — système d'objets/talents en combat PvP
+    try:
+        cur.execute("ALTER TABLE captures ADD COLUMN capacite TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cur.execute("ALTER TABLE captures ADD COLUMN objet_tenu TEXT")
+    except sqlite3.OperationalError:
+        pass
+
     # Migration pour les bases créées avant l'ajout de la colonne shiny
     try:
         cur.execute("ALTER TABLE captures ADD COLUMN shiny INTEGER NOT NULL DEFAULT 0")
@@ -801,6 +811,18 @@ def init_db():
             pokemon_nom TEXT NOT NULL,
             attaque_en_charge TEXT,
             doit_recharger INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (combat_id, user_id, pokemon_nom)
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_choix (
+            combat_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            pokemon_nom TEXT NOT NULL,
+            attaque_verrouillee TEXT,
             PRIMARY KEY (combat_id, user_id, pokemon_nom)
         )
         """
@@ -1928,7 +1950,67 @@ def obtenir_meilleures_ivs(user_id: int, pokemon_nom: str) -> dict:
     }
 
 
+def obtenir_capacite_reelle(user_id: int, pokemon_nom: str) -> str | None:
+    """Talent de la MEILLEURE capture (plus haut PC) de cette espèce — même individu que
+    celui utilisé en combat (voir obtenir_meilleures_ivs)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT capacite FROM captures WHERE user_id = ? AND pokemon_nom = ? ORDER BY pc DESC LIMIT 1",
+        (user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["capacite"] if row else None
+
+
+def definir_capacite_reelle(user_id: int, pokemon_nom: str, capacite: str):
+    """Change le talent de la MEILLEURE capture de cette espèce (celle utilisée en combat)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        UPDATE captures SET capacite = ? WHERE id = (
+            SELECT id FROM captures WHERE user_id = ? AND pokemon_nom = ? ORDER BY pc DESC LIMIT 1
+        )
+        """,
+        (capacite, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_objet_tenu_reel(user_id: int, pokemon_nom: str) -> str | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT objet_tenu FROM captures WHERE user_id = ? AND pokemon_nom = ? ORDER BY pc DESC LIMIT 1",
+        (user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["objet_tenu"] if row else None
+
+
+def definir_objet_tenu_reel(user_id: int, pokemon_nom: str, objet: str | None):
+    """objet=None retire l'objet tenu."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        UPDATE captures SET objet_tenu = ? WHERE id = (
+            SELECT id FROM captures WHERE user_id = ? AND pokemon_nom = ? ORDER BY pc DESC LIMIT 1
+        )
+        """,
+        (objet, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
 def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False, ivs: dict = None):
+    import capacites as capacites_module
+
     conn = get_connexion()
     cur = conn.cursor()
     _assurer_joueur_existe(cur, user_id)
@@ -1937,14 +2019,16 @@ def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False
         """
         INSERT INTO captures (
             user_id, pokemon_nom, pc, date_capture, shiny,
-            iv_pv, iv_attaque, iv_defense, iv_attaque_spe, iv_defense_spe, iv_vitesse
+            iv_pv, iv_attaque, iv_defense, iv_attaque_spe, iv_defense_spe, iv_vitesse,
+            capacite
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             user_id, pokemon_nom, pc, int(time.time()), int(shiny),
             ivs.get("pv"), ivs.get("attaque"), ivs.get("defense"),
             ivs.get("attaque_spe"), ivs.get("defense_spe"), ivs.get("vitesse"),
+            capacites_module.talent_aleatoire(),
         ),
     )
     # Compteurs à VIE (jamais décrémentés, même si la capture est relâchée plus tard) —
@@ -3184,7 +3268,47 @@ def reinitialiser_charge(combat_id: int, user_id: int, pokemon_nom: str):
     conn.close()
 
 
-# --- Statuts de combat (brûlure, poison, paralysie, sommeil, gel, confusion) ---
+def obtenir_attaque_verrouillee(combat_id: int, user_id: int, pokemon_nom: str) -> str | None:
+    """Attaque imposée par un Objet Choix tenu (Bandeau/Spécs/Bandana Choix) — None si le
+    Pokémon n'a encore rien utilisé depuis son entrée en jeu (ou ne tient pas cet objet)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT attaque_verrouillee FROM combat_choix WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["attaque_verrouillee"] if row else None
+
+
+def definir_attaque_verrouillee(combat_id: int, user_id: int, pokemon_nom: str, nom_attaque: str):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO combat_choix (combat_id, user_id, pokemon_nom, attaque_verrouillee)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(combat_id, user_id, pokemon_nom) DO UPDATE SET attaque_verrouillee = excluded.attaque_verrouillee
+        """,
+        (combat_id, user_id, pokemon_nom, nom_attaque),
+    )
+    conn.commit()
+    conn.close()
+
+
+def reinitialiser_verrouillage_choix(combat_id: int, user_id: int, pokemon_nom: str):
+    """Le verrouillage saute quand le Pokémon quitte le terrain (switch) — comme dans les
+    vrais jeux, un nouveau Pokémon envoyé peut choisir librement sa 1ère attaque."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM combat_choix WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
 
 def obtenir_statut(combat_id: int, user_id: int, pokemon_nom: str):
     """Retourne (statut, compteur) ou None si le Pokémon n'a aucune altération."""

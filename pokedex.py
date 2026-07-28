@@ -1,5 +1,6 @@
 import discord
 
+import capacites as capacites_module
 import database
 import niveaux_pokemon
 from pokemon_data import COULEUR_RARETE, EMOJI_POKEDEX, EMOJI_RARETE, IV_DEFAUT, POKEDEX, affichage_types, calculer_toutes_stats, cle_tri_alphabetique_fr, obtenir_pokemon_par_nom, sprite_pokemon
@@ -372,6 +373,19 @@ def construire_embed_fiche(user_id: int, nom_pokemon: str) -> discord.Embed:
         niveau, _xp = database.obtenir_niveau_pokemon(user_id, pokemon["nom"])
         niveau_max = niveaux_pokemon.niveau_max_pour_rarete(pokemon["rarete"])
         embed.add_field(name="Niveau", value=f"⭐ {niveau}/{niveau_max}", inline=True)
+
+        capacite = database.obtenir_capacite_reelle(user_id, pokemon["nom"])
+        info_capacite = capacites_module.infos_capacite(capacite) if capacite else None
+        if info_capacite:
+            embed.add_field(name="Talent", value=f"{info_capacite['emoji']} {info_capacite['nom']}", inline=True)
+
+        objet_tenu = database.obtenir_objet_tenu_reel(user_id, pokemon["nom"])
+        info_objet = capacites_module.infos_objet(objet_tenu) if objet_tenu else None
+        embed.add_field(
+            name="Objet tenu",
+            value=f"{info_objet['emoji']} {info_objet['nom']}" if info_objet else "*Aucun — `/equiper-objet`*",
+            inline=True,
+        )
 
         ivs = database.obtenir_meilleures_ivs(user_id, pokemon["nom"]) or IV_DEFAUT
         texte_hexagone = _texte_hexagone(pokemon, ivs, niveau)
