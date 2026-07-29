@@ -10,8 +10,12 @@ import leveling
 import quetes_ui
 import race_ui
 from pokemon_data import (
+    EMOJI_BALLS,
     EMOJI_OBJETS_DIVERS,
+    EMOJI_SOINS,
+    NOM_BALL_AFFICHAGE,
     NOM_OBJETS_DIVERS,
+    NOM_SOIN_AFFICHAGE,
     calculer_pc_derive,
     sprite_pokemon,
     tirer_ivs,
@@ -85,6 +89,104 @@ class VueLaboratoire(discord.ui.View):
     async def incubateur(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed, vue = construire_tableau_incubateur(interaction.user.id)
         await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
+
+    @discord.ui.button(
+        label="Transformateur", style=discord.ButtonStyle.secondary, emoji="🔬", custom_id="labo_transformateur_bouton"
+    )
+    async def transformateur(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = construire_embed_transformateur(interaction.user.id)
+        vue = VueTransformateur(interaction.user.id)
+        await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
+
+
+# ----------------------------------------------------------------------------
+# Transformateur — convertit 10 objets d'un palier en 1 du palier supérieur
+# (Poké Ball → Super Ball → Hyper Ball ; Potion → Super Potion → Hyper Potion).
+# Master Ball et Total Soin restent volontairement hors de cette chaîne, uniquement
+# achetables en boutique — voir config.CHAINES_TRANSFORMATION.
+# ----------------------------------------------------------------------------
+
+def _nom_affichage_objet(type_objet: str) -> str:
+    return NOM_BALL_AFFICHAGE.get(type_objet) or NOM_SOIN_AFFICHAGE.get(type_objet, type_objet)
+
+
+def _emoji_objet(type_objet: str) -> str:
+    return EMOJI_BALLS.get(type_objet) or EMOJI_SOINS.get(type_objet, "")
+
+
+def construire_embed_transformateur(user_id: int) -> discord.Embed:
+    inventaire = database.obtenir_inventaire_balls(user_id)
+    embed = discord.Embed(
+        title="🔬 Transformateur",
+        description=(
+            "Convertis 10 objets d'un palier en 1 du palier supérieur — pratique pour ne "
+            "pas laisser traîner un surplus de Poké Balls ou de Potions basiques.\n\n"
+            "⚠️ La Master Ball et le Total Soin restent uniquement achetables en boutique, "
+            "impossibles à obtenir par transformation."
+        ),
+        color=discord.Color.teal(),
+    )
+    for type_source, (type_cible, quantite_requise) in config.CHAINES_TRANSFORMATION.items():
+        quantite_actuelle = inventaire.get(type_source, 0)
+        nb_lots_possibles = quantite_actuelle // quantite_requise
+        embed.add_field(
+            name=f"{_emoji_objet(type_source)} {_nom_affichage_objet(type_source)}",
+            value=(
+                f"Tu en as **{quantite_actuelle}**\n"
+                f"→ {quantite_requise} pour 1 {_emoji_objet(type_cible)} {_nom_affichage_objet(type_cible)}\n"
+                f"({nb_lots_possibles} transformation(s) possible(s) maintenant)"
+            ),
+            inline=True,
+        )
+    return embed
+
+
+class VueTransformateur(discord.ui.View):
+    def __init__(self, user_id: int):
+        super().__init__(timeout=120)
+        self.user_id = user_id
+        self._construire_options()
+
+    def _construire_options(self):
+        self.clear_items()
+        inventaire = database.obtenir_inventaire_balls(self.user_id)
+        options = []
+        for type_source, (type_cible, quantite_requise) in config.CHAINES_TRANSFORMATION.items():
+            quantite_actuelle = inventaire.get(type_source, 0)
+            nb_lots_possibles = quantite_actuelle // quantite_requise
+            if nb_lots_possibles <= 0:
+                continue  # pas assez pour un seul lot complet, inutile de le proposer
+            options.append(
+                discord.SelectOption(
+                    label=f"{_nom_affichage_objet(type_source)} → {_nom_affichage_objet(type_cible)} "
+                    f"({nb_lots_possibles}× possible)",
+                    value=type_source,
+                    emoji=_emoji_objet(type_source) or None,
+                )
+            )
+        if options:
+            select = discord.ui.Select(placeholder="Choisis quel objet transformer (convertit tout ce qui est possible)…", options=options)
+            select.callback = self._on_select
+            self.add_item(select)
+
+    async def _on_select(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ton Transformateur !", ephemeral=True)
+            return
+        type_source = interaction.data["values"][0]
+        nb_lots, type_cible, quantite_consommee = database.transformer_objets(self.user_id, type_source)
+        if nb_lots <= 0:
+            await interaction.response.send_message("Il n'y avait plus assez d'objets pour transformer (quelqu'un a été plus rapide que toi ?).", ephemeral=True)
+            return
+
+        self._construire_options()
+        embed = construire_embed_transformateur(self.user_id)
+        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.followup.send(
+            f"✅ {quantite_consommee} {_emoji_objet(type_source)} {_nom_affichage_objet(type_source)} "
+            f"transformés en {nb_lots} {_emoji_objet(type_cible)} {_nom_affichage_objet(type_cible)} !",
+            ephemeral=True,
+        )
 
 
 # ----------------------------------------------------------------------------

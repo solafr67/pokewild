@@ -84,11 +84,11 @@ def _verifier_baie_statut(combat_id: int, user_id: int, pokemon_nom: str, code_s
     """À appeler juste après tout database.definir_statut(...) réussi : si le Pokémon qui
     vient de recevoir ce statut tient une baie qui le guérit (Pêcha/Chéri/Kika...), elle se
     déclenche immédiatement et se consomme — comme dans les vrais jeux."""
-    objet = database.obtenir_objet_tenu_reel(user_id, pokemon_nom)
+    objet = database.obtenir_objet_combat(combat_id, user_id, pokemon_nom)
     info_baie = capacites_module.guerison_statut_objet(objet, code_statut)
     if info_baie:
         database.retirer_statut(combat_id, user_id, pokemon_nom)
-        database.definir_objet_tenu_reel(user_id, pokemon_nom, None)
+        database.definir_objet_combat(combat_id, user_id, pokemon_nom, None)
         log.append(f"  {info_baie['emoji']} **{pokemon_nom}** guérit aussitôt grâce à sa **{info_baie['nom']}** !")
 
 
@@ -342,7 +342,7 @@ def _declencher_talent_entree(combat_id: int, user_id: int, pokemon_nom: str, ad
     row = next((r for r in eq if r["pokemon_nom"] == pokemon_nom), None)
     if row is None or row["pv_actuels"] <= 0:
         return
-    capacite = database.obtenir_capacite_reelle(user_id, pokemon_nom)
+    capacite = database.obtenir_capacite_combat(combat_id, user_id, pokemon_nom)
     info = capacites_module.infos_capacite(capacite) if capacite else None
     if not info or not info.get("sur_entree"):
         return
@@ -447,7 +447,7 @@ async def resoudre_tour(combat_id: int) -> list:
         if row is None or row["pv_actuels"] <= 0:
             continue
         boosts = database.obtenir_boosts(combat_id, user_id, nom)
-        objet_vitesse = database.obtenir_objet_tenu_reel(user_id, nom)
+        objet_vitesse = database.obtenir_objet_combat(combat_id, user_id, nom)
         vitesse = row["vit"] * mult_stage(boosts["vit"]) * capacites_module.multiplicateur_stat_objet(objet_vitesse, "vit")
         statut_actuel = database.obtenir_statut(combat_id, user_id, nom)
         if statut_actuel and statut_actuel[0] == "paralysis":
@@ -571,7 +571,7 @@ async def resoudre_tour(combat_id: int) -> list:
             # Immunité de TALENT (ex: Lévitation contre Sol, Absorb Volt contre Électrik)
             # — prioritaire sur l'immunité de type-chart classique, et peut soigner au
             # lieu de bloquer sèchement (Absorb Volt/Eau).
-            capacite_def = database.obtenir_capacite_reelle(adversaire_id, nom_def)
+            capacite_def = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
             info_immunite = capacites_module.immunite_type(capacite_def, attaque["type"]) if attaque["type"] else None
             if info_immunite:
                 log.append(
@@ -612,7 +612,7 @@ async def resoudre_tour(combat_id: int) -> list:
             variance = random.uniform(0.85, 1.15)
             cle_boost_off = "atk_spe" if est_special else "atk"
             cle_boost_def = "def_spe" if est_special else "def"
-            objet_atk = database.obtenir_objet_tenu_reel(user_id, nom_atk)
+            objet_atk = database.obtenir_objet_combat(combat_id, user_id, nom_atk)
             mult_stat_choix = capacites_module.multiplicateur_stat_objet(objet_atk, cle_boost_off)
             stat_def_boostee = max(1, stat_def / mult_stage(boosts_def[cle_boost_def]))
             stat_off_boostee = max(1, stat_off * mult_stage(boosts_atk[cle_boost_off]) * mult_stat_choix)
@@ -624,14 +624,14 @@ async def resoudre_tour(combat_id: int) -> list:
 
             # Multiplicateurs de talent/objet — attaquant (Cran, Torrent/Brasier..., Orbe
             # Vie) et défenseur (Solide Roc/Filtre, -25% sur un coup super efficace).
-            capacite_atk = database.obtenir_capacite_reelle(user_id, nom_atk)
+            capacite_atk = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
             mult_talent_objet = capacites_module.multiplicateur_degats_infliges(
                 capacite_atk, objet_atk, row_atk["pv_actuels"], row_atk["pv_max"], attaque["type"], attaque.get("classe")
             )
             if capacite_atk == "cran" and attaque.get("classe") == "physical" and statut_atk:
                 mult_talent_objet *= 1.5  # Cran : +50% physique si l'attaquant a un statut
 
-            capacite_def = database.obtenir_capacite_reelle(adversaire_id, nom_def)
+            capacite_def = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
             mult_talent_objet *= capacites_module.multiplicateur_degats_subis(capacite_def, multi_type)
 
             degats = max(1, round(
@@ -642,7 +642,7 @@ async def resoudre_tour(combat_id: int) -> list:
             # Ceinture Force (objet à usage unique) : si le défenseur est encore à pleine
             # vie et que ce coup l'aurait achevé, il survit avec 1 PV — puis l'objet se
             # consomme (comme une vraie baie/objet à usage unique).
-            objet_def = database.obtenir_objet_tenu_reel(adversaire_id, nom_def)
+            objet_def = database.obtenir_objet_combat(combat_id, adversaire_id, nom_def)
             info_objet_def = capacites_module.infos_objet(objet_def)
             sturdy_declenche = (
                 bool(info_objet_def and info_objet_def.get("sturdy_like"))
@@ -658,7 +658,7 @@ async def resoudre_tour(combat_id: int) -> list:
                 f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** sur **{nom_def}** → -{degats} PV{pp_txt}"
             )
             if sturdy_declenche:
-                database.definir_objet_tenu_reel(adversaire_id, nom_def, None)
+                database.definir_objet_combat(combat_id, adversaire_id, nom_def, None)
                 log.append(f"  🥊 **{nom_def}** s'accroche grâce à sa **{info_objet_def['nom']}** et survit avec 1 PV !")
             efficacite = _texte_efficacite(multi_type)
             if efficacite:
@@ -705,12 +705,12 @@ async def resoudre_tour(combat_id: int) -> list:
             # Baie du défenseur : soin/guérison de statut à usage unique, déclenchée sous
             # un certain seuil de PV — se consomme une fois utilisée.
             if pv_restants > 0:
-                objet_def_actuel = database.obtenir_objet_tenu_reel(adversaire_id, nom_def)
+                objet_def_actuel = database.obtenir_objet_combat(combat_id, adversaire_id, nom_def)
                 info_baie = capacites_module.infos_objet(objet_def_actuel)
                 if info_baie and "guerison_pv_seuil" in info_baie and pv_restants / row_def["pv_max"] <= info_baie["guerison_pv_seuil"]:
                     soin_baie = max(1, round(row_def["pv_max"] * info_baie["guerison_pv_pourcent"]))
                     pv_apres_baie = database.soigner_pvp(combat_id, adversaire_id, nom_def, soin_baie)
-                    database.definir_objet_tenu_reel(adversaire_id, nom_def, None)
+                    database.definir_objet_combat(combat_id, adversaire_id, nom_def, None)
                     log.append(f"  {info_baie['emoji']} **{nom_def}** grignote sa **{info_baie['nom']}** et récupère {soin_baie} PV !")
 
             # Tour de récupération pour les attaques à RECHARGE (ex: Ultimaton) — distinct
@@ -757,7 +757,7 @@ async def resoudre_tour(combat_id: int) -> list:
                     else:
                         cible_stat_id, cible_stat_nom = adversaire_id, nom_def
                     morceaux = []
-                    capacite_cible_stat = database.obtenir_capacite_reelle(cible_stat_id, cible_stat_nom)
+                    capacite_cible_stat = database.obtenir_capacite_combat(combat_id, cible_stat_id, cible_stat_nom)
                     double_stat = capacites_module.double_les_boosts(capacite_cible_stat)
                     for stat, delta in changements_secondaires:
                         delta_reel = delta * 2 if double_stat else delta
@@ -796,7 +796,7 @@ async def resoudre_tour(combat_id: int) -> list:
                     cible_id, cible_nom = adversaire_id, nom_def
 
                 morceaux = []
-                capacite_cible = database.obtenir_capacite_reelle(cible_id, cible_nom)
+                capacite_cible = database.obtenir_capacite_combat(combat_id, cible_id, cible_nom)
                 double_stat = capacites_module.double_les_boosts(capacite_cible)
                 for stat, delta in changements:
                     delta_reel = delta * 2 if double_stat else delta

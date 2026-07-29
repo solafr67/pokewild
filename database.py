@@ -1,10 +1,14 @@
 import json
+import os
+import random
 import sqlite3
 import time
 
 import config
 
-DB_PATH = "pokebot.sqlite3"
+# Surchargeable via DB_PATH dans l'environnement — permet à un 2e bot (serveur de test)
+# de tourner avec sa propre base sans jamais toucher aux vraies données de production.
+DB_PATH = os.environ.get("DB_PATH", "pokebot.sqlite3")
 
 BALLS_DEPART = {"pokeball": 5, "superball": 1, "hyperball": 0}
 
@@ -707,6 +711,18 @@ def init_db():
         cur.execute("ALTER TABLE combat_equipe ADD COLUMN niveau INTEGER NOT NULL DEFAULT 50")
     except sqlite3.OperationalError:
         pass  # la colonne existe déjà
+
+    # Snapshot du talent/objet tenu AU MOMENT du début du combat — pour un vrai joueur,
+    # copié depuis captures.capacite/objet_tenu ; pour un dresseur/boss IA (user_id < 0,
+    # jamais présent dans captures), tiré au hasard directement ici. Centraliser sur ce
+    # snapshot (plutôt que d'aller chercher dans captures à chaque tour) permet au moteur
+    # de combat de fonctionner IDENTIQUEMENT pour un vrai joueur ET une IA, sans code
+    # spécial — voir database.definir_capacite_combat/definir_objet_combat.
+    for colonne in ("capacite", "objet_tenu"):
+        try:
+            cur.execute(f"ALTER TABLE combat_equipe ADD COLUMN {colonne} TEXT")
+        except sqlite3.OperationalError:
+            pass  # la colonne existe déjà
 
     cur.execute(
         """
@@ -1788,6 +1804,40 @@ def ajouter_balls(user_id: int, ball_type: str, quantite: int):
     conn.close()
 
 
+def transformer_objets(user_id: int, type_source: str) -> tuple:
+    """Convertit AUTANT DE LOTS COMPLETS que possible de `type_source` (10 par lot, voir
+    config.CHAINES_TRANSFORMATION) vers le palier supérieur — ex: 47 Poké Balls → 4 Super
+    Balls + il reste 7 Poké Balls. Retourne (nb_lots_convertis, type_cible, quantite_source_consommee).
+    (0, None, 0) si le type n'est pas convertible ou s'il n'y a pas de quoi faire un lot complet."""
+    if type_source not in config.CHAINES_TRANSFORMATION:
+        return 0, None, 0
+    type_cible, quantite_requise = config.CHAINES_TRANSFORMATION[type_source]
+
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT quantite FROM inventaire_balls WHERE user_id = ? AND ball_type = ?",
+        (user_id, type_source),
+    )
+    row = cur.fetchone()
+    quantite_actuelle = row["quantite"] if row else 0
+    nb_lots = quantite_actuelle // quantite_requise
+    if nb_lots <= 0:
+        conn.close()
+        return 0, None, 0
+
+    quantite_consommee = nb_lots * quantite_requise
+    cur.execute(
+        "UPDATE inventaire_balls SET quantite = quantite - ? WHERE user_id = ? AND ball_type = ?",
+        (quantite_consommee, user_id, type_source),
+    )
+    conn.commit()
+    conn.close()
+
+    ajouter_balls(user_id, type_cible, nb_lots)
+    return nb_lots, type_cible, quantite_consommee
+
+
 # --- Captures / Pokédex ---
 
 def obtenir_captures_sans_ivs() -> list:
@@ -2729,26 +2779,93 @@ def definir_adversaire_combat(combat_id: int, joueur2_id: int):
     conn.close()
 
 
-def initialiser_equipe_combat_pvp(combat_id: int, user_id: int, equipe: list):
+def initialiser_equipe_combat_pvp(combat_id: int, user_id: int, equipe: list, id_reel_pour_capture: int = None):
     """Enregistre l'équipe d'un joueur pour ce combat. `equipe` est une liste de dicts
     {nom, pv, attaque, defense, attaque_spe, defense_spe, vitesse, niveau} — les stats
     complètes, déjà calculées une fois (IV + niveau) pour ne plus être re-dérivées à
-    chaque tour."""
+    chaque tour.
+
+    Le talent/objet tenu est fixé (snapshot) ICI, au début du combat :
+    - Vrai joueur (user_id > 0) : copié depuis captures.capacite/objet_tenu (meilleur PC).
+      `id_reel_pour_capture` sert pour le 2v2 : le 2e Pokémon d'un joueur y vit sous un ID
+      délégué synthétique (toujours positif) différent de son vrai ID Discord — sans ce
+      paramètre, la recherche dans captures échouerait puisque ses vraies captures sont
+      enregistrées sous son ID réel, pas sous l'ID délégué.
+    - Dresseur/boss IA (user_id < 0, jamais dans captures) : talent tiré au hasard, et un
+      objet dans 50% des cas — pour que les combats PvE aient aussi du relief, pas
+      seulement les combats PvP."""
+    import capacites as capacites_module
+
+    id_pour_recherche = id_reel_pour_capture if id_reel_pour_capture is not None else user_id
     conn = get_connexion()
     cur = conn.cursor()
     for i, mon in enumerate(equipe):
+        if id_pour_recherche > 0:
+            cur.execute(
+                "SELECT capacite, objet_tenu FROM captures WHERE user_id = ? AND pokemon_nom = ? ORDER BY pc DESC LIMIT 1",
+                (id_pour_recherche, mon["nom"]),
+            )
+            row_source = cur.fetchone()
+            capacite = row_source["capacite"] if row_source else None
+            objet_tenu = row_source["objet_tenu"] if row_source else None
+        else:
+            capacite = capacites_module.talent_aleatoire()
+            objet_tenu = random.choice(list(capacites_module.OBJETS_TENUS.keys())) if random.random() < 0.5 else None
+
         cur.execute(
             """
             INSERT INTO combat_equipe
-                (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau, capacite, objet_tenu)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 combat_id, user_id, mon["nom"], mon["pv"], mon["pv"], i,
                 mon["attaque"], mon["defense"], mon["attaque_spe"], mon["defense_spe"], mon["vitesse"],
-                mon.get("niveau", 50),
+                mon.get("niveau", 50), capacite, objet_tenu,
             ),
         )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_capacite_combat(combat_id: int, user_id: int, pokemon_nom: str) -> str | None:
+    """Talent SNAPSHOTÉ pour ce combat précis (voir initialiser_equipe_combat_pvp) — à
+    utiliser dans le moteur de combat plutôt que obtenir_capacite_reelle, pour que ça
+    fonctionne identiquement pour un vrai joueur ET un dresseur/boss IA."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT capacite FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["capacite"] if row else None
+
+
+def obtenir_objet_combat(combat_id: int, user_id: int, pokemon_nom: str) -> str | None:
+    """Objet tenu SNAPSHOTÉ pour ce combat précis — voir obtenir_capacite_combat."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT objet_tenu FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["objet_tenu"] if row else None
+
+
+def definir_objet_combat(combat_id: int, user_id: int, pokemon_nom: str, objet: str | None):
+    """Consomme/retire l'objet tenu SNAPSHOTÉ pour ce combat (baie utilisée, Ceinture
+    Force déclenchée...) — n'affecte JAMAIS l'objet réel hors combat (captures.objet_tenu),
+    seulement cette instance de combat."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_equipe SET objet_tenu = ? WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (objet, combat_id, user_id, pokemon_nom),
+    )
     conn.commit()
     conn.close()
 

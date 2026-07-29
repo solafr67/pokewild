@@ -25,6 +25,7 @@ from PIL import Image
 import discord
 
 import config
+import capacites as capacites_module
 import database
 import journal
 import leveling
@@ -112,6 +113,17 @@ NOMS_STATS = {"atk": "Attaque", "def": "Défense", "atk_spe": "Attaque Spé", "d
 def _mult_stage(stage: int) -> float:
     """Multiplicateur officiel Pokémon pour un stage de stat (-6..+6)."""
     return (2 + stage) / 2 if stage >= 0 else 2 / (2 - stage)
+
+
+def _verifier_baie_statut_2v2(combat_id: int, user_id: int, pokemon_nom: str, code_statut: str, log: list):
+    """Même logique que combat._verifier_baie_statut, en 2v2 : baie de statut à usage
+    unique (Pêcha/Chéri/Kika...) qui se déclenche et se consomme immédiatement."""
+    objet = database.obtenir_objet_combat(combat_id, user_id, pokemon_nom)
+    info_baie = capacites_module.guerison_statut_objet(objet, code_statut)
+    if info_baie:
+        database.retirer_statut(combat_id, user_id, pokemon_nom)
+        database.definir_objet_combat(combat_id, user_id, pokemon_nom, None)
+        log.append(f"  {info_baie['emoji']} **{pokemon_nom}** guérit aussitôt grâce à sa **{info_baie['nom']}** !")
 
 
 def _mapping_mentions(joueurs: list, noms_ia: dict) -> dict:
@@ -492,6 +504,7 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
             nouveau = action.split(":", 1)[1]
             database.reinitialiser_boosts(combat_id, j["user_id"], ancien_nom)
             database.reinitialiser_charge(combat_id, j["user_id"], ancien_nom)
+            database.reinitialiser_verrouillage_choix(combat_id, j["user_id"], ancien_nom)
             database.definir_actif_2v2(combat_id, j["user_id"], nouveau)
             log.append(f"<@{j['user_id']}> rappelle **{ancien_nom}** et envoie **{nouveau}** !")
             _appliquer_hazards_entree(combat_id, j["user_id"], nouveau, log)
@@ -531,7 +544,8 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
         ):
             continue
         boosts = database.obtenir_boosts(combat_id, j["user_id"], nom)
-        vitesse = row["vit"] * _mult_stage(boosts["vit"])
+        objet_vitesse = database.obtenir_objet_combat(combat_id, j["user_id"], nom)
+        vitesse = row["vit"] * _mult_stage(boosts["vit"]) * capacites_module.multiplicateur_stat_objet(objet_vitesse, "vit")
         statut_actuel = database.obtenir_statut(combat_id, j["user_id"], nom)
         if statut_actuel and statut_actuel[0] == "paralysis":
             vitesse /= 2
@@ -549,6 +563,16 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                 nom_attaque, cible_voulue = reste, None
         else:
             nom_attaque, cible_voulue = None, None
+
+        # Objet Choix : force à répéter la même attaque tant que ce Pokémon reste sur le
+        # terrain — même logique que le 1v1 (voir combat.py).
+        if nom_attaque and capacites_module.verrouille_attaque(objet_vitesse):
+            attaque_verrouillee = database.obtenir_attaque_verrouillee(combat_id, j["user_id"], nom)
+            if attaque_verrouillee and attaque_verrouillee != nom_attaque:
+                nom_attaque = attaque_verrouillee
+            else:
+                database.definir_attaque_verrouillee(combat_id, j["user_id"], nom, nom_attaque)
+
         attaquants.append((vitesse + random.random(), j["user_id"], nom_attaque, cible_voulue))
 
     attaquants.sort(reverse=True)
@@ -671,6 +695,23 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                 multi_type = calculer_multiplicateur_type([attaque["type"]], types_def)
                 stab = 1.5 if attaque["type"] in types_atk_pokemon else 1.0
 
+            # Immunité de TALENT (Lévitation, Absorb Volt...) — même logique qu'en 1v1.
+            capacite_def = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
+            info_immunite = capacites_module.immunite_type(capacite_def, attaque["type"]) if attaque["type"] else None
+            if info_immunite:
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** sur **{nom_def}**...{note_redirection}")
+                soin_pourcent = info_immunite.get("immunite_type_soin")
+                if soin_pourcent:
+                    soin = max(1, round(row_def["pv_max"] * soin_pourcent))
+                    pv_apres_absorb = database.soigner_pvp(combat_id, adversaire_id, nom_def, soin)
+                    log.append(
+                        f"  {info_immunite['emoji']} **{nom_def}** absorbe l'attaque grâce à "
+                        f"**{info_immunite['nom']}** et récupère {soin} PV ! ({pv_apres_absorb}/{row_def['pv_max']} PV)"
+                    )
+                else:
+                    log.append(f"  {info_immunite['emoji']} **{nom_def}** est immunisé grâce à **{info_immunite['nom']}** !")
+                continue
+
             if multi_type == 0.0:
                 log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** sur **{nom_def}**...{note_redirection}")
                 log.append("  🚫 Ça n'affecte pas " + nom_def + " !")
@@ -686,27 +727,97 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
             variance = random.uniform(0.85, 1.15)
             cle_boost_off = "atk_spe" if est_special else "atk"
             cle_boost_def = "def_spe" if est_special else "def"
+            objet_atk = database.obtenir_objet_combat(combat_id, user_id, nom_atk)
+            mult_stat_choix = capacites_module.multiplicateur_stat_objet(objet_atk, cle_boost_off)
             stat_def_boostee = max(1, stat_def / _mult_stage(boosts_def[cle_boost_def]))
-            stat_off_boostee = max(1, stat_off * _mult_stage(boosts_atk[cle_boost_off]))
+            stat_off_boostee = max(1, stat_off * _mult_stage(boosts_atk[cle_boost_off]) * mult_stat_choix)
             bonus_badge = 1.0
             if user_id > 0 and database.possede_badge_arene(user_id, attaque["type"]):
                 bonus_badge = 1.0 + config.ARENE_BONUS_DEGATS_PAR_BADGE
 
+            capacite_atk = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+            statut_atk_pour_cran = database.obtenir_statut(combat_id, user_id, nom_atk)
+            mult_talent_objet = capacites_module.multiplicateur_degats_infliges(
+                capacite_atk, objet_atk, row_atk["pv_actuels"], row_atk["pv_max"], attaque["type"], attaque.get("classe")
+            )
+            if capacite_atk == "cran" and attaque.get("classe") == "physical" and statut_atk_pour_cran:
+                mult_talent_objet *= 1.5
+            mult_talent_objet *= capacites_module.multiplicateur_degats_subis(capacite_def, multi_type)
+
             degats = max(1, round(
                 ((2 * row_atk["niveau"] / 5 + 2) * attaque["puissance"] * stat_off_boostee / stat_def_boostee / 50 + 2)
-                * multi_type * stab * variance * bonus_badge
+                * multi_type * stab * variance * bonus_badge * mult_talent_objet
             ))
+
+            # Ceinture Force (objet à usage unique) : survit à 1 PV si pleins et achevé.
+            objet_def = database.obtenir_objet_combat(combat_id, adversaire_id, nom_def)
+            info_objet_def = capacites_module.infos_objet(objet_def)
+            sturdy_declenche = (
+                bool(info_objet_def and info_objet_def.get("sturdy_like"))
+                and row_def["pv_actuels"] == row_def["pv_max"]
+                and degats >= row_def["pv_actuels"]
+            )
+            if sturdy_declenche:
+                degats = row_def["pv_actuels"] - 1
 
             pv_restants = database.appliquer_degats_pvp(combat_id, adversaire_id, nom_def, degats)
             pp_txt = "" if nom_attaque == NOM_LUTTE else f" ({pp_restant}/{pp_max} PP)"
             log.append(
                 f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** sur **{nom_def}** → -{degats} PV{pp_txt}{note_redirection}"
             )
+            if sturdy_declenche:
+                database.definir_objet_combat(combat_id, adversaire_id, nom_def, None)
+                log.append(f"  🥊 **{nom_def}** s'accroche grâce à sa **{info_objet_def['nom']}** et survit avec 1 PV !")
             efficacite = _texte_efficacite(multi_type)
             if efficacite:
                 log.append(f"  {efficacite}")
             if pv_restants <= 0:
                 log.append(f"  💀 **{nom_def}** est K.O. !")
+
+            # Riposte au contact (Peau Dure, Statik, Corps Ardent...) — même approximation
+            # qu'en 1v1 : toute attaque physique est considérée comme un contact.
+            if pv_restants > 0 and attaque.get("classe") == "physical":
+                info_capacite_def = capacites_module.infos_capacite(capacite_def)
+                if info_capacite_def and info_capacite_def.get("contact_riposte"):
+                    if "riposte_pourcent" in info_capacite_def:
+                        recul_contact = max(1, round(row_atk["pv_max"] * info_capacite_def["riposte_pourcent"]))
+                        pv_apres_contact = database.appliquer_degats_pvp(combat_id, user_id, nom_atk, recul_contact)
+                        log.append(
+                            f"  {info_capacite_def['emoji']} **{nom_atk}** est blessé au contact par "
+                            f"**{info_capacite_def['nom']}** de **{nom_def}** ! (-{recul_contact} PV)"
+                        )
+                        if pv_apres_contact <= 0:
+                            log.append(f"  💀 **{nom_atk}** est K.O. !")
+                    elif "riposte_statut" in info_capacite_def:
+                        if random.random() < info_capacite_def.get("riposte_chance", 0.3):
+                            statut_riposte = info_capacite_def["riposte_statut"]
+                            if not capacites_module.bloque_statut(capacite_atk, statut_riposte):
+                                if database.definir_statut(combat_id, user_id, nom_atk, statut_riposte):
+                                    info_statut_riposte = STATUTS_INFO[statut_riposte]
+                                    log.append(
+                                        f"  {info_capacite_def['emoji']} **{nom_atk}** est {info_statut_riposte['nom']} au "
+                                        f"contact de **{info_capacite_def['nom']}** !"
+                                    )
+                                    _verifier_baie_statut_2v2(combat_id, user_id, nom_atk, statut_riposte, log)
+
+            # Orbe Vie : recul de l'attaquant après chaque attaque offensive réussie.
+            info_objet_atk = capacites_module.infos_objet(objet_atk)
+            if info_objet_atk and "recul_pourcent" in info_objet_atk:
+                recul_objet = max(1, round(row_atk["pv_max"] * info_objet_atk["recul_pourcent"]))
+                pv_apres_recul = database.appliquer_degats_pvp(combat_id, user_id, nom_atk, recul_objet)
+                log.append(f"  🔮 **{nom_atk}** est affaibli par son **{info_objet_atk['nom']}** ! (-{recul_objet} PV)")
+                if pv_apres_recul <= 0:
+                    log.append(f"  💀 **{nom_atk}** est K.O. !")
+
+            # Baie du défenseur : soin à usage unique sous un certain seuil de PV.
+            if pv_restants > 0:
+                objet_def_actuel = database.obtenir_objet_combat(combat_id, adversaire_id, nom_def)
+                info_baie = capacites_module.infos_objet(objet_def_actuel)
+                if info_baie and "guerison_pv_seuil" in info_baie and pv_restants / row_def["pv_max"] <= info_baie["guerison_pv_seuil"]:
+                    soin_baie = max(1, round(row_def["pv_max"] * info_baie["guerison_pv_pourcent"]))
+                    pv_apres_baie = database.soigner_pvp(combat_id, adversaire_id, nom_def, soin_baie)
+                    database.definir_objet_combat(combat_id, adversaire_id, nom_def, None)
+                    log.append(f"  {info_baie['emoji']} **{nom_def}** grignote sa **{info_baie['nom']}** et récupère {soin_baie} PV !")
 
             if nom_attaque in ATTAQUES_RECHARGE:
                 database.definir_charge(combat_id, user_id, nom_atk, None, True)
@@ -731,6 +842,7 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                     if database.definir_statut(combat_id, adversaire_id, nom_def, ailment, compteur):
                         info = STATUTS_INFO[ailment]
                         log.append(f"  {info['emoji']} **{nom_def}** est {info['nom']} !")
+                        _verifier_baie_statut_2v2(combat_id, adversaire_id, nom_def, ailment, log)
 
             # Effet secondaire de stat éventuel (ex: Nitrocharge +1 Vitesse sur soi
             # garanti, Griffe Acier +1 Attaque sur soi à 10%, Étreinte -1 Défense sur la
@@ -745,10 +857,13 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                     else:
                         cible_stat_id, cible_stat_nom = adversaire_id, nom_def
                     morceaux = []
+                    capacite_cible_stat = database.obtenir_capacite_combat(combat_id, cible_stat_id, cible_stat_nom)
+                    double_stat = capacites_module.double_les_boosts(capacite_cible_stat)
                     for stat, delta in changements_secondaires:
-                        nouveau_stage = database.modifier_boost(combat_id, cible_stat_id, cible_stat_nom, stat, delta)
-                        signe = "+" if delta > 0 else ""
-                        morceaux.append(f"{signe}{delta} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
+                        delta_reel = delta * 2 if double_stat else delta
+                        nouveau_stage = database.modifier_boost(combat_id, cible_stat_id, cible_stat_nom, stat, delta_reel)
+                        signe = "+" if delta_reel > 0 else ""
+                        morceaux.append(f"{signe}{delta_reel} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
                     log.append(f"  📊 **{cible_stat_nom}** : {', '.join(morceaux)}")
         else:
             # --- Pièges de terrain : posés du côté des DEUX adversaires en 2v2 ---
@@ -778,10 +893,13 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                 else:
                     cible_id, cible_nom = adversaire_id, nom_def
                 morceaux = []
+                capacite_cible = database.obtenir_capacite_combat(combat_id, cible_id, cible_nom)
+                double_stat = capacites_module.double_les_boosts(capacite_cible)
                 for stat, delta in changements:
-                    nouveau_stage = database.modifier_boost(combat_id, cible_id, cible_nom, stat, delta)
-                    signe = "+" if delta > 0 else ""
-                    morceaux.append(f"{signe}{delta} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
+                    delta_reel = delta * 2 if double_stat else delta
+                    nouveau_stage = database.modifier_boost(combat_id, cible_id, cible_nom, stat, delta_reel)
+                    signe = "+" if delta_reel > 0 else ""
+                    morceaux.append(f"{signe}{delta_reel} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
                 log.append(f"  📊 **{cible_nom}** : {', '.join(morceaux)}")
 
             if ailment in STATUTS_INFO:
@@ -793,6 +911,7 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                 if database.definir_statut(combat_id, adversaire_id, nom_def, ailment, compteur):
                     info = STATUTS_INFO[ailment]
                     log.append(f"  {info['emoji']} **{nom_def}** est {info['nom']} !")
+                    _verifier_baie_statut_2v2(combat_id, adversaire_id, nom_def, ailment, log)
                 else:
                     log.append(f"  ❌ **{nom_def}** a déjà une altération de statut !")
 
@@ -1726,20 +1845,29 @@ async def demarrer_duo_dresseur(bot, joueur: discord.Member, dresseur_id: int, a
 
     # Équipe du joueur : insertion directe avec PV RÉELS (pas via initialiser_equipe_combat_pvp,
     # qui met tout le monde à pleine vie — ici on veut les PV persistants, comme un dresseur solo).
+    # Talent/objet : toujours résolus via id_reel (jamais id_delegue_val, qui n'existe pas dans
+    # captures) — les deux sièges représentent le même vrai joueur.
     conn = database.get_connexion()
     cur = conn.cursor()
     for siege_id, moitie in ((id_reel, moitie_a), (id_delegue_val, moitie_b)):
         for i, (stats, pv_actuels) in enumerate(moitie):
             cur.execute(
+                "SELECT capacite, objet_tenu FROM captures WHERE user_id = ? AND pokemon_nom = ? ORDER BY pc DESC LIMIT 1",
+                (id_reel, stats["nom"]),
+            )
+            row_source = cur.fetchone()
+            capacite = row_source["capacite"] if row_source else None
+            objet_tenu = row_source["objet_tenu"] if row_source else None
+            cur.execute(
                 """
                 INSERT INTO combat_equipe
-                    (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau, capacite, objet_tenu)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     combat_id, siege_id, stats["nom"], stats["pv"], pv_actuels, i,
                     stats["attaque"], stats["defense"], stats["attaque_spe"], stats["defense_spe"], stats["vitesse"],
-                    stats["niveau"],
+                    stats["niveau"], capacite, objet_tenu,
                 ),
             )
     conn.commit()
@@ -1852,9 +1980,9 @@ async def demarrer_combat_double(bot, joueur1: discord.Member, joueur2: discord.
         (id2_delegue, 2, moitie2_b[0]["nom"]),
     ])
     database.initialiser_equipe_combat_pvp(combat_id, joueur1.id, moitie1_a)
-    database.initialiser_equipe_combat_pvp(combat_id, id1_delegue, moitie1_b)
+    database.initialiser_equipe_combat_pvp(combat_id, id1_delegue, moitie1_b, id_reel_pour_capture=joueur1.id)
     database.initialiser_equipe_combat_pvp(combat_id, joueur2.id, moitie2_a)
-    database.initialiser_equipe_combat_pvp(combat_id, id2_delegue, moitie2_b)
+    database.initialiser_equipe_combat_pvp(combat_id, id2_delegue, moitie2_b, id_reel_pour_capture=joueur2.id)
 
     try:
         thread = await channel.create_thread(

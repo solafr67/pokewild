@@ -5,20 +5,35 @@
 import os
 TOKEN = os.environ["DISCORD_TOKEN"]
 
+
+def _id_env(nom_variable: str, valeur_defaut):
+    """Permet de faire tourner une 2e instance du bot (serveur de test) sans toucher au
+    code : chaque ID ci-dessous peut être surchargé par une variable d'environnement du
+    même nom (ex: CHANNEL_SPAWN_CLASSIQUE_ID=123456789012345678 dans le .env du bot de
+    test). Sans variable définie, on garde exactement le comportement actuel (l'ID de
+    production codé en dur) — donc aucun changement pour le bot déjà en prod."""
+    valeur_brute = os.environ.get(nom_variable)
+    if valeur_brute is None:
+        return valeur_defaut
+    if valeur_brute == "" and valeur_defaut is None:
+        return None
+    return int(valeur_brute)
+
+
 # --- IDs des channels (à remplir avec les vrais IDs de ton serveur) ---
-CHANNEL_SPAWN_CLASSIQUE_ID = 1524432178694455346
-CHANNEL_SPAWN_VIP_ID = 1524433167874920509
-CHANNEL_POKESTOP_ID = 1524432806912983241
-CHANNEL_BOUTIQUE_ID = 1524503716982689827
-CHANNEL_MAITRE_TYPES_ID = None  # crée un channel dédié et mets son ID ici pour afficher le PNJ (sinon /maitre-types marche partout)
-CHANNEL_EXPLORATION_ID = 1525908138203807926
-CHANNEL_QUETES_ID = 1525970082264514730
-CHANNEL_AVENTURE_ID = 1526201523867226192
-CHANNEL_LABORATOIRE_ID = 1526365279855054952  # Incubateur + Race, regroupés dans un seul channel
-CHANNEL_LOGS_ID = 1527415638371598526  # channel dédié aux logs bot + joueurs
-CHANNEL_PING_RAID_ID = 1530858928731193374  # message fixe pour (dés)activer le rôle de ping raid
-CHANNEL_MARKETPLACE_ID = 1530862635967582208  # annonces de vente de Pokémon entre joueurs
-CHANNEL_ROGUELIKE_ID = 1530873209245663302  # mini-jeu roguelike (catégorie mini-jeux, indépendant de l'économie principale)
+CHANNEL_SPAWN_CLASSIQUE_ID = _id_env("CHANNEL_SPAWN_CLASSIQUE_ID", 1524432178694455346)
+CHANNEL_SPAWN_VIP_ID = _id_env("CHANNEL_SPAWN_VIP_ID", 1524433167874920509)
+CHANNEL_POKESTOP_ID = _id_env("CHANNEL_POKESTOP_ID", 1524432806912983241)
+CHANNEL_BOUTIQUE_ID = _id_env("CHANNEL_BOUTIQUE_ID", 1524503716982689827)
+CHANNEL_MAITRE_TYPES_ID = _id_env("CHANNEL_MAITRE_TYPES_ID", None)  # crée un channel dédié et mets son ID ici pour afficher le PNJ (sinon /maitre-types marche partout)
+CHANNEL_EXPLORATION_ID = _id_env("CHANNEL_EXPLORATION_ID", 1525908138203807926)
+CHANNEL_QUETES_ID = _id_env("CHANNEL_QUETES_ID", 1525970082264514730)
+CHANNEL_AVENTURE_ID = _id_env("CHANNEL_AVENTURE_ID", 1526201523867226192)
+CHANNEL_LABORATOIRE_ID = _id_env("CHANNEL_LABORATOIRE_ID", 1526365279855054952)  # Incubateur + Race, regroupés dans un seul channel
+CHANNEL_LOGS_ID = _id_env("CHANNEL_LOGS_ID", 1527415638371598526)  # channel dédié aux logs bot + joueurs
+CHANNEL_PING_RAID_ID = _id_env("CHANNEL_PING_RAID_ID", 1530858928731193374)  # message fixe pour (dés)activer le rôle de ping raid
+CHANNEL_MARKETPLACE_ID = _id_env("CHANNEL_MARKETPLACE_ID", 1530862635967582208)  # annonces de vente de Pokémon entre joueurs
+CHANNEL_ROGUELIKE_ID = _id_env("CHANNEL_ROGUELIKE_ID", 1530873209245663302)  # mini-jeu roguelike (catégorie mini-jeux, indépendant de l'économie principale)
 
 # --- Roguelike (mini-jeu, salon dédié, aucune récompense liée au bot principal) ---
 ROGUELIKE_NB_SALLES_MIN = 8
@@ -44,8 +59,8 @@ DRESSEUR_FACTEUR_DOLLARS = 0.015  # récompense = PC cible de l'équipe adverse 
 DRESSEUR_FACTEUR_XP = 0.01  # baissés (avant 0.05 / 0.03) : à l'ancien taux, une équipe proche du plafond
 # de PC, multipliée par le fait que chaque spawn est désormais accessible à tout le monde, dépassait le
 # seuil de 600-900 PD/h déjà jugé abusif pour le PvP avant son propre nerf anti-collusion.
-CHANNEL_PROFIL_ID = 1524512674942156851
-CHANNEL_CLASSEMENT_ID = 1524802617455284404
+CHANNEL_PROFIL_ID = _id_env("CHANNEL_PROFIL_ID", 1524512674942156851)
+CHANNEL_CLASSEMENT_ID = _id_env("CHANNEL_CLASSEMENT_ID", 1524802617455284404)
 
 # --- Rythme des spawns (en secondes) ---
 INTERVALLE_SPAWN_CLASSIQUE = 60
@@ -58,11 +73,11 @@ DUREE_AVANT_DISPARITION = 180  # 3 minutes (relevé de 45s)
 COOLDOWN_POKESTOP = 300  # 5 minutes, en secondes
 
 # --- Rôle VIP (pour vérifier l'accès si besoin dans le code) ---
-ROLE_VIP_ID = 1524443826956271838
-ROLE_PING_RAID_ID = 1525883524396355675
+ROLE_VIP_ID = _id_env("ROLE_VIP_ID", 1524443826956271838)
+ROLE_PING_RAID_ID = _id_env("ROLE_PING_RAID_ID", 1525883524396355675)
 
 # --- Serveur de test (pour synchroniser les commandes instantanément dessus) ---
-GUILD_ID = 1496856137583296562
+GUILD_ID = _id_env("GUILD_ID", 1496856137583296562)
 
 # --- Shiny ---
 CHANCE_SHINY_BASE = 1 / 200  # ~0.5% de base, indépendant pour chaque joueur à chaque tentative
@@ -134,8 +149,8 @@ COEFFICIENT_COURBE_NIVEAU_POKEMON = 25
 DEFI_STATS_NB_ROUNDS = 5
 
 # --- Quiz communautaire multi-thèmes (Qui est-ce / Anagramme / Quiz de types / Trivia) ---
-CHANNEL_QUIZ_ID = 1528155287213572306
-CHANNEL_WIKI_ID = 1528849699812151447
+CHANNEL_QUIZ_ID = _id_env("CHANNEL_QUIZ_ID", 1528155287213572306)
+CHANNEL_WIKI_ID = _id_env("CHANNEL_WIKI_ID", 1528849699812151447)
 QUIZ_TIMEOUT_QUESTION = 60  # secondes avant de révéler la réponse si personne ne trouve
 QUIZ_DELAI_PROCHAINE_QUESTION = 5  # pause entre deux questions
 
@@ -366,6 +381,16 @@ PRIX_SOINS = {
     "superpotion": 65,
     "hyperpotion": 160,
     "totalsoin": 90,
+}
+
+# --- Transformateur (Laboratoire) : convertit 10 objets d'un palier en 1 du palier
+# supérieur. Master Ball et Total Soin sont volontairement hors chaîne — uniquement
+# achetables en boutique, jamais obtenables par transformation. {type_source: (type_cible, quantite_requise)}
+CHAINES_TRANSFORMATION = {
+    "pokeball": ("superball", 10),
+    "superball": ("hyperball", 10),
+    "potion": ("superpotion", 10),
+    "superpotion": ("hyperpotion", 10),
 }
 SOIN_POURCENT = {
     "potion": 0.20,       # soigne 20% des PV max

@@ -466,6 +466,9 @@ class VueCaptureRaid(discord.ui.View):
         self.raid_id = raid_id
         self.boss = boss
         self.etoiles = etoiles
+        # Un seul message d'échec par joueur, réédité à chaque tentative ratée plutôt que
+        # d'en empiler un nouveau à chaque clic — voir capturer() ci-dessous.
+        self._messages_echec: dict[int, discord.Message] = {}
 
     @discord.ui.button(label="Capturer", style=discord.ButtonStyle.success, emoji=EMOJI_BALLS["honorball"])
     async def capturer(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -510,7 +513,18 @@ class VueCaptureRaid(discord.ui.View):
             message = f"💨 **{self.boss['nom']}** s'est échappé... ({tentatives_restantes} tentative(s) restante(s))"
             if tentatives_restantes == 0:
                 message += "\nC'était ta dernière tentative pour ce raid."
+
+            ancien_message = self._messages_echec.get(user_id)
+            if ancien_message is not None:
+                try:
+                    await ancien_message.edit(content=message)
+                    await interaction.response.defer()  # accuse réception sans nouveau message visible
+                    return
+                except (discord.NotFound, discord.HTTPException):
+                    pass  # message d'échec précédent supprimé/expiré — on retombe sur un nouvel envoi
+
             await interaction.response.send_message(message, ephemeral=True)
+            self._messages_echec[user_id] = await interaction.original_response()
             return
 
         ivs = tirer_ivs()
@@ -533,8 +547,18 @@ class VueCaptureRaid(discord.ui.View):
         quetes_completees = database.incrementer_progression_quete(user_id, "capture", {"rarete": self.boss["rarete"]})
 
         shiny_txt = "✨ SHINY ✨ " if est_shiny else ""
-        await interaction.response.send_message(
+        texte_succes = (
             f"🎉 Tu as capturé {shiny_txt}**{self.boss['nom']}** ({pc} PC) !"
-            f"{quetes_ui_module.texte_notifications_completion(quetes_completees)}",
-            ephemeral=True,
+            f"{quetes_ui_module.texte_notifications_completion(quetes_completees)}"
         )
+
+        ancien_message = self._messages_echec.get(user_id)
+        if ancien_message is not None:
+            try:
+                await ancien_message.edit(content=texte_succes)
+                await interaction.response.defer()
+                return
+            except (discord.NotFound, discord.HTTPException):
+                pass  # message précédent supprimé/expiré — on retombe sur un nouvel envoi
+
+        await interaction.response.send_message(texte_succes, ephemeral=True)
