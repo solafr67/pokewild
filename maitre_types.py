@@ -1,5 +1,6 @@
 import discord
 
+import capacites as capacites_module
 import database
 from pokemon_data import (
     ATTAQUES,
@@ -104,6 +105,26 @@ class VueMaitreTypes(discord.ui.View):
         vue = VueBoutiqueCT(interaction.user.id)
         await interaction.response.send_message(embed=vue.construire_embed(), view=vue, ephemeral=True)
 
+    @discord.ui.button(
+        label="Objets tenus",
+        style=discord.ButtonStyle.secondary,
+        emoji="🎒",
+        custom_id="maitre_types_objets_tenus",
+    )
+    async def objets_tenus(self, interaction: discord.Interaction, button: discord.ui.Button):
+        noms_equipe = database.obtenir_equipe_combat(interaction.user.id)
+        if not noms_equipe:
+            await interaction.response.send_message(
+                "*« Reviens me voir quand tu auras configuré ton équipe de combat "
+                "(`/equipe-combat`) ! »*",
+                ephemeral=True,
+            )
+            return
+        vue = VueChoixPokemonObjet(interaction.user.id)
+        await interaction.response.send_message(
+            "*« Quel Pokémon veux-tu équiper ? »*", view=vue, ephemeral=True
+        )
+
 
 class VueChoixPokemonAttaques(discord.ui.View):
     """Étape 1 : choisir le Pokémon de son équipe de combat à entraîner."""
@@ -133,6 +154,123 @@ class VueChoixPokemonAttaques(discord.ui.View):
         await interaction.response.edit_message(
             content=None, embed=vue.construire_embed(), view=vue
         )
+
+
+class VueChoixPokemonObjet(discord.ui.View):
+    """Étape 1 (objets tenus) : choisir le Pokémon de son équipe de combat à équiper."""
+
+    def __init__(self, user_id: int):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+
+        noms_equipe = database.obtenir_equipe_combat(user_id)
+        options = []
+        for nom in noms_equipe[:25]:
+            objet_actuel = database.obtenir_objet_tenu_reel(user_id, nom)
+            info_objet = capacites_module.infos_objet(objet_actuel) if objet_actuel else None
+            description = f"Tient : {info_objet['nom']}" if info_objet else "Ne tient rien"
+            options.append(discord.SelectOption(label=nom, value=nom, description=description))
+        select = discord.ui.Select(placeholder="Choisis un Pokémon de ton équipe...", options=options)
+        select.callback = self._on_select
+        self.add_item(select)
+
+    async def _on_select(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ta session !", ephemeral=True)
+            return
+        nom = interaction.data["values"][0]
+        vue = VueGestionObjet(self.user_id, nom)
+        await interaction.response.edit_message(content=None, embed=vue.construire_embed(), view=vue)
+
+
+class VueGestionObjet(discord.ui.View):
+    """Étape 2 (objets tenus) : équiper/retirer l'objet tenu d'un Pokémon précis, parmi
+    ceux réellement possédés dans le sac (voir boutique — onglet 🎒 Objets)."""
+
+    def __init__(self, user_id: int, pokemon_nom: str):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        self.pokemon_nom = pokemon_nom
+        self._construire_composants()
+
+    def construire_embed(self) -> discord.Embed:
+        objet_actuel = database.obtenir_objet_tenu_reel(self.user_id, self.pokemon_nom)
+        info_objet = capacites_module.infos_objet(objet_actuel) if objet_actuel else None
+        embed = discord.Embed(
+            title=f"🎒 Objet tenu — {self.pokemon_nom}",
+            description=(
+                f"Tient actuellement : {info_objet['emoji']} **{info_objet['nom']}** — {info_objet['description']}"
+                if info_objet else "Ne tient actuellement aucun objet."
+            ),
+            color=discord.Color.purple(),
+        )
+        embed.set_footer(text="Choisis un objet de ton sac ci-dessous, ou clique Retirer.")
+        return embed
+
+    def _construire_composants(self):
+        self.clear_items()
+        inventaire = database.obtenir_inventaire_balls(self.user_id)
+        options = []
+        for cle, info in capacites_module.OBJETS_TENUS.items():
+            quantite = inventaire.get(cle, 0)
+            if quantite <= 0:
+                continue  # pas dans le sac, inutile de le proposer ici (voir la boutique pour en acheter)
+            options.append(
+                discord.SelectOption(
+                    label=f"{info['nom']} (×{quantite})"[:100],
+                    value=cle,
+                    description=info["description"][:100],
+                    emoji=info["emoji"],
+                )
+            )
+        if options:
+            select = discord.ui.Select(placeholder="Choisis un objet de ton sac…", options=options)
+            select.callback = self._on_select
+            self.add_item(select)
+        else:
+            bouton_vide = discord.ui.Button(label="Ton sac ne contient aucun objet tenu — va en boutique", style=discord.ButtonStyle.secondary, disabled=True)
+            self.add_item(bouton_vide)
+
+        bouton_retirer = discord.ui.Button(label="Retirer l'objet actuel", emoji="❌", style=discord.ButtonStyle.danger)
+        bouton_retirer.callback = self._on_retirer
+        self.add_item(bouton_retirer)
+
+    async def _on_select(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ta session !", ephemeral=True)
+            return
+        nouvel_objet = interaction.data["values"][0]
+        ancien_objet = database.obtenir_objet_tenu_reel(self.user_id, self.pokemon_nom)
+        if nouvel_objet == ancien_objet:
+            await interaction.response.send_message(f"**{self.pokemon_nom}** tient déjà cet objet.", ephemeral=True)
+            return
+
+        inventaire = database.obtenir_inventaire_balls(self.user_id)
+        if inventaire.get(nouvel_objet, 0) < 1:
+            await interaction.response.send_message("Il semble que tu n'aies plus cet objet, réessaie.", ephemeral=True)
+            return
+
+        database.retirer_ball(self.user_id, nouvel_objet)
+        if ancien_objet:
+            database.ajouter_balls(self.user_id, ancien_objet, 1)  # rendu au sac, jamais perdu
+        database.definir_objet_tenu_reel(self.user_id, self.pokemon_nom, nouvel_objet)
+
+        self._construire_composants()
+        await interaction.response.edit_message(embed=self.construire_embed(), view=self)
+
+    async def _on_retirer(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ta session !", ephemeral=True)
+            return
+        ancien_objet = database.obtenir_objet_tenu_reel(self.user_id, self.pokemon_nom)
+        if ancien_objet is None:
+            await interaction.response.send_message(f"**{self.pokemon_nom}** ne tenait déjà aucun objet.", ephemeral=True)
+            return
+        database.definir_objet_tenu_reel(self.user_id, self.pokemon_nom, None)
+        database.ajouter_balls(self.user_id, ancien_objet, 1)  # rendu au sac, jamais perdu
+
+        self._construire_composants()
+        await interaction.response.edit_message(embed=self.construire_embed(), view=self)
 
 
 class VueGestionAttaques(discord.ui.View):

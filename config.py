@@ -392,6 +392,34 @@ CHAINES_TRANSFORMATION = {
     "potion": ("superpotion", 10),
     "superpotion": ("hyperpotion", 10),
 }
+
+# --- Objets tenus de combat (boutique — voir capacites.OBJETS_TENUS pour les effets) ---
+# Analyse : ces objets sont des équipements PERMANENTS (jamais consommés hors combat, même
+# les baies/Ceinture Force qui ne se "grillent" que pour LE combat en cours — voir
+# capacites.py) — donc à comparer à un investissement durable (extension de stockage à
+# 450 PD) plutôt qu'à un consommable à usage unique (potion). Prix échelonnés par
+# puissance : baies de statut/PV (soin automatique gratuit à VIE à chaque combat) <
+# bonus passifs simples (+30% une stat, sans contrepartie) < Reste/Ceinture Force
+# (sustain/sécurité plus fortes) < Objets Choix et Orbes (+50%/+30% dégâts, avec un vrai
+# revers : verrouillage d'attaque ou recul) — les plus chers, au niveau d'une grosse
+# récompense de raid 4-5★, jamais au niveau de la Master Ball.
+PRIX_OBJETS_TENUS = {
+    # Baies de statut (guérison automatique d'1 statut précis, à chaque combat)
+    "baie_pecha": 180, "baie_cheri": 180, "baie_kika": 180,
+    "baie_lombre": 180, "baie_rawst": 180, "baie_persim": 180,
+    # Baies de PV (soin automatique sous un seuil de PV, à chaque combat)
+    "baie_oran": 150, "baie_sitrus": 220,
+    # Bonus passifs simples (+30% une stat, sans contrepartie)
+    "lunettes_cerema": 300, "ceinture_musclor": 300, "chaussures_agiles": 300,
+    "carapace_dure": 300, "ecaille_lumiere": 300,
+    # Sustain / sécurité plus marquée
+    "reste": 350, "ceinture_force": 400,
+    # Objets Choix (+50% une stat, mais verrouillage de l'attaque)
+    "bandeau_choix": 500, "specs_choix": 500, "bandana_choix": 500,
+    # Orbes (+30% dégâts, mais recul à chaque attaque) — le haut de gamme
+    "orbe_vie": 550, "orbe_feu": 550,
+}
+
 SOIN_POURCENT = {
     "potion": 0.20,       # soigne 20% des PV max
     "superpotion": 0.40,  # soigne 40% des PV max

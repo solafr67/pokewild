@@ -1,5 +1,6 @@
 import discord
 
+import capacites as capacites_module
 import config
 import database
 import journal
@@ -19,12 +20,13 @@ def construire_embed_boutique() -> discord.Embed:
     embed.add_field(name="🎯 Balls", value="Poké/Super/Hyper/Master Ball", inline=True)
     embed.add_field(name="💊 Potions", value="Potion/Super/Hyper Potion/Total Soin", inline=True)
     embed.add_field(name="📈 Améliorations", value="Extensions de stockage", inline=True)
+    embed.add_field(name="🎒 Objets", value="Objets tenus de combat (talents, Objets Choix, baies...)", inline=True)
     embed.set_footer(text="Ton solde s'affiche au moment de l'achat, visible seulement par toi.")
     return embed
 
 
 class VueBoutique(discord.ui.View):
-    """Vue persistante attachée au message fixe de la boutique. 3 catégories, chacune
+    """Vue persistante attachée au message fixe de la boutique. 4 catégories, chacune
     ouvre son propre sous-menu éphémère (visible seulement par le joueur qui clique)."""
 
     def __init__(self):
@@ -46,6 +48,12 @@ class VueBoutique(discord.ui.View):
     async def categorie_ameliorations(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(
             embed=construire_embed_categorie_ameliorations(), view=VueCategorieAmeliorations(), ephemeral=True
+        )
+
+    @discord.ui.button(label="Objets", emoji="🎒", style=discord.ButtonStyle.secondary, custom_id="boutique_categorie_objets")
+    async def categorie_objets(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(
+            embed=construire_embed_categorie_objets(interaction.user.id), view=VueCategorieObjets(), ephemeral=True
         )
 
 
@@ -438,4 +446,107 @@ class VueCategorieAmeliorations(discord.ui.View):
             f"Nouveau solde : {EMOJI_POKEDOLLAR} {nouveau_solde}",
             ephemeral=True,
         )
+
+
+# ----------------------------------------------------------------------------
+# Catégorie Objets tenus de combat
+# ----------------------------------------------------------------------------
+
+def construire_embed_categorie_objets(user_id: int) -> discord.Embed:
+    objets_actuels = database.compter_objets_totaux(user_id)
+    limite_objets = database.limite_stockage_objets(user_id)
+    embed = discord.Embed(title="🎒 Boutique — Objets tenus de combat", color=discord.Color.blurple())
+    embed.description = (
+        f"🎒 Sac : **{objets_actuels}/{limite_objets}** places utilisées\n\n"
+        "Ces objets s'équipent ensuite sur un de tes Pokémon avec `/equiper-objet` ou "
+        "au Maître des Capacités.\n\n"
+        "Choisis un objet dans le menu ci-dessous pour l'acheter."
+    )
+    embed.set_footer(text="Prix indicatifs — un objet équipé reste actif tant que tu ne le changes pas.")
+    return embed
+
+
+class ModalQuantiteAchatObjet(discord.ui.Modal):
+    """Fenêtre de saisie permettant d'entrer manuellement la quantité d'objets à acheter."""
+
+    def __init__(self, type_objet: str, solde_actuel: int):
+        info = capacites_module.infos_objet(type_objet)
+        super().__init__(title=f"Acheter {info['nom']}"[:45])
+        self.type_objet = type_objet
+
+        prix_unitaire = config.PRIX_OBJETS_TENUS[type_objet]
+        self.quantite_input = discord.ui.TextInput(
+            label=f"Quantité — {prix_unitaire} PD/u — Solde : {solde_actuel} PD"[:45],
+            placeholder="Ex : 1",
+            required=True,
+            max_length=3,
+        )
+        self.add_item(self.quantite_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        texte = self.quantite_input.value.strip()
+        if not texte.isdigit() or int(texte) <= 0:
+            await interaction.response.send_message("❌ Merci d'entrer un nombre entier positif.", ephemeral=True)
+            return
+
+        quantite = int(texte)
+        user_id = interaction.user.id
+        info = capacites_module.infos_objet(self.type_objet)
+        prix_unitaire = config.PRIX_OBJETS_TENUS[self.type_objet]
+        cout_total = prix_unitaire * quantite
+
+        limite_objets = database.limite_stockage_objets(user_id)
+        objets_actuels = database.compter_objets_totaux(user_id)
+        if objets_actuels + quantite > limite_objets:
+            place_restante = max(0, limite_objets - objets_actuels)
+            await interaction.response.send_message(
+                f"🎒 Pas assez de place dans ton sac ({objets_actuels}/{limite_objets}) ! "
+                f"Il te reste {place_restante} place(s).",
+                ephemeral=True,
+            )
+            return
+
+        solde = database.obtenir_poke_dollars(user_id)
+        if solde < cout_total:
+            await interaction.response.send_message(
+                f"❌ Solde insuffisant : il te faut {cout_total} Poké Dollars, tu en as {solde}.",
+                ephemeral=True,
+            )
+            return
+
+        database.ajouter_poke_dollars(user_id, -cout_total)
+        database.ajouter_balls(user_id, self.type_objet, quantite)
+        nouveau_solde = database.obtenir_poke_dollars(user_id)
+        journal.logger(f"🛒 <@{user_id}> a acheté {quantite}× {info['nom']} pour {cout_total} PD.")
+
+        await interaction.response.send_message(
+            f"✅ Achat réussi : **{quantite}× {info['emoji']} {info['nom']}** pour {cout_total} Poké Dollars.\n"
+            f"Nouveau solde : {EMOJI_POKEDOLLAR} {nouveau_solde}\nÉquipe-le avec `/equiper-objet`.",
+            ephemeral=True,
+        )
+
+
+class VueCategorieObjets(discord.ui.View):
+    """Sous-menu éphémère : un menu déroulant listant les 20 objets tenus (nom + prix),
+    la sélection ouvre une fenêtre de saisie de quantité (même principe que Balls/Potions)."""
+
+    def __init__(self):
+        super().__init__(timeout=120)
+        options = [
+            discord.SelectOption(
+                label=f"{info['nom']} — {config.PRIX_OBJETS_TENUS[cle]} PD"[:100],
+                value=cle,
+                description=info["description"][:100],
+                emoji=info["emoji"],
+            )
+            for cle, info in capacites_module.OBJETS_TENUS.items()
+        ]
+        select = discord.ui.Select(placeholder="Choisis un objet à acheter…", options=options)
+        select.callback = self._on_select
+        self.add_item(select)
+
+    async def _on_select(self, interaction: discord.Interaction):
+        type_objet = interaction.data["values"][0]
+        solde_actuel = database.obtenir_poke_dollars(interaction.user.id)
+        await interaction.response.send_modal(ModalQuantiteAchatObjet(type_objet, solde_actuel))
 

@@ -333,6 +333,28 @@ def _equipe_a_un_vivant(user_id: int) -> bool:
     return False
 
 
+async def _envoyer_erreur_privee(interaction, joueur: discord.Member, channel, texte: str):
+    """Envoie un message d'erreur en privé — TOUJOURS, jamais dans le salon public.
+    Ordre de repli : followup éphémère (cas normal) → message privé (DM) si
+    l'interaction a expiré entre-temps → dernier recours, un mini message public juste
+    pour signaler le souci sans exposer le détail, si même le DM échoue (bloqué)."""
+    if interaction is not None:
+        try:
+            await interaction.followup.send(texte, ephemeral=True)
+            return
+        except (discord.NotFound, discord.HTTPException):
+            pass  # interaction expirée — on retombe sur un DM ci-dessous, jamais un message public
+    try:
+        await joueur.send(texte)
+    except (discord.Forbidden, discord.HTTPException):
+        # DM bloqué ET interaction morte : dernier recours, un message discret dans le
+        # salon SANS le détail (juste un ping + invitation à réessayer), plutôt que rien.
+        try:
+            await channel.send(f"{joueur.mention}, une erreur est survenue — réessaie dans un instant.")
+        except (discord.NotFound, discord.HTTPException):
+            pass
+
+
 async def demarrer_combat_dresseur(
     bot,
     joueur: discord.Member,
@@ -376,13 +398,7 @@ async def demarrer_combat_dresseur(
             f"❌ {joueur.mention} — toute ton équipe est K.O. (PV persistants à 0) ! "
             f"Soigne-la via `/equipe-combat` avant de défier un dresseur."
         )
-        if interaction is not None:
-            try:
-                await interaction.followup.send(texte_ko, ephemeral=True)
-            except (discord.NotFound, discord.HTTPException):
-                await channel.send(texte_ko)  # interaction expirée : repli visible plutôt que perdu
-        else:
-            await channel.send(texte_ko)
+        await _envoyer_erreur_privee(interaction, joueur, channel, texte_ko)
         return
 
     date_limite = int(time.time()) + combat_module.DUREE_TOUR
@@ -805,13 +821,7 @@ async def defier_gladio(bot, joueur: discord.Member, channel: discord.TextChanne
             f"❌ {joueur.mention} — toute ton équipe est K.O. (PV persistants à 0) ! "
             f"Soigne-la via `/equipe-combat` avant de défier Gladio."
         )
-        if interaction is not None:
-            try:
-                await interaction.followup.send(texte_ko, ephemeral=True)
-            except (discord.NotFound, discord.HTTPException):
-                await channel.send(texte_ko)
-        else:
-            await channel.send(texte_ko)
+        await _envoyer_erreur_privee(interaction, joueur, channel, texte_ko)
         return
 
     dresseur_id = database.creer_dresseur_actif(ARCHETYPE_GLADIO["nom"], channel.id, int(time.time()) + 300)

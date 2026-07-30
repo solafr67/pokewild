@@ -2038,10 +2038,33 @@ async def equiper_objet(interaction: discord.Interaction, pokemon: str, objet: a
         await interaction.response.send_message(f"❌ Tu ne possèdes aucun **{pokemon}**.", ephemeral=True)
         return
 
+    ancien_objet = database.obtenir_objet_tenu_reel(interaction.user.id, pokemon_info["nom"])
+
     if objet is None:
+        if ancien_objet is None:
+            await interaction.response.send_message(f"**{pokemon_info['nom']}** ne tenait déjà aucun objet.", ephemeral=True)
+            return
         database.definir_objet_tenu_reel(interaction.user.id, pokemon_info["nom"], None)
-        await interaction.response.send_message(f"✅ **{pokemon_info['nom']}** ne tient plus aucun objet.", ephemeral=True)
+        database.ajouter_balls(interaction.user.id, ancien_objet, 1)  # rendu au sac, jamais perdu
+        await interaction.response.send_message(f"✅ **{pokemon_info['nom']}** ne tient plus aucun objet — il est retourné dans ton sac.", ephemeral=True)
         return
+
+    if objet.value == ancien_objet:
+        await interaction.response.send_message(f"**{pokemon_info['nom']}** tient déjà cet objet.", ephemeral=True)
+        return
+
+    inventaire = database.obtenir_inventaire_balls(interaction.user.id)
+    if inventaire.get(objet.value, 0) < 1:
+        info_manquant = capacites_module.infos_objet(objet.value)
+        await interaction.response.send_message(
+            f"❌ Tu n'as aucun(e) **{info_manquant['nom']}** dans ton sac — achète-le en boutique (onglet 🎒 Objets).",
+            ephemeral=True,
+        )
+        return
+
+    database.retirer_ball(interaction.user.id, objet.value)
+    if ancien_objet:
+        database.ajouter_balls(interaction.user.id, ancien_objet, 1)  # l'objet précédent revient au sac, jamais perdu
 
     info_objet = capacites_module.infos_objet(objet.value)
     database.definir_objet_tenu_reel(interaction.user.id, pokemon_info["nom"], objet.value)
@@ -2362,6 +2385,26 @@ async def backfill_ivs(interaction: discord.Interaction):
         f"✅ IV tirées aléatoirement pour **{len(ids)}** captures qui n'en avaient pas encore "
         f"(d'avant la refonte du combat). Relançable sans risque, ne touche jamais une capture "
         f"qui a déjà des IV."
+    )
+
+
+@bot.tree.command(
+    name="backfill-talents",
+    description="[Admin] Attribue un talent aux captures d'avant l'introduction du système talents/objets",
+)
+@app_commands.checks.has_permissions(administrator=True)
+async def backfill_talents(interaction: discord.Interaction):
+    await interaction.response.defer()
+
+    captures = database.obtenir_captures_sans_talent()
+    for capture_id, pokemon_nom in captures:
+        database.definir_capacite_capture(capture_id, capacites_module.capacite_pour_espece(pokemon_nom))
+
+    journal.logger(f"🛠️ <@{interaction.user.id}> a lancé /backfill-talents : {len(captures)} captures mises à jour.")
+    await interaction.followup.send(
+        f"✅ Talent attribué à **{len(captures)}** captures qui n'en avaient pas encore "
+        f"(d'avant l'introduction du système talents/objets). Relançable sans risque, ne "
+        f"touche jamais une capture qui a déjà un talent."
     )
 
 

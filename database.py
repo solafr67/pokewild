@@ -1851,6 +1851,25 @@ def obtenir_captures_sans_ivs() -> list:
     return resultats
 
 
+def obtenir_captures_sans_talent() -> list:
+    """(id, pokemon_nom) des captures qui n'ont pas encore de talent (créées avant cette
+    fonctionnalité). Utilisé uniquement par la commande d'admin /backfill-talents."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT id, pokemon_nom FROM captures WHERE capacite IS NULL")
+    resultats = [(row["id"], row["pokemon_nom"]) for row in cur.fetchall()]
+    conn.close()
+    return resultats
+
+
+def definir_capacite_capture(capture_id: int, capacite: str):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE captures SET capacite = ? WHERE id = ?", (capacite, capture_id))
+    conn.commit()
+    conn.close()
+
+
 def definir_ivs_capture(capture_id: int, ivs: dict):
     conn = get_connexion()
     cur = conn.cursor()
@@ -2078,7 +2097,7 @@ def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False
             user_id, pokemon_nom, pc, int(time.time()), int(shiny),
             ivs.get("pv"), ivs.get("attaque"), ivs.get("defense"),
             ivs.get("attaque_spe"), ivs.get("defense_spe"), ivs.get("vitesse"),
-            capacites_module.talent_aleatoire(),
+            capacites_module.capacite_pour_espece(pokemon_nom),
         ),
     )
     # Compteurs à VIE (jamais décrémentés, même si la capture est relâchée plus tard) —
@@ -2809,7 +2828,7 @@ def initialiser_equipe_combat_pvp(combat_id: int, user_id: int, equipe: list, id
             capacite = row_source["capacite"] if row_source else None
             objet_tenu = row_source["objet_tenu"] if row_source else None
         else:
-            capacite = capacites_module.talent_aleatoire()
+            capacite = capacites_module.capacite_pour_espece(mon["nom"])
             objet_tenu = random.choice(list(capacites_module.OBJETS_TENUS.keys())) if random.random() < 0.5 else None
 
         cur.execute(

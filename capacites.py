@@ -373,9 +373,40 @@ OBJETS_TENUS = {
 
 
 def talent_aleatoire() -> str:
-    """Tire un talent au hasard dans le pool implémenté — utilisé à la capture, en
-    attendant que le Pokédex ait de vrais pools de talents par espèce (voir docstring)."""
+    """Tire un talent au hasard dans le pool implémenté — utilisé en dernier recours pour
+    une espèce sans entrée dans POKEMON_CAPACITES (voir capacite_pour_espece)."""
     return random.choice(list(CAPACITES.keys()))
+
+
+# Vraies capacités possibles par espèce (fidèles aux jeux officiels), limitées aux
+# capacités qui ont un effet RÉELLEMENT implémenté ci-dessus — chantier progressif, pas
+# encore exhaustif sur les 1025 espèces. Une espèce absente de ce dict retombe sur
+# talent_aleatoire() (un talent générique au hasard) en attendant d'être curatée ici.
+POKEMON_CAPACITES = {
+    "Bulbizarre": ["plante"], "Herbizarre": ["plante"], "Florizarre": ["plante"],
+    "Salamèche": ["brasier"], "Reptincel": ["brasier"], "Dracaufeu": ["brasier"],
+    "Carapuce": ["torrent"], "Carabaffe": ["torrent"], "Tortank": ["torrent"],
+    "Machoc": ["cran"], "Machopeur": ["cran"], "Machamp": ["cran"],
+    "Ronflex": ["immunite"],
+    "Motisma": ["levitation"],
+    "Ponyta": ["corps_ardent"], "Galopa": ["corps_ardent"],
+    "Dardargnan": ["essaim"],
+    "Goupix": ["cache_flamme"], "Feunard": ["cache_flamme"],
+    "Simiabraz": ["brasier"],
+    "Pharamp": ["statik"],
+    "Léviator": ["intimidation"],
+    "Scarabrute": ["cran"],
+}
+
+
+def capacite_pour_espece(pokemon_nom: str) -> str:
+    """Tire une capacité pour cette espèce précise — parmi ses vraies capacités possibles
+    si elle est déjà curatée dans POKEMON_CAPACITES, sinon un talent générique au hasard
+    (voir la docstring de POKEMON_CAPACITES)."""
+    possibles = POKEMON_CAPACITES.get(pokemon_nom)
+    if possibles:
+        return random.choice(possibles)
+    return talent_aleatoire()
 
 
 def infos_capacite(cle: str) -> dict | None:
