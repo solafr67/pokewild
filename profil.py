@@ -350,6 +350,175 @@ class VueConfirmationRelacher(discord.ui.View):
         self.stop()
 
 
+# ----------------------------------------------------------------------------
+# Verrouillage de doublons — protège un exemplaire précis du relâcher automatique
+# (/relacher) sans avoir à le décocher manuellement à chaque fois. Une fois verrouillé,
+# une capture n'apparaît plus JAMAIS dans les listes de doublons proposées au relâcher,
+# même si ce n'est pas le meilleur PC de son espèce (voir database.py).
+# ----------------------------------------------------------------------------
+
+CAPTURES_PAR_PAGE_VERROU = 25
+OPTIONS_TRI_VERROU = [
+    ("alphabetique", "Alphabétique"),
+    ("pc_desc", "PC : fort → faible"),
+    ("verrouilles_dabord", "Verrouillés d'abord"),
+]
+
+
+def construire_embed_verrouillage(user_id: int) -> discord.Embed:
+    nb_verrouilles = len(database.obtenir_captures_verrouillees(user_id))
+    embed = discord.Embed(
+        title="🔒 Verrouillage de doublons",
+        description=(
+            "Coche les exemplaires à **verrouiller** — ils ne seront plus jamais proposés "
+            "par `/relacher` (doublons), même si ce n'est pas ton meilleur PC de "
+            "l'espèce. Reclique sur un exemplaire déjà coché pour le déverrouiller.\n\n"
+            f"🔒 **{nb_verrouilles}** exemplaire(s) actuellement verrouillé(s)."
+        ),
+        color=discord.Color.dark_teal(),
+    )
+    return embed
+
+
+class VueVerrouillage(discord.ui.View):
+    """Sélection paginée/triable/cherchable de TOUTE la collection — cocher un exemplaire
+    le verrouille, le décocher le déverrouille (appliqué immédiatement à chaque clic,
+    pas besoin d'un bouton de confirmation séparé)."""
+
+    def __init__(self, user_id: int, page: int = 0):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        self.page = page
+        self.tri = "alphabetique"
+        self.recherche = None
+        self.toutes_captures = database.obtenir_toutes_captures_detaillees(user_id)
+        self._trier_captures()
+        self._construire_composants()
+
+    def _captures_affichees(self) -> list:
+        if not self.recherche:
+            return self.toutes_captures
+        terme = cle_tri_alphabetique_fr(self.recherche)
+        return [row for row in self.toutes_captures if terme in cle_tri_alphabetique_fr(row["pokemon_nom"])]
+
+    def _trier_captures(self):
+        if self.tri == "pc_desc":
+            self.toutes_captures.sort(key=lambda row: -row["pc"])
+        elif self.tri == "verrouilles_dabord":
+            self.toutes_captures.sort(key=lambda row: (not row["verrouille"], cle_tri_alphabetique_fr(row["pokemon_nom"])))
+        else:
+            self.toutes_captures.sort(key=lambda row: cle_tri_alphabetique_fr(row["pokemon_nom"]))
+
+    def _construire_composants(self):
+        self.clear_items()
+        captures_affichees = self._captures_affichees()
+        debut = self.page * CAPTURES_PAR_PAGE_VERROU
+        page_captures = captures_affichees[debut : debut + CAPTURES_PAR_PAGE_VERROU]
+
+        options = []
+        for row in page_captures:
+            shiny_txt = " ✨" if row["shiny"] else ""
+            prefixe = "🔒 " if row["verrouille"] else ""
+            options.append(
+                discord.SelectOption(
+                    label=f"{prefixe}{row['pokemon_nom']}{shiny_txt} — {row['pc']} PC"[:100],
+                    value=str(row["id"]),
+                )
+            )
+        if options:
+            select = discord.ui.Select(placeholder="Coche pour verrouiller / décoche pour déverrouiller…", options=options, min_values=0, max_values=len(options), row=0)
+            select.callback = self._on_select
+            self.add_item(select)
+
+        select_tri = discord.ui.Select(
+            placeholder="Trier par...",
+            options=[discord.SelectOption(label=libelle, value=valeur, default=(valeur == self.tri)) for valeur, libelle in OPTIONS_TRI_VERROU],
+            row=1,
+        )
+        select_tri.callback = self._on_select_tri
+        self.add_item(select_tri)
+
+        nb_pages = max(1, (len(captures_affichees) + CAPTURES_PAR_PAGE_VERROU - 1) // CAPTURES_PAR_PAGE_VERROU)
+        if nb_pages > 1:
+            bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=2, disabled=self.page == 0)
+            bouton_prec.callback = self._page_prec
+            self.add_item(bouton_prec)
+            bouton_suiv = discord.ui.Button(label="▶", style=discord.ButtonStyle.secondary, row=2, disabled=self.page >= nb_pages - 1)
+            bouton_suiv.callback = self._page_suiv
+            self.add_item(bouton_suiv)
+
+        bouton_recherche = discord.ui.Button(
+            label=f"Recherche : {self.recherche}" if self.recherche else "Rechercher",
+            emoji="🔍",
+            style=discord.ButtonStyle.primary if self.recherche else discord.ButtonStyle.secondary,
+            row=2,
+        )
+        bouton_recherche.callback = self._on_rechercher
+        self.add_item(bouton_recherche)
+        if self.recherche:
+            bouton_effacer = discord.ui.Button(label="Effacer", emoji="❌", style=discord.ButtonStyle.secondary, row=2)
+            bouton_effacer.callback = self._on_effacer_recherche
+            self.add_item(bouton_effacer)
+
+    async def _rafraichir(self, interaction: discord.Interaction):
+        self.toutes_captures = database.obtenir_toutes_captures_detaillees(self.user_id)
+        self._trier_captures()
+        self._construire_composants()
+        await interaction.response.edit_message(embed=construire_embed_verrouillage(self.user_id), view=self)
+
+    async def _on_select(self, interaction: discord.Interaction):
+        ids_coches = {int(v) for v in interaction.data["values"]}
+        captures_affichees = self._captures_affichees()
+        debut = self.page * CAPTURES_PAR_PAGE_VERROU
+        page_captures = captures_affichees[debut : debut + CAPTURES_PAR_PAGE_VERROU]
+
+        for row in page_captures:
+            nouvel_etat = row["id"] in ids_coches
+            if bool(row["verrouille"]) != nouvel_etat:
+                database.definir_verrouillage_capture(row["id"], nouvel_etat)
+
+        await self._rafraichir(interaction)
+
+    async def _on_select_tri(self, interaction: discord.Interaction):
+        self.tri = interaction.data["values"][0]
+        self.page = 0
+        await self._rafraichir(interaction)
+
+    async def _page_prec(self, interaction: discord.Interaction):
+        self.page = max(0, self.page - 1)
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+    async def _page_suiv(self, interaction: discord.Interaction):
+        self.page += 1
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+    async def _on_rechercher(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(ModalRechercheVerrouillage(self))
+
+    async def _on_effacer_recherche(self, interaction: discord.Interaction):
+        self.recherche = None
+        self.page = 0
+        await self._rafraichir(interaction)
+
+
+class ModalRechercheVerrouillage(discord.ui.Modal, title="Rechercher un Pokémon"):
+    recherche_input = discord.ui.TextInput(label="Nom (ou partie du nom)", placeholder="Ex : Rat", required=False)
+
+    def __init__(self, vue_parente: VueVerrouillage):
+        super().__init__()
+        self.vue_parente = vue_parente
+        self.recherche_input.default = vue_parente.recherche or ""
+
+    async def on_submit(self, interaction: discord.Interaction):
+        terme = self.recherche_input.value.strip()
+        self.vue_parente.recherche = terme or None
+        self.vue_parente.page = 0
+        self.vue_parente._construire_composants()
+        await interaction.response.edit_message(embed=construire_embed_verrouillage(self.vue_parente.user_id), view=self.vue_parente)
+
+
 class VueSuppressionLibre(discord.ui.View):
     """Vue éphémère pour supprimer n'importe quel Pokémon de sa collection (y compris
     les uniques) afin de libérer de la place. Affiche un avertissement ⚠️ si l'exemplaire

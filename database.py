@@ -394,6 +394,13 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    # Migration : verrouillage d'un exemplaire précis — protège un doublon du relâcher
+    # automatique (/relacher) sans avoir à le décocher manuellement à chaque fois.
+    try:
+        cur.execute("ALTER TABLE captures ADD COLUMN verrouille INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
     # Migration pour les bases créées avant l'ajout de la colonne shiny
     try:
         cur.execute("ALTER TABLE captures ADD COLUMN shiny INTEGER NOT NULL DEFAULT 0")
@@ -2262,12 +2269,15 @@ def relacher_captures_par_id(user_id: int, capture_ids: list) -> int:
 
 def previsualiser_doublons(user_id: int) -> dict:
     """Calcule ce qui SERAIT relâché par relacher_tous_doublons, sans rien supprimer.
-    Retourne {pokemon_nom: quantite_relachable}."""
+    Retourne {pokemon_nom: quantite_relachable}. Les exemplaires VERROUILLÉS (voir
+    definir_verrouillage_capture) ne sont jamais comptés, même si ce ne sont pas le
+    meilleur PC de leur espèce — protège un doublon qu'on veut garder sans avoir à le
+    décocher manuellement à chaque fois."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         """
-        SELECT pokemon_nom,
+        SELECT pokemon_nom, verrouille,
                ROW_NUMBER() OVER (PARTITION BY pokemon_nom ORDER BY pc DESC, id ASC) AS rang
         FROM captures
         WHERE user_id = ?
@@ -2276,7 +2286,7 @@ def previsualiser_doublons(user_id: int) -> dict:
     )
     resultats = {}
     for row in cur.fetchall():
-        if row["rang"] > 1:
+        if row["rang"] > 1 and not row["verrouille"]:
             resultats[row["pokemon_nom"]] = resultats.get(row["pokemon_nom"], 0) + 1
     conn.close()
     return resultats
@@ -2285,33 +2295,35 @@ def previsualiser_doublons(user_id: int) -> dict:
 def obtenir_doublons_detailles(user_id: int):
     """Comme previsualiser_doublons, mais retourne chaque exemplaire individuel
     (id, pokemon_nom, pc, shiny) plutôt qu'un simple total par espèce — utilisé pour la
-    sélection manuelle (cocher précisément lesquels relâcher)."""
+    sélection manuelle (cocher précisément lesquels relâcher). Les exemplaires
+    verrouillés n'apparaissent jamais dans cette liste."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         """
-        SELECT id, pokemon_nom, pc, shiny,
+        SELECT id, pokemon_nom, pc, shiny, verrouille,
                ROW_NUMBER() OVER (PARTITION BY pokemon_nom ORDER BY pc DESC, id ASC) AS rang
         FROM captures
         WHERE user_id = ?
         """,
         (user_id,),
     )
-    resultats = [row for row in cur.fetchall() if row["rang"] > 1]
+    resultats = [row for row in cur.fetchall() if row["rang"] > 1 and not row["verrouille"]]
     conn.close()
     return resultats
 
 
 def obtenir_toutes_captures_detaillees(user_id: int):
     """Retourne TOUS les exemplaires de la collection du joueur (id, pokemon_nom, pc, shiny,
-    rang) triés par nom puis par PC décroissant. Rang = 1 signifie que c'est le seul/meilleur
-    exemplaire de son espèce — utile pour afficher un avertissement si l'utilisateur
-    tente de relâcher le dernier représentant d'une espèce (perte de l'entrée Pokédex)."""
+    verrouille, rang) triés par nom puis par PC décroissant. Rang = 1 signifie que c'est le
+    seul/meilleur exemplaire de son espèce — utile pour afficher un avertissement si
+    l'utilisateur tente de relâcher le dernier représentant d'une espèce (perte de
+    l'entrée Pokédex)."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         """
-        SELECT id, pokemon_nom, pc, shiny,
+        SELECT id, pokemon_nom, pc, shiny, verrouille,
                ROW_NUMBER() OVER (PARTITION BY pokemon_nom ORDER BY pc DESC, id ASC) AS rang,
                COUNT(*) OVER (PARTITION BY pokemon_nom) AS total_espece
         FROM captures
@@ -2325,22 +2337,46 @@ def obtenir_toutes_captures_detaillees(user_id: int):
     return resultats
 
 
+def definir_verrouillage_capture(capture_id: int, verrouille: bool):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE captures SET verrouille = ? WHERE id = ?", (int(verrouille), capture_id))
+    conn.commit()
+    conn.close()
+
+
+def obtenir_captures_verrouillees(user_id: int):
+    """Tous les exemplaires actuellement verrouillés d'un joueur (id, pokemon_nom, pc,
+    shiny) — utilisé pour l'écran de gestion des verrous (voir/déverrouiller)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, pokemon_nom, pc, shiny FROM captures WHERE user_id = ? AND verrouille = 1 "
+        "ORDER BY pokemon_nom COLLATE ALPHABET_FR ASC, pc DESC",
+        (user_id,),
+    )
+    resultats = cur.fetchall()
+    conn.close()
+    return resultats
+
+
 def relacher_tous_doublons(user_id: int) -> dict:
     """Relâche automatiquement TOUS les doublons de toutes les espèces d'un coup,
-    en gardant systématiquement le meilleur PC de chaque espèce.
+    en gardant systématiquement le meilleur PC de chaque espèce ET tout exemplaire
+    verrouillé (voir definir_verrouillage_capture).
     Retourne {pokemon_nom: quantite_relachee} pour les espèces concernées."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         """
-        SELECT id, pokemon_nom,
+        SELECT id, pokemon_nom, verrouille,
                ROW_NUMBER() OVER (PARTITION BY pokemon_nom ORDER BY pc DESC, id ASC) AS rang
         FROM captures
         WHERE user_id = ?
         """,
         (user_id,),
     )
-    a_supprimer = [row for row in cur.fetchall() if row["rang"] > 1]
+    a_supprimer = [row for row in cur.fetchall() if row["rang"] > 1 and not row["verrouille"]]
 
     resultats = {}
     for row in a_supprimer:

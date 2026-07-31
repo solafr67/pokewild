@@ -68,12 +68,14 @@ from profil import (
     construire_embed_fixe as construire_embed_profil_fixe,
     construire_embed_profil,
     construire_apercu_relacher,
+    construire_embed_verrouillage,
     effectuer_relacher_tous,
     fichier_avatar_fiable,
     url_avatar_fiable,
     VueConfirmationRelacher,
     VueOuvrirPokedex,
     VueProfil,
+    VueVerrouillage,
 )
 import pokedex as pokedex_module
 import capacites as capacites_module
@@ -2153,6 +2155,15 @@ async def relacher(interaction: discord.Interaction):
         return
     vue = VueConfirmationRelacher(interaction.user.id)
     await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
+
+
+@bot.tree.command(name="verrouiller-pokemon", description="Protège des doublons du relâcher automatique (/relacher) — plus besoin de les décocher à chaque fois")
+async def verrouiller_pokemon(interaction: discord.Interaction):
+    vue = VueVerrouillage(interaction.user.id)
+    if not vue.toutes_captures:
+        await interaction.response.send_message("Tu n'as aucun Pokémon à verrouiller !", ephemeral=True)
+        return
+    await interaction.response.send_message(embed=construire_embed_verrouillage(interaction.user.id), view=vue, ephemeral=True)
 
 
 @bot.tree.command(name="profil", description="Affiche tes statistiques de dresseur")
