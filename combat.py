@@ -614,7 +614,7 @@ async def resoudre_tour(combat_id: int) -> list:
             cle_boost_def = "def_spe" if est_special else "def"
             objet_atk = database.obtenir_objet_combat(combat_id, user_id, nom_atk)
             mult_stat_choix = capacites_module.multiplicateur_stat_objet(objet_atk, cle_boost_off)
-            stat_def_boostee = max(1, stat_def / mult_stage(boosts_def[cle_boost_def]))
+            stat_def_boostee = max(1, stat_def * mult_stage(boosts_def[cle_boost_def]))
             stat_off_boostee = max(1, stat_off * mult_stage(boosts_atk[cle_boost_off]) * mult_stat_choix)
             # Bonus permanent d'Arène : +X% si l'attaquant a débloqué le badge du type de
             # cette attaque (voir arene.py / config.ARENE_BONUS_DEGATS_PAR_BADGE).
@@ -806,18 +806,25 @@ async def resoudre_tour(combat_id: int) -> list:
                 log.append(f"  📊 **{cible_nom}** : {', '.join(morceaux)}")
 
             # Altération de statut pure (Hypnose → sommeil, Para-Spore → paralysie...)
+            # ⚠️ CORRECTIF : ciblait toujours l'adversaire, même pour une attaque dont la
+            # cible réelle est "soi" (ex: Ventardise — augmente sa propre Attaque, et ne
+            # doit PAS confondre l'adversaire au passage). Suit maintenant la même cible
+            # que les changements de stats ci-dessus.
             if ailment in STATUTS_INFO:
+                cible_ailment_id, cible_ailment_nom = (
+                    (user_id, nom_atk) if attaque.get("cible") == "soi" else (adversaire_id, nom_def)
+                )
                 compteur = 0
                 if ailment == "sleep":
                     compteur = random.randint(1, 3)
                 elif ailment == "confusion":
                     compteur = random.randint(1, 4)
-                if database.definir_statut(combat_id, adversaire_id, nom_def, ailment, compteur):
+                if database.definir_statut(combat_id, cible_ailment_id, cible_ailment_nom, ailment, compteur):
                     info = STATUTS_INFO[ailment]
-                    log.append(f"  {info['emoji']} **{nom_def}** est {info['nom']} !")
-                    _verifier_baie_statut(combat_id, adversaire_id, nom_def, ailment, log)
+                    log.append(f"  {info['emoji']} **{cible_ailment_nom}** est {info['nom']} !")
+                    _verifier_baie_statut(combat_id, cible_ailment_id, cible_ailment_nom, ailment, log)
                 else:
-                    log.append(f"  ❌ **{nom_def}** a déjà une altération de statut !")
+                    log.append(f"  ❌ **{cible_ailment_nom}** n'est pas affecté(e) (déjà un statut, ou immunisé par son type) !")
 
     # --- Dégâts de fin de tour : brûlure et poison ---
     combat = database.obtenir_combat(combat_id)

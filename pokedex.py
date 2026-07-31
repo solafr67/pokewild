@@ -74,8 +74,8 @@ def construire_lignes(
     elif filtre_capture == "captures":
         especes = [p for p in especes if p["nom"] in captures_par_nom]
     if recherche:
-        terme = recherche.lower()
-        especes = [p for p in especes if terme in p["nom"].lower()]
+        terme = cle_tri_alphabetique_fr(recherche)
+        especes = [p for p in especes if terme in cle_tri_alphabetique_fr(p["nom"])]
 
     if tri == "rarete":
         especes = sorted(especes, key=lambda p: (ORDRE_RARETE[p["rarete"]], cle_tri_alphabetique_fr(p["nom"])))

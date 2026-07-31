@@ -470,6 +470,17 @@ class VueCaptureRaid(discord.ui.View):
         # d'en empiler un nouveau à chaque clic — voir capturer() ci-dessous.
         self._messages_echec: dict[int, discord.Message] = {}
 
+        # Affiche le taux de base directement sur le bouton — jusqu'ici invisible pour le
+        # joueur (contrairement aux spawns sauvages, où chaque ball affiche son %), ce qui
+        # rendait la capture de raid injustement surprenante : les raids utilisent
+        # exclusivement l'Honor Ball, une colonne nettement plus stricte que les autres
+        # balls pour les raretés élevées (ex: 7% pour un hyper rare, 2% pour un légendaire).
+        # Ce % ne compte pas les bonus de Race/boost du joueur qui clique (propres à
+        # chacun, donc pas affichables sur un bouton partagé par tous les participants) —
+        # le vrai taux au moment du clic peut donc être légèrement supérieur à celui-ci.
+        taux_base = TAUX_CAPTURE[boss["rarete"]]["honorball"]
+        self.capturer.label = f"Capturer ({taux_base:.0%} de base)"
+
     @discord.ui.button(label="Capturer", style=discord.ButtonStyle.success, emoji=EMOJI_BALLS["honorball"])
     async def capturer(self, interaction: discord.Interaction, button: discord.ui.Button):
         user_id = interaction.user.id

@@ -428,8 +428,8 @@ class VueChoixOffre(discord.ui.View):
     def _captures_affichees(self) -> list:
         if not self.recherche:
             return self.toutes_captures
-        terme = self.recherche.lower()
-        return [row for row in self.toutes_captures if terme in row["pokemon_nom"].lower()]
+        terme = cle_tri_alphabetique_fr(self.recherche)
+        return [row for row in self.toutes_captures if terme in cle_tri_alphabetique_fr(row["pokemon_nom"])]
 
     def _trier_captures(self):
         if self.tri == "rarete":

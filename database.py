@@ -3459,9 +3459,29 @@ def obtenir_statut(combat_id: int, user_id: int, pokemon_nom: str):
     return (row["statut"], row["compteur"]) if row else None
 
 
+IMMUNITE_STATUT_PAR_TYPE = {
+    "poison": {"poison", "acier"},
+    "paralysis": {"electrik"},
+    "burn": {"feu"},
+    "freeze": {"glace"},
+}
+
+
 def definir_statut(combat_id: int, user_id: int, pokemon_nom: str, statut: str, compteur: int = 0) -> bool:
     """Applique une altération de statut, seulement si le Pokémon n'en a pas déjà une
-    (un seul statut à la fois, comme dans les vrais jeux). Retourne True si appliqué."""
+    (un seul statut à la fois, comme dans les vrais jeux). Retourne True si appliqué.
+
+    ⚠️ Respecte aussi les immunités de type des vrais jeux (voir IMMUNITE_STATUT_PAR_TYPE)
+    — un Poison/Acier ne peut jamais être empoisonné, un Électrik jamais paralysé, un Feu
+    jamais brûlé, un Glace jamais gelé. Centralisé ici pour s'appliquer partout sans
+    exception (1v1, 2v2, dresseurs, raids, ripostes au contact...)."""
+    types_a_eviter = IMMUNITE_STATUT_PAR_TYPE.get(statut)
+    if types_a_eviter:
+        import pokemon_data
+
+        pokemon = pokemon_data.obtenir_pokemon_par_nom(pokemon_nom)
+        if pokemon and types_a_eviter & set(pokemon.get("types", [])):
+            return False
     if obtenir_statut(combat_id, user_id, pokemon_nom) is not None:
         return False
     conn = get_connexion()
@@ -4895,8 +4915,12 @@ def executer_achat_marketplace(annonce_id: int, acheteur_id: int) -> tuple:
 
 
 def rechercher_annonces_marketplace_actives(terme: str, limite: int = 15):
-    """Recherche par nom d'espèce (insensible à la casse, sous-chaîne) parmi les
-    annonces ACTIVES uniquement."""
+    """Recherche par nom d'espèce parmi les annonces ACTIVES uniquement — insensible à la
+    casse ET aux accents (filtrage en Python : peu d'annonces actives à la fois, pas
+    besoin d'une recherche SQL, et ça évite les faux "aucun résultat" quand l'accent
+    n'est pas tapé — ex: chercher "ecremeuh" doit trouver "Écrémeuh")."""
+    import pokemon_data
+
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
@@ -4904,15 +4928,16 @@ def rechercher_annonces_marketplace_actives(terme: str, limite: int = 15):
         SELECT m.*, c.pokemon_nom, c.pc, c.shiny
         FROM marketplace_annonces m
         JOIN captures c ON c.id = m.capture_id
-        WHERE m.statut = 'active' AND c.pokemon_nom LIKE ? COLLATE NOCASE
+        WHERE m.statut = 'active'
         ORDER BY m.date_creation DESC
-        LIMIT ?
         """,
-        (f"%{terme}%", limite),
     )
-    rows = cur.fetchall()
+    toutes = cur.fetchall()
     conn.close()
-    return rows
+
+    terme_normalise = pokemon_data.cle_tri_alphabetique_fr(terme)
+    resultats = [row for row in toutes if terme_normalise in pokemon_data.cle_tri_alphabetique_fr(row["pokemon_nom"])]
+    return resultats[:limite]
 
 
 def obtenir_historique_marketplace_joueur(user_id: int, limite: int = 15):
