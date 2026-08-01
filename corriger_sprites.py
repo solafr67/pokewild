@@ -159,7 +159,22 @@ def main():
     with open("pokedex_complet.json", encoding="utf-8") as f:
         dex = json.load(f)
 
-    numeros = sorted({p.get("numero_sprite") or p["numero"] for p in dex if p.get("numero")})
+    numeros_dex = {p.get("numero_sprite") or p["numero"] for p in dex if p.get("numero")}
+
+    # Les formes déclenchées par un objet tenu (Dialga (Origine)...) ne sont PAS des
+    # entrées de Pokédex séparées — voir formes_objets.py — donc leur numero_sprite
+    # n'apparaît jamais dans pokedex_complet.json. Sans cette ligne, leurs sprites ne
+    # sont jamais téléchargés/corrigés du tout, même si le mécanisme de transformation
+    # fonctionne parfaitement côté jeu (la fiche pointe juste vers un fichier qui
+    # n'existe jamais sur GitHub).
+    try:
+        import formes_objets
+
+        numeros_formes_objets = {info["numero_sprite"] for info in formes_objets.FORMES_OBJETS.values()}
+    except ImportError:
+        numeros_formes_objets = set()
+
+    numeros = sorted(numeros_dex | numeros_formes_objets)
     total = len(numeros)
     compteurs = {"ok": 0, "deja_fait": 0, "absent": 0}
     echecs = []  # numéros pour lesquels normal ET/OU shiny a échoué (utile pour cibler un retry)
