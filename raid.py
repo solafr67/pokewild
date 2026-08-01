@@ -5,6 +5,7 @@ import discord
 
 import combat as combat_module
 import config
+import formes_objets as formes_objets_module
 import database
 import equipe_combat
 import etat_jeu
@@ -547,7 +548,7 @@ class VueCaptureRaid(discord.ui.View):
             * database.multiplicateur_boost(user_id, "shiny")
         )
         est_shiny = random.random() < chance_shiny
-        database.ajouter_capture(user_id, self.boss["nom"], pc, shiny=est_shiny, ivs=ivs)
+        objet_forme_obtenu = database.ajouter_capture(user_id, self.boss["nom"], pc, shiny=est_shiny, ivs=ivs)
 
         # Même règle que pour les captures sauvages/œufs : le niveau ne s'applique à
         # l'équipe que s'il est meilleur que celui déjà acquis (jamais de régression).
@@ -562,6 +563,13 @@ class VueCaptureRaid(discord.ui.View):
             f"🎉 Tu as capturé {shiny_txt}**{self.boss['nom']}** ({pc} PC) !"
             f"{quetes_ui_module.texte_notifications_completion(quetes_completees)}"
         )
+        if objet_forme_obtenu:
+            info_forme = formes_objets_module.FORMES_OBJETS[objet_forme_obtenu]
+            texte_succes += (
+                f"\n{info_forme['objet_emoji']} Trouvaille rarissime ! Il tenait un(e) "
+                f"**{info_forme['objet_nom']}** — équipe-le à un **{info_forme['espece']}** "
+                f"pour débloquer sa forme **{info_forme['forme_nom']}**."
+            )
 
         ancien_message = self._messages_echec.get(user_id)
         if ancien_message is not None:

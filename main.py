@@ -1123,13 +1123,19 @@ async def nettoyer_etats_orphelins_au_demarrage():
     for row in database.obtenir_raids_actifs():
         if row["message_id"] and await _supprimer_message_orphelin(row["channel_id"], row["message_id"]):
             compte += 1
+        # Les participants ne sont pour rien dans ce redémarrage — leur équipe (pool de
+        # PV séparé "raid") est soignée gratuitement plutôt que de rester endommagée par
+        # un raid qui n'a de toute façon donné ni victoire ni récompense.
+        for participant in database.obtenir_participants_raid(row["id"]):
+            database.soigner_completement_equipe(participant["user_id"], contexte="raid")
         database.terminer_raid(row["id"])
         # Prévenir les participants : sans ce message, le raid disparaissait sans explication.
         try:
             channel = bot.get_channel(int(row["channel_id"])) or await bot.fetch_channel(int(row["channel_id"]))
             await channel.send(
                 "⚠️ Le serveur a redémarré : le raid en cours a été annulé (aucune récompense, "
-                "aucune pénalité). Un nouveau raid apparaîtra au prochain cycle."
+                "aucune pénalité, équipes des participants soignées gratuitement). Un nouveau "
+                "raid apparaîtra au prochain cycle."
             )
         except (discord.HTTPException, ValueError, TypeError):
             pass
@@ -1148,13 +1154,21 @@ async def nettoyer_etats_orphelins_au_demarrage():
     for row in database.obtenir_combats_pvp_actifs():
         database.terminer_combat_pvp(row["id"])
         combats_annules += 1
+        # Les joueurs ne sont pour rien dans ce redémarrage — équipe soignée gratuitement
+        # plutôt que de rester endommagée par un combat qui n'a de toute façon abouti à
+        # rien (ni victoire, ni défaite). joueur2_id peut être une IA (ID négatif, dresseur
+        # /Arène/Gladio) : on ne soigne jamais une IA, seulement de vrais joueurs.
+        for joueur_id in (row["joueur1_id"], row["joueur2_id"]):
+            if joueur_id and joueur_id > 0:
+                database.soigner_completement_equipe(joueur_id, contexte="normal")
         if row["thread_id"]:
             try:
                 thread = bot.get_channel(int(row["thread_id"])) or await bot.fetch_channel(int(row["thread_id"]))
                 await thread.send(
                     "⚠️ Le serveur a redémarré : ce combat est annulé en forfait — ni vainqueur, "
-                    "ni récompense, personne n'est pénalisé. Vous pouvez relancer un combat dès "
-                    f"maintenant. Ce fil sera supprimé dans {combat_module.DELAI_SUPPRESSION_FIL // 60} minutes."
+                    "ni récompense, personne n'est pénalisé, et vos équipes ont été soignées "
+                    "gratuitement. Vous pouvez relancer un combat dès maintenant. Ce fil sera "
+                    f"supprimé dans {combat_module.DELAI_SUPPRESSION_FIL // 60} minutes."
                 )
                 bot.loop.create_task(
                     dresseurs_module._supprimer_fil_apres_delai(thread, combat_module.DELAI_SUPPRESSION_FIL)

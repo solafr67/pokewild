@@ -391,15 +391,19 @@ class VueVerrouillage(discord.ui.View):
         self.page = page
         self.tri = "alphabetique"
         self.recherche = None
+        self.doublons_uniquement = True  # actif par défaut : c'est ce qu'on vient verrouiller la plupart du temps
         self.toutes_captures = database.obtenir_toutes_captures_detaillees(user_id)
         self._trier_captures()
         self._construire_composants()
 
     def _captures_affichees(self) -> list:
-        if not self.recherche:
-            return self.toutes_captures
-        terme = cle_tri_alphabetique_fr(self.recherche)
-        return [row for row in self.toutes_captures if terme in cle_tri_alphabetique_fr(row["pokemon_nom"])]
+        captures = self.toutes_captures
+        if self.doublons_uniquement:
+            captures = [row for row in captures if row["rang"] > 1]
+        if self.recherche:
+            terme = cle_tri_alphabetique_fr(self.recherche)
+            captures = [row for row in captures if terme in cle_tri_alphabetique_fr(row["pokemon_nom"])]
+        return captures
 
     def _trier_captures(self):
         if self.tri == "pc_desc":
@@ -460,6 +464,15 @@ class VueVerrouillage(discord.ui.View):
             bouton_effacer.callback = self._on_effacer_recherche
             self.add_item(bouton_effacer)
 
+        bouton_filtre = discord.ui.Button(
+            label="Doublons uniquement" if self.doublons_uniquement else "Tout afficher",
+            emoji="🔁",
+            style=discord.ButtonStyle.success if self.doublons_uniquement else discord.ButtonStyle.secondary,
+            row=3,
+        )
+        bouton_filtre.callback = self._on_basculer_filtre
+        self.add_item(bouton_filtre)
+
     async def _rafraichir(self, interaction: discord.Interaction):
         self.toutes_captures = database.obtenir_toutes_captures_detaillees(self.user_id)
         self._trier_captures()
@@ -499,6 +512,11 @@ class VueVerrouillage(discord.ui.View):
 
     async def _on_effacer_recherche(self, interaction: discord.Interaction):
         self.recherche = None
+        self.page = 0
+        await self._rafraichir(interaction)
+
+    async def _on_basculer_filtre(self, interaction: discord.Interaction):
+        self.doublons_uniquement = not self.doublons_uniquement
         self.page = 0
         await self._rafraichir(interaction)
 

@@ -4,6 +4,7 @@ import time
 import discord
 
 import config
+import formes_objets as formes_objets_module
 import database
 import etat_jeu
 import journal
@@ -132,7 +133,7 @@ class SelectionBallView(discord.ui.View):
             )
             est_shiny = self.vue_spawn.force_shiny or (random.random() < chance_shiny)
 
-            database.ajouter_capture(user_id, self.pokemon["nom"], self.pc, shiny=est_shiny, ivs=self.ivs)
+            objet_forme_obtenu = database.ajouter_capture(user_id, self.pokemon["nom"], self.pc, shiny=est_shiny, ivs=self.ivs)
 
             # Le niveau suit l'espèce (comme le PC déjà affiché) : on ne l'écrase que s'il
             # est plus haut que celui déjà acquis pour cette espèce, pour ne jamais faire
@@ -221,6 +222,18 @@ class SelectionBallView(discord.ui.View):
                     value=(
                         f"Le **{self.pokemon['nom']}** tenait un(e) {NOM_OBJETS_DIVERS[objet_trouve]} "
                         f"dans ses mains, tu l'obtiens donc !"
+                    ),
+                    inline=False,
+                )
+
+            if objet_forme_obtenu:
+                info_forme = formes_objets_module.FORMES_OBJETS[objet_forme_obtenu]
+                embed.add_field(
+                    name=f"{info_forme['objet_emoji']} Trouvaille rarissime !",
+                    value=(
+                        f"Le **{self.pokemon['nom']}** tenait un(e) **{info_forme['objet_nom']}** "
+                        f"dans ses mains ! Équipe-le à un **{info_forme['espece']}** pour débloquer "
+                        f"sa forme **{info_forme['forme_nom']}**."
                     ),
                     inline=False,
                 )

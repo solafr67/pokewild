@@ -1,6 +1,7 @@
 import discord
 
 import capacites as capacites_module
+import formes_objets as formes_objets_module
 import database
 import niveaux_pokemon
 from pokemon_data import COULEUR_RARETE, EMOJI_POKEDEX, EMOJI_RARETE, IV_DEFAUT, POKEDEX, affichage_types, calculer_toutes_stats, cle_tri_alphabetique_fr, obtenir_pokemon_par_nom, sprite_pokemon
@@ -355,11 +356,17 @@ def construire_embed_fiche(user_id: int, nom_pokemon: str) -> discord.Embed:
     captures_par_nom = _agreger_captures(user_id)
     info = captures_par_nom.get(pokemon["nom"])
 
+    # Si ce Pokémon tient un objet de transformation (Fleur Gracidea...), la fiche
+    # affiche sa forme active — nom, types et sprite — voir formes_objets.py.
+    objet_tenu = database.obtenir_objet_tenu_reel(user_id, pokemon["nom"]) if info else None
+    pokemon_affiche = formes_objets_module.pokemon_effectif(pokemon, objet_tenu)
+    nom_affiche = formes_objets_module.nom_affichage(pokemon["nom"], objet_tenu)
+
     emoji = EMOJI_RARETE[pokemon["rarete"]]
-    types_affiches = affichage_types(pokemon["types"])
+    types_affiches = affichage_types(pokemon_affiche["types"])
 
     embed = discord.Embed(
-        title=f"{pokemon['nom']}",
+        title=nom_affiche,
         color=COULEUR_RARETE[pokemon["rarete"]],
     )
     embed.add_field(name="Type", value=types_affiches, inline=True)
@@ -379,20 +386,25 @@ def construire_embed_fiche(user_id: int, nom_pokemon: str) -> discord.Embed:
         if info_capacite:
             embed.add_field(name="Talent", value=f"{info_capacite['emoji']} {info_capacite['nom']}", inline=True)
 
-        objet_tenu = database.obtenir_objet_tenu_reel(user_id, pokemon["nom"])
+        # L'objet tenu peut être un objet de combat classique OU un objet de
+        # transformation (Fleur Gracidea...) — les deux ont leur propre petit dict de
+        # métadonnées, on cherche dans les deux.
         info_objet = capacites_module.infos_objet(objet_tenu) if objet_tenu else None
-        embed.add_field(
-            name="Objet tenu",
-            value=f"{info_objet['emoji']} {info_objet['nom']}" if info_objet else "*Aucun — `/equiper-objet`*",
-            inline=True,
-        )
+        info_forme = formes_objets_module.FORMES_OBJETS.get(objet_tenu) if objet_tenu else None
+        if info_objet:
+            valeur_objet = f"{info_objet['emoji']} {info_objet['nom']}"
+        elif info_forme:
+            valeur_objet = f"{info_forme['objet_emoji']} {info_forme['objet_nom']} — *{info_forme['forme_nom']} active !*"
+        else:
+            valeur_objet = "*Aucun — `/equiper-objet`*"
+        embed.add_field(name="Objet tenu", value=valeur_objet, inline=True)
 
         ivs = database.obtenir_meilleures_ivs(user_id, pokemon["nom"]) or IV_DEFAUT
         texte_hexagone = _texte_hexagone(pokemon, ivs, niveau)
         if texte_hexagone:
             embed.add_field(name="📊 Statistiques", value=f"```{texte_hexagone}```", inline=False)
 
-        sprite_url = sprite_pokemon(pokemon, shiny=info["shiny"])
+        sprite_url = sprite_pokemon(pokemon_affiche, shiny=info["shiny"])
     else:
         embed.add_field(name="Statut", value="Non capturé", inline=False)
         sprite_url = sprite_pokemon(pokemon)

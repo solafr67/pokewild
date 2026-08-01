@@ -522,6 +522,22 @@ EXPLORATION_CHANCE_CRISTAL = {
     "6h":  {"base": 0.15, "bonus_max": 0.20, "max": 0.35},
     "24h": {"base": 0.30, "bonus_max": 0.30, "max": 0.60},
 }
+# Objets de transformation (Fleur Gracidea, Orbe Griséous...) — voir formes_objets.py.
+# Volontairement rares et réservés aux longues explorations (objets clés, pas des
+# consommables) : jamais achetables en boutique (décision du 01/08/2026), uniquement
+# trouvables ici ou déjà tenus par le Pokémon sauvage correspondant à la capture.
+EXPLORATION_CHANCE_OBJET_FORME = {
+    "1h":  {"base": 0.0, "bonus_max": 0.0, "max": 0.0},
+    "6h":  {"base": 0.005, "bonus_max": 0.005, "max": 0.01},
+    "24h": {"base": 0.01, "bonus_max": 0.02, "max": 0.03},
+}
+# Chance qu'un Pokémon sauvage tienne DÉJÀ son objet de transformation au moment de sa
+# capture (uniquement pertinent pour Shaymin/Giratina/Dialga/Palkia, ignoré sinon).
+# Chance qu'une capture (n'importe quelle espèce, exactement comme le Cristal de
+# Mutation/les œufs ci-dessus) donne AUSSI un objet de transformation au hasard —
+# calibré sous le taux du Cristal (0.05%) : ces objets sont encore plus exceptionnels
+# (ils débloquent une forme alternative permanente sur une des 4 légendaires concernées).
+CHANCE_OBJET_FORME_A_LA_CAPTURE = 0.0003  # 0.03%
 # Relevé (équilibrage éco) : à 3000 PD, ce ×2 permanent des revenus d'exploration se
 # remboursait en une seule journée au plafond — c'est désormais un vrai objectif long terme.
 EXTENSION_SLOT_EXPLORATION_PRIX = 10000  # achat unique du 2e emplacement d'exploration

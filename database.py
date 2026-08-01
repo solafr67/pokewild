@@ -2084,13 +2084,16 @@ def definir_objet_tenu_reel(user_id: int, pokemon_nom: str, objet: str | None):
     conn.close()
 
 
-def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False, ivs: dict = None):
+def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False, ivs: dict = None) -> str | None:
     import capacites as capacites_module
+    import formes_objets as formes_objets_module
+    import random as _random
 
     conn = get_connexion()
     cur = conn.cursor()
     _assurer_joueur_existe(cur, user_id)
     ivs = ivs or {}
+
     cur.execute(
         """
         INSERT INTO captures (
@@ -2122,6 +2125,16 @@ def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False
     )
     conn.commit()
     conn.close()
+
+    # Chance qu'une capture (N'IMPORTE QUELLE espèce, comme les cristaux de mutation ou
+    # les œufs) donne AUSSI un objet de transformation au hasard dans le sac — voir
+    # formes_objets.py. Ne s'équipe jamais automatiquement sur le Pokémon capturé, comme
+    # une baie de mutation ou un œuf : le joueur l'équipe lui-même ensuite s'il le veut.
+    objet_forme_obtenu = None
+    if _random.random() < config.CHANCE_OBJET_FORME_A_LA_CAPTURE:
+        objet_forme_obtenu = _random.choice(list(formes_objets_module.FORMES_OBJETS.keys()))
+        ajouter_balls(user_id, objet_forme_obtenu, 1)
+    return objet_forme_obtenu
 
 
 def obtenir_pokedex_joueur(user_id: int):
@@ -2215,6 +2228,24 @@ def modifier_pv_pokemon(user_id: int, pokemon_nom: str, delta: int, pv_max: int,
     conn.commit()
     conn.close()
     return nouveau_pv
+
+
+def soigner_completement_equipe(user_id: int, contexte: str = "normal"):
+    """Remet à pleine vie TOUT le pool de PV persistants d'un joueur pour ce contexte
+    (normal ou raid) — gratuit, sans consommer de potion. Supprimer les lignes suffit :
+    obtenir_pv_actuels initialise déjà à pv_max quand aucune ligne n'existe (voir
+    ci-dessus), donc l'absence de ligne = pleine vie, pas besoin de connaître le pv_max
+    de chaque espèce individuellement.
+
+    Utilisé quand un combat/raid est annulé pour une raison INDÉPENDANTE du joueur (ex:
+    redémarrage du serveur en pleine partie) — jamais laisser une équipe blessée à cause
+    d'un incident technique qui n'est pas de sa faute."""
+    table = "etat_combat_pokemon_raid" if contexte == "raid" else "etat_combat_pokemon"
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(f"DELETE FROM {table} WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
 
 
 def compter_captures_espece(user_id: int, pokemon_nom: str) -> int:

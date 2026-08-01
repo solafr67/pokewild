@@ -1,9 +1,11 @@
 import discord
 
+import capacites as capacites_module
 import combat as combat_module
 import config
 import database
 import equipe_combat
+import formes_objets as formes_objets_module
 from pokemon_data import (
     EMOJI_BALLS,
     EMOJI_OBJETS_DIVERS,
@@ -14,8 +16,16 @@ from pokemon_data import (
     calculer_pv_max,
 )
 
-NOMS_OBJETS = {**NOM_BALL_AFFICHAGE, **NOM_SOIN_AFFICHAGE, **NOM_OBJETS_DIVERS}
-EMOJIS_OBJETS = {**EMOJI_BALLS, **EMOJI_SOINS, **EMOJI_OBJETS_DIVERS}
+NOMS_OBJETS = {
+    **NOM_BALL_AFFICHAGE, **NOM_SOIN_AFFICHAGE, **NOM_OBJETS_DIVERS,
+    **{cle: info["nom"] for cle, info in capacites_module.OBJETS_TENUS.items()},
+    **{cle: info["objet_nom"] for cle, info in formes_objets_module.FORMES_OBJETS.items()},
+}
+EMOJIS_OBJETS = {
+    **EMOJI_BALLS, **EMOJI_SOINS, **EMOJI_OBJETS_DIVERS,
+    **{cle: info["emoji"] for cle, info in capacites_module.OBJETS_TENUS.items()},
+    **{cle: info["objet_emoji"] for cle, info in formes_objets_module.FORMES_OBJETS.items()},
+}
 TYPES_POTIONS = set(config.PRIX_SOINS.keys()) - {"totalsoin"}  # totalsoin ne soigne pas les PV, uniquement les statuts en combat
 
 

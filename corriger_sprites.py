@@ -159,7 +159,7 @@ def main():
     with open("pokedex_complet.json", encoding="utf-8") as f:
         dex = json.load(f)
 
-    numeros = sorted({p["numero"] for p in dex if p.get("numero")})
+    numeros = sorted({p.get("numero_sprite") or p["numero"] for p in dex if p.get("numero")})
     total = len(numeros)
     compteurs = {"ok": 0, "deja_fait": 0, "absent": 0}
     echecs = []  # numéros pour lesquels normal ET/OU shiny a échoué (utile pour cibler un retry)

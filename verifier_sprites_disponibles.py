@@ -47,7 +47,7 @@ def main():
     manquants = []
 
     for i, pokemon in enumerate(a_verifier, start=1):
-        numero = pokemon.get("numero")
+        numero = pokemon.get("numero_sprite") or pokemon.get("numero")
         if not numero:
             continue
         disponible = sprite_existe(numero)

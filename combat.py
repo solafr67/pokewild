@@ -4,6 +4,7 @@ import time
 import discord
 
 import capacites as capacites_module
+import formes_objets as formes_objets_module
 import config
 import database
 import journal
@@ -122,7 +123,9 @@ def construire_embeds_combat(combat_id: int, log_tour: list = None, noms: dict =
     for (user_id, actif_nom, action), couleur in zip(cotes, couleurs):
         equipe = database.obtenir_equipe_pvp(combat_id, user_id)
         actif_row = next((r for r in equipe if r["pokemon_nom"] == actif_nom), None)
-        pokemon = obtenir_pokemon_par_nom(actif_nom)
+        objet_actif = database.obtenir_objet_combat(combat_id, user_id, actif_nom)
+        pokemon = formes_objets_module.pokemon_effectif(obtenir_pokemon_par_nom(actif_nom), objet_actif)
+        nom_affiche = formes_objets_module.nom_affichage(actif_nom, objet_actif)
 
         nom_joueur = noms.get(user_id) if noms else None
         nom_joueur = nom_joueur or f"Joueur {str(user_id)[-4:]}"
@@ -134,7 +137,7 @@ def construire_embeds_combat(combat_id: int, log_tour: list = None, noms: dict =
             # Émoji de statut à côté du nom (🔥 brûlé, 💤 endormi...)
             statut_actif = database.obtenir_statut(combat_id, user_id, actif_nom)
             emoji_statut = f" {STATUTS_INFO[statut_actif[0]]['emoji']}" if statut_actif and statut_actif[0] in STATUTS_INFO else ""
-            embed.title = f"{actif_nom}{emoji_statut}"
+            embed.title = f"{nom_affiche}{emoji_statut}"
 
             description = (
                 f"{_barre_pv(actif_row['pv_actuels'], actif_row['pv_max'])}\n"
@@ -198,11 +201,17 @@ def stats_combattant_reel(user_id: int, nom: str) -> dict:
     vitesse} pour UN Pokémon possédé par un vrai joueur — IV de sa meilleure capture de
     cette espèce (si disponibles) + son niveau actuel (croît avec l'XP d'équipe). Repli
     sur un profil neutre (IV 15, niveau 50) si les IV ou les vraies stats de l'espèce ne
-    sont pas encore disponibles (avant maj_stats.py / avant cette refonte)."""
+    sont pas encore disponibles (avant maj_stats.py / avant cette refonte).
+
+    Si ce Pokémon tient un objet de transformation (Fleur Gracidea, Orbe Griséous...),
+    les stats de SA FORME ALTERNATIVE sont utilisées à la place — voir formes_objets.py.
+    Le PC affiché au joueur, lui, ne change jamais (uniquement les stats de combat)."""
     pokemon = obtenir_pokemon_par_nom(nom)
+    objet_tenu = database.obtenir_objet_tenu_reel(user_id, nom)
+    pokemon_pour_calcul = formes_objets_module.pokemon_effectif(pokemon, objet_tenu)
     ivs = database.obtenir_meilleures_ivs(user_id, nom) or IV_DEFAUT
     niveau, _xp = database.obtenir_niveau_pokemon(user_id, nom)
-    stats = calculer_toutes_stats(pokemon, ivs, niveau) if pokemon else None
+    stats = calculer_toutes_stats(pokemon_pour_calcul, ivs, niveau) if pokemon_pour_calcul else None
     if not stats:
         stats = {"pv": 120, "attaque": 60, "defense": 60, "attaque_spe": 60, "defense_spe": 60, "vitesse": 60}
     return {"nom": nom, "niveau": niveau, **stats}
@@ -307,7 +316,9 @@ def _appliquer_hazards_entree(combat_id: int, user_id: int, pokemon_nom: str, lo
     if row is None or row["pv_actuels"] <= 0:
         return
 
-    pokemon = obtenir_pokemon_par_nom(pokemon_nom)
+    pokemon = formes_objets_module.pokemon_effectif(
+        obtenir_pokemon_par_nom(pokemon_nom), database.obtenir_objet_combat(combat_id, user_id, pokemon_nom)
+    )
     types_pokemon = pokemon["types"] if pokemon else ["normal"]
 
     if "stealth_rock" in hazards:
@@ -557,8 +568,12 @@ async def resoudre_tour(combat_id: int) -> list:
 
         if attaque.get("puissance"):
             # --- Attaque offensive ---
-            pok_atk = obtenir_pokemon_par_nom(nom_atk)
-            pok_def = obtenir_pokemon_par_nom(nom_def)
+            pok_atk = formes_objets_module.pokemon_effectif(
+                obtenir_pokemon_par_nom(nom_atk), database.obtenir_objet_combat(combat_id, user_id, nom_atk)
+            )
+            pok_def = formes_objets_module.pokemon_effectif(
+                obtenir_pokemon_par_nom(nom_def), database.obtenir_objet_combat(combat_id, adversaire_id, nom_def)
+            )
             types_atk_pokemon = pok_atk["types"] if pok_atk else ["normal"]
             types_def = pok_def["types"] if pok_def else ["normal"]
 

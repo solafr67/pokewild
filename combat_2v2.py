@@ -26,6 +26,7 @@ import discord
 
 import config
 import capacites as capacites_module
+import formes_objets as formes_objets_module
 import database
 import journal
 import leveling
@@ -684,8 +685,12 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
 
         if attaque.get("puissance"):
             # --- Attaque offensive (formule identique au 1v1) ---
-            pok_atk = obtenir_pokemon_par_nom(nom_atk)
-            pok_def = obtenir_pokemon_par_nom(nom_def)
+            pok_atk = formes_objets_module.pokemon_effectif(
+                obtenir_pokemon_par_nom(nom_atk), database.obtenir_objet_combat(combat_id, user_id, nom_atk)
+            )
+            pok_def = formes_objets_module.pokemon_effectif(
+                obtenir_pokemon_par_nom(nom_def), database.obtenir_objet_combat(combat_id, adversaire_id, nom_def)
+            )
             types_atk_pokemon = pok_atk["types"] if pok_atk else ["normal"]
             types_def = pok_def["types"] if pok_def else ["normal"]
 

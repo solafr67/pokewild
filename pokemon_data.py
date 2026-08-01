@@ -152,10 +152,17 @@ def sprite_pokemon(pokemon: dict, shiny: bool = False) -> str | None:
     explicitement False (renseigné par verifier_sprites_disponibles.py) — certaines
     espèces très récentes (DLC) n'ont pas encore de sprite animé Showdown du tout, peu
     importe la correction. Absent (script pas encore lancé) = on suppose le GIF
-    disponible, comportement inchangé."""
+    disponible, comportement inchangé.
+
+    `numero_sprite`, si présent, prend le pas sur `numero` pour la recherche du fichier —
+    utilisé par les formes régionales (Alola/Galar/Hisui...) : `numero` reste le numéro de
+    Pokédex NATIONAL partagé avec l'espèce de base (pour le tri/regroupement), alors que
+    `numero_sprite` est le vrai identifiant PokéAPI propre à cette forme précise (ex:
+    10100 pour Raichu d'Alola, quand Raichu normal est 26) — sans cette distinction, les
+    deux formes afficheraient le même sprite."""
     if not pokemon:
         return None
-    numero = pokemon.get("numero")
+    numero = pokemon.get("numero_sprite") or pokemon.get("numero")
     if not numero:
         return pokemon.get("sprite_shiny") if shiny else pokemon.get("sprite")
 

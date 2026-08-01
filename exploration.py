@@ -5,6 +5,7 @@ import discord
 
 import config
 import database
+import formes_objets as formes_objets_module
 import leveling
 import quetes_ui
 import races
@@ -13,6 +14,11 @@ from pokemon_data import EMOJI_OBJETS_DIVERS, EMOJI_POKEDOLLAR, NOM_OBJETS_DIVER
 
 EMOJI_CRISTAL = "🔮"
 NOM_CRISTAL = "Cristal de Mutation"
+
+
+def _tirer_objet_forme_aleatoire() -> str:
+    """Un objet de transformation au hasard parmi ceux existants (voir formes_objets.py)."""
+    return random.choice(list(formes_objets_module.FORMES_OBJETS.keys()))
 
 
 def construire_embed_centre() -> discord.Embed:
@@ -334,7 +340,15 @@ def _calculer_recompense(pc_total: int, duree_label: str) -> dict:
     conf_oeuf = config.EXPLORATION_CHANCE_OEUF[duree_label]
     chance_oeuf = min(conf_oeuf["max"], conf_oeuf["base"] + conf_oeuf["bonus_max"] * ratio_puissance)
 
-    return {"dollars": dollars, "xp": xp, "chance_cristal": chance_cristal, "chance_oeuf": chance_oeuf}
+    conf_objet_forme = config.EXPLORATION_CHANCE_OBJET_FORME[duree_label]
+    chance_objet_forme = min(
+        conf_objet_forme["max"], conf_objet_forme["base"] + conf_objet_forme["bonus_max"] * ratio_puissance
+    )
+
+    return {
+        "dollars": dollars, "xp": xp, "chance_cristal": chance_cristal, "chance_oeuf": chance_oeuf,
+        "chance_objet_forme": chance_objet_forme,
+    }
 
 
 def _tirer_palier_oeuf() -> str:
@@ -364,6 +378,7 @@ def recuperer_toutes_recompenses_pretes(user_id: int) -> discord.Embed:
     total_xp = 0
     total_cristaux = 0
     total_oeufs = []
+    total_objets_forme = []
     lignes_details = []
     toutes_quetes_completees = []
 
@@ -392,6 +407,11 @@ def recuperer_toutes_recompenses_pretes(user_id: int) -> discord.Embed:
             database.ajouter_balls(user_id, f"oeuf_{palier_oeuf}", 1)
             total_oeufs.append(palier_oeuf)
 
+        if random.random() < recompense["chance_objet_forme"]:
+            objet_forme = _tirer_objet_forme_aleatoire()
+            database.ajouter_balls(user_id, objet_forme, 1)
+            total_objets_forme.append(objet_forme)
+
         database.terminer_exploration(user_id, row["slot"])
         database.incrementer_explorations_terminees(user_id)
         quetes_completees = database.incrementer_progression_quete(user_id, "exploration_collectee")
@@ -411,6 +431,9 @@ def recuperer_toutes_recompenses_pretes(user_id: int) -> discord.Embed:
         description += f"\n{EMOJI_CRISTAL} **+{total_cristaux}** {NOM_CRISTAL}(s) !"
     for palier_oeuf in total_oeufs:
         description += f"\n{EMOJI_OBJETS_DIVERS[f'oeuf_{palier_oeuf}']} **+1** {NOM_OBJETS_DIVERS[f'oeuf_{palier_oeuf}']} !"
+    for objet_forme in total_objets_forme:
+        info = formes_objets_module.FORMES_OBJETS[objet_forme]
+        description += f"\n{info['objet_emoji']} **+1** {info['objet_nom']} — objet rarissime ! ({info['espece']} uniquement)"
     description += quetes_ui.texte_notifications_completion(toutes_quetes_completees)
 
     return discord.Embed(
@@ -459,6 +482,11 @@ def recuperer_recompense(user_id: int, slot: int) -> discord.Embed:
         palier_oeuf = _tirer_palier_oeuf()
         database.ajouter_balls(user_id, f"oeuf_{palier_oeuf}", 1)
 
+    objet_forme_obtenu = None
+    if random.random() < recompense["chance_objet_forme"]:
+        objet_forme_obtenu = _tirer_objet_forme_aleatoire()
+        database.ajouter_balls(user_id, objet_forme_obtenu, 1)
+
     database.terminer_exploration(user_id, slot)
     database.incrementer_explorations_terminees(user_id)
     quetes_completees = database.incrementer_progression_quete(user_id, "exploration_collectee")
@@ -472,6 +500,9 @@ def recuperer_recompense(user_id: int, slot: int) -> discord.Embed:
         description += f"\n{EMOJI_CRISTAL} +1 **{NOM_CRISTAL}** !"
     if palier_oeuf:
         description += f"\n{EMOJI_OBJETS_DIVERS[f'oeuf_{palier_oeuf}']} +1 **{NOM_OBJETS_DIVERS[f'oeuf_{palier_oeuf}']}** !"
+    if objet_forme_obtenu:
+        info = formes_objets_module.FORMES_OBJETS[objet_forme_obtenu]
+        description += f"\n{info['objet_emoji']} +1 **{info['objet_nom']}** — objet rarissime ! ({info['espece']} uniquement)"
     description += quetes_ui.texte_notifications_completion(quetes_completees)
 
     return discord.Embed(title="🎁 Retour d'exploration", description=description, color=discord.Color.gold())
