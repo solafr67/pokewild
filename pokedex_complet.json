@@ -124477,5 +124477,1527 @@
       "Chaîne Malsaine": 48
     },
     "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Rattata d'Alola",
+    "numero": 19,
+    "numero_sprite": 10091,
+    "types": [
+      "tenebres",
+      "normal"
+    ],
+    "rarete": "commun",
+    "generation": 7,
+    "base_pc": 253,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 30,
+      "attaque": 56,
+      "defense": 35,
+      "attaque_spe": 25,
+      "defense_spe": 35,
+      "vitesse": 72
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Rattatac d'Alola",
+    "numero": 20,
+    "numero_sprite": 10092,
+    "types": [
+      "tenebres",
+      "normal"
+    ],
+    "rarete": "peu_commun",
+    "generation": 7,
+    "base_pc": 413,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 75,
+      "attaque": 71,
+      "defense": 70,
+      "attaque_spe": 40,
+      "defense_spe": 80,
+      "vitesse": 77
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Raichu d'Alola",
+    "numero": 26,
+    "numero_sprite": 10100,
+    "types": [
+      "electrik",
+      "psy"
+    ],
+    "rarete": "peu_commun",
+    "generation": 7,
+    "base_pc": 485,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 60,
+      "attaque": 85,
+      "defense": 50,
+      "attaque_spe": 95,
+      "defense_spe": 85,
+      "vitesse": 110
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Sabelette d'Alola",
+    "numero": 27,
+    "numero_sprite": 10101,
+    "types": [
+      "glace",
+      "acier"
+    ],
+    "rarete": "commun",
+    "generation": 7,
+    "base_pc": 300,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 50,
+      "attaque": 75,
+      "defense": 90,
+      "attaque_spe": 10,
+      "defense_spe": 35,
+      "vitesse": 40
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Sablaireau d'Alola",
+    "numero": 28,
+    "numero_sprite": 10102,
+    "types": [
+      "glace",
+      "acier"
+    ],
+    "rarete": "peu_commun",
+    "generation": 7,
+    "base_pc": 450,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 75,
+      "attaque": 100,
+      "defense": 120,
+      "attaque_spe": 25,
+      "defense_spe": 65,
+      "vitesse": 65
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Goupix d'Alola",
+    "numero": 37,
+    "numero_sprite": 10103,
+    "types": [
+      "glace"
+    ],
+    "rarete": "commun",
+    "generation": 7,
+    "base_pc": 299,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 38,
+      "attaque": 41,
+      "defense": 40,
+      "attaque_spe": 50,
+      "defense_spe": 65,
+      "vitesse": 65
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Feunard d'Alola",
+    "numero": 38,
+    "numero_sprite": 10104,
+    "types": [
+      "glace",
+      "fee"
+    ],
+    "rarete": "rare",
+    "generation": 7,
+    "base_pc": 505,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 73,
+      "attaque": 67,
+      "defense": 75,
+      "attaque_spe": 81,
+      "defense_spe": 100,
+      "vitesse": 109
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Taupiqueur d'Alola",
+    "numero": 50,
+    "numero_sprite": 10105,
+    "types": [
+      "sol",
+      "acier"
+    ],
+    "rarete": "commun",
+    "generation": 7,
+    "base_pc": 265,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 10,
+      "attaque": 55,
+      "defense": 30,
+      "attaque_spe": 35,
+      "defense_spe": 45,
+      "vitesse": 90
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Triopikeur d'Alola",
+    "numero": 51,
+    "numero_sprite": 10106,
+    "types": [
+      "sol",
+      "acier"
+    ],
+    "rarete": "peu_commun",
+    "generation": 7,
+    "base_pc": 425,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 35,
+      "attaque": 100,
+      "defense": 60,
+      "attaque_spe": 50,
+      "defense_spe": 70,
+      "vitesse": 110
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Miaouss d'Alola",
+    "numero": 52,
+    "numero_sprite": 10107,
+    "types": [
+      "tenebres"
+    ],
+    "rarete": "commun",
+    "generation": 7,
+    "base_pc": 290,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 40,
+      "attaque": 35,
+      "defense": 35,
+      "attaque_spe": 50,
+      "defense_spe": 40,
+      "vitesse": 90
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Persian d'Alola",
+    "numero": 53,
+    "numero_sprite": 10108,
+    "types": [
+      "tenebres"
+    ],
+    "rarete": "peu_commun",
+    "generation": 7,
+    "base_pc": 440,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 65,
+      "attaque": 60,
+      "defense": 60,
+      "attaque_spe": 75,
+      "defense_spe": 65,
+      "vitesse": 115
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Racaillou d'Alola",
+    "numero": 74,
+    "numero_sprite": 10109,
+    "types": [
+      "roche",
+      "electrik"
+    ],
+    "rarete": "commun",
+    "generation": 7,
+    "base_pc": 355,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 40,
+      "attaque": 60,
+      "defense": 90,
+      "attaque_spe": 55,
+      "defense_spe": 65,
+      "vitesse": 45
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Gravalanch d'Alola",
+    "numero": 75,
+    "numero_sprite": 10110,
+    "types": [
+      "roche",
+      "electrik"
+    ],
+    "rarete": "peu_commun",
+    "generation": 7,
+    "base_pc": 435,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 55,
+      "attaque": 75,
+      "defense": 110,
+      "attaque_spe": 65,
+      "defense_spe": 85,
+      "vitesse": 45
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Grolem d'Alola",
+    "numero": 76,
+    "numero_sprite": 10111,
+    "types": [
+      "roche",
+      "electrik"
+    ],
+    "rarete": "peu_commun",
+    "generation": 7,
+    "base_pc": 470,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 80,
+      "attaque": 95,
+      "defense": 130,
+      "attaque_spe": 55,
+      "defense_spe": 65,
+      "vitesse": 45
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Grimace d'Alola",
+    "numero": 88,
+    "numero_sprite": 10112,
+    "types": [
+      "poison",
+      "tenebres"
+    ],
+    "rarete": "commun",
+    "generation": 7,
+    "base_pc": 325,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 80,
+      "attaque": 80,
+      "defense": 50,
+      "attaque_spe": 40,
+      "defense_spe": 50,
+      "vitesse": 25
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Tadmorv d'Alola",
+    "numero": 89,
+    "numero_sprite": 10113,
+    "types": [
+      "poison",
+      "tenebres"
+    ],
+    "rarete": "rare",
+    "generation": 7,
+    "base_pc": 500,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 105,
+      "attaque": 105,
+      "defense": 75,
+      "attaque_spe": 65,
+      "defense_spe": 100,
+      "vitesse": 50
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Noadkoko d'Alola",
+    "numero": 103,
+    "numero_sprite": 10114,
+    "types": [
+      "plante",
+      "dragon"
+    ],
+    "rarete": "rare",
+    "generation": 7,
+    "base_pc": 530,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 95,
+      "attaque": 105,
+      "defense": 85,
+      "attaque_spe": 125,
+      "defense_spe": 75,
+      "vitesse": 45
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Ossatueur d'Alola",
+    "numero": 105,
+    "numero_sprite": 10115,
+    "types": [
+      "feu",
+      "spectre"
+    ],
+    "rarete": "peu_commun",
+    "generation": 7,
+    "base_pc": 425,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 60,
+      "attaque": 80,
+      "defense": 110,
+      "attaque_spe": 50,
+      "defense_spe": 80,
+      "vitesse": 45
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Miaouss de Galar",
+    "numero": 52,
+    "numero_sprite": 10161,
+    "types": [
+      "acier"
+    ],
+    "rarete": "commun",
+    "generation": 8,
+    "base_pc": 290,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 50,
+      "attaque": 65,
+      "defense": 55,
+      "attaque_spe": 40,
+      "defense_spe": 40,
+      "vitesse": 40
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Ponyta de Galar",
+    "numero": 77,
+    "numero_sprite": 10162,
+    "types": [
+      "fee"
+    ],
+    "rarete": "commun",
+    "generation": 8,
+    "base_pc": 390,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 50,
+      "attaque": 65,
+      "defense": 55,
+      "attaque_spe": 65,
+      "defense_spe": 65,
+      "vitesse": 90
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Galopa de Galar",
+    "numero": 78,
+    "numero_sprite": 10163,
+    "types": [
+      "fee"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 500,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 65,
+      "attaque": 100,
+      "defense": 70,
+      "attaque_spe": 80,
+      "defense_spe": 80,
+      "vitesse": 105
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Ramoloss de Galar",
+    "numero": 79,
+    "numero_sprite": 10164,
+    "types": [
+      "poison",
+      "psy"
+    ],
+    "rarete": "commun",
+    "generation": 8,
+    "base_pc": 315,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 90,
+      "attaque": 65,
+      "defense": 65,
+      "attaque_spe": 40,
+      "defense_spe": 40,
+      "vitesse": 15
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Flagadoss de Galar",
+    "numero": 80,
+    "numero_sprite": 10165,
+    "types": [
+      "poison",
+      "psy"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 490,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 95,
+      "attaque": 100,
+      "defense": 95,
+      "attaque_spe": 100,
+      "defense_spe": 70,
+      "vitesse": 30
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Canarticho de Galar",
+    "numero": 83,
+    "numero_sprite": 10166,
+    "types": [
+      "normal"
+    ],
+    "rarete": "commun",
+    "generation": 8,
+    "base_pc": 377,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 52,
+      "attaque": 90,
+      "defense": 55,
+      "attaque_spe": 58,
+      "defense_spe": 62,
+      "vitesse": 60
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Smogogo de Galar",
+    "numero": 110,
+    "numero_sprite": 10167,
+    "types": [
+      "poison",
+      "fee"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 490,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 65,
+      "attaque": 90,
+      "defense": 120,
+      "attaque_spe": 85,
+      "defense_spe": 70,
+      "vitesse": 60
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "M. Mime de Galar",
+    "numero": 122,
+    "numero_sprite": 10168,
+    "types": [
+      "glace",
+      "psy"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 460,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 50,
+      "attaque": 65,
+      "defense": 65,
+      "attaque_spe": 90,
+      "defense_spe": 90,
+      "vitesse": 100
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Artikodin de Galar",
+    "numero": 144,
+    "numero_sprite": 10169,
+    "types": [
+      "psy",
+      "vol"
+    ],
+    "rarete": "legendaire",
+    "generation": 8,
+    "base_pc": 580,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 90,
+      "attaque": 85,
+      "defense": 85,
+      "attaque_spe": 125,
+      "defense_spe": 100,
+      "vitesse": 95
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Électhor de Galar",
+    "numero": 145,
+    "numero_sprite": 10170,
+    "types": [
+      "combat",
+      "vol"
+    ],
+    "rarete": "legendaire",
+    "generation": 8,
+    "base_pc": 580,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 90,
+      "attaque": 125,
+      "defense": 90,
+      "attaque_spe": 85,
+      "defense_spe": 90,
+      "vitesse": 100
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Sulfura de Galar",
+    "numero": 146,
+    "numero_sprite": 10171,
+    "types": [
+      "tenebres",
+      "vol"
+    ],
+    "rarete": "legendaire",
+    "generation": 8,
+    "base_pc": 580,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 90,
+      "attaque": 85,
+      "defense": 90,
+      "attaque_spe": 125,
+      "defense_spe": 90,
+      "vitesse": 100
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Roigada de Galar",
+    "numero": 199,
+    "numero_sprite": 10172,
+    "types": [
+      "poison",
+      "psy"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 490,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 95,
+      "attaque": 65,
+      "defense": 80,
+      "attaque_spe": 110,
+      "defense_spe": 110,
+      "vitesse": 30
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Corayon de Galar",
+    "numero": 222,
+    "numero_sprite": 10173,
+    "types": [
+      "fantome"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 410,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 60,
+      "attaque": 55,
+      "defense": 100,
+      "attaque_spe": 65,
+      "defense_spe": 100,
+      "vitesse": 30
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Zigzaton de Galar",
+    "numero": 263,
+    "numero_sprite": 10174,
+    "types": [
+      "tenebres",
+      "normal"
+    ],
+    "rarete": "commun",
+    "generation": 8,
+    "base_pc": 240,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 38,
+      "attaque": 30,
+      "defense": 41,
+      "attaque_spe": 30,
+      "defense_spe": 41,
+      "vitesse": 60
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Linéon de Galar",
+    "numero": 264,
+    "numero_sprite": 10175,
+    "types": [
+      "tenebres",
+      "normal"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 420,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 78,
+      "attaque": 70,
+      "defense": 61,
+      "attaque_spe": 50,
+      "defense_spe": 61,
+      "vitesse": 100
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Darumacho de Galar",
+    "numero": 554,
+    "numero_sprite": 10176,
+    "types": [
+      "glace"
+    ],
+    "rarete": "commun",
+    "generation": 8,
+    "base_pc": 315,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 70,
+      "attaque": 90,
+      "defense": 45,
+      "attaque_spe": 15,
+      "defense_spe": 45,
+      "vitesse": 50
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Ristourbo de Galar",
+    "numero": 555,
+    "numero_sprite": 10177,
+    "types": [
+      "glace"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 440,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 105,
+      "attaque": 140,
+      "defense": 55,
+      "attaque_spe": 30,
+      "defense_spe": 55,
+      "vitesse": 55
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Sacré Griffe",
+    "numero": 863,
+    "numero_sprite": 863,
+    "types": [
+      "acier"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 440,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 70,
+      "attaque": 110,
+      "defense": 100,
+      "attaque_spe": 50,
+      "defense_spe": 60,
+      "vitesse": 50
+    },
+    "sprite_gif_disponible": true
+  },
+  {
+    "nom": "Dosinectar",
+    "numero": 864,
+    "numero_sprite": 864,
+    "types": [
+      "fantome"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 510,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 60,
+      "attaque": 95,
+      "defense": 50,
+      "attaque_spe": 145,
+      "defense_spe": 130,
+      "vitesse": 30
+    },
+    "sprite_gif_disponible": true
+  },
+  {
+    "nom": "Doigrind",
+    "numero": 865,
+    "numero_sprite": 865,
+    "types": [
+      "combat"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 507,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 62,
+      "attaque": 135,
+      "defense": 95,
+      "attaque_spe": 68,
+      "defense_spe": 82,
+      "vitesse": 65
+    },
+    "sprite_gif_disponible": true
+  },
+  {
+    "nom": "M. Glacial",
+    "numero": 866,
+    "numero_sprite": 866,
+    "types": [
+      "glace",
+      "psy"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 520,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 80,
+      "attaque": 85,
+      "defense": 75,
+      "attaque_spe": 110,
+      "defense_spe": 100,
+      "vitesse": 70
+    },
+    "sprite_gif_disponible": true
+  },
+  {
+    "nom": "Caninos d'Hisui",
+    "numero": 58,
+    "numero_sprite": 10229,
+    "types": [
+      "feu",
+      "roche"
+    ],
+    "rarete": "commun",
+    "generation": 8,
+    "base_pc": 350,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 60,
+      "attaque": 75,
+      "defense": 45,
+      "attaque_spe": 65,
+      "defense_spe": 50,
+      "vitesse": 55
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Arcanin d'Hisui",
+    "numero": 59,
+    "numero_sprite": 10230,
+    "types": [
+      "feu",
+      "roche"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 555,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 90,
+      "attaque": 115,
+      "defense": 80,
+      "attaque_spe": 95,
+      "defense_spe": 80,
+      "vitesse": 95
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Voltorbe d'Hisui",
+    "numero": 100,
+    "numero_sprite": 10231,
+    "types": [
+      "plante",
+      "electrik"
+    ],
+    "rarete": "commun",
+    "generation": 8,
+    "base_pc": 330,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 40,
+      "attaque": 30,
+      "defense": 50,
+      "attaque_spe": 55,
+      "defense_spe": 55,
+      "vitesse": 100
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Électrode d'Hisui",
+    "numero": 101,
+    "numero_sprite": 10232,
+    "types": [
+      "plante",
+      "electrik"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 490,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 60,
+      "attaque": 50,
+      "defense": 70,
+      "attaque_spe": 80,
+      "defense_spe": 80,
+      "vitesse": 150
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Typhlosion d'Hisui",
+    "numero": 157,
+    "numero_sprite": 10233,
+    "types": [
+      "feu",
+      "fantome"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 529,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 73,
+      "attaque": 84,
+      "defense": 78,
+      "attaque_spe": 109,
+      "defense_spe": 85,
+      "vitesse": 100
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Qwilfish d'Hisui",
+    "numero": 211,
+    "numero_sprite": 10234,
+    "types": [
+      "tenebres",
+      "poison"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 430,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 65,
+      "attaque": 95,
+      "defense": 75,
+      "attaque_spe": 55,
+      "defense_spe": 55,
+      "vitesse": 85
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Farfuret d'Hisui",
+    "numero": 215,
+    "numero_sprite": 10235,
+    "types": [
+      "combat",
+      "poison"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 430,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 55,
+      "attaque": 95,
+      "defense": 55,
+      "attaque_spe": 35,
+      "defense_spe": 75,
+      "vitesse": 115
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Clamiral d'Hisui",
+    "numero": 503,
+    "numero_sprite": 10236,
+    "types": [
+      "tenebres",
+      "eau"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 528,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 90,
+      "attaque": 108,
+      "defense": 80,
+      "attaque_spe": 100,
+      "defense_spe": 65,
+      "vitesse": 85
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Blancoton d'Hisui",
+    "numero": 549,
+    "numero_sprite": 10237,
+    "types": [
+      "plante",
+      "combat"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 480,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 70,
+      "attaque": 105,
+      "defense": 75,
+      "attaque_spe": 50,
+      "defense_spe": 75,
+      "vitesse": 105
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Zorua d'Hisui",
+    "numero": 570,
+    "numero_sprite": 10238,
+    "types": [
+      "normal",
+      "fantome"
+    ],
+    "rarete": "commun",
+    "generation": 8,
+    "base_pc": 280,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 35,
+      "attaque": 60,
+      "defense": 40,
+      "attaque_spe": 40,
+      "defense_spe": 40,
+      "vitesse": 65
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Zoroark d'Hisui",
+    "numero": 571,
+    "numero_sprite": 10239,
+    "types": [
+      "normal",
+      "fantome"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 465,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 55,
+      "attaque": 100,
+      "defense": 60,
+      "attaque_spe": 85,
+      "defense_spe": 60,
+      "vitesse": 105
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Gueriaigle d'Hisui",
+    "numero": 628,
+    "numero_sprite": 10240,
+    "types": [
+      "psy",
+      "vol"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 535,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 110,
+      "attaque": 83,
+      "defense": 70,
+      "attaque_spe": 112,
+      "defense_spe": 70,
+      "vitesse": 90
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Mucuscule d'Hisui",
+    "numero": 705,
+    "numero_sprite": 10241,
+    "types": [
+      "acier",
+      "dragon"
+    ],
+    "rarete": "peu_commun",
+    "generation": 8,
+    "base_pc": 472,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 58,
+      "attaque": 75,
+      "defense": 83,
+      "attaque_spe": 83,
+      "defense_spe": 113,
+      "vitesse": 60
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Muplodocus d'Hisui",
+    "numero": 706,
+    "numero_sprite": 10242,
+    "types": [
+      "acier",
+      "dragon"
+    ],
+    "rarete": "hyper_rare",
+    "generation": 8,
+    "base_pc": 610,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 80,
+      "attaque": 100,
+      "defense": 100,
+      "attaque_spe": 100,
+      "defense_spe": 150,
+      "vitesse": 80
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Séracrawl d'Hisui",
+    "numero": 713,
+    "numero_sprite": 10243,
+    "types": [
+      "glace",
+      "roche"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 524,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 95,
+      "attaque": 127,
+      "defense": 184,
+      "attaque_spe": 44,
+      "defense_spe": 46,
+      "vitesse": 28
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Archéduc d'Hisui",
+    "numero": 724,
+    "numero_sprite": 10244,
+    "types": [
+      "plante",
+      "combat"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 530,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 78,
+      "attaque": 107,
+      "defense": 75,
+      "attaque_spe": 100,
+      "defense_spe": 100,
+      "vitesse": 70
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Wyrdeer",
+    "numero": 899,
+    "numero_sprite": 899,
+    "types": [
+      "normal",
+      "psy"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 525,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 103,
+      "attaque": 105,
+      "defense": 72,
+      "attaque_spe": 105,
+      "defense_spe": 75,
+      "vitesse": 65
+    },
+    "sprite_gif_disponible": true
+  },
+  {
+    "nom": "Kleavor",
+    "numero": 900,
+    "numero_sprite": 900,
+    "types": [
+      "insecte",
+      "roche"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 500,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 70,
+      "attaque": 135,
+      "defense": 95,
+      "attaque_spe": 45,
+      "defense_spe": 70,
+      "vitesse": 85
+    },
+    "sprite_gif_disponible": true
+  },
+  {
+    "nom": "Ursaluna",
+    "numero": 901,
+    "numero_sprite": 901,
+    "types": [
+      "sol",
+      "normal"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 550,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 130,
+      "attaque": 140,
+      "defense": 105,
+      "attaque_spe": 45,
+      "defense_spe": 80,
+      "vitesse": 50
+    },
+    "sprite_gif_disponible": true
+  },
+  {
+    "nom": "Sneasler",
+    "numero": 903,
+    "numero_sprite": 903,
+    "types": [
+      "combat",
+      "poison"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 510,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 80,
+      "attaque": 130,
+      "defense": 60,
+      "attaque_spe": 40,
+      "defense_spe": 80,
+      "vitesse": 120
+    },
+    "sprite_gif_disponible": true
+  },
+  {
+    "nom": "Overqwil",
+    "numero": 904,
+    "numero_sprite": 904,
+    "types": [
+      "tenebres",
+      "poison"
+    ],
+    "rarete": "rare",
+    "generation": 8,
+    "base_pc": 510,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 85,
+      "attaque": 115,
+      "defense": 95,
+      "attaque_spe": 65,
+      "defense_spe": 65,
+      "vitesse": 85
+    },
+    "sprite_gif_disponible": true
+  },
+  {
+    "nom": "Ouaporo de Paldea",
+    "numero": 194,
+    "numero_sprite": 10253,
+    "types": [
+      "poison",
+      "sol"
+    ],
+    "rarete": "commun",
+    "generation": 9,
+    "base_pc": 210,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 55,
+      "attaque": 45,
+      "defense": 45,
+      "attaque_spe": 25,
+      "defense_spe": 25,
+      "vitesse": 15
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Tauros de Paldea (Combat)",
+    "numero": 128,
+    "numero_sprite": 10250,
+    "types": [
+      "combat"
+    ],
+    "rarete": "peu_commun",
+    "generation": 9,
+    "base_pc": 490,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 75,
+      "attaque": 110,
+      "defense": 105,
+      "attaque_spe": 30,
+      "defense_spe": 70,
+      "vitesse": 100
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Tauros de Paldea (Flamme)",
+    "numero": 128,
+    "numero_sprite": 10251,
+    "types": [
+      "combat",
+      "feu"
+    ],
+    "rarete": "peu_commun",
+    "generation": 9,
+    "base_pc": 490,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 75,
+      "attaque": 110,
+      "defense": 105,
+      "attaque_spe": 30,
+      "defense_spe": 70,
+      "vitesse": 100
+    },
+    "sprite_gif_disponible": false
+  },
+  {
+    "nom": "Tauros de Paldea (Aqua)",
+    "numero": 128,
+    "numero_sprite": 10252,
+    "types": [
+      "combat",
+      "eau"
+    ],
+    "rarete": "peu_commun",
+    "generation": 9,
+    "base_pc": 490,
+    "sprite": null,
+    "attaques": [],
+    "movepool_niveaux": {},
+    "stats_detaillees": {
+      "pv": 75,
+      "attaque": 110,
+      "defense": 105,
+      "attaque_spe": 30,
+      "defense_spe": 70,
+      "vitesse": 100
+    },
+    "sprite_gif_disponible": false
   }
 ]
