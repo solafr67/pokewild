@@ -79,6 +79,7 @@ from profil import (
 )
 import pokedex as pokedex_module
 import capacites as capacites_module
+import formes_objets as formes_objets_module
 import equipe_combat as equipe_combat_module
 from views import VueSpawn, construire_embed_spawn
 
@@ -2276,6 +2277,10 @@ async def setup_pokestop(interaction: discord.Interaction):
         app_commands.Choice(name="Œuf Rare", value="oeuf_rare"),
         app_commands.Choice(name="Œuf Hyper Rare", value="oeuf_hyper_rare"),
         app_commands.Choice(name="Œuf Légendaire", value="oeuf_legendaire"),
+        app_commands.Choice(name="🌸 Fleur Gracidea (Shaymin)", value="fleur_gracidea"),
+        app_commands.Choice(name="🔮 Orbe Griséous (Giratina)", value="orbe_griseous"),
+        app_commands.Choice(name="💎 Orbe Adamant (Dialga)", value="orbe_adamant"),
+        app_commands.Choice(name="💠 Perle Lustrée (Palkia)", value="perle_lustree"),
     ]
 )
 async def give_objet(
@@ -2284,8 +2289,14 @@ async def give_objet(
     objet: app_commands.Choice[str],
     quantite: int,
 ):
-    noms_objets = {**NOM_BALL_AFFICHAGE, **NOM_SOIN_AFFICHAGE, **NOM_OBJETS_DIVERS}
-    emojis_objets = {**EMOJI_BALLS, **EMOJI_SOINS, **EMOJI_OBJETS_DIVERS}
+    noms_objets = {
+        **NOM_BALL_AFFICHAGE, **NOM_SOIN_AFFICHAGE, **NOM_OBJETS_DIVERS,
+        **{cle: info["objet_nom"] for cle, info in formes_objets_module.FORMES_OBJETS.items()},
+    }
+    emojis_objets = {
+        **EMOJI_BALLS, **EMOJI_SOINS, **EMOJI_OBJETS_DIVERS,
+        **{cle: info["objet_emoji"] for cle, info in formes_objets_module.FORMES_OBJETS.items()},
+    }
     database.ajouter_balls(membre.id, objet.value, quantite)
     journal.logger(f"🛠️ <@{interaction.user.id}> a donné {quantite}× {objet.value} à <@{membre.id}> (/give-objet).")
     await interaction.response.send_message(
