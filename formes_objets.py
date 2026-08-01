@@ -34,6 +34,7 @@ FORMES_OBJETS = {
         "espece": "Shaymin",
         "forme_nom": "Shaymin (Forme Céleste)",
         "numero_sprite": 10006,
+        "sprite_gif_disponible": False,  # forme trop rare pour un GIF Showdown fiable — repli sur l'artwork officiel statique, garanti disponible
         "types": ["plante", "vol"],
         "stats_detaillees": {"pv": 100, "attaque": 103, "defense": 75, "attaque_spe": 120, "defense_spe": 75, "vitesse": 127},
     },
@@ -43,6 +44,7 @@ FORMES_OBJETS = {
         "espece": "Giratina",
         "forme_nom": "Giratina (Origine)",
         "numero_sprite": 10007,
+        "sprite_gif_disponible": False,
         "types": ["spectre", "dragon"],
         "stats_detaillees": {"pv": 150, "attaque": 120, "defense": 100, "attaque_spe": 120, "defense_spe": 100, "vitesse": 90},
     },
@@ -52,6 +54,7 @@ FORMES_OBJETS = {
         "espece": "Dialga",
         "forme_nom": "Dialga (Origine)",
         "numero_sprite": 10245,
+        "sprite_gif_disponible": False,
         "types": ["acier", "dragon"],
         "stats_detaillees": {"pv": 100, "attaque": 100, "defense": 100, "attaque_spe": 150, "defense_spe": 120, "vitesse": 110},
     },
@@ -61,6 +64,7 @@ FORMES_OBJETS = {
         "espece": "Palkia",
         "forme_nom": "Palkia (Origine)",
         "numero_sprite": 10246,
+        "sprite_gif_disponible": False,
         "types": ["eau", "dragon"],
         "stats_detaillees": {"pv": 90, "attaque": 100, "defense": 100, "attaque_spe": 150, "defense_spe": 120, "vitesse": 120},
     },
@@ -98,6 +102,7 @@ def pokemon_effectif(pokemon: dict, objet_tenu: str | None) -> dict:
         "types": forme["types"],
         "stats_detaillees": forme["stats_detaillees"],
         "numero_sprite": forme["numero_sprite"],
+        "sprite_gif_disponible": forme["sprite_gif_disponible"],
     }
 
 
