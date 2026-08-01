@@ -1,6 +1,7 @@
 import discord
 
 import capacites as capacites_module
+import formes_objets as formes_objets_module
 import database
 from pokemon_data import (
     ATTAQUES,
@@ -59,8 +60,9 @@ def construire_embed_maitre() -> discord.Embed:
             "une fois à ma boutique, elle est à toi pour toujours, utilisable sur "
             "n'importe lequel de tes Pokémon, autant de fois que tu veux. Choisis bien : "
             "chaque Pokémon ne peut retenir que 4 attaques à la fois. »*\n\n"
-            "Clique sur **Gérer les attaques** pour ton équipe de combat, ou **Boutique CT** "
-            "pour acheter de nouvelles attaques."
+            "Clique sur **Gérer les attaques** pour ton équipe de combat, **Boutique CT** "
+            "pour acheter de nouvelles attaques, ou **Objets tenus** pour équiper un objet "
+            "de combat (achetable en boutique, onglet 🎒 Objets)."
         ),
         color=discord.Color.purple(),
     )
@@ -168,7 +170,13 @@ class VueChoixPokemonObjet(discord.ui.View):
         for nom in noms_equipe[:25]:
             objet_actuel = database.obtenir_objet_tenu_reel(user_id, nom)
             info_objet = capacites_module.infos_objet(objet_actuel) if objet_actuel else None
-            description = f"Tient : {info_objet['nom']}" if info_objet else "Ne tient rien"
+            info_forme = formes_objets_module.FORMES_OBJETS.get(objet_actuel) if objet_actuel else None
+            if info_objet:
+                description = f"Tient : {info_objet['nom']}"
+            elif info_forme:
+                description = f"Tient : {info_forme['objet_nom']}"
+            else:
+                description = "Ne tient rien"
             options.append(discord.SelectOption(label=nom, value=nom, description=description))
         select = discord.ui.Select(placeholder="Choisis un Pokémon de ton équipe...", options=options)
         select.callback = self._on_select
@@ -196,12 +204,19 @@ class VueGestionObjet(discord.ui.View):
     def construire_embed(self) -> discord.Embed:
         objet_actuel = database.obtenir_objet_tenu_reel(self.user_id, self.pokemon_nom)
         info_objet = capacites_module.infos_objet(objet_actuel) if objet_actuel else None
+        info_forme = formes_objets_module.FORMES_OBJETS.get(objet_actuel) if objet_actuel else None
+        if info_objet:
+            texte_tenu = f"Tient actuellement : {info_objet['emoji']} **{info_objet['nom']}** — {info_objet['description']}"
+        elif info_forme:
+            texte_tenu = (
+                f"Tient actuellement : {info_forme['objet_emoji']} **{info_forme['objet_nom']}** — "
+                f"*{info_forme['forme_nom']}* active tant qu'il le tient !"
+            )
+        else:
+            texte_tenu = "Ne tient actuellement aucun objet."
         embed = discord.Embed(
             title=f"🎒 Objet tenu — {self.pokemon_nom}",
-            description=(
-                f"Tient actuellement : {info_objet['emoji']} **{info_objet['nom']}** — {info_objet['description']}"
-                if info_objet else "Ne tient actuellement aucun objet."
-            ),
+            description=texte_tenu,
             color=discord.Color.purple(),
         )
         embed.set_footer(text="Choisis un objet de ton sac ci-dessous, ou clique Retirer.")
@@ -210,8 +225,18 @@ class VueGestionObjet(discord.ui.View):
     def _construire_composants(self):
         self.clear_items()
         inventaire = database.obtenir_inventaire_balls(self.user_id)
+        # Deux familles d'objets équipables : les objets de combat classiques
+        # (capacites.OBJETS_TENUS) et les objets de transformation (Fleur Gracidea...,
+        # voir formes_objets.py) — les seconds n'étaient pas proposés ici avant, alors
+        # qu'ils sont bien équipables comme n'importe quel autre objet tenu.
+        toutes_les_infos = {
+            **capacites_module.OBJETS_TENUS,
+            **{cle: {"nom": info["objet_nom"], "emoji": info["objet_emoji"],
+                     "description": f"Transforme {info['espece']} en {info['forme_nom']} tant qu'il le tient."}
+               for cle, info in formes_objets_module.FORMES_OBJETS.items()},
+        }
         options = []
-        for cle, info in capacites_module.OBJETS_TENUS.items():
+        for cle, info in toutes_les_infos.items():
             quantite = inventaire.get(cle, 0)
             if quantite <= 0:
                 continue  # pas dans le sac, inutile de le proposer ici (voir la boutique pour en acheter)

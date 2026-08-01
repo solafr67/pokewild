@@ -2039,7 +2039,30 @@ async def pokedex_info(interaction: discord.Interaction, nom: str, membre: disco
 _CHOIX_OBJETS_TENUS = [
     app_commands.Choice(name=f"{info['nom']} — {info['description']}"[:100], value=cle)
     for cle, info in capacites_module.OBJETS_TENUS.items()
+] + [
+    app_commands.Choice(
+        name=f"{info['objet_nom']} — Transforme {info['espece']} en {info['forme_nom']}"[:100], value=cle
+    )
+    for cle, info in formes_objets_module.FORMES_OBJETS.items()
 ]
+
+
+def _infos_objet_tenu_ou_forme(cle: str) -> dict | None:
+    """Cherche une clé d'objet dans les 2 familles équipables : objets de combat
+    classiques (capacites.OBJETS_TENUS) et objets de transformation (formes_objets.py) —
+    ce sont deux dicts séparés avec des noms de champs légèrement différents, uniformisés
+    ici en {emoji, nom, description}."""
+    info_combat = capacites_module.infos_objet(cle)
+    if info_combat:
+        return info_combat
+    info_forme = formes_objets_module.FORMES_OBJETS.get(cle)
+    if info_forme:
+        return {
+            "emoji": info_forme["objet_emoji"],
+            "nom": info_forme["objet_nom"],
+            "description": f"Transforme {info_forme['espece']} en {info_forme['forme_nom']} tant qu'il le tient.",
+        }
+    return None
 
 
 @bot.tree.command(name="equiper-objet", description="Équipe (ou retire) l'objet tenu d'un de tes Pokémon pour le combat")
@@ -2072,9 +2095,10 @@ async def equiper_objet(interaction: discord.Interaction, pokemon: str, objet: a
 
     inventaire = database.obtenir_inventaire_balls(interaction.user.id)
     if inventaire.get(objet.value, 0) < 1:
-        info_manquant = capacites_module.infos_objet(objet.value)
+        info_manquant = _infos_objet_tenu_ou_forme(objet.value)
         await interaction.response.send_message(
-            f"❌ Tu n'as aucun(e) **{info_manquant['nom']}** dans ton sac — achète-le en boutique (onglet 🎒 Objets).",
+            f"❌ Tu n'as aucun(e) **{info_manquant['nom']}** dans ton sac — achète-le en boutique (onglet 🎒 Objets) "
+            f"ou trouve-le en jeu si c'est un objet rarissime.",
             ephemeral=True,
         )
         return
@@ -2083,7 +2107,7 @@ async def equiper_objet(interaction: discord.Interaction, pokemon: str, objet: a
     if ancien_objet:
         database.ajouter_balls(interaction.user.id, ancien_objet, 1)  # l'objet précédent revient au sac, jamais perdu
 
-    info_objet = capacites_module.infos_objet(objet.value)
+    info_objet = _infos_objet_tenu_ou_forme(objet.value)
     database.definir_objet_tenu_reel(interaction.user.id, pokemon_info["nom"], objet.value)
     await interaction.response.send_message(
         f"✅ **{pokemon_info['nom']}** tient maintenant {info_objet['emoji']} **{info_objet['nom']}** — {info_objet['description']}",
