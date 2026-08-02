@@ -29,9 +29,9 @@ numero_sprite). Étapes complètes :
 
 Portée : les 18 formes d'Alola + les 17 formes de Galar (dont les 3 oiseaux légendaires) +
 les 6 espèces qui évoluent EXCLUSIVEMENT depuis une forme de Galar (Ixon, Sacré Griffe,
-Dosinectar, Doigrind, M. Glacial, Trépassable) + les 16 formes d'Hisui (Légendes Arceus) +
+Dosinectar, Doigrind, M. Glaquette, Trépassable) + les 16 formes d'Hisui (Légendes Arceus) +
 les 6 espèces qui évoluent exclusivement depuis une forme d'Hisui (Wyrdeer, Kleavor,
-Ursaluna, Bargantua, Sneasler, Overqwil) + les 4 formes de Paldea (Ouaporo de Paldea, et
+Ursaluna, Bargantua, Sneasler, Overqwil) + les 4 formes de Paldea (Axoloto de Paldea, et
 les 3 races de Tauros de Paldea : Combat/Flamme/Aqua). 87 espèces au total.
 
 Relançable sans risque : un Pokémon dont le NOM existe déjà dans pokedex_complet.json
@@ -58,8 +58,8 @@ FORMES_ALOLA = [
     ("Racaillou d'Alola", 74, 10109, ['roche', 'electrik'], (40, 60, 90, 55, 65, 45), 7, False),
     ("Gravalanch d'Alola", 75, 10110, ['roche', 'electrik'], (55, 75, 110, 65, 85, 45), 7, False),
     ("Grolem d'Alola", 76, 10111, ['roche', 'electrik'], (80, 95, 130, 55, 65, 45), 7, False),
-    ("Grimace d'Alola", 88, 10112, ['poison', 'tenebres'], (80, 80, 50, 40, 50, 25), 7, False),
-    ("Tadmorv d'Alola", 89, 10113, ['poison', 'tenebres'], (105, 105, 75, 65, 100, 50), 7, False),
+    ("Tadmorv d'Alola", 88, 10112, ['poison', 'tenebres'], (80, 80, 50, 40, 50, 25), 7, False),
+    ("Grotadmorv d'Alola", 89, 10113, ['poison', 'tenebres'], (105, 105, 75, 65, 100, 50), 7, False),
     ("Noadkoko d'Alola", 103, 10114, ['plante', 'dragon'], (95, 105, 85, 125, 75, 45), 7, False),
     ("Ossatueur d'Alola", 105, 10115, ['feu', 'spectre'], (60, 80, 110, 50, 80, 45), 7, False),
 ]
@@ -80,8 +80,8 @@ FORMES_GALAR = [
     ("Corayon de Galar", 222, 10173, ['fantome'], (60, 55, 100, 65, 100, 30), 8, False),
     ("Zigzaton de Galar", 263, 10174, ['tenebres', 'normal'], (38, 30, 41, 30, 41, 60), 8, False),
     ("Linéon de Galar", 264, 10175, ['tenebres', 'normal'], (78, 70, 61, 50, 61, 100), 8, False),
-    ("Darumacho de Galar", 554, 10176, ['glace'], (70, 90, 45, 15, 45, 50), 8, False),
-    ("Ristourbo de Galar", 555, 10177, ['glace'], (105, 140, 55, 30, 55, 55), 8, False),
+    ("Darumarond de Galar", 554, 10176, ['glace'], (70, 90, 45, 15, 45, 50), 8, False),
+    ("Darumacho de Galar", 555, 10177, ['glace'], (105, 140, 55, 30, 55, 55), 8, False),
 ]
 
 # Espèces à part entière qui n'évoluent QUE depuis une forme de Galar — ont déjà leur
@@ -92,7 +92,7 @@ FORMES_GALAR_EVOLUTIONS = [
     ("Sacré Griffe", 863, 863, ['acier'], (70, 110, 100, 50, 60, 50), 8, False),
     ("Dosinectar", 864, 864, ['fantome'], (60, 95, 50, 145, 130, 30), 8, False),
     ("Doigrind", 865, 865, ['combat'], (62, 135, 95, 68, 82, 65), 8, False),
-    ("M. Glacial", 866, 866, ['glace', 'psy'], (80, 85, 75, 110, 100, 70), 8, False),
+    ("M. Glaquette", 866, 866, ['glace', 'psy'], (80, 85, 75, 110, 100, 70), 8, False),
     ("Trépassable", 867, 867, ['sol', 'fantome'], (58, 95, 145, 50, 105, 30), 8, False),
 ]
 
@@ -131,7 +131,7 @@ FORMES_HISUI_EVOLUTIONS = [
 ]
 
 FORMES_PALDEA = [
-    ("Ouaporo de Paldea", 194, 10253, ['poison', 'sol'], (55, 45, 45, 25, 25, 15), 9, False),
+    ("Axoloto de Paldea", 194, 10253, ['poison', 'sol'], (55, 45, 45, 25, 25, 15), 9, False),
     ("Tauros de Paldea (Combat)", 128, 10250, ['combat'], (75, 110, 105, 30, 70, 100), 9, False),
     ("Tauros de Paldea (Flamme)", 128, 10251, ['combat', 'feu'], (75, 110, 105, 30, 70, 100), 9, False),
     ("Tauros de Paldea (Aqua)", 128, 10252, ['combat', 'eau'], (75, 110, 105, 30, 70, 100), 9, False),
