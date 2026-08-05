@@ -29,7 +29,9 @@ CHEMIN_JSON = "pokedex_complet.json"
 def recuperer_movepool_anglais(numero: int):
     """Retourne {nom_anglais: niveau_minimum} pour les attaques apprises par montée de
     niveau (method 'level-up'), tous groupes de version confondus (le niveau le plus bas
-    trouvé est gardé)."""
+    trouvé est gardé). `numero` doit être l'identifiant PokéAPI RÉEL de la forme précise
+    (numero_sprite pour une forme régionale/alternative, sinon numero) — sinon une forme
+    régionale récupérerait le movepool de son espèce de base, pas forcément identique."""
     reponse = requests.get(f"{BASE_URL}/pokemon/{numero}")
     if reponse.status_code != 200:
         return None
@@ -54,7 +56,10 @@ def main():
     with open(CHEMIN_JSON, "r", encoding="utf-8") as f:
         pokedex = json.load(f)
 
-    a_traiter = [p for p in pokedex if forcer or "movepool_niveaux" not in p]
+    # ⚠️ "movepool_niveaux" pas dans p, OU présent mais VIDE ({}) — ce dernier cas couvre
+    # les espèces ajoutées avec un mouvepool volontairement vide en attendant ce script
+    # (ex: les 67 formes régionales/alternatives ajoutées via ajouter_formes_regionales.py).
+    a_traiter = [p for p in pokedex if forcer or not p.get("movepool_niveaux")]
     if not a_traiter:
         print("Tous les Pokémon ont déjà leur movepool par niveau. Utilise --forcer pour tout re-télécharger.")
         return
@@ -65,7 +70,7 @@ def main():
     echecs = []
     noms_anglais_uniques = set()
     for i, pokemon in enumerate(a_traiter, start=1):
-        numero = pokemon.get("numero")
+        numero = pokemon.get("numero_sprite") or pokemon.get("numero")
         if not numero:
             continue
         movepool = recuperer_movepool_anglais(numero)

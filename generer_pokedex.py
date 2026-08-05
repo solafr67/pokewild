@@ -177,8 +177,7 @@ def recuperer_attaque(nom_anglais: str):
     type_attaque = TRADUCTION_TYPES.get(data["type"]["name"], data["type"]["name"])
     classe = data["damage_class"]["name"] if data.get("damage_class") else "status"
 
-    # Changements de stats (ex: Danse-Lames +2 Atq garanti ; Nitrocharge +1 Vit garanti sur
-    # une attaque OFFENSIVE ; Griffe Acier +1 Atq à 10% de chance sur une attaque offensive)
+    # Changements de stats (ex: Danse-Lames +2 Atq, Groz'Yeux -1 Déf adverse)
     changements = []
     for sc in data.get("stat_changes", []):
         stat_simplifiee = TRADUCTION_STATS.get(sc["stat"]["name"])
@@ -187,16 +186,6 @@ def recuperer_attaque(nom_anglais: str):
 
     # Cible simplifiée : boosts sur soi, malus sur l'adversaire
     cible = "soi" if changements and all(delta > 0 for _, delta in changements) else "adversaire"
-
-    # Probabilité d'application du changement de stats ci-dessus — DISTINCTE de
-    # ailment_chance (altération de statut). Sur une attaque de statut PURE (Danse-Lames,
-    # Rugissement...), le changement est garanti : stat_chance vaut 0 côté PokéAPI, ce qui
-    # ne veut PAS dire "jamais" ici mais "toujours" (même convention que ailment_chance).
-    # Sur une attaque qui inflige aussi des dégâts (Nitrocharge, Griffe Acier...), c'est un
-    # effet SECONDAIRE avec sa vraie probabilité (100 pour Nitrocharge, 10 pour Griffe
-    # Acier, etc.) — jusqu'ici totalement ignoré par le moteur de combat (voir combat.py),
-    # qui n'appliquait "stats" que sur les attaques SANS dégâts.
-    stat_chance = (data.get("meta") or {}).get("stat_chance", 0)
 
     # Altération de statut infligée (brûlure, sommeil, paralysie, poison, gel, confusion)
     STATUTS_GERES = {"burn", "poison", "paralysis", "sleep", "freeze", "confusion"}
@@ -213,11 +202,15 @@ def recuperer_attaque(nom_anglais: str):
         "precision": data.get("accuracy"),  # None = ne rate jamais
         "classe": classe,  # physical / special / status
         "stats": changements,
-        "stat_chance": stat_chance,  # 0 = garanti (statut pur) ; sinon % de déclenchement (effet secondaire)
         "cible": cible,
         "ailment": ailment,
         "ailment_chance": ailment_chance,
         "pp": data.get("pp"),  # Points de Pouvoir — nombre d'utilisations avant épuisement en combat
+        # Recul/absorption propre à l'attaque, en % des DÉGÂTS INFLIGÉS à la cible (pas
+        # des PV max) — négatif = recul (Explosion -100, Wild Charge -33), positif =
+        # absorption (Giga Sangsue +50). 0 = ni l'un ni l'autre (la grande majorité des
+        # attaques). Distinct du recul de l'Orbe Vie, qui est un effet d'OBJET.
+        "recul": meta.get("drain", 0),
     }
 
 

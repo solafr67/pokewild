@@ -707,6 +707,25 @@ async def resoudre_tour(combat_id: int) -> list:
                                     )
                                     _verifier_baie_statut(combat_id, user_id, nom_atk, statut_riposte, log)
 
+            # Recul/absorption propre à l'ATTAQUE elle-même (Explosion, Cogne-Griffe,
+            # Wild Charge... = recul négatif ; Giga Sangsue, Draco-Souffle-vamp... =
+            # absorption positive) — distinct du recul de l'Orbe Vie ci-dessus (qui est un
+            # effet d'OBJET, toujours 10% des PV MAX). Ici c'est un pourcentage des DÉGÂTS
+            # INFLIGÉS à la cible, comme dans les vrais jeux — ex: Explosion inflige 100%
+            # des dégâts causés en recul à soi-même, donc s'auto-inflige un coup fatal la
+            # plupart du temps sans que ce soit un KO totalement garanti à 1 PV près.
+            recul_attaque = attaque.get("recul") or 0
+            if recul_attaque > 0:  # absorption : l'attaquant se soigne d'un % des dégâts infligés
+                soin_absorption = max(1, round(degats * recul_attaque / 100))
+                database.soigner_pvp(combat_id, user_id, nom_atk, soin_absorption)
+                log.append(f"  🩸 **{nom_atk}** récupère {soin_absorption} PV en absorbant les dégâts infligés !")
+            elif recul_attaque < 0:  # recul : l'attaquant se blesse d'un % des dégâts infligés
+                recul_montant = max(1, round(degats * abs(recul_attaque) / 100))
+                pv_apres_recul_attaque = database.appliquer_degats_pvp(combat_id, user_id, nom_atk, recul_montant)
+                log.append(f"  💥 **{nom_atk}** subit le contrecoup de son attaque ! (-{recul_montant} PV)")
+                if pv_apres_recul_attaque <= 0:
+                    log.append(f"  💀 **{nom_atk}** est K.O. !")
+
             # Orbe Vie : recul de 10% des PV max de l'attaquant après chaque attaque
             # offensive réussie (indépendant de l'issue du coup).
             info_objet_atk = capacites_module.infos_objet(objet_atk)

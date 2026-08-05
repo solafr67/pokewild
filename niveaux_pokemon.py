@@ -37,13 +37,15 @@ def progression_niveau(xp_total: int, niveau_max: int):
     return niveau, xp_total - xp_debut_niveau, xp_fin_niveau - xp_debut_niveau
 
 
-def gagner_xp_equipe(user_id: int, montant: int) -> list:
-    """Ajoute `montant` XP à CHAQUE Pokémon de l'équipe de combat active (pas divisé
-    entre eux). Un Pokémon déjà à son niveau plafond (selon la rareté de son espèce)
-    n'engrange plus rien. Retourne la liste des montées de niveau survenues (dicts avec
+def gagner_xp_equipe(user_id: int, montant: int, noms: list = None) -> list:
+    """Ajoute `montant` XP à CHAQUE Pokémon d'une liste (par défaut : l'équipe de combat
+    active — passe `noms` explicitement pour cibler un autre groupe, ex: les 3 Pokémon
+    envoyés en exploration, pas forcément les mêmes que l'équipe de combat). Un Pokémon
+    déjà à son niveau plafond (selon la rareté de son espèce) n'engrange plus rien.
+    Retourne la liste des montées de niveau survenues (dicts avec
     nom/niveau_avant/niveau_apres/niveau_max), pour notifier le joueur."""
     montees = []
-    noms_equipe = database.obtenir_equipe_combat(user_id)
+    noms_equipe = noms if noms is not None else database.obtenir_equipe_combat(user_id)
 
     for nom in noms_equipe:
         pokemon = obtenir_pokemon_par_nom(nom)

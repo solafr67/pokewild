@@ -21,10 +21,23 @@ import database
 import dresseurs as dresseurs_module
 import equipe_combat
 import journal
-from pokemon_data import EMOJI_TYPES, POKEDEX
+from pokemon_data import ATTAQUES, EMOJI_TYPES, POKEDEX
 
 NOMS_APPRENTI_1 = "Apprenti d'Arène"
 NOMS_APPRENTI_2 = "Apprenti d'Arène Confirmé"
+
+
+def _ct_aleatoire_pour_type(type_arene: str, user_id: int) -> str | None:
+    """Une CT au hasard parmi les attaques du type de l'arène que le joueur ne possède
+    pas encore — None si aucune n'est disponible (déjà toutes possédées). Offerte au
+    joueur qui bat le Champion, en plus des Poké Dollars — voir _terminer_run_arene."""
+    candidates = [
+        nom for nom, info in ATTAQUES.items()
+        if info.get("type") == type_arene and not database.possede_ct(user_id, nom)
+    ]
+    if not candidates:
+        return None
+    return random.choice(candidates)
 
 
 def _nom_champion(type_arene: str) -> str:
@@ -203,8 +216,18 @@ async def _resoudre_etape(bot, joueur_id, channel, arene_id, type_arene, etape, 
     nouveau_badge = database.accorder_badge_arene(joueur_id, type_arene)
     journal.logger(f"🏟️ <@{joueur_id}> a vaincu le {_nom_champion(type_arene)} !" + (" (nouveau badge)" if nouveau_badge else ""))
 
+    # Le Champion offre aussi une CT au hasard de son type, en plus des Poké Dollars —
+    # jamais une CT déjà possédée (sinon un joueur qui rebat le Champion plusieurs fois
+    # finirait par ne plus rien recevoir de nouveau).
+    ct_offerte = _ct_aleatoire_pour_type(type_arene, joueur_id)
+    if ct_offerte:
+        database.acheter_ct(joueur_id, ct_offerte)
+        journal.logger(f"🏟️ <@{joueur_id}> a aussi reçu la CT {ct_offerte} du {_nom_champion(type_arene)}.")
+
     emoji = EMOJI_TYPES.get(type_arene, "")
     texte = f"🏆 <@{joueur_id}> a vaincu le **{_nom_champion(type_arene)}** ! +{dollars} Poké Dollars"
+    if ct_offerte:
+        texte += f"\n📀 **CT {ct_offerte}** offerte — apprends-la à un Pokémon au Maître des Capacités !"
     if mult_jour < 1.0:
         texte += " *(récompense réduite : plusieurs runs déjà complétés aujourd'hui)*"
     if nouveau_badge:

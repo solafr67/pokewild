@@ -7,6 +7,7 @@ import config
 import database
 import formes_objets as formes_objets_module
 import leveling
+import niveaux_pokemon
 import quetes_ui
 import races
 from equipe_combat import _stats_par_espece
@@ -381,6 +382,7 @@ def recuperer_toutes_recompenses_pretes(user_id: int) -> discord.Embed:
     total_objets_forme = []
     lignes_details = []
     toutes_quetes_completees = []
+    toutes_montees_niveau = []
 
     for row in explorations:
         pokemons = [row["pokemon1"], row["pokemon2"], row["pokemon3"]]
@@ -396,6 +398,11 @@ def recuperer_toutes_recompenses_pretes(user_id: int) -> discord.Embed:
         # Affichage = XP réellement créditée (boost de Race/temporaire inclus) — gagner_xp()
         # applique son propre multiplicateur en interne, on le reproduit ici pour le texte.
         xp_affichee = round(recompense["xp"] * database.multiplicateur_boost(user_id, "xp"))
+
+        # XP du niveau PAR Pokémon : uniquement les 3 Pokémon envoyés sur CETTE
+        # exploration précise (pas forcément l'équipe de combat), indépendamment de l'XP
+        # de dresseur ci-dessus — même montant, comme pour une capture/PokéStop.
+        toutes_montees_niveau.extend(niveaux_pokemon.gagner_xp_equipe(user_id, recompense["xp"], noms=pokemons))
 
         obtenu_cristal = random.random() < recompense["chance_cristal"]
         if obtenu_cristal:
@@ -434,6 +441,8 @@ def recuperer_toutes_recompenses_pretes(user_id: int) -> discord.Embed:
     for objet_forme in total_objets_forme:
         info = formes_objets_module.FORMES_OBJETS[objet_forme]
         description += f"\n{info['objet_emoji']} **+1** {info['objet_nom']} — objet rarissime ! ({info['espece']} uniquement)"
+    if toutes_montees_niveau:
+        description += "\n\n" + niveaux_pokemon.texte_montees_niveau(toutes_montees_niveau)
     description += quetes_ui.texte_notifications_completion(toutes_quetes_completees)
 
     return discord.Embed(
@@ -473,6 +482,9 @@ def recuperer_recompense(user_id: int, slot: int) -> discord.Embed:
     # applique son propre multiplicateur en interne, on le reproduit ici pour le texte.
     xp_affichee = round(recompense["xp"] * database.multiplicateur_boost(user_id, "xp"))
 
+    # XP du niveau PAR Pokémon : uniquement les 3 Pokémon envoyés sur cette exploration.
+    montees_niveau = niveaux_pokemon.gagner_xp_equipe(user_id, recompense["xp"], noms=pokemons)
+
     obtenu_cristal = random.random() < recompense["chance_cristal"]
     if obtenu_cristal:
         database.ajouter_balls(user_id, "cristal_mutation", 1)
@@ -503,6 +515,8 @@ def recuperer_recompense(user_id: int, slot: int) -> discord.Embed:
     if objet_forme_obtenu:
         info = formes_objets_module.FORMES_OBJETS[objet_forme_obtenu]
         description += f"\n{info['objet_emoji']} +1 **{info['objet_nom']}** — objet rarissime ! ({info['espece']} uniquement)"
+    if montees_niveau:
+        description += "\n\n" + niveaux_pokemon.texte_montees_niveau(montees_niveau)
     description += quetes_ui.texte_notifications_completion(quetes_completees)
 
     return discord.Embed(title="🎁 Retour d'exploration", description=description, color=discord.Color.gold())
