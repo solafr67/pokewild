@@ -540,13 +540,20 @@ async def boucle_marketplace():
 @tasks.loop(hours=24)
 async def boucle_snapshot_economie():
     """Enregistre un instantané quotidien de la masse de Poké Dollars en circulation,
-    pour repérer un futur déséquilibre économique tôt plutôt que par analyse manuelle."""
+    pour repérer un futur déséquilibre économique tôt plutôt que par analyse manuelle.
+    Vérifie aussi (même cadence, largement suffisant pour un événement mensuel) si une
+    nouvelle saison de clan doit être archivée — ne fait rien la plupart des jours."""
     DERNIERE_ACTIVITE_BOUCLES["snapshot_economie"] = time.time()
     try:
         database.enregistrer_snapshot_economie()
     except Exception as e:
         print(f"⚠️ Erreur dans boucle_snapshot_economie (la boucle continue) : {e}")
         journal.logger(f"🔴 Erreur dans `boucle_snapshot_economie` : {e}")
+    try:
+        database.cloturer_saison_clan_si_necessaire()
+    except Exception as e:
+        print(f"⚠️ Erreur dans cloturer_saison_clan_si_necessaire (la boucle continue) : {e}")
+        journal.logger(f"🔴 Erreur dans `cloturer_saison_clan_si_necessaire` : {e}")
 
 
 async def declencher_meteo(meteo_tiree: dict, duree_minutes: int = None):

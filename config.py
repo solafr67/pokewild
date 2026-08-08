@@ -344,6 +344,39 @@ EMOJI_EQUIPES = {
     "Jaune": "<:17720teaminstinct:1524813430563934340>",
 }
 
+# IDs des VRAIS rôles Discord déjà créés sur le serveur pour chaque clan — recherche par
+# ID plutôt que par nom (voir profil.py VueChoixClan.choisir), pour ne jamais dépendre du
+# nom exact du rôle (qui peut différer légèrement, ex: avec un emoji devant).
+ROLES_EQUIPES_ID = {
+    "Bleu": _id_env("ROLE_EQUIPE_BLEU_ID", 1524800469216661518),
+    "Jaune": _id_env("ROLE_EQUIPE_JAUNE_ID", 1525177640242122783),
+    "Rouge": _id_env("ROLE_EQUIPE_ROUGE_ID", 1525198697703411913),
+}
+
+# --- Objectif hebdomadaire de clan (coopératif au sein d'une équipe, compétitif entre
+# les 3) — voir database.obtenir_objectif_semaine_actif / ajouter_contribution_clan.
+# Chaque tuple = (type, cible). "capture" = 1 point par capture ; "combat" = 2 points par
+# victoire (PvP, dresseur, ou raid). Un nouveau tirage a lieu automatiquement chaque lundi.
+OBJECTIFS_CLAN_POSSIBLES = [
+    ("capture", 3000), ("capture", 5000), ("capture", 8000),
+    ("combat", 500), ("combat", 900), ("combat", 1500),
+]
+# Récompense (Poké Dollars) versée à CHAQUE membre de l'équipe dès qu'elle atteint
+# l'objectif — bonus supplémentaire pour la toute première équipe des 3 à y arriver.
+CLAN_OBJECTIF_RECOMPENSE_BASE = 150
+CLAN_OBJECTIF_BONUS_PREMIER = 150
+
+# --- Grille de titres de contribution au clan (rang personnel, remis à 0 si changement
+# d'équipe — voir database.clan_contribution).
+TITRES_CONTRIBUTION_CLAN = [
+    (0, "Recrue", "🔹"),
+    (100, "Membre", "🔸"),
+    (300, "Vétéran", "🥈"),
+    (700, "Élite", "🥇"),
+    (1500, "Champion", "💎"),
+    (3000, "Légende de l'équipe", "👑"),
+]
+
 # Délai minimum entre deux changements gratuits de clan
 COOLDOWN_CHANGEMENT_EQUIPE = 7 * 24 * 3600  # 1 semaine, en secondes
 
