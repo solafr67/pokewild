@@ -122152,7 +122152,7 @@
       "Champ Herbu": 65,
       "Cataclysme": 50
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Baojian",
@@ -122243,7 +122243,7 @@
       "Cataclysme": 50,
       "Chute de Neige": 30
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Dinglu",
@@ -122334,7 +122334,7 @@
       "Trépignement": 45,
       "Cataclysme": 50
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Yuyu",
@@ -122425,7 +122425,7 @@
       "Feu d’Enfer": 65,
       "Cataclysme": 50
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rugit-Lune",
@@ -123411,7 +123411,7 @@
       "Giga Impact": 72,
       "Centrifugifle": 48
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Fortusimia",
@@ -123507,7 +123507,7 @@
       "Bain de Smog": 24,
       "Dernier Mot": 72
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Favianos",
@@ -123611,7 +123611,7 @@
       "Voix Enjôleuse": 1,
       "Pouvoir Lunaire": 72
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ogerpon",
@@ -124500,7 +124500,7 @@
       "defense_spe": 35,
       "vitesse": 72
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Rattatac d'Alola",
@@ -124524,7 +124524,7 @@
       "defense_spe": 80,
       "vitesse": 77
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Raichu d'Alola",
@@ -124548,7 +124548,7 @@
       "defense_spe": 85,
       "vitesse": 110
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sabelette d'Alola",
@@ -124572,7 +124572,7 @@
       "defense_spe": 35,
       "vitesse": 40
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sablaireau d'Alola",
@@ -124596,7 +124596,7 @@
       "defense_spe": 65,
       "vitesse": 65
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Goupix d'Alola",
@@ -124619,7 +124619,7 @@
       "defense_spe": 65,
       "vitesse": 65
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Feunard d'Alola",
@@ -124643,7 +124643,7 @@
       "defense_spe": 100,
       "vitesse": 109
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Taupiqueur d'Alola",
@@ -124667,7 +124667,7 @@
       "defense_spe": 45,
       "vitesse": 90
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Triopikeur d'Alola",
@@ -124691,7 +124691,7 @@
       "defense_spe": 70,
       "vitesse": 110
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Miaouss d'Alola",
@@ -124714,7 +124714,7 @@
       "defense_spe": 40,
       "vitesse": 90
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Persian d'Alola",
@@ -124737,7 +124737,7 @@
       "defense_spe": 65,
       "vitesse": 115
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Racaillou d'Alola",
@@ -124761,7 +124761,7 @@
       "defense_spe": 65,
       "vitesse": 45
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gravalanch d'Alola",
@@ -124785,7 +124785,7 @@
       "defense_spe": 85,
       "vitesse": 45
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grolem d'Alola",
@@ -124809,7 +124809,7 @@
       "defense_spe": 65,
       "vitesse": 45
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Grimace d'Alola",
@@ -124833,7 +124833,7 @@
       "defense_spe": 50,
       "vitesse": 25
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tadmorv d'Alola",
@@ -124857,7 +124857,7 @@
       "defense_spe": 100,
       "vitesse": 50
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Noadkoko d'Alola",
@@ -124881,7 +124881,7 @@
       "defense_spe": 75,
       "vitesse": 45
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ossatueur d'Alola",
@@ -124905,7 +124905,7 @@
       "defense_spe": 80,
       "vitesse": 45
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Miaouss de Galar",
@@ -124928,7 +124928,7 @@
       "defense_spe": 40,
       "vitesse": 40
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ponyta de Galar",
@@ -124951,7 +124951,7 @@
       "defense_spe": 65,
       "vitesse": 90
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Galopa de Galar",
@@ -124974,7 +124974,7 @@
       "defense_spe": 80,
       "vitesse": 105
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ramoloss de Galar",
@@ -124998,7 +124998,7 @@
       "defense_spe": 40,
       "vitesse": 15
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Flagadoss de Galar",
@@ -125022,7 +125022,7 @@
       "defense_spe": 70,
       "vitesse": 30
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Canarticho de Galar",
@@ -125045,7 +125045,7 @@
       "defense_spe": 62,
       "vitesse": 60
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Smogogo de Galar",
@@ -125069,7 +125069,7 @@
       "defense_spe": 70,
       "vitesse": 60
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "M. Mime de Galar",
@@ -125093,7 +125093,7 @@
       "defense_spe": 90,
       "vitesse": 100
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Artikodin de Galar",
@@ -125117,7 +125117,7 @@
       "defense_spe": 100,
       "vitesse": 95
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Électhor de Galar",
@@ -125141,7 +125141,7 @@
       "defense_spe": 90,
       "vitesse": 100
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sulfura de Galar",
@@ -125165,7 +125165,7 @@
       "defense_spe": 90,
       "vitesse": 100
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Roigada de Galar",
@@ -125189,7 +125189,7 @@
       "defense_spe": 110,
       "vitesse": 30
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Corayon de Galar",
@@ -125212,7 +125212,7 @@
       "defense_spe": 100,
       "vitesse": 30
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zigzaton de Galar",
@@ -125236,7 +125236,7 @@
       "defense_spe": 41,
       "vitesse": 60
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Linéon de Galar",
@@ -125260,7 +125260,7 @@
       "defense_spe": 61,
       "vitesse": 100
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Darumacho de Galar",
@@ -125283,7 +125283,7 @@
       "defense_spe": 45,
       "vitesse": 50
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Ristourbo de Galar",
@@ -125306,7 +125306,7 @@
       "defense_spe": 55,
       "vitesse": 55
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Sacré Griffe",
@@ -125423,7 +125423,7 @@
       "defense_spe": 50,
       "vitesse": 55
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Arcanin d'Hisui",
@@ -125447,7 +125447,7 @@
       "defense_spe": 80,
       "vitesse": 95
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Voltorbe d'Hisui",
@@ -125471,7 +125471,7 @@
       "defense_spe": 55,
       "vitesse": 100
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Électrode d'Hisui",
@@ -125495,7 +125495,7 @@
       "defense_spe": 80,
       "vitesse": 150
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Typhlosion d'Hisui",
@@ -125519,7 +125519,7 @@
       "defense_spe": 85,
       "vitesse": 100
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Qwilfish d'Hisui",
@@ -125543,7 +125543,7 @@
       "defense_spe": 55,
       "vitesse": 85
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Farfuret d'Hisui",
@@ -125567,7 +125567,7 @@
       "defense_spe": 75,
       "vitesse": 115
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Clamiral d'Hisui",
@@ -125591,7 +125591,7 @@
       "defense_spe": 65,
       "vitesse": 85
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Blancoton d'Hisui",
@@ -125615,7 +125615,7 @@
       "defense_spe": 75,
       "vitesse": 105
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zorua d'Hisui",
@@ -125639,7 +125639,7 @@
       "defense_spe": 40,
       "vitesse": 65
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Zoroark d'Hisui",
@@ -125663,7 +125663,7 @@
       "defense_spe": 60,
       "vitesse": 105
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Gueriaigle d'Hisui",
@@ -125687,7 +125687,7 @@
       "defense_spe": 70,
       "vitesse": 90
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Mucuscule d'Hisui",
@@ -125711,7 +125711,7 @@
       "defense_spe": 113,
       "vitesse": 60
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Muplodocus d'Hisui",
@@ -125735,7 +125735,7 @@
       "defense_spe": 150,
       "vitesse": 80
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Séracrawl d'Hisui",
@@ -125759,7 +125759,7 @@
       "defense_spe": 46,
       "vitesse": 28
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Archéduc d'Hisui",
@@ -125783,7 +125783,7 @@
       "defense_spe": 100,
       "vitesse": 70
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Wyrdeer",
@@ -125927,7 +125927,7 @@
       "defense_spe": 25,
       "vitesse": 15
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tauros de Paldea (Combat)",
@@ -125950,7 +125950,7 @@
       "defense_spe": 70,
       "vitesse": 100
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tauros de Paldea (Flamme)",
@@ -125974,7 +125974,7 @@
       "defense_spe": 70,
       "vitesse": 100
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   },
   {
     "nom": "Tauros de Paldea (Aqua)",
@@ -125998,6 +125998,6 @@
       "defense_spe": 70,
       "vitesse": 100
     },
-    "sprite_gif_disponible": false
+    "sprite_gif_disponible": true
   }
 ]
