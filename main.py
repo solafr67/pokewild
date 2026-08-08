@@ -1218,24 +1218,36 @@ async def on_ready():
     # Note : VueRaid n'est plus enregistrée en persistante (elle a besoin d'un raid_id précis,
     # comme les spawns classiques un raid en cours au moment d'un redémarrage sera perdu)
 
-    if config.GUILD_ID:
-        # En développement : synchro uniquement sur le serveur de test (instantané,
-        # évite les doublons qu'on aurait avec une synchro globale en parallèle)
-        guild = discord.Object(id=config.GUILD_ID)
+    # ⚠️ Toute la synchro est entourée d'un try/except : une erreur ici (ex: trop de
+    # choix sur un paramètre, limite Discord = 25) ne doit JAMAIS empêcher le reste de
+    # on_ready() de s'exécuter — sinon les boucles de spawn, entre autres, ne démarrent
+    # plus DU TOUT (vécu le 08/08/2026 : plus aucun spawn tant que le bot n'a pas pu
+    # passer cette étape, à chaque tentative de reconnexion en plus).
+    try:
+        if config.GUILD_ID:
+            # En développement : synchro uniquement sur le serveur de test (instantané,
+            # évite les doublons qu'on aurait avec une synchro globale en parallèle)
+            guild = discord.Object(id=config.GUILD_ID)
 
-        # 1. On copie et synchronise d'abord sur le serveur, PENDANT que l'arbre
-        #    de commandes globales contient encore toutes les commandes définies
-        bot.tree.copy_global_to(guild=guild)
-        await bot.tree.sync(guild=guild)
+            # 1. On copie et synchronise d'abord sur le serveur, PENDANT que l'arbre
+            #    de commandes globales contient encore toutes les commandes définies
+            bot.tree.copy_global_to(guild=guild)
+            await bot.tree.sync(guild=guild)
 
-        # 2. Ensuite seulement, on nettoie les anciennes commandes globales côté Discord
-        #    (celles qui causaient les doublons), sans toucher à ce qui vient d'être
-        #    synchronisé sur le serveur
-        bot.tree.clear_commands(guild=None)
-        await bot.tree.sync()
-    else:
-        # En production (bot sur plusieurs serveurs) : synchro globale classique
-        await bot.tree.sync()
+            # 2. Ensuite seulement, on nettoie les anciennes commandes globales côté Discord
+            #    (celles qui causaient les doublons), sans toucher à ce qui vient d'être
+            #    synchronisé sur le serveur
+            bot.tree.clear_commands(guild=None)
+            await bot.tree.sync()
+        else:
+            # En production (bot sur plusieurs serveurs) : synchro globale classique
+            await bot.tree.sync()
+    except Exception as e:
+        print(f"🔴 Erreur lors de la synchro des commandes (le bot continue de démarrer quand même) : {e}")
+        journal.logger(
+            f"🔴 Synchro des commandes échouée — les commandes slash peuvent être obsolètes/manquantes, "
+            f"mais spawns et autres boucles démarrent normalement : {e}"
+        )
 
     if not boucle_spawn_classique.is_running():
         boucle_spawn_classique.start()
@@ -2066,15 +2078,19 @@ async def pokedex_info(interaction: discord.Interaction, nom: str, membre: disco
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
-_CHOIX_OBJETS_TENUS = [
-    app_commands.Choice(name=f"{info['nom']} — {info['description']}"[:100], value=cle)
-    for cle, info in capacites_module.OBJETS_TENUS.items()
-] + [
-    app_commands.Choice(
-        name=f"{info['objet_nom']} — Transforme {info['espece']} en {info['forme_nom']}"[:100], value=cle
-    )
-    for cle, info in formes_objets_module.FORMES_OBJETS.items()
-]
+# ⚠️ PAS de @app_commands.choices ici : Discord plafonne une liste de choix fixe à 25
+# valeurs MAXIMUM (dépassement = bot.tree.sync() plante intégralement au démarrage,
+# bloquant TOUT le reste de l'initialisation, spawns compris — vécu le 08/08/2026 en
+# passant de 24 à 29 objets après l'ajout de 5 nouvelles formes par objet). Autocomplete
+# n'a pas cette limite (juste ≤25 SUGGESTIONS affichées par frappe), donc résistant à
+# n'importe quelle croissance future du nombre d'objets.
+_OBJETS_TOUTES_FAMILLES = {
+    **{cle: f"{info['nom']} — {info['description']}" for cle, info in capacites_module.OBJETS_TENUS.items()},
+    **{
+        cle: f"{info['objet_nom']} — Transforme {info['espece']} en {info['forme_nom']}"
+        for cle, info in formes_objets_module.FORMES_OBJETS.items()
+    },
+}
 
 
 def _infos_objet_tenu_ou_forme(cle: str) -> dict | None:
@@ -2100,8 +2116,7 @@ def _infos_objet_tenu_ou_forme(cle: str) -> dict | None:
     pokemon="Nom de l'espèce (le meilleur exemplaire que tu possèdes la représente en combat)",
     objet="Objet à équiper — laisse vide pour retirer l'objet actuel",
 )
-@app_commands.choices(objet=_CHOIX_OBJETS_TENUS)
-async def equiper_objet(interaction: discord.Interaction, pokemon: str, objet: app_commands.Choice[str] = None):
+async def equiper_objet(interaction: discord.Interaction, pokemon: str, objet: str = None):
     especes_possedees = {row["pokemon_nom"] for row in database.obtenir_pokedex_joueur(interaction.user.id)}
     pokemon_info = obtenir_pokemon_par_nom(pokemon)
     if pokemon_info is None or pokemon_info["nom"] not in especes_possedees:
@@ -2119,13 +2134,19 @@ async def equiper_objet(interaction: discord.Interaction, pokemon: str, objet: a
         await interaction.response.send_message(f"✅ **{pokemon_info['nom']}** ne tient plus aucun objet — il est retourné dans ton sac.", ephemeral=True)
         return
 
-    if objet.value == ancien_objet:
+    if objet not in _OBJETS_TOUTES_FAMILLES:
+        await interaction.response.send_message(
+            "❌ Objet inconnu — choisis-en un dans la liste proposée par l'autocomplétion.", ephemeral=True
+        )
+        return
+
+    if objet == ancien_objet:
         await interaction.response.send_message(f"**{pokemon_info['nom']}** tient déjà cet objet.", ephemeral=True)
         return
 
     inventaire = database.obtenir_inventaire_balls(interaction.user.id)
-    if inventaire.get(objet.value, 0) < 1:
-        info_manquant = _infos_objet_tenu_ou_forme(objet.value)
+    if inventaire.get(objet, 0) < 1:
+        info_manquant = _infos_objet_tenu_ou_forme(objet)
         await interaction.response.send_message(
             f"❌ Tu n'as aucun(e) **{info_manquant['nom']}** dans ton sac — achète-le en boutique (onglet 🎒 Objets) "
             f"ou trouve-le en jeu si c'est un objet rarissime.",
@@ -2133,16 +2154,27 @@ async def equiper_objet(interaction: discord.Interaction, pokemon: str, objet: a
         )
         return
 
-    database.retirer_ball(interaction.user.id, objet.value)
+    database.retirer_ball(interaction.user.id, objet)
     if ancien_objet:
         database.ajouter_balls(interaction.user.id, ancien_objet, 1)  # l'objet précédent revient au sac, jamais perdu
 
-    info_objet = _infos_objet_tenu_ou_forme(objet.value)
-    database.definir_objet_tenu_reel(interaction.user.id, pokemon_info["nom"], objet.value)
+    info_objet = _infos_objet_tenu_ou_forme(objet)
+    database.definir_objet_tenu_reel(interaction.user.id, pokemon_info["nom"], objet)
     await interaction.response.send_message(
         f"✅ **{pokemon_info['nom']}** tient maintenant {info_objet['emoji']} **{info_objet['nom']}** — {info_objet['description']}",
         ephemeral=True,
     )
+
+
+@equiper_objet.autocomplete("objet")
+async def _equiper_objet_autocomplete(interaction: discord.Interaction, current: str):
+    current_lower = current.lower()
+    resultats = [
+        app_commands.Choice(name=label[:100], value=cle)
+        for cle, label in _OBJETS_TOUTES_FAMILLES.items()
+        if current_lower in label.lower() or current_lower in cle.lower()
+    ]
+    return resultats[:25]
 
 
 @bot.tree.command(name="objets-disponibles", description="Liste tous les objets tenus équipables en combat")
