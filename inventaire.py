@@ -14,6 +14,7 @@ from pokemon_data import (
     NOM_OBJETS_DIVERS,
     NOM_SOIN_AFFICHAGE,
     calculer_pv_max,
+    emoji_pour_objet,
 )
 
 NOMS_OBJETS = {
@@ -21,7 +22,9 @@ NOMS_OBJETS = {
     **{cle: info["nom"] for cle, info in capacites_module.OBJETS_TENUS.items()},
     **{cle: info["objet_nom"] for cle, info in formes_objets_module.FORMES_OBJETS.items()},
 }
-EMOJIS_OBJETS = {
+# Emoji Unicode de repli — remplacés à l'affichage par le vrai sprite (emoji Discord
+# personnalisé) via emoji_pour_objet() si déjà importé, voir /admin-importer-emojis-objets.
+_EMOJIS_OBJETS_REPLI = {
     **EMOJI_BALLS, **EMOJI_SOINS, **EMOJI_OBJETS_DIVERS,
     **{cle: info["emoji"] for cle, info in capacites_module.OBJETS_TENUS.items()},
     **{cle: info["objet_emoji"] for cle, info in formes_objets_module.FORMES_OBJETS.items()},
@@ -32,7 +35,7 @@ TYPES_POTIONS = set(config.PRIX_SOINS.keys()) - {"totalsoin"}  # totalsoin ne so
 def construire_embed_inventaire(user: discord.abc.User) -> discord.Embed:
     inventaire = database.obtenir_inventaire_balls(user.id)
     lignes = [
-        f"{EMOJIS_OBJETS.get(objet, '')} **{NOMS_OBJETS.get(objet, objet)}** : {quantite}"
+        f"{emoji_pour_objet(objet, _EMOJIS_OBJETS_REPLI.get(objet, ''))} **{NOMS_OBJETS.get(objet, objet)}** : {quantite}"
         for objet, quantite in sorted(inventaire.items())
         if quantite > 0
     ]
@@ -163,7 +166,7 @@ class VueInventaire(discord.ui.View):
             discord.SelectOption(
                 label=f"{NOMS_OBJETS.get(objet, objet)} (x{quantite})",
                 value=objet,
-                emoji=EMOJIS_OBJETS.get(objet),
+                emoji=emoji_pour_objet(objet, _EMOJIS_OBJETS_REPLI.get(objet)),
                 default=(objet == self.objet_selectionne),
             )
             for objet, quantite in sorted(inventaire.items())

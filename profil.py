@@ -25,6 +25,7 @@ from pokemon_data import (
     NOM_OBJETS_DIVERS,
     NOM_SOIN_AFFICHAGE,
     cle_tri_alphabetique_fr,
+    emoji_pour_objet,
 )
 
 
@@ -155,7 +156,7 @@ async def construire_embed_profil(user: discord.abc.User, autoriser_piece_jointe
     divers = {k: v for k, v in inventaire.items() if k in NOM_OBJETS_DIVERS and v > 0}
 
     def _ligne(dico, noms, emojis):
-        return "\n".join(f"{emojis.get(k, '')} {noms.get(k, k)} ×{v}" for k, v in dico.items()) or "—"
+        return "\n".join(f"{emoji_pour_objet(k, emojis.get(k, ''))} {noms.get(k, k)} ×{v}" for k, v in dico.items()) or "—"
 
     embed.add_field(name="Balls", value=_ligne(balls, NOM_BALL_AFFICHAGE, EMOJI_BALLS), inline=True)
     embed.add_field(name="Soins", value=_ligne(soins, NOM_SOIN_AFFICHAGE, EMOJI_SOINS), inline=True)

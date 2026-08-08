@@ -56,6 +56,7 @@ from pokemon_data import (
     NOM_OBJETS_DIVERS,
     NOM_SOIN_AFFICHAGE,
     recharger_cache_emojis_objets,
+    appliquer_emojis_objets,
     POIDS_RARETE_CLASSIQUE,
     POIDS_RARETE_VIP,
     POKEDEX,
@@ -1204,6 +1205,10 @@ async def nettoyer_etats_orphelins_au_demarrage():
 @bot.event
 async def on_ready():
     database.init_db()
+    # Remplace en place les emoji Unicode génériques des objets par les vrais sprites déjà
+    # importés (voir /admin-importer-emojis-objets) — met à jour tous les affichages du bot
+    # d'un coup (inventaire, profil, combat, exploration, raids, repaires, roguelike, pokédex...).
+    appliquer_emojis_objets(capacites_module.OBJETS_TENUS, formes_objets_module.FORMES_OBJETS, EMOJI_SOINS)
     await nettoyer_etats_orphelins_au_demarrage()
     bot.add_view(VuePokestop())  # réenregistre la vue persistante après un redémarrage
     bot.add_view(VueBoutique())  # idem pour la boutique
@@ -2122,6 +2127,7 @@ async def admin_importer_emojis_objets(interaction: discord.Interaction):
                     echoues.append((cle, str(e)))
 
     recharger_cache_emojis_objets()
+    appliquer_emojis_objets(capacites_module.OBJETS_TENUS, formes_objets_module.FORMES_OBJETS, EMOJI_SOINS)
     journal.logger(f"🛠️ <@{interaction.user.id}> a importé {len(reussis)} emoji d'objets (/admin-importer-emojis-objets).")
 
     description = f"✅ **{len(reussis)}** emoji créés et branchés.\n"

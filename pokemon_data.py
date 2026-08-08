@@ -208,6 +208,30 @@ def emoji_pour_objet(cle: str, emoji_unicode_repli: str):
     return emoji_unicode_repli
 
 
+def appliquer_emojis_objets(objets_tenus: dict, formes_objets: dict, emoji_soins: dict):
+    """Remplace EN PLACE le champ emoji Unicode générique par le vrai emoji Discord
+    personnalisé (sprite) partout où il a été importé — dans les 3 dicts sources
+    (capacites.OBJETS_TENUS, formes_objets.FORMES_OBJETS, pokemon_data.EMOJI_SOINS).
+
+    Comme ce sont les MÊMES objets dict que ceux importés ailleurs dans le bot (Python
+    passe les dicts par référence), cette seule fonction met à jour TOUS les affichages
+    du bot qui lisent ces champs (inventaire, profil, combat, exploration, raids,
+    repaires, roguelike, pokédex...) sans avoir à toucher chacun de ces fichiers
+    individuellement. À appeler une fois au démarrage (après database.init_db()) et de
+    nouveau juste après un import réussi via /admin-importer-emojis-objets (pour prendre
+    effet immédiatement, sans redémarrage du bot)."""
+    global _CACHE_EMOJIS_OBJETS
+    _CACHE_EMOJIS_OBJETS = database.obtenir_emojis_objets()
+    for cle, (emoji_id, emoji_nom) in _CACHE_EMOJIS_OBJETS.items():
+        emoji_str = str(discord.PartialEmoji(name=emoji_nom, id=emoji_id))
+        if cle in objets_tenus:
+            objets_tenus[cle]["emoji"] = emoji_str
+        if cle in formes_objets:
+            formes_objets[cle]["objet_emoji"] = emoji_str
+        if cle in emoji_soins:
+            emoji_soins[cle] = emoji_str
+
+
 def calculer_multiplicateur_type(types_attaquant: list, types_defenseur: list) -> float:
     """Calcule le multiplicateur de dégâts total en fonction des types de l'attaquant et du défenseur.
     Un Pokémon à deux types cumule les deux multiplicateurs (ex: eau vs feu/sol = 2.0 × 2.0 = 4.0)."""
