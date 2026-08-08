@@ -84,7 +84,7 @@ FORMES_OBJETS = {
     "orbe_bleue": {
         "objet_nom": "Orbe Bleue",
         "objet_emoji": "🔵",
-        "objet_image": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites/orbe_bleue.png",
+        "objet_image": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites_v2/orbe_bleue.png",
         "espece": "Kyogre",
         "forme_nom": "Primo-Kyogre",
         "numero_sprite": 10077,
@@ -95,7 +95,7 @@ FORMES_OBJETS = {
     "orbe_rouge": {
         "objet_nom": "Orbe Rouge",
         "objet_emoji": "🔴",
-        "objet_image": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites/orbe_rouge.png",
+        "objet_image": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites_v2/orbe_rouge.png",
         "espece": "Groudon",
         "forme_nom": "Primo-Groudon",
         "numero_sprite": 10078,
@@ -106,7 +106,7 @@ FORMES_OBJETS = {
     "vase_entrave": {
         "objet_nom": "Vase de l'Entrave",
         "objet_emoji": "🏺",
-        "objet_image": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites/vase_entrave.png",
+        "objet_image": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites_v2/vase_entrave.png",
         "espece": "Hoopa",
         "forme_nom": "Hoopa Déchaîné",
         "numero_sprite": 10086,
@@ -117,7 +117,7 @@ FORMES_OBJETS = {
     "epee_rouillee": {
         "objet_nom": "Épée Rouillée",
         "objet_emoji": "⚔️",
-        "objet_image": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites/epee_rouillee.png",
+        "objet_image": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites_v2/epee_rouillee.png",
         "espece": "Zacian",
         "forme_nom": "Zacian (Épée Suprême)",
         "numero_sprite": 10188,
@@ -128,7 +128,7 @@ FORMES_OBJETS = {
     "bouclier_rouille": {
         "objet_nom": "Bouclier Rouillé",
         "objet_emoji": "🛡️",
-        "objet_image": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites/bouclier_rouille.png",
+        "objet_image": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites_v2/bouclier_rouille.png",
         "espece": "Zamazenta",
         "forme_nom": "Zamazenta (Bouclier Suprême)",
         "numero_sprite": 10189,
