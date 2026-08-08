@@ -29,7 +29,9 @@ def construire_embed_centre() -> discord.Embed:
             "Envoie une équipe de 3 Pokémon explorer pendant 1h, 6h ou 24h. Plus ton "
             "équipe est puissante, meilleure sera la récompense — Poké Dollars, XP, une "
             f"chance d'obtenir un {EMOJI_CRISTAL} **{NOM_CRISTAL}** (pour retenter ta Race), "
-            "et une chance de trouver un 🥚 **Œuf** à faire éclore au Laboratoire.\n\n"
+            "une chance de trouver un 🥚 **Œuf** à faire éclore au Laboratoire, et (uniquement "
+            "sur les explorations 6h/24h) une petite chance de trouver un 💎 **objet de "
+            "transformation** rarissime (Orbe Adamant, Fleur Gracidea...).\n\n"
             "⚠️ Les Pokémon partis en exploration ne peuvent plus être utilisés en combat "
             "ni en raid tant qu'ils ne sont pas revenus."
         ),
@@ -42,16 +44,16 @@ def construire_embed_centre() -> discord.Embed:
         xp_max = round(config.EXPLORATION_PLAFOND_PC * config.EXPLORATION_FACTEUR_XP[duree_label])
         cristal = config.EXPLORATION_CHANCE_CRISTAL[duree_label]
         oeuf = config.EXPLORATION_CHANCE_OEUF[duree_label]
-        embed.add_field(
-            name=f"⏱️ {nom_affiche}",
-            value=(
-                f"{EMOJI_POKEDOLLAR} 0 à {dollars_max} PD\n"
-                f"✨ 0 à {xp_max} XP\n"
-                f"{EMOJI_CRISTAL} {cristal['base']*100:g}% à {cristal['max']*100:g}%\n"
-                f"🥚 {oeuf['base']*100:g}% à {oeuf['max']*100:g}%"
-            ),
-            inline=True,
+        objet_forme = config.EXPLORATION_CHANCE_OBJET_FORME[duree_label]
+        valeur = (
+            f"{EMOJI_POKEDOLLAR} 0 à {dollars_max} PD\n"
+            f"✨ 0 à {xp_max} XP\n"
+            f"{EMOJI_CRISTAL} {cristal['base']*100:g}% à {cristal['max']*100:g}%\n"
+            f"🥚 {oeuf['base']*100:g}% à {oeuf['max']*100:g}%"
         )
+        if objet_forme["max"] > 0:
+            valeur += f"\n💎 {objet_forme['base']*100:g}% à {objet_forme['max']*100:g}%"
+        embed.add_field(name=f"⏱️ {nom_affiche}", value=valeur, inline=True)
     embed.set_footer(text="Le minimum correspond à une équipe faible, le maximum au plafond de PC (6000 cumulés).")
     return embed
 

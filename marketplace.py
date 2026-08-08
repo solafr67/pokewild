@@ -374,6 +374,31 @@ async def purger_annonces_expirees(bot):
     return len(expirees)
 
 
+async def nettoyer_messages_annonces_terminees(bot):
+    """Filet de sécurité pour les messages d'annonces vendue/annulée/expirée qui
+    auraient dû être supprimés (voir _supprimer_message_apres_delai) mais dont la tâche
+    a été perdue — typiquement un redémarrage du bot survenu entre la vente et
+    l'échéance des DELAI_SUPPRESSION_MESSAGE secondes prévues. Contrairement à
+    bot.loop.create_task, cette fonction est appelée PÉRIODIQUEMENT (voir
+    boucle_marketplace) et relit l'état réel en base à chaque fois, donc rien ne peut
+    rester bloqué indéfiniment même après plusieurs redémarrages d'affilée."""
+    a_nettoyer = database.obtenir_annonces_marketplace_a_nettoyer(int(time.time()) - DELAI_SUPPRESSION_MESSAGE)
+    if not a_nettoyer:
+        return 0
+
+    channel = bot.get_channel(config.CHANNEL_MARKETPLACE_ID)
+    for annonce in a_nettoyer:
+        if channel is not None:
+            try:
+                message = await channel.fetch_message(int(annonce["message_id"]))
+                await message.delete()
+            except (discord.NotFound, discord.HTTPException):
+                pass
+        database.effacer_message_id_annonce(annonce["id"])
+
+    return len(a_nettoyer)
+
+
 LIBELLE_STATUT = {
     "vendue": "✅ Vendu",
     "annulee": "🚫 Retiré",

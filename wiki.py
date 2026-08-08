@@ -40,7 +40,10 @@ PAGES = {
             "Chaque Pokémon capturé a de vrais **IV individuels** (6 stats tirées "
             "indépendamment) — deux individus de la même espèce ne sont jamais "
             "identiques. Ton meilleur exemplaire d'une espèce est celui utilisé partout "
-            "(équipe, combat, Pokédex)."
+            "(équipe, combat, Pokédex).\n\n"
+            "**Formes régionales** (Alola, Galar, Hisui, Paldea) — de vraies entrées de "
+            "Pokédex à part entière, capturables comme n'importe quel autre Pokémon, "
+            "juste regroupées avec leur forme de base une fois attrapées."
         ),
     },
     "niveau_stats": {
@@ -128,6 +131,24 @@ PAGES = {
             "requis, achète sa CT à la **Boutique CT** — une fois achetée, elle est à "
             "toi pour toujours, utilisable sur n'importe lequel de tes Pokémon, sans "
             "limite. Filtrable par type et catégorie (Physique/Spécial/Statut)."
+        ),
+    },
+    "maitre_capacites": {
+        "titre": "Maître des Capacités (talents & objets tenus)",
+        "emoji": "🎒",
+        "texte": (
+            "Le PNJ qui gère le **talent** et l'**objet tenu** de tes Pokémon (en plus "
+            "de leurs attaques, voir \"Maître des Types\").\n\n"
+            "🧬 **Talent** — attribué automatiquement à la capture, fidèle à sa vraie "
+            "capacité dans les jeux quand elle est connue (ex : Salamèche → Brasier).\n\n"
+            "🎒 **Objet tenu** — bouton \"Objets tenus\" pour équiper un objet de ton "
+            "sac à un Pokémon (Reste, Orbe Vie, objets Choix...) — achetables à la "
+            "**Boutique**, onglet Objets.\n\n"
+            "💎 **Objets de transformation** — une poignée d'objets rarissimes (jamais "
+            "en boutique, uniquement trouvables en Exploration ou à la capture) "
+            "transforment certaines légendaires tant qu'elles les tiennent (Dialga + "
+            "Orbe Adamant → Dialga Origine, Kyogre + Orbe Bleue → Primo-Kyogre...) — "
+            "stats et types changent, le PC affiché ne bouge jamais."
         ),
     },
     "exploration": {
@@ -222,10 +243,20 @@ PAGES = {
         "titre": "Classements & Clans",
         "emoji": "🏆",
         "texte": (
-            "`/classement` — le classement général des dresseurs du serveur.\n\n"
-            "**Clans** : choisis le tien via `/equipe` (1 changement gratuit par "
-            "semaine). Chaque clan a sa couleur et son rôle Discord — c'est ton "
-            "identité sur le serveur, au-delà du simple classement individuel."
+            "`/classement` — le classement général des dresseurs du serveur. "
+            "`/mon-classement` — ta position personnelle, en privé.\n\n"
+            "**Clans** : 3 équipes fixes façon Pokémon GO (Bleu/Rouge/Jaune) — bouton "
+            "\"Clan\" dans ton profil pour ouvrir le tableau de bord (1 changement "
+            "gratuit par semaine). Chaque clan a sa couleur de rôle Discord.\n\n"
+            "🎯 **Objectif hebdomadaire** — un nouveau but tiré au sort chaque lundi "
+            "(captures ou combats), suivi séparément par équipe. Toute équipe qui "
+            "l'atteint récompense ses membres, et la **première des 3** touche un "
+            "bonus en plus.\n\n"
+            "🔹 **Rang de contribution** — tes captures/combats font monter ton titre "
+            "au sein de ton clan (Recrue → ... → Légende de l'équipe), remis à 0 si "
+            "tu changes d'équipe.\n\n"
+            "📜 **Historique des saisons** — chaque mois, le classement des 3 clans "
+            "est archivé pour toujours, façon palmarès."
         ),
     },
     "pokestop": {
@@ -281,7 +312,28 @@ PAGES = {
             "arène en parallèle, chacun son run.\n\n"
             "Vaincre un Champion pour la première fois débloque son **badge**, "
             "définitif — `/badges-arene` pour voir ta collection (18 possibles). Chaque "
-            "badge donne un petit bonus de dégâts permanent avec les attaques de ce type."
+            "badge donne un petit bonus de dégâts permanent avec les attaques de ce type, "
+            "et aussi une CT au hasard de ce type à chaque victoire (jamais une déjà possédée)."
+        ),
+    },
+    "repaires": {
+        "titre": "Repaires de méchants",
+        "emoji": "🕵️",
+        "texte": (
+            "Même principe que l'Arène, mais contre les équipes méchantes des jeux "
+            "(Team Rocket, Aqua, Magma, Galactic...) — un repaire ouvre régulièrement "
+            "dans le channel Aventure. Clique sur **Infiltrer le repaire** pour "
+            "enchaîner 2 sbires puis le **boss** de l'équipe (Giovanni, Arthur, Max, "
+            "Hélio...).\n\n"
+            "Entre chaque combat, tu peux soigner ton équipe ou enchaîner directement. "
+            "**Une défaite met fin à ta tentative** — retente ta chance au prochain "
+            "repaire. Plusieurs joueurs peuvent s'y essayer en parallèle.\n\n"
+            "Vaincre un boss pour la première fois débloque son **badge**, définitif — "
+            "chaque équipe donne un bonus permanent différent (capture, shiny, Poké "
+            "Dollars ou XP selon l'équipe).\n\n"
+            "💎 À chaque victoire de boss, **chacun** des objets de transformation "
+            "rarissimes (Orbe Adamant, Fleur Gracidea, Orbe Bleue...) a une petite "
+            "chance indépendante de tomber, peu importe l'équipe affrontée."
         ),
     },
     "draft_pvp": {
@@ -289,12 +341,15 @@ PAGES = {
         "emoji": "🎯",
         "texte": (
             "Un mode de combat **compétitif équitable**, indépendant de ta collection.\n\n"
-            "`/defi-draft @adversaire` — un pool de 8 Pokémon aléatoires est proposé, "
-            "vous piochez chacun 3 Pokémon à tour de rôle (façon draft \"serpent\"). "
+            "`/defi-draft @adversaire` — chaque joueur reçoit son **propre pool privé** "
+            "de 12 Pokémon aléatoires (jamais les mêmes des deux côtés) dans un message "
+            "visible de lui seul, et choisit 6 Pokémon dedans en toute confidentialité. "
+            "Le combat démarre automatiquement dès que les deux ont validé — pas besoin "
+            "d'attendre son tour.\n\n"
             "Tous les Pokémon draftés sont au **même niveau** (peu importe votre "
-            "progression réelle), avec des IV neutres, et **4 attaques tirées au hasard** "
-            "dans tout leur movepool possible — sans tenir compte du niveau requis ni "
-            "d'une CT possédée.\n\n"
+            "progression réelle), avec des IV neutres, un **talent tiré au hasard**, et "
+            "**4 attaques tirées au hasard** dans tout leur movepool possible — sans "
+            "tenir compte du niveau requis ni d'une CT possédée.\n\n"
             "Seule la lecture du plateau compte : qui a le plus farmé ne joue aucun rôle ici."
         ),
     },
@@ -366,4 +421,15 @@ class VueWiki(discord.ui.View):
     async def _on_select(self, interaction: discord.Interaction):
         cle = interaction.data["values"][0]
         embed = construire_embed_page(cle)
-        await interaction.response.edit_message(embed=embed, view=self)
+
+        # Le message fixe du channel #wiki est PUBLIC et PARTAGÉ par tout le monde — si on
+        # l'éditait directement, un joueur qui clique écraserait ce que regardait un autre
+        # au même moment. On répond donc par un nouveau message éphémère à la place, pour
+        # que chacun puisse naviguer indépendamment. Si l'interaction vient déjà d'un
+        # message éphémère (ex: /wiki), on continue à l'éditer sur place comme avant —
+        # pas de raison d'en spammer un nouveau à chaque clic dans ce cas-là.
+        deja_ephemere = interaction.message is not None and interaction.message.flags.ephemeral
+        if deja_ephemere:
+            await interaction.response.edit_message(embed=embed, view=self)
+        else:
+            await interaction.response.send_message(embed=embed, view=VueWiki(), ephemeral=True)

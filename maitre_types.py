@@ -219,6 +219,9 @@ class VueGestionObjet(discord.ui.View):
             description=texte_tenu,
             color=discord.Color.purple(),
         )
+        image_objet = (info_objet or {}).get("image") or (info_forme or {}).get("objet_image")
+        if image_objet:
+            embed.set_thumbnail(url=image_objet)
         embed.set_footer(text="Choisis un objet de ton sac ci-dessous, ou clique Retirer.")
         return embed
 

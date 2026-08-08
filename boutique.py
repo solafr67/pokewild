@@ -519,11 +519,16 @@ class ModalQuantiteAchatObjet(discord.ui.Modal):
         nouveau_solde = database.obtenir_poke_dollars(user_id)
         journal.logger(f"🛒 <@{user_id}> a acheté {quantite}× {info['nom']} pour {cout_total} PD.")
 
-        await interaction.response.send_message(
-            f"✅ Achat réussi : **{quantite}× {info['emoji']} {info['nom']}** pour {cout_total} Poké Dollars.\n"
-            f"Nouveau solde : {EMOJI_POKEDOLLAR} {nouveau_solde}\nÉquipe-le avec `/equiper-objet`.",
-            ephemeral=True,
+        embed_achat = discord.Embed(
+            description=(
+                f"✅ Achat réussi : **{quantite}× {info['emoji']} {info['nom']}** pour {cout_total} Poké Dollars.\n"
+                f"Nouveau solde : {EMOJI_POKEDOLLAR} {nouveau_solde}\nÉquipe-le avec `/equiper-objet`."
+            ),
+            color=discord.Color.green(),
         )
+        if info.get("image"):
+            embed_achat.set_thumbnail(url=info["image"])
+        await interaction.response.send_message(embed=embed_achat, ephemeral=True)
 
 
 class VueCategorieObjets(discord.ui.View):

@@ -689,6 +689,125 @@ class VueSuppressionLibre(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
         self.stop()
 
+# ----------------------------------------------------------------------------
+# Tableau de bord de clan — équipe actuelle, rang de contribution, objectif
+# hebdomadaire (coopératif au sein de l'équipe, compétitif entre les 3), historique
+# des saisons passées. Le changement d'équipe (VueChoixClan, juste après) reste
+# accessible en un clic depuis ici.
+# ----------------------------------------------------------------------------
+
+def _titre_contribution(points: int) -> tuple:
+    """(emoji, titre) du palier de contribution atteint — voir config.TITRES_CONTRIBUTION_CLAN."""
+    titre_actuel = config.TITRES_CONTRIBUTION_CLAN[0]
+    for seuil, nom, emoji in config.TITRES_CONTRIBUTION_CLAN:
+        if points >= seuil:
+            titre_actuel = (seuil, nom, emoji)
+    return titre_actuel[2], titre_actuel[1]
+
+
+def _barre_objectif(progres: int, cible: int, longueur: int = 10) -> str:
+    ratio = max(0.0, min(1.0, progres / cible)) if cible else 0
+    rempli = round(longueur * ratio)
+    return "🟩" * rempli + "⬛" * (longueur - rempli)
+
+
+def construire_embed_tableau_bord_clan(user_id: int) -> discord.Embed:
+    equipe_actuelle, peut_changer, secondes_restantes = database.obtenir_statut_equipe(user_id)
+
+    embed = discord.Embed(title="🛡️ Clan", color=discord.Color.dark_teal())
+
+    if not equipe_actuelle:
+        embed.description = (
+            "Tu n'as pas encore choisi de clan ! Clique sur **Changer d'équipe** "
+            "ci-dessous pour rejoindre Bleu, Rouge ou Jaune."
+        )
+        return embed
+
+    emoji_equipe = config.EMOJI_EQUIPES.get(equipe_actuelle, "")
+    contribution = database.obtenir_contribution_clan(user_id)
+    emoji_titre, nom_titre = _titre_contribution(contribution)
+
+    embed.description = (
+        f"Tu es dans le clan {emoji_equipe} **{equipe_actuelle}**.\n"
+        f"{emoji_titre} **{nom_titre}** — {contribution} points de contribution"
+    )
+
+    objectif = database.obtenir_objectif_semaine_actif()
+    tous_progres = database.obtenir_tous_progres_objectif(objectif["id"])
+    label_type = "Captures" if objectif["type"] == "capture" else "Combats gagnés"
+
+    lignes_objectif = []
+    for nom_equipe in ("Bleu", "Rouge", "Jaune"):
+        p = tous_progres.get(nom_equipe, {"progres": 0, "complete_le": None})
+        marqueur = " ✅" if p["complete_le"] else ""
+        lignes_objectif.append(
+            f"{config.EMOJI_EQUIPES.get(nom_equipe, '')} **{nom_equipe}** "
+            f"{_barre_objectif(p['progres'], objectif['cible'])} "
+            f"{min(p['progres'], objectif['cible'])}/{objectif['cible']}{marqueur}"
+        )
+
+    embed.add_field(
+        name=f"🎯 Objectif de la semaine : {label_type}",
+        value=(
+            "\n".join(lignes_objectif)
+            + f"\n\n💰 {config.CLAN_OBJECTIF_RECOMPENSE_BASE} PD par membre à l'équipe qui l'atteint "
+            f"(+{config.CLAN_OBJECTIF_BONUS_PREMIER} PD bonus pour la 1ère des 3)."
+        ),
+        inline=False,
+    )
+
+    if not peut_changer:
+        jours = secondes_restantes // 86400
+        heures = (secondes_restantes % 86400) // 3600
+        embed.set_footer(text=f"Prochain changement de clan gratuit possible dans {jours}j {heures}h.")
+    else:
+        embed.set_footer(text="Tu peux changer de clan gratuitement dès maintenant si tu le souhaites.")
+
+    return embed
+
+
+class VueTableauBordClan(discord.ui.View):
+    def __init__(self, user_id: int):
+        super().__init__(timeout=120)
+        self.user_id = user_id
+
+    @discord.ui.button(label="Changer d'équipe", emoji="🔁", style=discord.ButtonStyle.primary)
+    async def changer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ton tableau de bord !", ephemeral=True)
+            return
+        vue = VueChoixClan(self.user_id)
+        await interaction.response.send_message(
+            "Choisis ton clan (1 changement gratuit par semaine) :", view=vue, ephemeral=True
+        )
+
+    @discord.ui.button(label="Historique des saisons", emoji="📜", style=discord.ButtonStyle.secondary)
+    async def historique(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ton tableau de bord !", ephemeral=True)
+            return
+
+        saisons = database.obtenir_historique_saisons_clan()
+        if not saisons:
+            await interaction.response.send_message(
+                "Aucune saison archivée pour l'instant — la toute première sera enregistrée à la fin de ce mois-ci.",
+                ephemeral=True,
+            )
+            return
+
+        embed = discord.Embed(title="📜 Historique des saisons de clan", color=discord.Color.dark_gold())
+        medailles = ["🥇", "🥈", "🥉"]
+        for saison, classement in saisons:
+            lignes = [
+                f"{medailles[rang - 1] if rang <= 3 else f'{rang}.'} {config.EMOJI_EQUIPES.get(equipe, '')} "
+                f"**{equipe}** — {score} PC cumulés"
+                for equipe, rang, score in classement
+            ]
+            embed.add_field(name=saison, value="\n".join(lignes) or "—", inline=False)
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
 class VueChoixClan(discord.ui.View):
     """Vue éphémère pour changer de clan directement depuis le profil — mêmes règles que
     la commande /equipe (1 changement gratuit par semaine)."""
@@ -741,19 +860,25 @@ class VueChoixClan(discord.ui.View):
         if isinstance(interaction.user, discord.Member) and interaction.guild is not None:
             try:
                 if ancienne_equipe is not None:
-                    ancien_role = discord.utils.get(interaction.guild.roles, name=ancienne_equipe)
+                    ancien_role = interaction.guild.get_role(config.ROLES_EQUIPES_ID.get(ancienne_equipe))
                     if ancien_role is not None:
                         await interaction.user.remove_roles(ancien_role, reason="Changement de clan")
 
-                nouveau_role = discord.utils.get(interaction.guild.roles, name=nom_equipe)
+                nouveau_role = interaction.guild.get_role(config.ROLES_EQUIPES_ID.get(nom_equipe))
                 if nouveau_role is None:
-                    nouveau_role = await interaction.guild.create_role(
-                        name=nom_equipe,
-                        color=discord.Color(config.COULEURS_EQUIPES[nom_equipe]),
-                        mentionable=True,
-                        reason="Création automatique du rôle d'équipe",
+                    # L'ID configuré ne correspond à aucun rôle existant sur CE serveur
+                    # (mauvais ID, ou rôle supprimé depuis) — on ne recrée JAMAIS un rôle à
+                    # la volée pour un clan (contrairement à avant) : ces 3 rôles sont
+                    # censés être gérés à la main par un admin, un doublon créé
+                    # automatiquement ferait plus de mal que de bien. On prévient juste
+                    # le joueur que la couleur n'a pas pu être appliquée.
+                    message += (
+                        f"\n⚠️ Le rôle Discord du clan **{nom_equipe}** est introuvable "
+                        f"(ID mal configuré, ou rôle supprimé) — demande à un admin de "
+                        f"vérifier `config.ROLES_EQUIPES_ID`."
                     )
-                await interaction.user.add_roles(nouveau_role, reason="Choix de clan")
+                else:
+                    await interaction.user.add_roles(nouveau_role, reason="Choix de clan")
             except discord.Forbidden:
                 message += (
                     "\n⚠️ Je n'ai pas la permission de gérer les rôles — demande à un admin de "
@@ -850,10 +975,9 @@ class VueOuvrirPokedex(discord.ui.View):
         custom_id="profil_clan_bouton",  # requis pour la persistance après redémarrage
     )
     async def clan(self, interaction: discord.Interaction, button: discord.ui.Button):
-        vue = VueChoixClan(interaction.user.id)
-        await interaction.response.send_message(
-            "Choisis ton clan (1 changement gratuit par semaine) :", view=vue, ephemeral=True
-        )
+        embed = construire_embed_tableau_bord_clan(interaction.user.id)
+        vue = VueTableauBordClan(interaction.user.id)
+        await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
 class VueProfil(discord.ui.View):

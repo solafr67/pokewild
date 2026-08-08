@@ -801,6 +801,50 @@ def init_db():
         """
     )
 
+    # --- Repaires de méchants (Team Rocket, Aqua, Magma, Galactic...) — même principe
+    # que l'arène (2 sbires + 1 boss), voir repaires.py.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS repaire_spawn (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            equipe_mechante TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            date_expiration INTEGER NOT NULL
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS repaire_runs (
+            repaire_spawn_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            etape INTEGER NOT NULL DEFAULT 0,
+            statut TEXT NOT NULL DEFAULT 'en_cours',
+            PRIMARY KEY (repaire_spawn_id, user_id)
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS repaire_victoires_jour (
+            user_id INTEGER NOT NULL,
+            jour_id INTEGER NOT NULL,
+            compteur INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, jour_id)
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS repaire_badges (
+            user_id INTEGER NOT NULL,
+            equipe_mechante TEXT NOT NULL,
+            date_obtenu INTEGER NOT NULL,
+            PRIMARY KEY (user_id, equipe_mechante)
+        )
+        """
+    )
+
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS combat_boosts (
@@ -1999,6 +2043,158 @@ def obtenir_badges_arene(user_id: int) -> set:
     resultats = {row["type_pokemon"] for row in cur.fetchall()}
     conn.close()
     return resultats
+
+
+# ----------------------------------------------------------------------------
+# Repaires de méchants — mêmes mécaniques que l'arène ci-dessus, mais indexées par
+# équipe_mechante (ex: "Team Rocket") au lieu du type Pokémon, et le badge donne un
+# bonus permanent à une CATÉGORIE (capture/shiny/argent/xp, voir
+# config.EQUIPES_MECHANTES["categorie_bonus"]) plutôt qu'un bonus de dégâts par type —
+# se greffe sur le même multiplicateur_boost() que les Races. Voir repaires.py.
+# ----------------------------------------------------------------------------
+
+def creer_repaire_spawn(equipe_mechante: str, channel_id: int, date_expiration: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO repaire_spawn (equipe_mechante, channel_id, date_expiration) VALUES (?, ?, ?)",
+        (equipe_mechante, str(channel_id), date_expiration),
+    )
+    repaire_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return repaire_id
+
+
+def obtenir_repaire_spawn(repaire_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM repaire_spawn WHERE id = ?", (repaire_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def creer_run_repaire(repaire_id: int, user_id: int) -> bool:
+    """Crée le run d'un joueur pour ce repaire — retourne False s'il en a déjà un
+    (une seule tentative par joueur et par spawn, gagnée ou perdue)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM repaire_runs WHERE repaire_spawn_id = ? AND user_id = ?", (repaire_id, user_id))
+    if cur.fetchone() is not None:
+        conn.close()
+        return False
+    cur.execute(
+        "INSERT INTO repaire_runs (repaire_spawn_id, user_id, etape, statut) VALUES (?, ?, 0, 'en_cours')",
+        (repaire_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def avancer_run_repaire(repaire_id: int, user_id: int, nouvelle_etape: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE repaire_runs SET etape = ? WHERE repaire_spawn_id = ? AND user_id = ?",
+        (nouvelle_etape, repaire_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def terminer_run_repaire(repaire_id: int, user_id: int, statut: str):
+    """statut : 'victoire' (Boss battu) ou 'defaite'."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE repaire_runs SET statut = ? WHERE repaire_spawn_id = ? AND user_id = ?",
+        (statut, repaire_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def possede_badge_repaire(user_id: int, equipe_mechante: str) -> bool:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM repaire_badges WHERE user_id = ? AND equipe_mechante = ?", (user_id, equipe_mechante))
+    trouve = cur.fetchone() is not None
+    conn.close()
+    return trouve
+
+
+def accorder_badge_repaire(user_id: int, equipe_mechante: str) -> bool:
+    """Retourne True si c'est un NOUVEAU badge (première fois), False s'il l'avait déjà."""
+    if possede_badge_repaire(user_id, equipe_mechante):
+        return False
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT OR IGNORE INTO repaire_badges (user_id, equipe_mechante, date_obtenu) VALUES (?, ?, ?)",
+        (user_id, equipe_mechante, int(time.time())),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def obtenir_badges_repaire(user_id: int) -> set:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT equipe_mechante FROM repaire_badges WHERE user_id = ?", (user_id,))
+    resultats = {row["equipe_mechante"] for row in cur.fetchall()}
+    conn.close()
+    return resultats
+
+
+def multiplicateur_repaire_du_jour(user_id: int) -> float:
+    """Équivalent de multiplicateur_arene_du_jour, pour les repaires."""
+    import config
+
+    jour_id = int(time.time()) // 86400
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT compteur FROM repaire_victoires_jour WHERE user_id = ? AND jour_id = ?",
+        (user_id, jour_id),
+    )
+    row = cur.fetchone()
+    conn.close()
+    compteur = row["compteur"] if row else 0
+    paliers = config.REPAIRE_MULTIPLICATEURS_REPETITION_JOUR
+    return paliers[min(compteur, len(paliers) - 1)]
+
+
+def enregistrer_victoire_repaire_repetition(user_id: int) -> float:
+    """Équivalent de enregistrer_victoire_arene_repetition, pour les repaires."""
+    import config
+
+    jour_id = int(time.time()) // 86400
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT compteur FROM repaire_victoires_jour WHERE user_id = ? AND jour_id = ?",
+        (user_id, jour_id),
+    )
+    row = cur.fetchone()
+    compteur_avant = row["compteur"] if row else 0
+
+    paliers = config.REPAIRE_MULTIPLICATEURS_REPETITION_JOUR
+    multiplicateur = paliers[min(compteur_avant, len(paliers) - 1)]
+
+    cur.execute(
+        """
+        INSERT INTO repaire_victoires_jour (user_id, jour_id, compteur)
+        VALUES (?, ?, 1)
+        ON CONFLICT(user_id, jour_id) DO UPDATE SET compteur = compteur + 1
+        """,
+        (user_id, jour_id),
+    )
+    conn.commit()
+    conn.close()
+    return multiplicateur
 
 
 def obtenir_meilleures_ivs(user_id: int, pokemon_nom: str) -> dict:
@@ -3706,6 +3902,14 @@ def multiplicateur_boost(user_id: int, type_boost: str) -> float:
         race = races.obtenir_race_par_nom(race_nom)
         if race:
             multiplicateur *= 1.0 + race["bonus"].get(type_boost, 0.0)
+
+    # Bonus permanent des badges de Repaire de méchants (voir repaires.py) — chaque
+    # équipe vaincue pour la première fois donne un petit bonus à SA catégorie précise
+    # (capture/shiny/argent/xp — voir config.EQUIPES_MECHANTES["categorie_bonus"]).
+    for equipe in obtenir_badges_repaire(user_id):
+        info = config.EQUIPES_MECHANTES.get(equipe)
+        if info and info.get("categorie_bonus") == type_boost:
+            multiplicateur *= 1.0 + config.REPAIRE_BONUS_PAR_BADGE
 
     if obtenir_boost_actif(user_id, type_boost) is not None:
         multiplicateur *= config.MULTIPLICATEURS_BOOST.get(type_boost, 1.0)

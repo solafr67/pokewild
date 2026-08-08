@@ -738,7 +738,9 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
             stat_off_boostee = max(1, stat_off * _mult_stage(boosts_atk[cle_boost_off]) * mult_stat_choix)
             bonus_badge = 1.0
             if user_id > 0 and database.possede_badge_arene(user_id, attaque["type"]):
-                bonus_badge = 1.0 + config.ARENE_BONUS_DEGATS_PAR_BADGE
+                bonus_badge += config.ARENE_BONUS_DEGATS_PAR_BADGE
+            if user_id > 0 and database.possede_badge_repaire_pour_type(user_id, attaque["type"]):
+                bonus_badge += config.REPAIRE_BONUS_DEGATS_PAR_BADGE
 
             capacite_atk = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
             statut_atk_pour_cran = database.obtenir_statut(combat_id, user_id, nom_atk)

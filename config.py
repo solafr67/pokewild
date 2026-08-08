@@ -219,6 +219,58 @@ ARENE_IMAGES_CHAMPION = {
 }
 ARENE_IMAGE_CHAMPION_DEFAUT = "https://www.pokepedia.fr/images/8/8e/VS_Tanguy_Pt.png"
 
+# --- Repaires de méchants (Team Rocket, Aqua, Magma, Galactic...) — même principe que
+# l'arène, spawn dans le même channel que les dresseurs (CHANNEL_AVENTURE_ID), voir
+# repaires.py. "types_theme" alimente le pool de Pokémon des combats. "categorie_bonus"
+# détermine à QUELLE catégorie de multiplicateur_boost (capture/shiny/argent/xp) le
+# badge de cette équipe donne un bonus permanent une fois débloqué. Noms et images des
+# chefs vérifiés (Poképédia) : Arthur = nom FR d'Archie (Team Aqua), Max = nom FR de
+# Maxie (Team Magma), Hélio = nom FR de Cyrus (Team Galactic).
+EQUIPES_MECHANTES = {
+    "Team Rocket": {
+        "types_theme": ["poison", "tenebres"],
+        "emoji": "🌹",
+        "chef": "Giovanni",
+        "image_chef": "https://www.pokepedia.fr/images/d/d5/VS_Giovanni_%28Classique%29_PM.png",
+        "categorie_bonus": "argent",
+    },
+    "Team Aqua": {
+        "types_theme": ["eau"],
+        "emoji": "🌊",
+        "chef": "Arthur",
+        "image_chef": "https://www.pokepedia.fr/images/2/2d/Sprite_Arthur_ROSA.png",
+        "categorie_bonus": "capture",
+    },
+    "Team Magma": {
+        "types_theme": ["feu", "sol"],
+        "emoji": "🌋",
+        "chef": "Max",
+        "image_chef": "https://www.pokepedia.fr/images/6/61/Sprite_Max_ROSA.png",
+        "categorie_bonus": "shiny",
+    },
+    "Team Galactic": {
+        "types_theme": ["poison", "acier", "spectre"],
+        "emoji": "🌌",
+        "chef": "Hélio",
+        "image_chef": "https://www.pokepedia.fr/images/1/1e/Sprite_H%C3%A9lio_USUL.png",
+        "categorie_bonus": "xp",
+    },
+}
+
+CHANNEL_REPAIRE_ID = CHANNEL_AVENTURE_ID  # même channel que les dresseurs/l'arène, plus simple
+REPAIRE_INTERVALLE_HEURES = 3
+REPAIRE_DUREE_DISPONIBLE_MINUTES = 20
+REPAIRE_TAILLE_SBIRE_1 = 3
+REPAIRE_TAILLE_SBIRE_2 = 4
+REPAIRE_TAILLE_BOSS = 5
+REPAIRE_MULTIPLICATEUR_BOSS = 1.15
+REPAIRE_RARETES_BOSS = {"rare", "hyper_rare", "legendaire"}
+REPAIRE_RECOMPENSE_DOLLARS_SBIRE = (80, 150)
+REPAIRE_RECOMPENSE_DOLLARS_BOSS = (250, 400)
+REPAIRE_MULTIPLICATEURS_REPETITION_JOUR = [1.0, 0.6, 0.35]
+REPAIRE_BONUS_PAR_BADGE = 0.03
+REPAIRE_CHANCE_OBJET_PAR_OBJET = 0.02
+
 # Temps laissé à un joueur pour choisir son prochain Pokémon quand le sien tombe K.O.
 # en combat (dresseur/Arène/Gladio/PvP) — au-delà, le premier vivant est envoyé
 # automatiquement (anti-AFK, même durée qu'un tour de combat).

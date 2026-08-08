@@ -38,6 +38,7 @@ import wiki as wiki_module
 import parrainage as parrainage_module
 import draft_pvp as draft_pvp_module
 import arene as arene_module
+import repaires as repaires_module
 import meteo
 import niveaux_pokemon
 from pokemon_data import (
@@ -1254,6 +1255,10 @@ async def on_ready():
         bot.loop.create_task(arene_module.boucle_arene(bot))
         bot.boucle_arene_lancee = True
 
+    if not getattr(bot, "boucle_repaires_lancee", False):
+        bot.loop.create_task(repaires_module.boucle_repaires(bot))
+        bot.boucle_repaires_lancee = True
+
     if not getattr(bot, "boucle_gladio_lancee", False):
         bot.loop.create_task(boucle_gladio_spontane())
         bot.boucle_gladio_lancee = True
@@ -2018,6 +2023,24 @@ async def force_arene_cmd(interaction: discord.Interaction, type_pokemon: str = 
     await arene_module.demarrer_nouvelle_arene(bot, channel, type_arene=type_pokemon.lower() if type_pokemon else None)
     journal.logger(f"🛠️ <@{interaction.user.id}> a forcé l'ouverture d'une arène (/force-arene).")
     await interaction.response.send_message(f"✅ Arène ouverte dans {channel.mention} !", ephemeral=True)
+
+
+@bot.tree.command(name="force-repaire", description="[Admin] Force l'ouverture immédiate d'un repaire de méchants")
+@app_commands.describe(equipe="Équipe méchante (aléatoire si non précisée)")
+@app_commands.choices(equipe=[
+    app_commands.Choice(name=nom_equipe, value=nom_equipe) for nom_equipe in config.EQUIPES_MECHANTES
+])
+@app_commands.checks.has_permissions(administrator=True)
+async def force_repaire_cmd(interaction: discord.Interaction, equipe: app_commands.Choice[str] = None):
+    channel_id = getattr(config, "CHANNEL_REPAIRE_ID", None)
+    channel = bot.get_channel(channel_id) if channel_id else None
+    if channel is None:
+        await interaction.response.send_message("❌ CHANNEL_REPAIRE_ID introuvable — vérifie l'ID dans config.py.", ephemeral=True)
+        return
+
+    await repaires_module.demarrer_nouveau_repaire(bot, channel, equipe_mechante=equipe.value if equipe else None)
+    journal.logger(f"🛠️ <@{interaction.user.id}> a forcé l'ouverture d'un repaire (/force-repaire).")
+    await interaction.response.send_message(f"✅ Repaire ouvert dans {channel.mention} !", ephemeral=True)
 
 
 @bot.tree.command(name="pokedex-info", description="Affiche la fiche détaillée d'un Pokémon précis")

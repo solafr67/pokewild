@@ -64,6 +64,12 @@ EMOJI_SOINS = {
     "hyperpotion": "⚕️",
     "totalsoin": "🌿",
 }
+IMAGE_SOINS = {
+    "potion": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites/potion.png",
+    "superpotion": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites/super_potion.png",
+    "hyperpotion": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites/hyper_potion.png",
+    "totalsoin": "https://raw.githubusercontent.com/solafr67/pokewild/main/objets_sprites/total_soin.png",
+}
 
 NOM_OBJETS_DIVERS = {
     "cristal_mutation": "Cristal de Mutation",
