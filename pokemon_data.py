@@ -3,7 +3,10 @@ import os
 import random
 import unicodedata
 
+import discord
+
 import config
+import database
 
 # Rareté : commun / peu_commun / rare / hyper_rare / legendaire
 
@@ -176,6 +179,33 @@ def sprite_pokemon(pokemon: dict, shiny: bool = False) -> str | None:
     if pokemon.get("sprite_gif_disponible") is False:
         return URL_ARTWORK_OFFICIEL.format(prefixe=sous_dossier, numero=numero)
     return f"https://raw.githubusercontent.com/solafr67/pokewild/main/sprites_corriges/{sous_dossier}{numero}.gif"
+
+
+_CACHE_EMOJIS_OBJETS: dict | None = None
+
+
+def recharger_cache_emojis_objets():
+    """Force le rechargement du cache d'emoji personnalisés depuis la base — à appeler
+    juste après un import réussi via /admin-importer-emojis-objets, sans quoi le cache
+    en mémoire resterait périmé jusqu'au prochain redémarrage du bot."""
+    global _CACHE_EMOJIS_OBJETS
+    _CACHE_EMOJIS_OBJETS = database.obtenir_emojis_objets()
+
+
+def emoji_pour_objet(cle: str, emoji_unicode_repli: str):
+    """Retourne l'emoji à utiliser pour un objet (SelectOption/Button) : l'emoji Discord
+    personnalisé (le vrai sprite) s'il a été importé via /admin-importer-emojis-objets,
+    sinon l'emoji Unicode générique de repli passé en argument — donc rien ne casse tant
+    que l'import n'a pas encore été fait, ou pour un objet dont l'upload aurait échoué
+    (limite d'emplacements du serveur atteinte, par ex.)."""
+    global _CACHE_EMOJIS_OBJETS
+    if _CACHE_EMOJIS_OBJETS is None:
+        _CACHE_EMOJIS_OBJETS = database.obtenir_emojis_objets()
+    trouve = _CACHE_EMOJIS_OBJETS.get(cle)
+    if trouve:
+        emoji_id, emoji_nom = trouve
+        return discord.PartialEmoji(name=emoji_nom, id=emoji_id)
+    return emoji_unicode_repli
 
 
 def calculer_multiplicateur_type(types_attaquant: list, types_defenseur: list) -> float:

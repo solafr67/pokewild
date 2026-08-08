@@ -4,7 +4,7 @@ import capacites as capacites_module
 import config
 import database
 import journal
-from pokemon_data import EMOJI_BALLS, EMOJI_POKEDOLLAR, EMOJI_SOINS, NOM_BALL_AFFICHAGE, NOM_SOIN_AFFICHAGE
+from pokemon_data import EMOJI_BALLS, EMOJI_POKEDOLLAR, EMOJI_SOINS, NOM_BALL_AFFICHAGE, NOM_SOIN_AFFICHAGE, emoji_pour_objet
 
 
 # ----------------------------------------------------------------------------
@@ -264,7 +264,7 @@ class VueCategoriePotions(discord.ui.View):
         for soin_type in config.PRIX_SOINS:
             bouton = discord.ui.Button(
                 label=f"Acheter {NOM_SOIN_AFFICHAGE[soin_type]}",
-                emoji=EMOJI_SOINS.get(soin_type),
+                emoji=emoji_pour_objet(soin_type, EMOJI_SOINS.get(soin_type)),
                 style=discord.ButtonStyle.secondary,
             )
             bouton.callback = self._creer_callback(soin_type)
@@ -542,7 +542,7 @@ class VueCategorieObjets(discord.ui.View):
                 label=f"{info['nom']} — {config.PRIX_OBJETS_TENUS[cle]} PD"[:100],
                 value=cle,
                 description=info["description"][:100],
-                emoji=info["emoji"],
+                emoji=emoji_pour_objet(cle, info["emoji"]),
             )
             for cle, info in capacites_module.OBJETS_TENUS.items()
         ]

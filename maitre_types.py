@@ -11,6 +11,7 @@ from pokemon_data import (
     attaque_necessite_ct,
     attaques_apprenables,
     attaques_verrouillees_par_niveau,
+    emoji_pour_objet,
     obtenir_attaque,
     obtenir_pokemon_par_nom,
     prix_ct,
@@ -248,7 +249,7 @@ class VueGestionObjet(discord.ui.View):
                     label=f"{info['nom']} (×{quantite})"[:100],
                     value=cle,
                     description=info["description"][:100],
-                    emoji=info["emoji"],
+                    emoji=emoji_pour_objet(cle, info["emoji"]),
                 )
             )
         if options:

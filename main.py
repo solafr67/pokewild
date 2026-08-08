@@ -41,6 +41,8 @@ import arene as arene_module
 import repaires as repaires_module
 import meteo
 import niveaux_pokemon
+import aiohttp
+
 from pokemon_data import (
     ATTAQUES,
     EMOJI_BALLS,
@@ -49,9 +51,11 @@ from pokemon_data import (
     EMOJI_RARETE,
     EMOJI_TYPES,
     EMOJI_SOINS,
+    IMAGE_SOINS,
     NOM_BALL_AFFICHAGE,
     NOM_OBJETS_DIVERS,
     NOM_SOIN_AFFICHAGE,
+    recharger_cache_emojis_objets,
     POIDS_RARETE_CLASSIQUE,
     POIDS_RARETE_VIP,
     POKEDEX,
@@ -2060,6 +2064,84 @@ async def force_repaire_cmd(interaction: discord.Interaction, equipe: app_comman
     await repaires_module.demarrer_nouveau_repaire(bot, channel, equipe_mechante=equipe.value if equipe else None)
     journal.logger(f"🛠️ <@{interaction.user.id}> a forcé l'ouverture d'un repaire (/force-repaire).")
     await interaction.response.send_message(f"✅ Repaire ouvert dans {channel.mention} !", ephemeral=True)
+
+
+@bot.tree.command(
+    name="admin-importer-emojis-objets",
+    description="[Admin] Upload les sprites d'objets comme emoji Discord perso (une fois, pour les menus déroulants)",
+)
+@app_commands.checks.has_permissions(administrator=True)
+async def admin_importer_emojis_objets(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+
+    # Les 3 familles d'objets qui ont un vrai sprite (voir objets_sprites/, objets_sprites_v2/) :
+    # objets de combat, objets de transformation, potions. Clé interne = nom de l'emoji créé.
+    a_importer = {}
+    for cle, info in capacites_module.OBJETS_TENUS.items():
+        if info.get("image"):
+            a_importer[cle] = info["image"]
+    for cle, info in formes_objets_module.FORMES_OBJETS.items():
+        if info.get("objet_image"):
+            a_importer[cle] = info["objet_image"]
+    for cle, url in IMAGE_SOINS.items():
+        a_importer[cle] = url
+
+    deja_importes = database.obtenir_emojis_objets()
+    a_faire = {cle: url for cle, url in a_importer.items() if cle not in deja_importes}
+
+    if not a_faire:
+        await interaction.followup.send(
+            f"✅ Rien à faire — les {len(a_importer)} objets ont déjà un emoji personnalisé importé.",
+            ephemeral=True,
+        )
+        return
+
+    reussis, echoues, limite_atteinte = [], [], False
+    async with aiohttp.ClientSession() as session:
+        for cle, url in a_faire.items():
+            if limite_atteinte:
+                echoues.append((cle, "limite d'emplacements du serveur atteinte"))
+                continue
+            try:
+                async with session.get(url) as resp:
+                    if resp.status != 200:
+                        echoues.append((cle, f"téléchargement échoué (HTTP {resp.status})"))
+                        continue
+                    image_bytes = await resp.read()
+                emoji = await interaction.guild.create_custom_emoji(
+                    name=cle, image=image_bytes, reason="Import sprites objets PokéWild"
+                )
+                database.enregistrer_emoji_objet(cle, emoji.id, emoji.name)
+                reussis.append(cle)
+                await asyncio.sleep(1)  # reste courtois vis-à-vis du rate limit Discord
+            except discord.HTTPException as e:
+                if getattr(e, "code", None) == 30008 or "Maximum number of emojis reached" in str(e):
+                    limite_atteinte = True
+                    echoues.append((cle, "limite d'emplacements du serveur atteinte"))
+                else:
+                    echoues.append((cle, str(e)))
+
+    recharger_cache_emojis_objets()
+    journal.logger(f"🛠️ <@{interaction.user.id}> a importé {len(reussis)} emoji d'objets (/admin-importer-emojis-objets).")
+
+    description = f"✅ **{len(reussis)}** emoji créés et branchés.\n"
+    if echoues:
+        lignes_echec = "\n".join(f"— `{cle}` : {raison}" for cle, raison in echoues[:15])
+        description += f"\n❌ **{len(echoues)}** échoués :\n{lignes_echec}"
+        if len(echoues) > 15:
+            description += f"\n… et {len(echoues) - 15} de plus."
+        if limite_atteinte:
+            description += (
+                "\n\n⚠️ Le serveur a atteint sa limite d'emplacements d'emoji. "
+                "Il faut soit booster le serveur (plus d'emplacements), soit supprimer des emoji existants, "
+                "puis relancer cette commande — elle ne refera que ceux qui manquent encore."
+            )
+    embed = discord.Embed(
+        title="🖼️ Import des emoji d'objets",
+        description=description,
+        color=discord.Color.green() if not echoues else discord.Color.orange(),
+    )
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(name="pokedex-info", description="Affiche la fiche détaillée d'un Pokémon précis")

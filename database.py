@@ -1081,8 +1081,44 @@ def init_db():
         except sqlite3.OperationalError:
             pass  # la colonne existe déjà
 
+    # Emoji Discord personnalisés (sprite réel) uploadés sur le serveur pour remplacer
+    # les emoji Unicode génériques dans les menus déroulants d'objets (boutique, équiper).
+    # Rempli par la commande admin /admin-importer-emojis-objets, pas au démarrage.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS emoji_objet (
+            cle TEXT PRIMARY KEY,
+            emoji_id INTEGER NOT NULL,
+            emoji_nom TEXT NOT NULL
+        )
+        """
+    )
+
     conn.commit()
     conn.close()
+
+
+def enregistrer_emoji_objet(cle: str, emoji_id: int, emoji_nom: str):
+    """Sauvegarde l'ID d'un emoji personnalisé Discord uploadé pour un objet
+    (clé interne de capacites.OBJETS_TENUS / formes_objets.FORMES_OBJETS / pokemon_data.IMAGE_SOINS)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT OR REPLACE INTO emoji_objet (cle, emoji_id, emoji_nom) VALUES (?, ?, ?)",
+        (cle, emoji_id, emoji_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_emojis_objets() -> dict:
+    """Retourne {cle: (emoji_id, emoji_nom)} pour tous les emoji personnalisés déjà importés."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT cle, emoji_id, emoji_nom FROM emoji_objet")
+    resultat = {row[0]: (row[1], row[2]) for row in cur.fetchall()}
+    conn.close()
+    return resultat
 
 
 def obtenir_parametre(cle: str):
