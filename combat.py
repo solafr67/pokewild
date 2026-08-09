@@ -632,14 +632,12 @@ async def resoudre_tour(combat_id: int) -> list:
             stat_def_boostee = max(1, stat_def * mult_stage(boosts_def[cle_boost_def]))
             stat_off_boostee = max(1, stat_off * mult_stage(boosts_atk[cle_boost_off]) * mult_stat_choix)
             # Bonus permanent d'Arène : +X% si l'attaquant a débloqué le badge du type de
-            # cette attaque (voir arene.py / config.ARENE_BONUS_DEGATS_PAR_BADGE).
-            # Même principe pour les badges de Repaire de méchants (voir repaires.py) —
-            # les deux se cumulent si le joueur a débloqué les deux pour ce type.
+            # cette attaque (voir arene.py / config.ARENE_BONUS_DEGATS_PAR_BADGE). Les
+            # badges de Repaire de méchants donnent un bonus différent (multiplicateur_boost
+            # par catégorie capture/shiny/argent/xp, pas de bonus de dégâts) — voir repaires.py.
             bonus_badge = 1.0
             if user_id > 0 and database.possede_badge_arene(user_id, attaque["type"]):
                 bonus_badge += config.ARENE_BONUS_DEGATS_PAR_BADGE
-            if user_id > 0 and database.possede_badge_repaire_pour_type(user_id, attaque["type"]):
-                bonus_badge += config.REPAIRE_BONUS_DEGATS_PAR_BADGE
 
             # Multiplicateurs de talent/objet — attaquant (Cran, Torrent/Brasier..., Orbe
             # Vie) et défenseur (Solide Roc/Filtre, -25% sur un coup super efficace).

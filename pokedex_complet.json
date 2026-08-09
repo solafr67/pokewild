@@ -124812,7 +124812,7 @@
     "sprite_gif_disponible": true
   },
   {
-    "nom": "Grimace d'Alola",
+    "nom": "Tadmorv d'Alola",
     "numero": 88,
     "numero_sprite": 10112,
     "types": [
@@ -124836,7 +124836,7 @@
     "sprite_gif_disponible": true
   },
   {
-    "nom": "Tadmorv d'Alola",
+    "nom": "Grotadmorv d'Alola",
     "numero": 89,
     "numero_sprite": 10113,
     "types": [
@@ -125263,7 +125263,7 @@
     "sprite_gif_disponible": true
   },
   {
-    "nom": "Darumacho de Galar",
+    "nom": "Darumarond de Galar",
     "numero": 554,
     "numero_sprite": 10176,
     "types": [
@@ -125286,7 +125286,7 @@
     "sprite_gif_disponible": true
   },
   {
-    "nom": "Ristourbo de Galar",
+    "nom": "Darumacho de Galar",
     "numero": 555,
     "numero_sprite": 10177,
     "types": [
@@ -125305,99 +125305,6 @@
       "attaque_spe": 30,
       "defense_spe": 55,
       "vitesse": 55
-    },
-    "sprite_gif_disponible": true
-  },
-  {
-    "nom": "Sacré Griffe",
-    "numero": 863,
-    "numero_sprite": 863,
-    "types": [
-      "acier"
-    ],
-    "rarete": "peu_commun",
-    "generation": 8,
-    "base_pc": 440,
-    "sprite": null,
-    "attaques": [],
-    "movepool_niveaux": {},
-    "stats_detaillees": {
-      "pv": 70,
-      "attaque": 110,
-      "defense": 100,
-      "attaque_spe": 50,
-      "defense_spe": 60,
-      "vitesse": 50
-    },
-    "sprite_gif_disponible": true
-  },
-  {
-    "nom": "Dosinectar",
-    "numero": 864,
-    "numero_sprite": 864,
-    "types": [
-      "fantome"
-    ],
-    "rarete": "rare",
-    "generation": 8,
-    "base_pc": 510,
-    "sprite": null,
-    "attaques": [],
-    "movepool_niveaux": {},
-    "stats_detaillees": {
-      "pv": 60,
-      "attaque": 95,
-      "defense": 50,
-      "attaque_spe": 145,
-      "defense_spe": 130,
-      "vitesse": 30
-    },
-    "sprite_gif_disponible": true
-  },
-  {
-    "nom": "Doigrind",
-    "numero": 865,
-    "numero_sprite": 865,
-    "types": [
-      "combat"
-    ],
-    "rarete": "rare",
-    "generation": 8,
-    "base_pc": 507,
-    "sprite": null,
-    "attaques": [],
-    "movepool_niveaux": {},
-    "stats_detaillees": {
-      "pv": 62,
-      "attaque": 135,
-      "defense": 95,
-      "attaque_spe": 68,
-      "defense_spe": 82,
-      "vitesse": 65
-    },
-    "sprite_gif_disponible": true
-  },
-  {
-    "nom": "M. Glacial",
-    "numero": 866,
-    "numero_sprite": 866,
-    "types": [
-      "glace",
-      "psy"
-    ],
-    "rarete": "rare",
-    "generation": 8,
-    "base_pc": 520,
-    "sprite": null,
-    "attaques": [],
-    "movepool_niveaux": {},
-    "stats_detaillees": {
-      "pv": 80,
-      "attaque": 85,
-      "defense": 75,
-      "attaque_spe": 110,
-      "defense_spe": 100,
-      "vitesse": 70
     },
     "sprite_gif_disponible": true
   },
@@ -125594,7 +125501,7 @@
     "sprite_gif_disponible": true
   },
   {
-    "nom": "Blancoton d'Hisui",
+    "nom": "Fragilady d'Hisui",
     "numero": 549,
     "numero_sprite": 10237,
     "types": [
@@ -125906,7 +125813,7 @@
     "sprite_gif_disponible": true
   },
   {
-    "nom": "Ouaporo de Paldea",
+    "nom": "Axoloto de Paldea",
     "numero": 194,
     "numero_sprite": 10253,
     "types": [
