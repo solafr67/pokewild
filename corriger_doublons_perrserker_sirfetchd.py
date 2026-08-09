@@ -1,39 +1,76 @@
 """
-Complément à corriger_noms_formes_manquants.py — traite 2 espèces découvertes après coup
-en creusant le signalement de l'utilisateur sur Sacré Griffe/Doigrind : ce ne sont pas de
-simples mauvais noms, ce sont des entrées Pokédex EN DOUBLE et VIDES (sprite=null, 0
-attaque, 0 movepool) créées par erreur par ajouter_formes_regionales.py pour des espèces
-qui existaient déjà correctement dans le Pokédex de base (Perrserker/Sirfetch'd/Cursola/
-M. Rime ne sont PAS des formes régionales à proprement parler — juste des Pokémon
-exclusifs à Galar avec leur propre numéro, déjà présents une fois).
-
-Les 4 entrées vides (numero_sprite == numero, sprite null) ont été supprimées du
-pokedex_complet.json livré à part. Ce script corrige les CAPTURES DÉJÀ FAITES par des
-joueurs sous l'ancien nom fantôme, en les fusionnant vers la vraie entrée :
+Complément à corriger_noms_formes_manquants.py — traite 2 espèces découvertes après coup :
+entrées Pokédex EN DOUBLE et VIDES (sprite=null, 0 attaque) créées par erreur pour des
+espèces qui existaient déjà correctement dans le Pokédex de base (Perrserker/Sirfetch'd
+ne sont pas des formes régionales à proprement parler — juste des Pokémon exclusifs à
+Galar avec leur propre numéro, déjà présents une fois). Les entrées vides ont été
+supprimées du pokedex_complet.json livré à part. Ce script corrige les CAPTURES DÉJÀ
+FAITES par des joueurs sous l'ancien nom fantôme :
 
   Sacré Griffe -> Berserkatt   (Perrserker, #863)
   Doigrind     -> Palarticho   (Sirfetch'd, #865)
 
-(Dosinectar->Corayôme et M. Glacial->M. Glaquette avaient déjà le même souci de doublon,
-mais leur RENOMMAGE de capture est déjà couvert par corriger_noms_formes_manquants.py —
-à lancer aussi si ce n'est pas déjà fait, il n'y a que la suppression de l'entrée fantôme
-dans le JSON qui était encore manquante pour ces deux-là, déjà faite dans le fichier livré.)
-
-Idempotent (comme l'original) : verrou dans `settings` pour empêcher un relancement.
+Même logique corrigée que corriger_noms_formes_manquants.py v3 (renommage à un seul saut
+par ligne, fusion uniquement des vrais doublons — même joueur, même destination finale,
+garde le niveau/XP le plus haut). Idempotent (verrou dans `settings`).
 """
 
 import sqlite3
 import os
+from collections import defaultdict
 
 DB_PATH = os.environ.get("DB_PATH", "pokebot.sqlite3")
-CLE_PARAMETRE = "migration_noms_doublons_perrserker_sirfetchd_appliquee"
+CLE_PARAMETRE = "migration_noms_doublons_perrserker_sirfetchd_2_appliquee"
 
 CORRECTIONS = {
     "Sacré Griffe": "Berserkatt",
     "Doigrind": "Palarticho",
 }
 
-TABLES = ["captures", "equipe_combat", "niveaux_pokemon"]
+
+def _corriger_captures(cur):
+    anciens_noms = list(CORRECTIONS.keys())
+    case_sql = " ".join("WHEN ? THEN ?" for _ in CORRECTIONS)
+    case_params = [v for paire in CORRECTIONS.items() for v in paire]
+    placeholders = ", ".join("?" for _ in anciens_noms)
+    cur.execute(
+        f"""
+        UPDATE captures
+        SET pokemon_nom = CASE pokemon_nom {case_sql} ELSE pokemon_nom END
+        WHERE pokemon_nom IN ({placeholders})
+        """,
+        case_params + anciens_noms,
+    )
+    if cur.rowcount:
+        print(f"  captures : {cur.rowcount} ligne(s) renommée(s)")
+
+
+def _corriger_table_avec_cle_unique(cur, table, colonnes_extra):
+    colonnes = ["user_id", "pokemon_nom"] + colonnes_extra
+    cur.execute(f"SELECT {', '.join(colonnes)} FROM {table}")
+    lignes = cur.fetchall()
+
+    par_destination = defaultdict(list)
+    for ligne in lignes:
+        user_id, nom, *extra = ligne
+        cle = CORRECTIONS.get(nom, nom)
+        par_destination[(user_id, cle)].append(tuple(extra))
+
+    total_fusionnees = 0
+    cur.execute(f"DELETE FROM {table}")
+    for (user_id, nom_final), groupe in par_destination.items():
+        fusion = tuple(max(valeurs) for valeurs in zip(*groupe)) if colonnes_extra else ()
+        placeholders = ", ".join("?" for _ in colonnes)
+        cur.execute(
+            f"INSERT INTO {table} ({', '.join(colonnes)}) VALUES ({placeholders})",
+            (user_id, nom_final) + fusion,
+        )
+        if len(groupe) > 1:
+            total_fusionnees += 1
+
+    if total_fusionnees:
+        print(f"  {table} : {total_fusionnees} doublon(s) réel(s) fusionné(s)")
+    print(f"  {table} : {len(par_destination)} ligne(s) au total après passage")
 
 
 def corriger():
@@ -46,30 +83,12 @@ def corriger():
         conn.close()
         return
 
-    anciens_noms = list(CORRECTIONS.keys())
-    case_sql = " ".join("WHEN ? THEN ?" for _ in CORRECTIONS)
-    case_params = [v for paire in CORRECTIONS.items() for v in paire]
-
-    total = 0
-    for table in TABLES:
-        placeholders = ", ".join("?" for _ in anciens_noms)
-        try:
-            cur.execute(
-                f"""
-                UPDATE {table}
-                SET pokemon_nom = CASE pokemon_nom {case_sql} ELSE pokemon_nom END
-                WHERE pokemon_nom IN ({placeholders})
-                """,
-                case_params + anciens_noms,
-            )
-            if cur.rowcount:
-                print(f"  {table} : {cur.rowcount} ligne(s) corrigée(s)")
-                total += cur.rowcount
-        except sqlite3.OperationalError as e:
-            print(f"  ⚠️ {table}: {e}")
+    _corriger_captures(cur)
+    _corriger_table_avec_cle_unique(cur, "equipe_combat", [])
+    _corriger_table_avec_cle_unique(cur, "niveaux_pokemon", ["niveau", "xp"])
 
     conn.commit()
-    print(f"\n✅ Terminé — {total} ligne(s) corrigée(s) au total.")
+    print("\n✅ Terminé.")
 
     conn.execute(
         "INSERT OR REPLACE INTO settings (cle, valeur) VALUES (?, ?)",
