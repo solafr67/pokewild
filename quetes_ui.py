@@ -90,6 +90,11 @@ class VueCentreQuetes(discord.ui.View):
         embed, vue = construire_tableau_de_bord(interaction.user.id)
         await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
+    @discord.ui.button(label="Quête principale", style=discord.ButtonStyle.secondary, emoji="📖", custom_id="quetes_principale_voir")
+    async def voir_principale(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = construire_embed_quete_principale(interaction.user.id)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 def _ligne_quete(user_id: int, quete: dict, type_quete: str) -> str:
     compteur, reclamee = database.obtenir_progression_quete(user_id, quete["id"], type_quete)

@@ -172,8 +172,10 @@ MULTIPLICATEUR_BOOSTER_SERVEUR = {"argent": 1.15, "xp": 1.15, "shiny": 1.5}
 # --- Draft PvP : niveau standardisé pour tous les Pokémon draftés (compétition équitable,
 # indépendante de la collection/progression de chacun) ---
 DRAFT_NIVEAU = 50
-DRAFT_TAILLE_POOL = 8
-DRAFT_PICKS_PAR_JOUEUR = 3
+# Chaque joueur pioche dans son PROPRE pool privé (disjoint de celui de l'adversaire — voir
+# draft_pvp.EtatDraft) et choisit son équipe dedans.
+DRAFT_TAILLE_POOL_PERSO = 12
+DRAFT_TAILLE_EQUIPE = 6
 
 # --- Arène (PvE) : spawn à intervalle fixe dans le channel Aventure, 3 combats
 # (2 Apprentis + le Champion), type tiré au hasard à chaque spawn. Plusieurs joueurs

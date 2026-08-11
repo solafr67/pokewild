@@ -1977,7 +1977,7 @@ async def parrainage_cmd(interaction: discord.Interaction):
 
 @bot.tree.command(
     name="defi-draft",
-    description="Défie un joueur en Draft PvP — équipe piochée dans un pool commun, niveau/attaques standardisés",
+    description="Défie un joueur en Draft PvP — équipe piochée dans ton propre pool privé, niveau/attaques standardisés",
 )
 async def defi_draft_cmd(interaction: discord.Interaction, adversaire: discord.Member):
     if adversaire.id == interaction.user.id:
@@ -2007,8 +2007,10 @@ async def defi_draft_cmd(interaction: discord.Interaction, adversaire: discord.M
     vue = draft_pvp_module.VueInvitationDraft(bot, interaction.user, adversaire, interaction.channel)
     await thread.send(
         f"🎯 {adversaire.mention}, **{interaction.user.display_name}** te défie en **Draft PvP** ! "
-        f"Piochez chacun 3 Pokémon dans un pool commun (niveau {config.DRAFT_NIVEAU}, attaques aléatoires) "
-        f"et affrontez-vous. Tu acceptes ?",
+        f"Chacun pioche dans son **propre pool privé** de {config.DRAFT_TAILLE_POOL_PERSO} Pokémon "
+        f"(jamais les mêmes des deux côtés) et choisit son équipe de {config.DRAFT_TAILLE_EQUIPE} dedans, "
+        f"en toute confidentialité (niveau {config.DRAFT_NIVEAU}, attaques et talent tirés au hasard). "
+        f"Le combat démarre dès que vous êtes prêts tous les deux. Tu acceptes ?",
         view=vue,
     )
     await interaction.response.send_message(f"Défi envoyé dans {thread.mention} !", ephemeral=True)
