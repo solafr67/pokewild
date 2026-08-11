@@ -686,6 +686,8 @@ async def _tick_resolution_dresseur(bot, combat_id, thread_id, message_id, dress
                 leveling.gagner_xp(joueur_id, xp)
                 database.incrementer_victoires_pve(joueur_id)
                 quetes_completees = database.incrementer_progression_quete(joueur_id, "pve_victoire")
+                if archetype["nom"] == pnj.NOM_RIVAL:
+                    database.avancer_quete_principale(joueur_id, "gladio_victoire")
 
                 note_reduction = (
                     "\n*(récompense réduite : plusieurs dresseurs déjà battus aujourd'hui)*"

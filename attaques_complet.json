@@ -200,7 +200,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 20
+    "pp": 20,
+    "ejecte_adversaire": true
   },
   "Vol": {
     "type": "vol",
@@ -523,7 +524,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 20
+    "pp": 20,
+    "ejecte_adversaire": true
   },
   "Berceuse": {
     "type": "normal",
@@ -1789,7 +1791,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 5
+    "pp": 5,
+    "recul": -100
   },
   "Combo-Griffe": {
     "type": "normal",
@@ -2627,7 +2630,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 40
+    "pp": 40,
+    "relais": true
   },
   "Encore": {
     "type": "normal",
@@ -3265,7 +3269,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 5
+    "pp": 5,
+    "stats_cible": "soi"
   },
   "Reflet Magik": {
     "type": "psy",
@@ -3734,7 +3739,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 5
+    "pp": 5,
+    "stats_cible": "soi"
   },
   "Flair": {
     "type": "normal",
@@ -4259,7 +4265,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 5
+    "pp": 5,
+    "stats_cible": "soi"
   },
   "Atterrissage": {
     "type": "vol",
@@ -4429,7 +4436,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 20
+    "pp": 20,
+    "changement_apres": true
   },
   "Close Combat": {
     "type": "combat",
@@ -4449,7 +4457,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 5
+    "pp": 5,
+    "stats_cible": "soi"
   },
   "Représailles": {
     "type": "tenebres",
@@ -5193,7 +5202,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 5
+    "pp": 5,
+    "stats_cible": "soi"
   },
   "Coup d’Jus": {
     "type": "electrik",
@@ -5231,7 +5241,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 5
+    "pp": 5,
+    "stats_cible": "soi"
   },
   "Mégafouet": {
     "type": "plante",
@@ -6145,7 +6156,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 10
+    "pp": 10,
+    "ejecte_adversaire": true
   },
   "Calcination": {
     "type": "feu",
@@ -6277,7 +6289,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 20
+    "pp": 20,
+    "changement_apres": true
   },
   "Survinsecte": {
     "type": "insecte",
@@ -6331,7 +6344,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 10
+    "pp": 10,
+    "ejecte_adversaire": true
   },
   "Rengorgement": {
     "type": "normal",
@@ -6735,7 +6749,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 5
+    "pp": 5,
+    "stats_cible": "soi"
   },
   "Flamme Croix": {
     "type": "feu",
@@ -7554,7 +7569,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 5
+    "pp": 5,
+    "stats_cible": "soi"
   },
   "Furie Dimension": {
     "type": "tenebres",

@@ -577,6 +577,7 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
         attaquants.append((vitesse + random.random(), j["user_id"], nom_attaque, cible_voulue))
 
     attaquants.sort(reverse=True)
+    switches_volontaires = {}  # user_id -> True si Relais (transfère les boosts), False sinon
 
     for _, user_id, nom_attaque, cible_voulue in attaquants:
         nom_atk, row_atk = infos_actif(user_id)
@@ -872,7 +873,9 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
             if changements_secondaires and (attaque.get("cible") == "soi" or pv_restants > 0):
                 chance_stat = attaque.get("stat_chance", 0) or 100
                 if random.random() * 100 < chance_stat:
-                    if attaque.get("cible") == "soi":
+                    # Voir combat.py pour l'explication de "stats_cible" — même correctif.
+                    cible_effective = attaque.get("stats_cible") or attaque.get("cible")
+                    if cible_effective == "soi":
                         cible_stat_id, cible_stat_nom = user_id, nom_atk
                     else:
                         cible_stat_id, cible_stat_nom = adversaire_id, nom_def
@@ -885,6 +888,30 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                         signe = "+" if delta_reel > 0 else ""
                         morceaux.append(f"{signe}{delta_reel} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
                     log.append(f"  📊 **{cible_stat_nom}** : {', '.join(morceaux)}")
+
+            # Changement Éclair / Demi-Tour : voir combat.py pour l'explication complète —
+            # même principe ici, réutilise le remplacement post-K.O. existant plus bas.
+            if attaque.get("changement_apres"):
+                _, actif_apres_attaque = infos_actif(user_id)
+                if actif_apres_attaque and actif_apres_attaque["pv_actuels"] > 0:
+                    switches_volontaires[user_id] = (False, nom_atk)
+
+            # Draco-Queue / Projection : voir combat.py pour l'explication complète —
+            # éjecte la CIBLE (pas l'attaquant) immédiatement, vers un remplaçant tiré au
+            # hasard, si elle a survécu au coup.
+            if attaque.get("ejecte_adversaire") and pv_restants > 0:
+                eq_adverse = database.obtenir_equipe_pvp(combat_id, adversaire_id)
+                candidats = [r["pokemon_nom"] for r in eq_adverse if r["pv_actuels"] > 0 and r["pokemon_nom"] != nom_def]
+                if candidats:
+                    suivant = random.choice(candidats)
+                    database.reinitialiser_boosts(combat_id, adversaire_id, nom_def)
+                    database.definir_actif_2v2(combat_id, adversaire_id, suivant)
+                    log.append(
+                        f"  🌀 **{nom_def}** est repoussé hors du combat — "
+                        f"{'<@' + str(adversaire_id) + '>' if adversaire_id > 0 else 'son dresseur'} "
+                        f"envoie **{suivant}** !"
+                    )
+                    _appliquer_hazards_entree(combat_id, adversaire_id, suivant, log)
         else:
             # --- Pièges de terrain : posés du côté des DEUX adversaires en 2v2 ---
             if nom_attaque in ATTAQUES_TERRAIN:
@@ -901,6 +928,34 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
             # --- Attaque de statut ---
             changements = attaque.get("stats", [])
             ailment = attaque.get("ailment")
+
+            # Éjection forcée de l'adversaire ciblé (Cyclone) — voir combat.py pour
+            # l'explication complète. En 2v2, seul le Pokémon ciblé (nom_def/adversaire_id)
+            # est éjecté, pas toute l'équipe adverse.
+            if attaque.get("ejecte_adversaire"):
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !{note_redirection}")
+                eq_adverse = database.obtenir_equipe_pvp(combat_id, adversaire_id)
+                candidats = [r["pokemon_nom"] for r in eq_adverse if r["pv_actuels"] > 0 and r["pokemon_nom"] != nom_def]
+                if not candidats:
+                    log.append(f"  ...mais **{nom_def}** n'a personne d'autre à envoyer, ça n'a aucun effet !")
+                else:
+                    suivant = random.choice(candidats)
+                    database.reinitialiser_boosts(combat_id, adversaire_id, nom_def)
+                    database.definir_actif_2v2(combat_id, adversaire_id, suivant)
+                    log.append(
+                        f"  🌀 **{nom_def}** est repoussé hors du combat — "
+                        f"{'<@' + str(adversaire_id) + '>' if adversaire_id > 0 else 'son dresseur'} "
+                        f"envoie **{suivant}** !"
+                    )
+                    _appliquer_hazards_entree(combat_id, adversaire_id, suivant, log)
+                continue
+
+            # Relais (Baton Pass) — voir combat.py pour l'explication complète.
+            if attaque.get("relais"):
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !{note_redirection}")
+                switches_volontaires[user_id] = (True, nom_atk)
+                continue
+
             if not changements and ailment not in STATUTS_INFO:
                 log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** (sans effet notable)")
                 continue
@@ -958,28 +1013,45 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
             if pv_apres <= 0:
                 log.append(f"  💀 **{j['actif_nom']}** est K.O. !")
 
-    # --- K.O. et remplacements (choix du joueur, comme en 1v1) ---
+    # --- K.O. et remplacements (choix du joueur, comme en 1v1) + changements volontaires ---
     for j in _joueurs(combat_id):
         if j["abandonne"] or not j["actif_nom"]:
             continue
         row = _row_actif(combat_id, j["user_id"], j["actif_nom"])
-        if row is None or row["pv_actuels"] > 0:
+        est_ko = row is not None and row["pv_actuels"] <= 0
+        est_switch_volontaire = (
+            j["user_id"] in switches_volontaires
+            and row is not None and row["pv_actuels"] > 0
+            and switches_volontaires[j["user_id"]][1] == j["actif_nom"]  # pas déjà déplacé entre-temps (ex: éjecté par Cyclone adverse avant sa propre résolution)
+        )
+        if not (est_ko or est_switch_volontaire):
             continue
-        database.reinitialiser_boosts(combat_id, j["user_id"], j["actif_nom"])
+        est_relais = est_switch_volontaire and switches_volontaires[j["user_id"]][0]
+        if not est_relais:
+            database.reinitialiser_boosts(combat_id, j["user_id"], j["actif_nom"])
         eq = database.obtenir_equipe_pvp(combat_id, j["user_id"])
-        vivants = [r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0]
+        if est_ko:
+            vivants = [r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0]
+        else:
+            vivants = [r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0 and r["pokemon_nom"] != j["actif_nom"]]
         if not vivants:
-            continue  # ce joueur est hors combat, la fin d'équipe sera constatée après
+            if est_relais:
+                database.reinitialiser_boosts(combat_id, j["user_id"], j["actif_nom"])
+            continue  # ce joueur est hors combat (ou plus personne d'autre à envoyer)
         if j["user_id"] > 0 and len(vivants) >= 2:
-            database.creer_choix_ko(combat_id, j["user_id"], int(time.time()) + config.CHOIX_KO_DUREE_SECONDES)
+            database.creer_choix_ko(combat_id, j["user_id"], int(time.time()) + config.CHOIX_KO_DUREE_SECONDES, relais=est_relais)
             log.append(
                 f"  🔁 <@{j['user_id']}> — choisis ton prochain Pokémon avec le bouton "
                 f"**Envoyer un Pokémon** ({config.CHOIX_KO_DUREE_SECONDES}s, sinon envoi automatique) !"
             )
         else:
             suivant = vivants[0]
+            if est_relais:
+                database.copier_boosts(combat_id, j["user_id"], j["actif_nom"], suivant)
+                database.reinitialiser_boosts(combat_id, j["user_id"], j["actif_nom"])
             database.definir_actif_2v2(combat_id, j["user_id"], suivant)
-            log.append(f"  → <@{j['user_id']}> envoie **{suivant}** !" if j["user_id"] > 0 else f"  → **{suivant}** entre en jeu !")
+            note_relais = " (avec ses boosts de stats hérités de Relais !)" if est_relais else ""
+            log.append(f"  → <@{j['user_id']}> envoie **{suivant}**{note_relais} !" if j["user_id"] > 0 else f"  → **{suivant}** entre en jeu !")
             _appliquer_hazards_entree(combat_id, j["user_id"], suivant, log)
 
     return log
@@ -1003,6 +1075,11 @@ async def traiter_choix_ko_2v2(combat_id: int, thread) -> bool:
         suivant = next((r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0), None)
         if suivant is None:
             continue
+        if row["relais"]:
+            j_actuel = next((x for x in _joueurs(combat_id) if x["user_id"] == row["user_id"]), None)
+            if j_actuel and j_actuel["actif_nom"]:
+                database.copier_boosts(combat_id, row["user_id"], j_actuel["actif_nom"], suivant)
+                database.reinitialiser_boosts(combat_id, row["user_id"], j_actuel["actif_nom"])
         database.definir_actif_2v2(combat_id, row["user_id"], suivant)
         mini_log = [f"⏳ <@{row['user_id']}> n'a pas choisi à temps — **{suivant}** est envoyé automatiquement !"]
         _appliquer_hazards_entree(combat_id, row["user_id"], suivant, mini_log)
@@ -1593,6 +1670,9 @@ class _VueChoixRemplacant2v2(discord.ui.View):
         self._select = select
 
     async def _on_choix(self, interaction: discord.Interaction):
+        ligne_choix = next(
+            (r for r in database.obtenir_choix_ko(self.combat_id) if r["user_id"] == self.user_id), None
+        )
         if not database.supprimer_choix_ko(self.combat_id, self.user_id):
             await interaction.response.edit_message(content="⏳ Trop tard — l'envoi automatique a déjà eu lieu !", view=None)
             return
@@ -1601,6 +1681,11 @@ class _VueChoixRemplacant2v2(discord.ui.View):
             await interaction.response.edit_message(content="Ce combat est terminé.", view=None)
             return
         nouveau_nom = self._select.values[0]
+        if ligne_choix and ligne_choix["relais"]:
+            j_actuel = next((x for x in _joueurs(self.combat_id) if x["user_id"] == self.user_id), None)
+            if j_actuel and j_actuel["actif_nom"]:
+                database.copier_boosts(self.combat_id, self.user_id, j_actuel["actif_nom"], nouveau_nom)
+                database.reinitialiser_boosts(self.combat_id, self.user_id, j_actuel["actif_nom"])
         database.definir_actif_2v2(self.combat_id, self.user_id, nouveau_nom)
         mention = f"<@{controleur_reel(self.user_id)}>" if self.user_id > 0 else "L'adversaire"
         mini_log = [f"🔁 {mention} envoie **{nouveau_nom}** !"]

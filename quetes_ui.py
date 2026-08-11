@@ -10,6 +10,47 @@ from pokemon_data import EMOJI_POKEDOLLAR, EMOJI_SOINS, NOM_SOIN_AFFICHAGE
 OBJETS_BONUS_JOUR = ["hyperball", "totalsoin"]
 
 
+def construire_embed_quete_principale(user_id: int) -> discord.Embed:
+    """Fiche de la quête principale (narration) — chapitre en cours avec son texte
+    d'intro et la progression, ou l'écran de fin si tous les chapitres sont complétés."""
+    progression = database.obtenir_progression_quete_principale(user_id)
+    chapitres = config.QUETE_PRINCIPALE_CHAPITRES
+
+    if progression["termine"]:
+        return discord.Embed(
+            title="🏅 Quête principale — Terminée !",
+            description=(
+                "Tu as vécu tous les chapitres de ton histoire de dresseur — Gladio "
+                "lui-même reconnaît ta force. Le reste de l'aventure PokéWild continue, "
+                "bien sûr, mais ce fil narratif s'arrête ici pour toi.\n\n"
+                "Merci d'avoir suivi l'histoire jusqu'au bout !"
+            ),
+            color=discord.Color.gold(),
+        )
+
+    index = progression["chapitre"] - 1
+    chapitre = chapitres[index]
+    barre = "🟩" * progression["compteur"] + "⬜" * (chapitre["cible"] - progression["compteur"])
+
+    embed = discord.Embed(
+        title=f"📖 Quête principale — Chapitre {progression['chapitre']}/{len(chapitres)} : {chapitre['titre']}",
+        description=chapitre["intro"],
+        color=discord.Color.purple(),
+    )
+    embed.add_field(
+        name="Progression",
+        value=f"{barre}\n{progression['compteur']}/{chapitre['cible']}",
+        inline=False,
+    )
+    recompense = chapitre["recompense"]
+    lignes_recompense = [f"{EMOJI_POKEDOLLAR} {recompense['dollars']} PD", f"✨ {recompense['xp']} XP"]
+    if recompense.get("objet"):
+        lignes_recompense.append(f"🎁 {recompense['objet'].replace('_', ' ').title()}")
+    embed.add_field(name="Récompense du chapitre", value=" · ".join(lignes_recompense), inline=False)
+    embed.set_footer(text="Cette quête suit ce que tu fais déjà dans le jeu — rien à faire de spécial, continue de jouer !")
+    return embed
+
+
 def texte_notifications_completion(completions: list) -> str:
     """Formate un texte court à afficher juste après une action qui vient de compléter
     une ou plusieurs quêtes (jour/semaine), pour prévenir le joueur immédiatement plutôt

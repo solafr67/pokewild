@@ -682,3 +682,111 @@ QUETE_RECOMPENSE_JOUR = {"dollars": 50, "xp": 30}
 QUETE_RECOMPENSE_SEMAINE = {"dollars": 350, "xp": 200}
 QUETE_CHANCE_OBJET_BONUS_JOUR = 0.12  # chance d'un objet un peu rare en plus (Hyperball/Total Soin)
 QUETE_CHANCE_CRISTAL_SEMAINE = 0.15   # chance de Cristal de Mutation en plus (bien plus rare qu'en exploration)
+
+
+# --- Quête principale (narration) ---
+# Optionnelle et non-bloquante par choix explicite : tout le contenu du bot reste
+# accessible indépendamment de la progression ici, c'est un fil narratif qui suit ce que
+# le joueur fait déjà plutôt qu'une restriction. TOUS les joueurs (même déjà avancés)
+# démarrent au chapitre 1 — pas de rattrapage rétroactif basé sur leur progression déjà
+# faite, par choix explicite (simplicité, pas de risque de mal détecter un "juste palier").
+# "evenement" correspond soit à un evenement existant de incrementer_progression_quete
+# (capture/pve_victoire/pvp_victoire/raid_victoire/exploration_collectee/pokestop), soit à
+# un des 3 événements dédiés (badge_arene/badge_repaire/gladio_victoire) déclenchés
+# directement depuis leurs points d'octroi respectifs (voir database.avancer_quete_principale).
+QUETE_PRINCIPALE_CHAPITRES = [
+    {
+        "titre": "Premiers Pas",
+        "intro": (
+            "Le monde de PokéWild s'ouvre devant toi. Chaque buisson, chaque recoin peut "
+            "cacher un Pokémon sauvage — à toi de les trouver et de les capturer.\n\n"
+            "**Objectif : capturer 5 Pokémon.**"
+        ),
+        "outro": "Ton équipe prend forme. Un dresseur t'a repéré au loin — il n'attend qu'un signe pour t'affronter...",
+        "evenement": "capture",
+        "cible": 5,
+        "recompense": {"dollars": 100, "xp": 50},
+    },
+    {
+        "titre": "Face à un Dresseur",
+        "intro": (
+            "Un dresseur croise ta route et te met au défi. C'est l'occasion de tester "
+            "tes Pokémon en combat réel, pas seulement contre des sauvages.\n\n"
+            "**Objectif : gagner 1 combat contre un dresseur.**"
+        ),
+        "outro": (
+            "Victoire ! Au loin, tu aperçois les couleurs d'une Arène — les maîtres qui "
+            "l'occupent n'accordent leur badge qu'aux dresseurs qui les battent en duel."
+        ),
+        "evenement": "pve_victoire",
+        "cible": 1,
+        "recompense": {"dollars": 150, "xp": 75},
+    },
+    {
+        "titre": "Défi de l'Arène",
+        "intro": (
+            "L'Arène t'attend. Un Apprenti d'abord, puis le Champion en personne — "
+            "seule une victoire complète te vaudra le badge.\n\n"
+            "**Objectif : obtenir 1 badge d'Arène.**"
+        ),
+        "outro": (
+            "Le badge brille sur ton profil. Mais tout n'est pas paisible dans cette région — "
+            "des rumeurs parlent d'une équipe aux intentions bien moins nobles..."
+        ),
+        "evenement": "badge_arene",
+        "cible": 1,
+        "recompense": {"dollars": 250, "xp": 120},
+    },
+    {
+        "titre": "Repaire Infiltré",
+        "intro": (
+            "Une organisation criminelle a établi un repaire non loin. Ses sbires, puis "
+            "son chef, s'opposeront à toi si tu t'y aventures.\n\n"
+            "**Objectif : obtenir 1 badge de Repaire de méchants.**"
+        ),
+        "outro": "Le repaire est neutralisé, pour cette fois. Mais ta réputation grandit — un rival bien connu commence à s'intéresser à toi.",
+        "evenement": "badge_repaire",
+        "cible": 1,
+        "recompense": {"dollars": 300, "xp": 150},
+    },
+    {
+        "titre": "L'Esprit de Compétition",
+        "intro": (
+            "Un autre dresseur, un vrai, humain celui-là, accepte de croiser le fer avec toi. "
+            "Le combat entre joueurs demande une autre approche que le sauvage ou le dresseur PNJ.\n\n"
+            "**Objectif : gagner 1 combat PvP.**"
+        ),
+        "outro": "Ta première victoire en PvP ! Ce genre de duel va vite devenir une habitude...",
+        "evenement": "pvp_victoire",
+        "cible": 1,
+        "recompense": {"dollars": 200, "xp": 100},
+    },
+    {
+        "titre": "Force du Nombre",
+        "intro": (
+            "Certains Pokémon sont bien trop puissants pour être affrontés seul. "
+            "Rallie d'autres dresseurs pour un Raid.\n\n"
+            "**Objectif : remporter 1 Raid.**"
+        ),
+        "outro": "Ensemble, vous avez triomphé là où un seul dresseur aurait échoué. La coopération a du bon.",
+        "evenement": "raid_victoire",
+        "cible": 1,
+        "recompense": {"dollars": 300, "xp": 150},
+    },
+    {
+        "titre": "Rival de Toujours",
+        "intro": (
+            "Gladio te suit depuis le début, t'observant grandir. Il est temps de savoir "
+            "qui, de vous deux, est réellement le plus fort.\n\n"
+            "**Objectif : battre Gladio en combat.**"
+        ),
+        "outro": (
+            "Gladio accepte sa défaite avec un sourire en coin — le respect entre vous est "
+            "réel, désormais. Ton aventure continue, mais ce chapitre de ton histoire "
+            "s'achève ici. Le reste du monde de PokéWild n'attend que toi."
+        ),
+        "evenement": "gladio_victoire",
+        "cible": 1,
+        "recompense": {"dollars": 500, "xp": 300, "objet": "cristal_mutation"},
+    },
+]

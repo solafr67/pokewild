@@ -479,6 +479,7 @@ async def resoudre_tour(combat_id: int) -> list:
         attaquants.append((vitesse + random.random(), user_id, adversaire_id, nom_attaque_demandee))
 
     attaquants.sort(reverse=True)  # le plus rapide agit en premier
+    switches_volontaires = {}  # user_id -> True si Relais (transfère les boosts), False sinon (Change Éclair/Demi-Tour)
 
     for _, user_id, adversaire_id, nom_attaque in attaquants:
         nom_atk, row_atk = infos_actif(user_id)
@@ -788,7 +789,16 @@ async def resoudre_tour(combat_id: int) -> list:
             if changements_secondaires and (attaque.get("cible") == "soi" or pv_restants > 0):
                 chance_stat = attaque.get("stat_chance", 0) or 100  # 0 = garanti (donnée absente/ancienne = garanti aussi)
                 if random.random() * 100 < chance_stat:
-                    if attaque.get("cible") == "soi":
+                    # "stats_cible" (nouveau champ optionnel) prime sur "cible" pour décider
+                    # qui reçoit CE malus/bonus de stat secondaire — nécessaire car "cible"
+                    # ne concerne que le ciblage des DÉGÂTS : une attaque offensive comme
+                    # Close Combat ou Surchauffe vise bien l'adversaire pour les dégâts, mais
+                    # son malus de stat s'applique à SOI, pas à la cible. Sans ce champ
+                    # distinct, ces malus étaient infligés à tort à l'adversaire au lieu de
+                    # l'attaquant. Absent (grande majorité des attaques) -> comportement
+                    # identique à avant, basé sur "cible".
+                    cible_effective = attaque.get("stats_cible") or attaque.get("cible")
+                    if cible_effective == "soi":
                         cible_stat_id, cible_stat_nom = user_id, nom_atk
                     else:
                         cible_stat_id, cible_stat_nom = adversaire_id, nom_def
@@ -801,6 +811,39 @@ async def resoudre_tour(combat_id: int) -> list:
                         signe = "+" if delta_reel > 0 else ""
                         morceaux.append(f"{signe}{delta_reel} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
                     log.append(f"  📊 **{cible_stat_nom}** : {', '.join(morceaux)}")
+
+            # Changement Éclair / Demi-Tour et consorts : l'attaquant quitte le combat
+            # juste après avoir frappé, à condition d'avoir survécu (recul éventuel
+            # compris) et d'avoir un autre Pokémon vivant vers qui basculer — sinon
+            # l'attaque reste sans effet de retrait, comme dans les vrais jeux. Réutilise
+            # TEL QUEL le mécanisme de remplacement après K.O. (bouton "Envoyer un
+            # Pokémon", envoi auto anti-AFK) : la sélection y exclut déjà l'actif en
+            # cours par son nom, donc rien d'autre à adapter pour ce cas non-fatal.
+            if attaque.get("changement_apres"):
+                _, actif_apres_attaque = infos_actif(user_id)
+                if actif_apres_attaque and actif_apres_attaque["pv_actuels"] > 0:
+                    switches_volontaires[user_id] = (False, nom_atk)
+
+            # Draco-Queue / Projection et consorts : inflige des dégâts PUIS éjecte la
+            # CIBLE (pas l'attaquant) vers un remplaçant tiré au hasard, à condition
+            # qu'elle ait survécu au coup — sinon c'est un K.O. normal, pas d'éjection en
+            # plus. Immédiat et sans choix pour la victime (contrairement à Change
+            # Éclair), donc traité directement ici plutôt que via le mécanisme différé.
+            if attaque.get("ejecte_adversaire") and pv_restants > 0:
+                eq_adverse = database.obtenir_equipe_pvp(combat_id, adversaire_id)
+                candidats = [r["pokemon_nom"] for r in eq_adverse if r["pv_actuels"] > 0 and r["pokemon_nom"] != nom_def]
+                if candidats:
+                    suivant = random.choice(candidats)
+                    database.reinitialiser_boosts(combat_id, adversaire_id, nom_def)
+                    database.reinitialiser_charge(combat_id, adversaire_id, nom_def)
+                    database.reinitialiser_verrouillage_choix(combat_id, adversaire_id, nom_def)
+                    database.changer_pokemon_actif_pvp(combat_id, adversaire_id, suivant)
+                    log.append(
+                        f"  🌀 **{nom_def}** est repoussé hors du combat — "
+                        f"{'<@' + str(adversaire_id) + '>' if adversaire_id > 0 else 'son dresseur'} "
+                        f"envoie **{suivant}** !"
+                    )
+                    _appliquer_hazards_entree(combat_id, adversaire_id, suivant, log)
         else:
             # --- Attaque de terrain (Piège de Roc, Picots, Pics Toxik) ---
             if nom_attaque in ATTAQUES_TERRAIN:
@@ -817,6 +860,39 @@ async def resoudre_tour(combat_id: int) -> list:
             # --- Attaque de statut (boosts / malus / altérations) ---
             changements = attaque.get("stats", [])
             ailment = attaque.get("ailment")
+
+            # Éjection forcée de l'adversaire (Cyclone) : contrairement à Change Éclair/
+            # Demi-Tour (l'ATTAQUANT choisit de partir), ici c'est la CIBLE qui est éjectée
+            # sans son consentement, vers un remplaçant tiré AU HASARD parmi ses Pokémon
+            # vivants restants — pas de bouton de choix, comme dans les vrais jeux.
+            if attaque.get("ejecte_adversaire"):
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+                eq_adverse = database.obtenir_equipe_pvp(combat_id, adversaire_id)
+                candidats = [r["pokemon_nom"] for r in eq_adverse if r["pv_actuels"] > 0 and r["pokemon_nom"] != nom_def]
+                if not candidats:
+                    log.append(f"  ...mais **{nom_def}** n'a personne d'autre à envoyer, ça n'a aucun effet !")
+                else:
+                    suivant = random.choice(candidats)
+                    database.reinitialiser_boosts(combat_id, adversaire_id, nom_def)
+                    database.reinitialiser_charge(combat_id, adversaire_id, nom_def)
+                    database.reinitialiser_verrouillage_choix(combat_id, adversaire_id, nom_def)
+                    database.changer_pokemon_actif_pvp(combat_id, adversaire_id, suivant)
+                    log.append(
+                        f"  🌀 **{nom_def}** est repoussé hors du combat — "
+                        f"{'<@' + str(adversaire_id) + '>' if adversaire_id > 0 else 'son dresseur'} "
+                        f"envoie **{suivant}** !"
+                    )
+                    _appliquer_hazards_entree(combat_id, adversaire_id, suivant, log)
+                continue
+
+            # Relais (Baton Pass) : quitte le combat comme Change Éclair, MAIS transmet
+            # les boosts de stats actuels au remplaçant au lieu de les perdre — voir la
+            # gestion du transfert dans le bloc de remplacement post-tour plus bas et dans
+            # les callbacks de choix (_on_envoyer_remplacant / traiter_choix_ko).
+            if attaque.get("relais"):
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+                switches_volontaires[user_id] = (True, nom_atk)
+                continue
 
             if not changements and ailment not in STATUTS_INFO:
                 log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** (sans effet notable)")
@@ -883,22 +959,41 @@ async def resoudre_tour(combat_id: int) -> list:
             if pv_apres <= 0:
                 log.append(f"  💀 **{nom_actif}** est K.O. !")
 
-    # --- Vérifier les K.O. et gérer le remplacement ---
+    # --- Vérifier les K.O. et gérer le remplacement (+ changements volontaires post-attaque) ---
     combat = database.obtenir_combat(combat_id)
     for user_id in (j1, j2):
         nom_actif = combat["actif1_nom"] if user_id == j1 else combat["actif2_nom"]
         eq = database.obtenir_equipe_pvp(combat_id, user_id)
         actif_row = next((r for r in eq if r["pokemon_nom"] == nom_actif), None)
-        if actif_row and actif_row["pv_actuels"] <= 0:
-            database.reinitialiser_boosts(combat_id, user_id, nom_actif)
-            vivants = [r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0]
+        est_ko = actif_row and actif_row["pv_actuels"] <= 0
+        est_switch_volontaire = (
+            user_id in switches_volontaires
+            and actif_row and actif_row["pv_actuels"] > 0
+            and switches_volontaires[user_id][1] == nom_actif  # pas déjà déplacé entre-temps (ex: éjecté par Cyclone adverse avant sa propre résolution)
+        )
+        if est_ko or est_switch_volontaire:
+            est_relais = est_switch_volontaire and switches_volontaires[user_id][0]
+            # Relais (Baton Pass) : ne PAS réinitialiser tout de suite — les boosts de
+            # nom_actif doivent survivre jusqu'au transfert vers le remplaçant (choisi
+            # immédiatement ci-dessous si envoi auto, ou plus tard via le bouton/le
+            # timeout anti-AFK — voir _on_envoyer_remplacant et traiter_choix_ko).
+            if not est_relais:
+                database.reinitialiser_boosts(combat_id, user_id, nom_actif)
+            if est_ko:
+                vivants = [r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0]
+            else:
+                # Changement volontaire : l'actif reste vivant, on l'exclut juste lui-même
+                # des choix (il ne peut pas "se remplacer par lui-même").
+                vivants = [r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0 and r["pokemon_nom"] != nom_actif]
             if not vivants:
-                continue  # équipe entière K.O. : verifier_fin_combat tranchera
+                if est_relais:
+                    database.reinitialiser_boosts(combat_id, user_id, nom_actif)  # personne à qui transférer
+                continue  # équipe entière K.O. (ou plus personne d'autre à envoyer) : rien à faire de plus
             if user_id > 0 and len(vivants) >= 2:
                 # Joueur humain avec un vrai choix : comme dans les jeux, c'est LUI qui
                 # décide qui entre — la résolution du tour suivant attend son choix
                 # (bouton "Envoyer un Pokémon"), avec envoi auto au bout du délai anti-AFK.
-                database.creer_choix_ko(combat_id, user_id, int(time.time()) + config.CHOIX_KO_DUREE_SECONDES)
+                database.creer_choix_ko(combat_id, user_id, int(time.time()) + config.CHOIX_KO_DUREE_SECONDES, relais=est_relais)
                 log.append(
                     f"  🔁 <@{user_id}> — choisis ton prochain Pokémon avec le bouton "
                     f"**Envoyer un Pokémon** ({config.CHOIX_KO_DUREE_SECONDES}s, sinon envoi automatique) !"
@@ -906,8 +1001,12 @@ async def resoudre_tour(combat_id: int) -> list:
             else:
                 # IA (dresseur/Arène/Gladio) ou un seul survivant : envoi automatique
                 suivant = vivants[0]
+                if est_relais:
+                    database.copier_boosts(combat_id, user_id, nom_actif, suivant)
+                    database.reinitialiser_boosts(combat_id, user_id, nom_actif)
                 database.changer_pokemon_actif_pvp(combat_id, user_id, suivant)
-                log.append(f"  → <@{user_id}> envoie **{suivant}** !" if user_id > 0 else f"  → **{suivant}** entre en jeu !")
+                note_relais = " (avec ses boosts de stats hérités de Relais !)" if est_relais else ""
+                log.append(f"  → <@{user_id}> envoie **{suivant}**{note_relais} !" if user_id > 0 else f"  → **{suivant}** entre en jeu !")
                 _appliquer_hazards_entree(combat_id, user_id, suivant, log)
 
     return log
@@ -935,6 +1034,11 @@ async def traiter_choix_ko(bot, combat_id: int, thread) -> bool:
         suivant = next((r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0), None)
         if suivant is None:
             continue
+        if row["relais"]:
+            combat_actuel = database.obtenir_combat(combat_id)
+            nom_sortant = combat_actuel["actif1_nom"] if row["user_id"] == combat_actuel["joueur1_id"] else combat_actuel["actif2_nom"]
+            database.copier_boosts(combat_id, row["user_id"], nom_sortant, suivant)
+            database.reinitialiser_boosts(combat_id, row["user_id"], nom_sortant)
         database.changer_pokemon_actif_pvp(combat_id, row["user_id"], suivant)
         mini_log = [f"⏳ <@{row['user_id']}> n'a pas choisi à temps — **{suivant}** est envoyé automatiquement !"]
         _appliquer_hazards_entree(combat_id, row["user_id"], suivant, mini_log)
@@ -1413,8 +1517,10 @@ class VueChoixRemplacantKO(discord.ui.View):
         self._select = select
 
     async def _on_choix(self, interaction: discord.Interaction):
-        # supprimer_choix_ko sert de verrou : si l'envoi auto (anti-AFK) est passé entre
-        # temps, la ligne n'existe plus et on ne change rien une deuxième fois.
+        # Récupère le flag "relais" AVANT de supprimer la ligne (verrou anti-double-envoi).
+        ligne_choix = next(
+            (r for r in database.obtenir_choix_ko(self.combat_id) if r["user_id"] == self.user_id), None
+        )
         if not database.supprimer_choix_ko(self.combat_id, self.user_id):
             await interaction.response.edit_message(
                 content="⏳ Trop tard — l'envoi automatique a déjà eu lieu !", view=None
@@ -1425,6 +1531,10 @@ class VueChoixRemplacantKO(discord.ui.View):
             await interaction.response.edit_message(content="Ce combat est terminé.", view=None)
             return
         nouveau_nom = self._select.values[0]
+        if ligne_choix and ligne_choix["relais"]:
+            nom_sortant = combat["actif1_nom"] if self.user_id == combat["joueur1_id"] else combat["actif2_nom"]
+            database.copier_boosts(self.combat_id, self.user_id, nom_sortant, nouveau_nom)
+            database.reinitialiser_boosts(self.combat_id, self.user_id, nom_sortant)
         database.changer_pokemon_actif_pvp(self.combat_id, self.user_id, nouveau_nom)
         mini_log = [f"🔁 <@{self.user_id}> envoie **{nouveau_nom}** !"]
         _appliquer_hazards_entree(self.combat_id, self.user_id, nouveau_nom, mini_log)

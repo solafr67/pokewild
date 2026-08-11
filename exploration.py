@@ -394,7 +394,8 @@ def recuperer_toutes_recompenses_pretes(user_id: int) -> discord.Embed:
         pc_total = sum(stats.get(nom, {}).get("pc", 0) for nom in pokemons)
         recompense = _calculer_recompense(pc_total, duree_label)
 
-        dollars = round(recompense["dollars"] * database.multiplicateur_boost(user_id, "argent"))
+        mult_repetition = database.enregistrer_completion_exploration_repetition(user_id)
+        dollars = round(recompense["dollars"] * mult_repetition * database.multiplicateur_boost(user_id, "argent"))
         database.ajouter_poke_dollars(user_id, dollars)
         leveling.gagner_xp(user_id, recompense["xp"])
         # Affichage = XP réellement créditée (boost de Race/temporaire inclus) — gagner_xp()
@@ -477,7 +478,8 @@ def recuperer_recompense(user_id: int, slot: int) -> discord.Embed:
 
     recompense = _calculer_recompense(pc_total, duree_label)
 
-    dollars = round(recompense["dollars"] * database.multiplicateur_boost(user_id, "argent"))
+    mult_repetition = database.enregistrer_completion_exploration_repetition(user_id)
+    dollars = round(recompense["dollars"] * mult_repetition * database.multiplicateur_boost(user_id, "argent"))
     database.ajouter_poke_dollars(user_id, dollars)
     leveling.gagner_xp(user_id, recompense["xp"])
     # Affichage = XP réellement créditée (boost de Race/temporaire inclus) — gagner_xp()

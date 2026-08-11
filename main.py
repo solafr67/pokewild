@@ -3356,6 +3356,12 @@ async def quetes_cmd(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
+@bot.tree.command(name="quete-principale", description="Affiche ta progression dans la quête principale (narration)")
+async def quete_principale_cmd(interaction: discord.Interaction):
+    embed = quetes_ui_module.construire_embed_quete_principale(interaction.user.id)
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
 @bot.tree.command(name="setup-quetes", description="[Admin] Poste ou remet à jour le message fixe des Quêtes dans ce channel")
 @app_commands.checks.has_permissions(administrator=True)
 async def setup_quetes(interaction: discord.Interaction):

@@ -727,10 +727,17 @@ def init_db():
             combat_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             date_limite INTEGER NOT NULL,
+            relais INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (combat_id, user_id)
         )
         """
     )
+
+    # Migration pour les bases créées avant l'ajout de Relais (Baton Pass)
+    try:
+        cur.execute("ALTER TABLE combat_choix_ko ADD COLUMN relais INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
 
     # Migration pour les combats déjà en base avant l'ajout de la limite de potions de soin
     for colonne in ("potions_soin1", "potions_soin2"):
@@ -1094,6 +1101,19 @@ def init_db():
         """
     )
 
+    # Quête principale (narration) — chapitre courant + progression dans CE chapitre.
+    # Tout le monde démarre à chapitre=1 (pas de rattrapage rétroactif, choix explicite).
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS quete_principale_progression (
+            user_id INTEGER PRIMARY KEY,
+            chapitre INTEGER NOT NULL DEFAULT 1,
+            compteur INTEGER NOT NULL DEFAULT 0,
+            termine INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+
     conn.commit()
     conn.close()
 
@@ -1121,7 +1141,95 @@ def obtenir_emojis_objets() -> dict:
     return resultat
 
 
-def obtenir_parametre(cle: str):
+def obtenir_progression_quete_principale(user_id: int) -> dict:
+    """Retourne {"chapitre": int, "compteur": int, "termine": bool} — crée la ligne au
+    chapitre 1 si le joueur n'a encore jamais été vu par ce système."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT OR IGNORE INTO quete_principale_progression (user_id) VALUES (?)",
+        (user_id,),
+    )
+    conn.commit()
+    cur.execute(
+        "SELECT chapitre, compteur, termine FROM quete_principale_progression WHERE user_id = ?",
+        (user_id,),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return {"chapitre": row["chapitre"], "compteur": row["compteur"], "termine": bool(row["termine"])}
+
+
+def avancer_quete_principale(user_id: int, evenement: str, montant: int = 1) -> dict | None:
+    """Fait progresser la quête principale si `evenement` correspond à l'objectif du
+    chapitre EN COURS du joueur (les événements pour un chapitre déjà passé ou pas encore
+    atteint sont ignorés silencieusement). Retourne un dict de notification de chapitre
+    tout juste complété (titre/outro/récompense + éventuel nouveau chapitre à annoncer) si
+    CET appel vient de faire franchir le seuil, sinon None. La récompense est créditée
+    immédiatement (pas d'étape de réclamation séparée, contrairement aux quêtes jour/semaine)."""
+    import config
+
+    chapitres = config.QUETE_PRINCIPALE_CHAPITRES
+    progression = obtenir_progression_quete_principale(user_id)
+    if progression["termine"]:
+        return None
+
+    index_chapitre = progression["chapitre"] - 1
+    if index_chapitre >= len(chapitres):
+        return None
+
+    chapitre_actuel = chapitres[index_chapitre]
+    if chapitre_actuel["evenement"] != evenement:
+        return None
+
+    conn = get_connexion()
+    cur = conn.cursor()
+    nouveau_compteur = min(chapitre_actuel["cible"], progression["compteur"] + montant)
+    cur.execute(
+        "UPDATE quete_principale_progression SET compteur = ? WHERE user_id = ?",
+        (nouveau_compteur, user_id),
+    )
+    conn.commit()
+
+    if nouveau_compteur < chapitre_actuel["cible"]:
+        conn.close()
+        return None
+
+    # Chapitre complété à l'instant : crédite la récompense, avance au suivant (ou marque
+    # la quête entière comme terminée si c'était le dernier chapitre).
+    recompense = chapitre_actuel["recompense"]
+    if recompense.get("dollars"):
+        ajouter_poke_dollars(user_id, round(recompense["dollars"] * multiplicateur_boost(user_id, "argent")))
+    if recompense.get("xp"):
+        import leveling
+        leveling.gagner_xp(user_id, recompense["xp"])
+    if recompense.get("objet"):
+        ajouter_balls(user_id, recompense["objet"], 1)
+
+    est_dernier_chapitre = index_chapitre + 1 >= len(chapitres)
+    if est_dernier_chapitre:
+        cur.execute(
+            "UPDATE quete_principale_progression SET termine = 1 WHERE user_id = ?",
+            (user_id,),
+        )
+    else:
+        cur.execute(
+            "UPDATE quete_principale_progression SET chapitre = chapitre + 1, compteur = 0 WHERE user_id = ?",
+            (user_id,),
+        )
+    conn.commit()
+    conn.close()
+
+    return {
+        "chapitre_titre": chapitre_actuel["titre"],
+        "chapitre_outro": chapitre_actuel["outro"],
+        "recompense": recompense,
+        "termine": est_dernier_chapitre,
+        "prochain_chapitre": chapitres[index_chapitre + 1] if not est_dernier_chapitre else None,
+    }
+
+
+
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute("SELECT valeur FROM settings WHERE cle = ?", (cle,))
@@ -2358,6 +2466,7 @@ def accorder_badge_arene(user_id: int, type_pokemon: str) -> bool:
     )
     conn.commit()
     conn.close()
+    avancer_quete_principale(user_id, "badge_arene")
     return True
 
 
@@ -2462,6 +2571,7 @@ def accorder_badge_repaire(user_id: int, equipe_mechante: str) -> bool:
     )
     conn.commit()
     conn.close()
+    avancer_quete_principale(user_id, "badge_repaire")
     return True
 
 
@@ -3597,14 +3707,17 @@ def passer_tour_pvp(combat_id: int, date_limite: int):
     conn.close()
 
 
-def creer_choix_ko(combat_id: int, user_id: int, date_limite: int):
-    """Le Pokémon actif de ce joueur vient de tomber K.O. : on attend son choix de
-    remplaçant jusqu'à date_limite (au-delà, envoi automatique — anti-AFK)."""
+def creer_choix_ko(combat_id: int, user_id: int, date_limite: int, relais: bool = False):
+    """Le Pokémon actif de ce joueur vient de tomber K.O. (ou quitte volontairement le
+    combat, Change Éclair/Demi-Tour/Relais) : on attend son choix de remplaçant jusqu'à
+    date_limite (au-delà, envoi automatique — anti-AFK). `relais=True` signale que les
+    boosts de stats de l'actif sortant doivent être transférés au remplaçant choisi
+    (Relais/Baton Pass) au lieu d'être simplement réinitialisés — voir copier_boosts."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
-        "INSERT OR REPLACE INTO combat_choix_ko (combat_id, user_id, date_limite) VALUES (?, ?, ?)",
-        (combat_id, user_id, date_limite),
+        "INSERT OR REPLACE INTO combat_choix_ko (combat_id, user_id, date_limite, relais) VALUES (?, ?, ?, ?)",
+        (combat_id, user_id, date_limite, int(relais)),
     )
     conn.commit()
     conn.close()
@@ -3613,7 +3726,7 @@ def creer_choix_ko(combat_id: int, user_id: int, date_limite: int):
 def obtenir_choix_ko(combat_id: int):
     conn = get_connexion()
     cur = conn.cursor()
-    cur.execute("SELECT user_id, date_limite FROM combat_choix_ko WHERE combat_id = ?", (combat_id,))
+    cur.execute("SELECT user_id, date_limite, relais FROM combat_choix_ko WHERE combat_id = ?", (combat_id,))
     rows = cur.fetchall()
     conn.close()
     return rows
@@ -3932,6 +4045,40 @@ def reinitialiser_boosts(combat_id: int, user_id: int, pokemon_nom: str):
     cur.execute(
         "DELETE FROM combat_boosts WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
         (combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def copier_boosts(combat_id: int, user_id: int, nom_source: str, nom_dest: str):
+    """Relais/Baton Pass : transfère les stages de stats de l'actif sortant (nom_source)
+    au remplaçant qui entre (nom_dest), au lieu de les réinitialiser comme un changement
+    normal. Écrase les boosts déjà présents chez le remplaçant (ne les additionne pas —
+    comme dans les vrais jeux, où un seul Pokémon n'a jamais de boosts avant d'entrer).
+    N'efface PAS les boosts de la source : à appeler juste avant reinitialiser_boosts sur
+    la source, pas à la place."""
+    boosts_source = obtenir_boosts(combat_id, user_id, nom_source)
+    if all(v == 0 for v in boosts_source.values()):
+        return  # rien à transférer, évite une ligne combat_boosts vide inutile
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO combat_boosts
+            (combat_id, user_id, pokemon_nom, stage_atk, stage_def, stage_atk_spe, stage_def_spe, stage_vit)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(combat_id, user_id, pokemon_nom) DO UPDATE SET
+            stage_atk = excluded.stage_atk,
+            stage_def = excluded.stage_def,
+            stage_atk_spe = excluded.stage_atk_spe,
+            stage_def_spe = excluded.stage_def_spe,
+            stage_vit = excluded.stage_vit
+        """,
+        (
+            combat_id, user_id, nom_dest,
+            boosts_source["atk"], boosts_source["def"], boosts_source["atk_spe"],
+            boosts_source["def_spe"], boosts_source["vit"],
+        ),
     )
     conn.commit()
     conn.close()
@@ -4737,6 +4884,14 @@ def incrementer_progression_quete(user_id: int, evenement: str, contexte: dict =
     if evenement in _CATEGORIE_CONTRIBUTION_CLAN:
         categorie, points = _CATEGORIE_CONTRIBUTION_CLAN[evenement]
         ajouter_contribution_clan(user_id, categorie, points * montant)
+
+    # Quête principale (narration) : suit les mêmes événements que les quêtes jour/semaine
+    # (capture/pve_victoire/pvp_victoire/raid_victoire/exploration_collectee/pokestop) —
+    # avancer_quete_principale ignore silencieusement tout événement qui ne correspond pas
+    # au chapitre EN COURS du joueur, donc aucun risque de double-avancement. Le résultat
+    # n'est pas propagé aux appelants ici (le joueur découvre la progression via
+    # /quete-principale) pour éviter de devoir modifier tous les points d'appel existants.
+    avancer_quete_principale(user_id, evenement, montant)
 
     contexte = contexte or {}
     conn = get_connexion()

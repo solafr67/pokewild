@@ -257,7 +257,10 @@ async def _telecharger_sprites_statiques(captures: list) -> dict:
         pokemon = obtenir_pokemon_par_nom(row["pokemon_nom"])
         if not pokemon:
             continue
-        numero = pokemon.get("numero")
+        # Les formes régionales/alternatives partagent "numero" (dex national) avec leur
+        # forme de base — utiliser numero_sprite (l'ID PokéAPI propre à LA forme) en
+        # priorité, sinon on affiche l'artwork de la forme de base par erreur.
+        numero = pokemon.get("numero_sprite") or pokemon.get("numero")
         if numero:
             prefixe = "shiny/" if row["shiny"] else ""
             url = URL_ARTWORK_OFFICIEL.format(prefixe=prefixe, numero=numero)
