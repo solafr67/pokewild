@@ -1977,7 +1977,7 @@ async def parrainage_cmd(interaction: discord.Interaction):
 
 @bot.tree.command(
     name="defi-draft",
-    description="Défie un joueur en Draft PvP — équipe piochée dans ton propre pool privé, niveau/attaques standardisés",
+    description="Défie un joueur en Draft PvP — pool privé pour chacun, niveau/attaques standardisés",
 )
 async def defi_draft_cmd(interaction: discord.Interaction, adversaire: discord.Member):
     if adversaire.id == interaction.user.id:
