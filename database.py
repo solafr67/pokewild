@@ -190,6 +190,33 @@ def init_db():
         """
     )
 
+    # Dégression PvP générale (tous adversaires confondus), en complément de
+    # pvp_victoires_jour ci-dessus qui ne couvre que l'anti-collusion par adversaire
+    # précis — voir database.enregistrer_victoire_pvp_generale_repetition.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS pvp_victoires_jour_generale (
+            user_id INTEGER NOT NULL,
+            jour_id INTEGER NOT NULL,
+            compteur INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, jour_id)
+        )
+        """
+    )
+
+    # Dégression économique de l'Exploration (harmonisée avec Dresseur/Arène/Repaire/PvP) —
+    # voir database.enregistrer_completion_exploration_repetition.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS exploration_completions_jour (
+            user_id INTEGER NOT NULL,
+            jour_id INTEGER NOT NULL,
+            compteur INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, jour_id)
+        )
+        """
+    )
+
     # Contrairement au PvP (par adversaire précis), ici on regroupe TOUS les dresseurs
     # confondus : peu importe l'archétype battu, seul le nombre de victoires PvE du jour
     # compte pour la dégression (voir enregistrer_victoire_dresseur_repetition).
@@ -1230,6 +1257,7 @@ def avancer_quete_principale(user_id: int, evenement: str, montant: int = 1) -> 
 
 
 
+def obtenir_parametre(cle: str):
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute("SELECT valeur FROM settings WHERE cle = ?", (cle,))
@@ -2598,7 +2626,7 @@ def multiplicateur_repaire_du_jour(user_id: int) -> float:
     row = cur.fetchone()
     conn.close()
     compteur = row["compteur"] if row else 0
-    paliers = config.REPAIRE_MULTIPLICATEURS_REPETITION_JOUR
+    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
     return paliers[min(compteur, len(paliers) - 1)]
 
 
@@ -2616,7 +2644,7 @@ def enregistrer_victoire_repaire_repetition(user_id: int) -> float:
     row = cur.fetchone()
     compteur_avant = row["compteur"] if row else 0
 
-    paliers = config.REPAIRE_MULTIPLICATEURS_REPETITION_JOUR
+    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
     multiplicateur = paliers[min(compteur_avant, len(paliers) - 1)]
 
     cur.execute(
@@ -5031,7 +5059,11 @@ def enregistrer_victoire_pvp_repetition(vainqueur_id: int, perdant_id: int) -> f
     """Enregistre une victoire de vainqueur_id contre perdant_id pour la journée en cours,
     et retourne le multiplicateur à appliquer sur la récompense ÉCONOMIQUE (PD + XP) de
     CETTE victoire : 1.0 si c'est la première fois aujourd'hui qu'il bat CET adversaire,
-    sinon config.PVP_MULTIPLICATEUR_REPETITION (fortement réduit, contre la collusion)."""
+    sinon config.PVP_MULTIPLICATEUR_REPETITION (fortement réduit, contre la collusion).
+    Combiné (le plus bas des deux) avec la dégression générale journalière (harmonisée
+    avec Dresseur/Arène/Repaire, voir enregistrer_victoire_pvp_generale_repetition) —
+    donc même un joueur qui varie ses adversaires reste soumis au même anti-farm que les
+    autres systèmes de combat, en plus de l'anti-collusion par adversaire précis."""
     import config
 
     jour_id = int(time.time()) // 86400
@@ -5043,7 +5075,7 @@ def enregistrer_victoire_pvp_repetition(vainqueur_id: int, perdant_id: int) -> f
     )
     row = cur.fetchone()
     compteur_avant = row["compteur"] if row else 0
-    multiplicateur = 1.0 if compteur_avant == 0 else config.PVP_MULTIPLICATEUR_REPETITION
+    multiplicateur_collusion = 1.0 if compteur_avant == 0 else config.PVP_MULTIPLICATEUR_REPETITION
 
     cur.execute(
         """
@@ -5052,6 +5084,75 @@ def enregistrer_victoire_pvp_repetition(vainqueur_id: int, perdant_id: int) -> f
         ON CONFLICT(vainqueur_id, perdant_id, jour_id) DO UPDATE SET compteur = compteur + 1
         """,
         (vainqueur_id, perdant_id, jour_id),
+    )
+    conn.commit()
+    conn.close()
+
+    multiplicateur_general = enregistrer_victoire_pvp_generale_repetition(vainqueur_id)
+    return min(multiplicateur_collusion, multiplicateur_general)
+
+
+def enregistrer_victoire_pvp_generale_repetition(user_id: int) -> float:
+    """Dégression journalière générale des victoires PvP (harmonisée avec Dresseur/Arène/
+    Repaire), TOUS adversaires confondus — complète l'anti-collusion par adversaire précis
+    ci-dessus, qui à lui seul ne freinait pas un joueur enchaînant des victoires contre des
+    adversaires DIFFÉRENTS chaque fois."""
+    import config
+
+    jour_id = int(time.time()) // 86400
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT compteur FROM pvp_victoires_jour_generale WHERE user_id = ? AND jour_id = ?",
+        (user_id, jour_id),
+    )
+    row = cur.fetchone()
+    compteur_avant = row["compteur"] if row else 0
+
+    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
+    multiplicateur = paliers[min(compteur_avant, len(paliers) - 1)]
+
+    cur.execute(
+        """
+        INSERT INTO pvp_victoires_jour_generale (user_id, jour_id, compteur)
+        VALUES (?, ?, 1)
+        ON CONFLICT(user_id, jour_id) DO UPDATE SET compteur = compteur + 1
+        """,
+        (user_id, jour_id),
+    )
+    conn.commit()
+    conn.close()
+    return multiplicateur
+
+
+def enregistrer_completion_exploration_repetition(user_id: int) -> float:
+    """Dégression journalière des Poké Dollars d'Exploration, harmonisée avec les autres
+    systèmes (Dresseur/Arène/Repaire/PvP) — l'Exploration n'avait jusqu'ici AUCUNE limite
+    de répétition quotidienne. Compte les explorations RÉCUPÉRÉES (pas lancées) dans la
+    journée, tous emplacements confondus. N'affecte que les Poké Dollars, pas l'XP ni les
+    chances de Cristal/Œuf/objet de forme."""
+    import config
+
+    jour_id = int(time.time()) // 86400
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT compteur FROM exploration_completions_jour WHERE user_id = ? AND jour_id = ?",
+        (user_id, jour_id),
+    )
+    row = cur.fetchone()
+    compteur_avant = row["compteur"] if row else 0
+
+    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
+    multiplicateur = paliers[min(compteur_avant, len(paliers) - 1)]
+
+    cur.execute(
+        """
+        INSERT INTO exploration_completions_jour (user_id, jour_id, compteur)
+        VALUES (?, ?, 1)
+        ON CONFLICT(user_id, jour_id) DO UPDATE SET compteur = compteur + 1
+        """,
+        (user_id, jour_id),
     )
     conn.commit()
     conn.close()
@@ -5074,14 +5175,14 @@ def multiplicateur_arene_du_jour(user_id: int) -> float:
     row = cur.fetchone()
     conn.close()
     compteur = row["compteur"] if row else 0
-    paliers = config.ARENE_MULTIPLICATEURS_REPETITION_JOUR
+    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
     return paliers[min(compteur, len(paliers) - 1)]
 
 
 def enregistrer_victoire_arene_repetition(user_id: int) -> float:
     """Enregistre un run d'arène COMPLÉTÉ (champion battu) pour la journée en cours, et
     retourne le multiplicateur à appliquer sur la récompense économique de CE run —
-    dégression progressive au fil des runs du jour (config.ARENE_MULTIPLICATEURS_REPETITION_JOUR).
+    dégression progressive au fil des runs du jour (config.MULTIPLICATEURS_REPETITION_JOUR_ECO).
     Un run perdu avant le champion n'incrémente rien : on peut retenter au plein tarif."""
     import config
 
@@ -5095,7 +5196,7 @@ def enregistrer_victoire_arene_repetition(user_id: int) -> float:
     row = cur.fetchone()
     compteur_avant = row["compteur"] if row else 0
 
-    paliers = config.ARENE_MULTIPLICATEURS_REPETITION_JOUR
+    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
     multiplicateur = paliers[min(compteur_avant, len(paliers) - 1)]
 
     cur.execute(
@@ -5115,7 +5216,7 @@ def enregistrer_victoire_dresseur_repetition(user_id: int) -> float:
     """Enregistre une victoire PvE contre dresseur pour la journée en cours (TOUS
     archétypes confondus), et retourne le multiplicateur à appliquer sur la récompense
     ÉCONOMIQUE (PD + XP) de CETTE victoire — dégression progressive au fil des victoires
-    du jour, voir config.DRESSEUR_MULTIPLICATEURS_REPETITION_JOUR."""
+    du jour, voir config.MULTIPLICATEURS_REPETITION_JOUR_ECO."""
     import config
 
     jour_id = int(time.time()) // 86400
@@ -5128,7 +5229,7 @@ def enregistrer_victoire_dresseur_repetition(user_id: int) -> float:
     row = cur.fetchone()
     compteur_avant = row["compteur"] if row else 0
 
-    paliers = config.DRESSEUR_MULTIPLICATEURS_REPETITION_JOUR
+    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
     multiplicateur = paliers[min(compteur_avant, len(paliers) - 1)]
 
     cur.execute(

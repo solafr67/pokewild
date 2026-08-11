@@ -192,7 +192,7 @@ ARENE_RECOMPENSE_DOLLARS_CHAMPION = (250, 400)
 # Dégression journalière des Poké Dollars d'arène par RUN COMPLÉTÉ (champion battu) :
 # 1er run du jour plein tarif, puis ×0.6, puis ×0.35 pour tous les suivants. Badges, XP
 # et plaisir de jeu non concernés — seule la récompense économique est contenue.
-ARENE_MULTIPLICATEURS_REPETITION_JOUR = [1.0, 0.6, 0.35]
+# (dégression harmonisée, voir MULTIPLICATEURS_REPETITION_JOUR_ECO plus bas)
 
 # Image de transition affichée entre le 2e Apprenti et le Champion (style "VS" des jeux).
 # Clé = type d'arène (mêmes clés que EMOJI_TYPES) ; les 18 types sont couverts —
@@ -267,7 +267,7 @@ REPAIRE_MULTIPLICATEUR_BOSS = 1.15
 REPAIRE_RARETES_BOSS = {"rare", "hyper_rare", "legendaire"}
 REPAIRE_RECOMPENSE_DOLLARS_SBIRE = (80, 150)
 REPAIRE_RECOMPENSE_DOLLARS_BOSS = (250, 400)
-REPAIRE_MULTIPLICATEURS_REPETITION_JOUR = [1.0, 0.6, 0.35]
+# (dégression harmonisée, voir MULTIPLICATEURS_REPETITION_JOUR_ECO plus bas)
 REPAIRE_BONUS_PAR_BADGE = 0.03
 REPAIRE_CHANCE_OBJET_PAR_OBJET = 0.02
 
@@ -567,12 +567,12 @@ XP_RAID_PAR_ETOILE = {1: 50, 2: 75, 3: 100, 4: 150, 5: 250}
 # quêtes/accomplissements (seule la récompense économique brute est concernée).
 PVP_MULTIPLICATEUR_REPETITION = 0.2
 
-# --- Anti-farming Dresseurs (PvE) ---
-# Dégression PROGRESSIVE (pas juste un palier comme le PvP) sur les récompenses PD/XP des
-# victoires contre dresseur, regroupées TOUS archétypes confondus par jour — index 0 = 1ère
-# victoire du jour (plein tarif), index 1 = 2e, etc. Le dernier palier s'applique à toute
-# victoire suivante.
-DRESSEUR_MULTIPLICATEURS_REPETITION_JOUR = [1.0, 0.6, 0.35, 0.2]
+# --- Anti-farming économique : dégression PROGRESSIVE partagée par tous les systèmes de
+# combat/récompense répétable (Dresseur PvE, Arène, Repaire de méchants, PvP, Exploration)
+# — harmonisé : une seule courbe partagée au lieu d'une par système. index 0 = 1ère fois
+# du jour (plein tarif), index 1 = 2e, etc. Le dernier palier s'applique à toute occurrence
+# suivante.
+MULTIPLICATEURS_REPETITION_JOUR_ECO = [1.0, 0.6, 0.35, 0.2]
 
 # --- Races (bonus permanents de dresseur) ---
 # Obtenues uniquement par reroll aléatoire (Cristal de Mutation, gagné au Centre des
