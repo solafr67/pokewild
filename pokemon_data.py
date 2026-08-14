@@ -383,6 +383,20 @@ ATTAQUES_RECHARGE = {
     "Ultralaser",
 }
 
+# PRIORITÉ TRÈS BASSE (comme la priorité -3 des vrais jeux) : agit systématiquement en
+# dernier ce tour-ci, peu importe la Vitesse — et si l'utilisateur a subi des dégâts d'une
+# attaque adverse CE MÊME TOUR avant d'avoir pu agir, le coup échoue automatiquement (voir
+# combat.py/combat_2v2.py, "dégâts_subis_ce_tour").
+ATTAQUES_PRIORITE_BASSE_ECHOUE_SI_TOUCHE = {
+    "Mitra-Poing",
+}
+
+# FURIE (ex: Colère = Dracocolère dans nos données) : verrouille sur la même attaque 2-3
+# tours d'affilée dès le premier usage, puis confusion automatique à la fin.
+ATTAQUES_FURIE = {
+    "Colère",
+}
+
 
 def toutes_attaques_utilisables() -> list:
     """Toutes les attaques ayant un effet en jeu, tous Pokémon confondus (triées par
