@@ -256,7 +256,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 20
+    "pp": 20,
+    "flinch_chance": 30
   },
   "Double Pied": {
     "type": "combat",
@@ -399,7 +400,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 20
+    "pp": 20,
+    "recul": -33
   },
   "Mania": {
     "type": "normal",
@@ -421,7 +423,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 15
+    "pp": 15,
+    "recul": -33
   },
   "Mimi-Queue": {
     "type": "normal",
@@ -497,7 +500,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 25
+    "pp": 25,
+    "flinch_chance": 30
   },
   "Rugissement": {
     "type": "normal",
@@ -1836,7 +1840,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 10
+    "pp": 10,
+    "flinch_chance": 30
   },
   "Croc de Mort": {
     "type": "normal",
@@ -2340,7 +2345,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 10
+    "pp": 10,
+    "meteo": "sable"
   },
   "Giga-Sangsue": {
     "type": "plante",
@@ -2800,7 +2806,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 5
+    "pp": 5,
+    "meteo": "pluie"
   },
   "Zénith": {
     "type": "feu",
@@ -2811,7 +2818,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 5
+    "pp": 5,
+    "meteo": "soleil"
   },
   "Mâchouille": {
     "type": "tenebres",
@@ -3043,7 +3051,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 10
+    "pp": 10,
+    "meteo": "grele"
   },
   "Tourmente": {
     "type": "tenebres",
@@ -4132,7 +4141,8 @@
     "cible": "adversaire",
     "ailment": "paralysis",
     "ailment_chance": 10,
-    "pp": 15
+    "pp": 15,
+    "recul": -33
   },
   "Feuille Magik": {
     "type": "plante",
@@ -4722,7 +4732,8 @@
     "cible": "adversaire",
     "ailment": "burn",
     "ailment_chance": 10,
-    "pp": 15
+    "pp": 15,
+    "recul": -33
   },
   "Forte-Paume": {
     "type": "combat",
@@ -4951,7 +4962,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 15
+    "pp": 15,
+    "recul": -33
   },
   "Telluriforce": {
     "type": "sol",
@@ -5297,7 +5309,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 15
+    "pp": 15,
+    "flinch_chance": 30
   },
   "Bombe Aimant": {
     "type": "acier",
@@ -5417,7 +5430,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 15
+    "pp": 15,
+    "recul": -33
   },
   "Aqua-Jet": {
     "type": "eau",
@@ -6392,7 +6406,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 15
+    "pp": 15,
+    "recul": -33
   },
   "Tunnelier": {
     "type": "sol",
@@ -6567,7 +6582,8 @@
     "cible": "adversaire",
     "ailment": null,
     "ailment_chance": 0,
-    "pp": 15
+    "pp": 15,
+    "recul": -33
   },
   "Lancécrou": {
     "type": "acier",

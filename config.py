@@ -75,6 +75,10 @@ COOLDOWN_POKESTOP = 300  # 5 minutes, en secondes
 # --- Rôle VIP (pour vérifier l'accès si besoin dans le code) ---
 ROLE_VIP_ID = _id_env("ROLE_VIP_ID", 1524443826956271838)
 ROLE_PING_RAID_ID = _id_env("ROLE_PING_RAID_ID", 1525883524396355675)
+ROLE_PING_EVENT_ID = _id_env("ROLE_PING_EVENT_ID", 1537908441518051328)
+ROLE_PING_ANNONCE_ID = _id_env("ROLE_PING_ANNONCE_ID", 1537908347091820655)
+ROLE_PING_MAJ_ID = _id_env("ROLE_PING_MAJ_ID", 1537908282176315493)
+CHANNEL_EVENT_ID = _id_env("CHANNEL_EVENT_ID", 1537908848973713480)
 
 # --- Serveur de test (pour synchroniser les commandes instantanément dessus) ---
 GUILD_ID = _id_env("GUILD_ID", 1496856137583296562)
@@ -560,6 +564,35 @@ DUREES_BOOST = {
     "6h": 6 * 3600,
     "24h": 24 * 3600,
 }
+
+# --- Events serveur (/event) : boost global, défi collectif, chasse aux shiny ---
+# Multiplicateurs bien plus généreux que les boosts personnels ci-dessus (MULTIPLICATEURS_BOOST)
+# — un event serveur est ponctuel et rassembleur, il doit se sentir exceptionnel.
+MULTIPLICATEURS_EVENT_BOOST = {
+    "xp": 2.0,
+    "argent": 2.0,
+    "shiny": 5.0,
+}
+NOMS_BOOST_EVENT = {
+    "xp": "XP (dresseur et Pokémon)",
+    "argent": "Poké Dollars",
+    "shiny": "Taux de Shiny",
+}
+EMOJI_BOOST_EVENT = {
+    "xp": "📈",
+    "argent": "💰",
+    "shiny": "✨",
+}
+
+# Types de défi collectif proposés au staff, et le nom de l'évènement de progression
+# central (database.incrementer_progression_quete) auquel chacun correspond.
+TYPES_DEFI_COLLECTIF = {
+    "capture": "Captures de Pokémon",
+    "pve_victoire": "Victoires contre un Dresseur",
+    "pokestop": "Tours de PokéStop",
+}
+RECOMPENSE_DEFI_COLLECTIF_PD = 300  # Poké Dollars par participant ayant contribué au moins 1 fois
+
 XP_RAID_PAR_ETOILE = {1: 50, 2: 75, 3: 100, 4: 150, 5: 250}
 
 # Anti-collusion PvP : contre un MÊME adversaire, seule la 1ère victoire de la journée

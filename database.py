@@ -52,6 +52,72 @@ def init_db():
         """
     )
 
+    # --- Events serveur : boost global, défi collectif, chasse aux shiny (/event) ---
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS evenement_boost_global (
+            type_boost TEXT PRIMARY KEY,
+            multiplicateur REAL NOT NULL,
+            date_expiration INTEGER NOT NULL,
+            channel_annonce_id INTEGER,
+            message_id INTEGER
+        )
+        """
+    )
+    try:
+        cur.execute("ALTER TABLE evenement_boost_global ADD COLUMN message_id INTEGER")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS defi_collectif_serveur (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type_evenement TEXT NOT NULL,
+            cible INTEGER NOT NULL,
+            progres INTEGER NOT NULL DEFAULT 0,
+            actif INTEGER NOT NULL DEFAULT 1,
+            date_debut INTEGER NOT NULL,
+            channel_annonce_id INTEGER,
+            recompense_donnee INTEGER NOT NULL DEFAULT 0,
+            message_id INTEGER
+        )
+        """
+    )
+    try:
+        cur.execute("ALTER TABLE defi_collectif_serveur ADD COLUMN message_id INTEGER")
+    except sqlite3.OperationalError:
+        pass
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS defi_collectif_participants (
+            defi_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            contribution INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (defi_id, user_id)
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS chasse_shiny_evenement (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date_debut INTEGER NOT NULL,
+            date_fin INTEGER NOT NULL,
+            actif INTEGER NOT NULL DEFAULT 1,
+            channel_annonce_id INTEGER,
+            annoncee INTEGER NOT NULL DEFAULT 0,
+            message_id INTEGER
+        )
+        """
+    )
+    try:
+        cur.execute("ALTER TABLE chasse_shiny_evenement ADD COLUMN message_id INTEGER")
+    except sqlite3.OperationalError:
+        pass
+
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS joueur_race (
@@ -4417,7 +4483,272 @@ def multiplicateur_boost(user_id: int, type_boost: str) -> float:
     if type_boost in config.MULTIPLICATEUR_BOOSTER_SERVEUR and est_booster_serveur(user_id):
         multiplicateur *= config.MULTIPLICATEUR_BOOSTER_SERVEUR[type_boost]
 
+    boost_global = obtenir_boost_global_actif(type_boost)
+    if boost_global is not None:
+        multiplicateur *= boost_global
+
     return multiplicateur
+
+
+# --- Events serveur : boost global (/event) ---
+
+def activer_boost_global(type_boost: str, multiplicateur: float, duree_secondes: int, channel_annonce_id: int | None = None):
+    """Démarre (ou remplace) un boost GLOBAL, appliqué à TOUS les joueurs, sans exception
+    de user_id — contrairement à boosts_actifs qui est personnel."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO evenement_boost_global (type_boost, multiplicateur, date_expiration, channel_annonce_id)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(type_boost) DO UPDATE SET
+            multiplicateur = excluded.multiplicateur,
+            date_expiration = excluded.date_expiration,
+            channel_annonce_id = excluded.channel_annonce_id
+        """,
+        (type_boost, multiplicateur, int(time.time()) + duree_secondes, channel_annonce_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_boost_global_actif(type_boost: str) -> float | None:
+    """Retourne le multiplicateur si un boost global de ce type est encore actif, sinon None."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT multiplicateur, date_expiration FROM evenement_boost_global WHERE type_boost = ?",
+        (type_boost,),
+    )
+    row = cur.fetchone()
+    conn.close()
+    if row and row["date_expiration"] > int(time.time()):
+        return row["multiplicateur"]
+    return None
+
+
+def obtenir_tous_boosts_globaux() -> list:
+    """Retourne toutes les lignes (actives ou tout juste expirées) — pour la boucle de
+    vérification périodique, qui doit détecter la transition actif->expiré pour annoncer
+    la fin, ce qu'un simple filtre 'encore actif' ne permettrait pas de repérer."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT type_boost, multiplicateur, date_expiration, channel_annonce_id, message_id FROM evenement_boost_global")
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def desactiver_boost_global(type_boost: str):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM evenement_boost_global WHERE type_boost = ?", (type_boost,))
+    conn.commit()
+    conn.close()
+
+
+def definir_message_boost_global(type_boost: str, message_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE evenement_boost_global SET message_id = ? WHERE type_boost = ?", (message_id, type_boost))
+    conn.commit()
+    conn.close()
+
+
+# --- Events serveur : défi collectif (/event) ---
+
+def demarrer_defi_collectif(type_evenement: str, cible: int, channel_annonce_id: int | None = None) -> int:
+    """Démarre un nouveau défi collectif, désactivant silencieusement tout défi encore actif
+    (un seul à la fois). Retourne l'id du nouveau défi."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE defi_collectif_serveur SET actif = 0 WHERE actif = 1")
+    cur.execute(
+        """
+        INSERT INTO defi_collectif_serveur (type_evenement, cible, progres, actif, date_debut, channel_annonce_id)
+        VALUES (?, ?, 0, 1, ?, ?)
+        """,
+        (type_evenement, cible, int(time.time()), channel_annonce_id),
+    )
+    defi_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return defi_id
+
+
+def obtenir_defi_collectif_actif() -> dict | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM defi_collectif_serveur WHERE actif = 1 LIMIT 1")
+    row = cur.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def definir_message_defi_collectif(defi_id: int, message_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE defi_collectif_serveur SET message_id = ? WHERE id = ?", (message_id, defi_id))
+    conn.commit()
+    conn.close()
+
+
+def progresser_defi_collectif(user_id: int, type_evenement: str, montant: int = 1) -> dict | None:
+    """Fait progresser le défi collectif actif s'il correspond à `type_evenement`.
+    Retourne un dict avec l'état à jour (et 'vient_de_finir': bool) si un défi actif
+    correspondait, sinon None (aucun défi actif de ce type, rien à faire)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM defi_collectif_serveur WHERE actif = 1 AND type_evenement = ? LIMIT 1", (type_evenement,))
+    defi = cur.fetchone()
+    if defi is None:
+        conn.close()
+        return None
+
+    nouveau_progres = min(defi["cible"], defi["progres"] + montant)
+    vient_de_finir = nouveau_progres >= defi["cible"] and defi["progres"] < defi["cible"]
+    cur.execute("UPDATE defi_collectif_serveur SET progres = ? WHERE id = ?", (nouveau_progres, defi["id"]))
+    cur.execute(
+        """
+        INSERT INTO defi_collectif_participants (defi_id, user_id, contribution) VALUES (?, ?, ?)
+        ON CONFLICT(defi_id, user_id) DO UPDATE SET contribution = contribution + excluded.contribution
+        """,
+        (defi["id"], user_id, montant),
+    )
+    if vient_de_finir:
+        cur.execute("UPDATE defi_collectif_serveur SET actif = 0 WHERE id = ?", (defi["id"],))
+    conn.commit()
+    conn.close()
+    return {
+        "id": defi["id"], "type_evenement": type_evenement, "cible": defi["cible"],
+        "progres": nouveau_progres, "vient_de_finir": vient_de_finir,
+        "channel_annonce_id": defi["channel_annonce_id"],
+    }
+
+
+def arreter_defi_collectif():
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE defi_collectif_serveur SET actif = 0 WHERE actif = 1")
+    conn.commit()
+    conn.close()
+
+
+def obtenir_participants_defi_collectif(defi_id: int) -> list:
+    """Retourne [(user_id, contribution)] triés par contribution décroissante — pour la
+    distribution de récompense et l'annonce des meilleurs contributeurs."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT user_id, contribution FROM defi_collectif_participants WHERE defi_id = ? ORDER BY contribution DESC",
+        (defi_id,),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return [(r["user_id"], r["contribution"]) for r in rows]
+
+
+def obtenir_defis_collectifs_a_recompenser() -> list:
+    """Défis désactivés (actif=0) dont la cible a bien été ATTEINTE (pas juste annulés
+    par un admin) et pas encore récompensés — pour la boucle de vérification."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT * FROM defi_collectif_serveur WHERE actif = 0 AND recompense_donnee = 0 AND progres >= cible"
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def marquer_defi_collectif_recompense(defi_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE defi_collectif_serveur SET recompense_donnee = 1 WHERE id = ?", (defi_id,))
+    conn.commit()
+    conn.close()
+
+
+# --- Events serveur : chasse aux shiny (/event) ---
+
+def demarrer_chasse_shiny(duree_secondes: int, channel_annonce_id: int | None = None) -> int:
+    """Démarre une nouvelle chasse aux shiny, désactivant silencieusement toute chasse
+    encore active (une seule à la fois). Retourne l'id de la nouvelle chasse."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE chasse_shiny_evenement SET actif = 0 WHERE actif = 1")
+    maintenant = int(time.time())
+    cur.execute(
+        """
+        INSERT INTO chasse_shiny_evenement (date_debut, date_fin, actif, channel_annonce_id, annoncee)
+        VALUES (?, ?, 1, ?, 0)
+        """,
+        (maintenant, maintenant + duree_secondes, channel_annonce_id),
+    )
+    chasse_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return chasse_id
+
+
+def obtenir_chasse_shiny_active() -> dict | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM chasse_shiny_evenement WHERE actif = 1 LIMIT 1")
+    row = cur.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def definir_message_chasse_shiny(chasse_id: int, message_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE chasse_shiny_evenement SET message_id = ? WHERE id = ?", (message_id, chasse_id))
+    conn.commit()
+    conn.close()
+
+
+def obtenir_chasses_shiny_a_terminer() -> list:
+    """Chasses actives dont la date de fin est dépassée — pour la boucle de vérification."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM chasse_shiny_evenement WHERE actif = 1 AND date_fin <= ?", (int(time.time()),))
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def terminer_chasse_shiny(chasse_id: int) -> list:
+    """Clôture la chasse et retourne le classement final [(user_id, nb_shiny)] trié
+    décroissant, en comptant les captures shiny du joueur sur la fenêtre de la chasse."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT date_debut, date_fin FROM chasse_shiny_evenement WHERE id = ?", (chasse_id,))
+    chasse = cur.fetchone()
+    if chasse is None:
+        conn.close()
+        return []
+    cur.execute(
+        """
+        SELECT user_id, COUNT(*) AS nb_shiny FROM captures
+        WHERE shiny = 1 AND date_capture BETWEEN ? AND ?
+        GROUP BY user_id ORDER BY nb_shiny DESC
+        """,
+        (chasse["date_debut"], chasse["date_fin"]),
+    )
+    classement = [(r["user_id"], r["nb_shiny"]) for r in cur.fetchall()]
+    cur.execute("UPDATE chasse_shiny_evenement SET actif = 0, annoncee = 1 WHERE id = ?", (chasse_id,))
+    conn.commit()
+    conn.close()
+    return classement
+
+
+def arreter_chasse_shiny():
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE chasse_shiny_evenement SET actif = 0 WHERE actif = 1")
+    conn.commit()
+    conn.close()
 
 
 # --- Codes promo ---
@@ -4912,6 +5243,14 @@ def incrementer_progression_quete(user_id: int, evenement: str, contexte: dict =
     if evenement in _CATEGORIE_CONTRIBUTION_CLAN:
         categorie, points = _CATEGORIE_CONTRIBUTION_CLAN[evenement]
         ajouter_contribution_clan(user_id, categorie, points * montant)
+
+    # Défi collectif du serveur (/event) : capture / combat dresseur / tour de PokéStop —
+    # no-op silencieux si aucun défi actif ou si son type ne correspond pas (voir
+    # progresser_defi_collectif). La détection de complétion + l'annonce + la récompense
+    # se font dans la boucle périodique (main.py), pas ici, car database.py n'a pas accès
+    # au bot Discord pour poster un message.
+    if evenement in ("capture", "pve_victoire", "pokestop"):
+        progresser_defi_collectif(user_id, evenement, montant)
 
     # Quête principale (narration) : suit les mêmes événements que les quêtes jour/semaine
     # (capture/pve_victoire/pvp_victoire/raid_victoire/exploration_collectee/pokestop) —

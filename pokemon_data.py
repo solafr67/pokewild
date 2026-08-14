@@ -14,8 +14,8 @@ TAUX_CAPTURE = {
     "commun": {"pokeball": 0.60, "superball": 0.75, "hyperball": 0.90, "masterball": 1.0, "honorball": 0.70},
     "peu_commun": {"pokeball": 0.35, "superball": 0.55, "hyperball": 0.75, "masterball": 1.0, "honorball": 0.45},
     "rare": {"pokeball": 0.15, "superball": 0.30, "hyperball": 0.50, "masterball": 1.0, "honorball": 0.20},
-    "hyper_rare": {"pokeball": 0.08, "superball": 0.18, "hyperball": 0.35, "masterball": 1.0, "honorball": 0.07},
-    "legendaire": {"pokeball": 0.05, "superball": 0.12, "hyperball": 0.25, "masterball": 1.0, "honorball": 0.02},
+    "hyper_rare": {"pokeball": 0.08, "superball": 0.18, "hyperball": 0.35, "masterball": 1.0, "honorball": 0.09},
+    "legendaire": {"pokeball": 0.05, "superball": 0.12, "hyperball": 0.25, "masterball": 1.0, "honorball": 0.04},
 }
 
 EMOJI_RARETE = {

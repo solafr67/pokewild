@@ -23,6 +23,7 @@ import race_ui as race_ui_module
 import races
 import quetes as quetes_module
 import quetes_ui as quetes_ui_module
+import evenements as evenements_module
 import dresseurs as dresseurs_module
 import defi_stats as defi_stats_module
 import plus_ou_moins as plus_ou_moins_module
@@ -540,6 +541,67 @@ async def boucle_marketplace():
     except Exception as e:
         print(f"⚠️ Erreur dans boucle_marketplace (la boucle continue) : {e}")
         journal.logger(f"🔴 Erreur dans `boucle_marketplace` : {e}")
+
+
+@tasks.loop(seconds=60)
+async def boucle_verification_evenements():
+    """Surveille les 3 events serveur (/event) pour détecter et annoncer leur fin : boost
+    global expiré, défi collectif tout juste complété, chasse aux shiny arrivée à échéance.
+    Base de données uniquement (pas de suivi en mémoire) — résiste aux redémarrages du bot,
+    contrairement à un simple délai programmé (voir la leçon marketplace/pokestop_dore).
+    ÉDITE le message "en cours" existant pour dire "terminé" (pas un nouveau message) —
+    si ce message a été supprimé entre-temps, retombe sur un envoi normal."""
+    DERNIERE_ACTIVITE_BOUCLES["evenements"] = time.time()
+
+    async def _editer_ou_envoyer(channel, message_id, embed):
+        if message_id:
+            try:
+                message = await channel.fetch_message(message_id)
+                await message.edit(content=None, embed=embed)
+                return
+            except discord.NotFound:
+                pass  # message supprimé entre-temps : on retombe sur un envoi normal
+            except discord.HTTPException:
+                return
+        try:
+            await channel.send(embed=embed)
+        except discord.HTTPException:
+            pass
+
+    try:
+        maintenant = int(time.time())
+
+        # Boosts globaux expirés
+        for ligne in database.obtenir_tous_boosts_globaux():
+            if ligne["date_expiration"] > maintenant:
+                continue
+            channel = bot.get_channel(ligne["channel_annonce_id"]) if ligne["channel_annonce_id"] else None
+            if channel:
+                await _editer_ou_envoyer(channel, ligne.get("message_id"), evenements_module.construire_embed_boost_termine(ligne["type_boost"]))
+            database.desactiver_boost_global(ligne["type_boost"])
+
+        # Défis collectifs tout juste complétés (pas annulés — voir la requête SQL)
+        for defi in database.obtenir_defis_collectifs_a_recompenser():
+            participants = database.obtenir_participants_defi_collectif(defi["id"])
+            for user_id, _contribution in participants:
+                database.ajouter_poke_dollars(user_id, config.RECOMPENSE_DEFI_COLLECTIF_PD)
+            database.marquer_defi_collectif_recompense(defi["id"])
+            channel = bot.get_channel(defi["channel_annonce_id"]) if defi["channel_annonce_id"] else None
+            if channel:
+                nom = config.TYPES_DEFI_COLLECTIF.get(defi["type_evenement"], defi["type_evenement"])
+                embed = evenements_module.construire_embed_defi_termine(nom, defi["cible"], len(participants))
+                await _editer_ou_envoyer(channel, defi.get("message_id"), embed)
+
+        # Chasses aux shiny arrivées à échéance
+        for chasse in database.obtenir_chasses_shiny_a_terminer():
+            classement = database.terminer_chasse_shiny(chasse["id"])
+            channel = bot.get_channel(chasse["channel_annonce_id"]) if chasse["channel_annonce_id"] else None
+            if channel:
+                embed = evenements_module.construire_embed_chasse_shiny_terminee(classement)
+                await _editer_ou_envoyer(channel, chasse.get("message_id"), embed)
+    except Exception as e:
+        print(f"⚠️ Erreur dans boucle_verification_evenements (la boucle continue) : {e}")
+        journal.logger(f"🔴 Erreur dans `boucle_verification_evenements` : {e}")
 
 
 @tasks.loop(hours=24)
@@ -1316,6 +1378,9 @@ async def on_ready():
     if not boucle_marketplace.is_running():
         boucle_marketplace.start()
 
+    if not boucle_verification_evenements.is_running():
+        boucle_verification_evenements.start()
+
     await poster_message_pokestop_si_absent()
     await poster_message_boutique_si_absent()
     await poster_message_maitre_types_si_absent()
@@ -1569,35 +1634,58 @@ async def poster_message_profil_si_absent():
     database.definir_parametre("profil_message_id", str(message.id))
 
 
+async def _basculer_role_ping(interaction: discord.Interaction, role_id: int | None, nom_config: str, nom_notification: str):
+    """Logique partagée par les 4 boutons de notification ci-dessous : ajoute/retire le
+    rôle selon que le joueur l'a déjà ou non."""
+    if not role_id:
+        await interaction.response.send_message(
+            f"⚠️ Le rôle de notification {nom_notification} n'a pas encore été configuré par un admin ({nom_config}).",
+            ephemeral=True,
+        )
+        return
+
+    role = interaction.guild.get_role(role_id)
+    if role is None:
+        await interaction.response.send_message(
+            f"⚠️ Le rôle configuré ({nom_config}) est introuvable sur ce serveur.", ephemeral=True
+        )
+        return
+
+    if role in interaction.user.roles:
+        await interaction.user.remove_roles(role)
+        await interaction.response.send_message(f"🔕 Tu ne recevras plus les notifications {nom_notification}.", ephemeral=True)
+    else:
+        await interaction.user.add_roles(role)
+        await interaction.response.send_message(f"🔔 Tu recevras désormais un ping à chaque {nom_notification} !", ephemeral=True)
+
+
 class VuePingRaid(discord.ui.View):
-    """Message fixe (channel dédié) permettant à chacun d'activer/désactiver le rôle de
-    ping raid sans passer par la commande /ping-raid — même logique, juste un bouton."""
+    """Message fixe (channel dédié) permettant à chacun d'activer/désactiver ses rôles de
+    notification (raid, event, annonce, mise à jour) sans passer par une commande —
+    un bouton toggle par catégorie."""
 
     def __init__(self):
         super().__init__(timeout=None)
 
     @discord.ui.button(label="Notifications Raid", emoji="🔔", style=discord.ButtonStyle.primary, custom_id="pokewild:toggle_ping_raid")
-    async def basculer(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def basculer_raid(self, interaction: discord.Interaction, button: discord.ui.Button):
         role_id = getattr(config, "ROLE_PING_RAID_ID", None)
-        if not role_id:
-            await interaction.response.send_message(
-                "⚠️ Le rôle de ping raid n'a pas encore été configuré par un admin.", ephemeral=True
-            )
-            return
+        await _basculer_role_ping(interaction, role_id, "ROLE_PING_RAID_ID", "nouveau raid")
 
-        role = interaction.guild.get_role(role_id)
-        if role is None:
-            await interaction.response.send_message(
-                "⚠️ Le rôle configuré (ROLE_PING_RAID_ID) est introuvable sur ce serveur.", ephemeral=True
-            )
-            return
+    @discord.ui.button(label="Notifications Event", emoji="🎉", style=discord.ButtonStyle.primary, custom_id="pokewild:toggle_ping_event")
+    async def basculer_event(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role_id = getattr(config, "ROLE_PING_EVENT_ID", None)
+        await _basculer_role_ping(interaction, role_id, "ROLE_PING_EVENT_ID", "event serveur")
 
-        if role in interaction.user.roles:
-            await interaction.user.remove_roles(role)
-            await interaction.response.send_message("🔕 Tu ne recevras plus les notifications de raid.", ephemeral=True)
-        else:
-            await interaction.user.add_roles(role)
-            await interaction.response.send_message("🔔 Tu recevras désormais un ping à chaque nouveau raid !", ephemeral=True)
+    @discord.ui.button(label="Notifications Annonce", emoji="📢", style=discord.ButtonStyle.secondary, custom_id="pokewild:toggle_ping_annonce")
+    async def basculer_annonce(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role_id = getattr(config, "ROLE_PING_ANNONCE_ID", None)
+        await _basculer_role_ping(interaction, role_id, "ROLE_PING_ANNONCE_ID", "annonce")
+
+    @discord.ui.button(label="Notifications Mise à Jour", emoji="🛠️", style=discord.ButtonStyle.secondary, custom_id="pokewild:toggle_ping_maj")
+    async def basculer_maj(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role_id = getattr(config, "ROLE_PING_MAJ_ID", None)
+        await _basculer_role_ping(interaction, role_id, "ROLE_PING_MAJ_ID", "mise à jour")
 
 
 async def poster_message_ping_raid_si_absent():
@@ -1612,11 +1700,14 @@ async def poster_message_ping_raid_si_absent():
         return
 
     embed = discord.Embed(
-        title="🔔 Notifications de raid",
+        title="🔔 Notifications",
         description=(
-            "Clique sur le bouton ci-dessous pour être notifié·e à chaque nouveau raid — "
-            "reclique pour te désabonner à tout moment.\n\n"
-            "Ça revient au même que la commande `/ping-raid`, en plus rapide."
+            "Clique sur les boutons ci-dessous pour activer/désactiver chaque type de "
+            "notification — reclique à tout moment pour te désabonner.\n\n"
+            "🔔 **Raid** — un nouveau raid apparaît\n"
+            "🎉 **Event** — un event serveur démarre (boost, défi collectif, chasse aux shiny...)\n"
+            "📢 **Annonce** — une annonce importante du staff\n"
+            "🛠️ **Mise à jour** — une nouvelle mise à jour du bot"
         ),
         color=discord.Color.blue(),
     )
@@ -1677,117 +1768,8 @@ async def obtenir_ou_creer_role_equipe(guild: discord.Guild, nom_equipe: str) ->
     return role
 
 
-@bot.tree.command(name="equipe", description="Choisis ton clan (1 changement gratuit par semaine)")
-@app_commands.choices(
-    nom=[
-        app_commands.Choice(name="Bleu", value="Bleu"),
-        app_commands.Choice(name="Rouge", value="Rouge"),
-        app_commands.Choice(name="Jaune", value="Jaune"),
-    ]
-)
-async def equipe(interaction: discord.Interaction, nom: app_commands.Choice[str]):
-    equipe_actuelle, peut_changer, secondes_restantes = database.obtenir_statut_equipe(interaction.user.id)
-
-    if equipe_actuelle == nom.value:
-        await interaction.response.send_message(
-            f"Tu es déjà dans le clan **{nom.value}** !", ephemeral=True
-        )
-        return
-
-    if not peut_changer:
-        jours = secondes_restantes // 86400
-        heures = (secondes_restantes % 86400) // 3600
-        await interaction.response.send_message(
-            f"⏳ Tu as déjà changé de clan récemment. Prochain changement gratuit possible "
-            f"dans **{jours}j {heures}h**.",
-            ephemeral=True,
-        )
-        return
-
-    ancienne_equipe = equipe_actuelle
-    database.changer_equipe(interaction.user.id, nom.value)
-
-    verbe = "rejoint" if ancienne_equipe is None else "rejoint à nouveau"
-    message = (
-        f"🎉 Tu as {verbe} le clan {config.EMOJI_EQUIPES[nom.value]} **{nom.value}** ! "
-        f"Prochain changement gratuit possible dans 7 jours."
-    )
-
-    if isinstance(interaction.user, discord.Member) and interaction.guild is not None:
-        try:
-            if ancienne_equipe is not None:
-                ancien_role = discord.utils.get(interaction.guild.roles, name=ancienne_equipe)
-                if ancien_role is not None:
-                    await interaction.user.remove_roles(ancien_role, reason="Changement de clan")
-
-            nouveau_role = await obtenir_ou_creer_role_equipe(interaction.guild, nom.value)
-            await interaction.user.add_roles(nouveau_role, reason="Choix de clan")
-        except discord.Forbidden:
-            message += (
-                "\n⚠️ Je n'ai pas la permission de gérer les rôles — demande à un admin de "
-                "vérifier mes permissions (Gérer les rôles) et l'ordre des rôles sur le serveur."
-            )
-
-    await interaction.response.send_message(message)
-
-    if ancienne_equipe is None:
-        embed_rival = pnj.construire_embed_reaction(
-            "rejoint_clan", user_id=interaction.user.id, joueur=interaction.user.display_name
-        )
-        if embed_rival:
-            try:
-                await interaction.channel.send(embed=embed_rival)
-            except discord.HTTPException:
-                pass
 
 
-@bot.tree.command(name="pokedex", description="Affiche ton Pokédex personnel")
-@app_commands.choices(
-    rarete=[
-        app_commands.Choice(name="Toutes", value="toutes"),
-        app_commands.Choice(name="Commun", value="commun"),
-        app_commands.Choice(name="Peu commun", value="peu_commun"),
-        app_commands.Choice(name="Rare", value="rare"),
-        app_commands.Choice(name="Hyper Rare", value="hyper_rare"),
-        app_commands.Choice(name="Légendaire", value="legendaire"),
-    ],
-    tri=[
-        app_commands.Choice(name="Alphabétique", value="alphabetique"),
-        app_commands.Choice(name="Ordre du Pokédex", value="numero"),
-        app_commands.Choice(name="Rareté", value="rarete"),
-    ],
-    filtre_capture=[
-        app_commands.Choice(name="Tous", value="tous"),
-        app_commands.Choice(name="Non capturés", value="non_captures"),
-        app_commands.Choice(name="Capturés", value="captures"),
-    ],
-)
-@app_commands.describe(
-    generation="Filtrer par génération (1 à 9)",
-    membre="Voir le pokédex d'un autre joueur (pratique pour les échanges) — toi par défaut",
-)
-async def pokedex(
-    interaction: discord.Interaction,
-    rarete: app_commands.Choice[str] = None,
-    tri: app_commands.Choice[str] = None,
-    generation: app_commands.Range[int, 1, 9] = None,
-    filtre_capture: app_commands.Choice[str] = None,
-    membre: discord.Member = None,
-):
-    filtre_rarete = None if (rarete is None or rarete.value == "toutes") else rarete.value
-    valeur_tri = tri.value if tri else "alphabetique"
-    valeur_filtre_capture = None if (filtre_capture is None or filtre_capture.value == "tous") else filtre_capture.value
-    cible = membre or interaction.user
-
-    vue = pokedex_module.VuePokedex(
-        cible,
-        filtre_rarete=filtre_rarete,
-        filtre_generation=generation,
-        tri=valeur_tri,
-        filtre_capture=valeur_filtre_capture,
-        proprietaire_id=interaction.user.id,
-    )
-    await interaction.response.send_message(embed=vue.construire_embed(), view=vue, ephemeral=True)
 
 
 @bot.tree.command(
@@ -1946,10 +1928,6 @@ async def passe_saison_cmd(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
-@bot.tree.command(name="wiki", description="Ouvre le wiki interactif de PokéWild — toutes les infos sur le jeu")
-async def wiki_cmd(interaction: discord.Interaction):
-    vue = wiki_module.VueWiki()
-    await interaction.response.send_message(embed=wiki_module.construire_embed_accueil(), view=vue, ephemeral=True)
 
 
 @bot.tree.command(name="parrainage", description="Vois combien de personnes tu as invitées sur le serveur, et ta prochaine récompense")
@@ -2331,21 +2309,8 @@ async def plus_ou_moins_cmd(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
-@bot.tree.command(name="equipe-combat", description="Compose ton équipe de 6 Pokémon pour les futurs combats")
-async def equipe_combat(interaction: discord.Interaction):
-    embed = equipe_combat_module.construire_embed_equipe(interaction.user)
-    vue = equipe_combat_module.VueEquipeCombat(interaction.user.id)
-    await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
-@bot.tree.command(name="relacher", description="Relâche automatiquement tous tes doublons (garde le meilleur PC de chaque espèce)")
-async def relacher(interaction: discord.Interaction):
-    embed, y_a_quelque_chose = construire_apercu_relacher(interaction.user.id)
-    if not y_a_quelque_chose:
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-        return
-    vue = VueConfirmationRelacher(interaction.user.id)
-    await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
 @bot.tree.command(name="verrouiller-pokemon", description="Protège des doublons du relâcher automatique (/relacher) — plus besoin de les décocher à chaque fois")
@@ -2357,13 +2322,6 @@ async def verrouiller_pokemon(interaction: discord.Interaction):
     await interaction.response.send_message(embed=construire_embed_verrouillage(interaction.user.id), view=vue, ephemeral=True)
 
 
-@bot.tree.command(name="profil", description="Affiche tes statistiques de dresseur")
-async def profil(interaction: discord.Interaction):
-    # Éphémère (comme le bouton "Voir mon profil") : Discord n'affiche jamais une image
-    # jointe via "attachment://" dans un message éphémère (voir profil.fichier_avatar_fiable),
-    # donc pas de tentative de pièce jointe ici non plus — retombe sur l'URL directe.
-    embed, _ = await construire_embed_profil(interaction.user, autoriser_piece_jointe=False)
-    await interaction.response.send_message(embed=embed, view=VueOuvrirPokedex(), ephemeral=True)
 
 
 @bot.tree.command(name="setup-boutique", description="[Admin] Poste ou remet à jour le message fixe de la boutique dans ce channel")
@@ -2380,11 +2338,6 @@ async def setup_profil(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, view=VueProfil())
 
 
-@bot.tree.command(name="classement", description="Affiche tous les classements du serveur")
-async def classement(interaction: discord.Interaction):
-    embed = classement_module.construire_embed_apercu()
-    vue = classement_module.VueClassements()
-    await interaction.response.send_message(embed=embed, view=vue)
 
 
 @bot.tree.command(name="mon-classement", description="Affiche ta position personnelle dans les classements")
@@ -3123,32 +3076,6 @@ async def annuler_combat(interaction: discord.Interaction, membre: discord.Membe
     )
 
 
-@bot.tree.command(name="ping-raid", description="Active ou désactive les notifications de raid pour toi")
-async def ping_raid_toggle(interaction: discord.Interaction):
-    role_id = getattr(config, "ROLE_PING_RAID_ID", None)
-    if not role_id:
-        await interaction.response.send_message(
-            "⚠️ Le rôle de ping raid n'a pas encore été configuré par un admin.", ephemeral=True
-        )
-        return
-
-    role = interaction.guild.get_role(role_id)
-    if role is None:
-        await interaction.response.send_message(
-            "⚠️ Le rôle configuré (ROLE_PING_RAID_ID) est introuvable sur ce serveur.", ephemeral=True
-        )
-        return
-
-    if role in interaction.user.roles:
-        await interaction.user.remove_roles(role)
-        await interaction.response.send_message(
-            "🔕 Tu ne recevras plus les notifications de raid.", ephemeral=True
-        )
-    else:
-        await interaction.user.add_roles(role)
-        await interaction.response.send_message(
-            "🔔 Tu recevras désormais un ping à chaque nouveau raid !", ephemeral=True
-        )
 
 
 @bot.tree.command(name="roguelike", description="Lance une run du mini-jeu roguelike (mini-jeu indépendant, aucune récompense liée au bot)")
@@ -3339,29 +3266,12 @@ async def echanger(interaction: discord.Interaction, membre: discord.Member):
     vue_proposition.message = await interaction.original_response()
 
 
-@bot.tree.command(name="maitre-types", description="Rends visite au Maître des Types pour gérer les attaques de tes Pokémon")
-async def maitre_types_cmd(interaction: discord.Interaction):
-    embed = maitre_types_module.construire_embed_maitre()
-    vue = maitre_types_module.VueMaitreTypes()
-    await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
-@bot.tree.command(name="exploration", description="Ouvre le Centre des Explorations pour gérer tes équipes en exploration")
-async def exploration_cmd(interaction: discord.Interaction):
-    embed, vue = exploration_module.construire_tableau_de_bord(interaction.user.id)
-    await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
-@bot.tree.command(name="quetes", description="Affiche tes quêtes journalières, hebdomadaires et tes accomplissements")
-async def quetes_cmd(interaction: discord.Interaction):
-    embed, vue = quetes_ui_module.construire_tableau_de_bord(interaction.user.id)
-    await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
-@bot.tree.command(name="quete-principale", description="Affiche ta progression dans la quête principale (narration)")
-async def quete_principale_cmd(interaction: discord.Interaction):
-    embed = quetes_ui_module.construire_embed_quete_principale(interaction.user.id)
-    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(name="setup-quetes", description="[Admin] Poste ou remet à jour le message fixe des Quêtes dans ce channel")
@@ -3407,11 +3317,6 @@ async def finir_incubation(interaction: discord.Interaction, membre: discord.Mem
     )
 
 
-@bot.tree.command(name="ma-race", description="Affiche ta Race de dresseur et utilise tes Cristaux de Mutation")
-async def ma_race_cmd(interaction: discord.Interaction):
-    embed = race_ui_module.construire_embed_race(interaction.user.id)
-    vue = race_ui_module.VueRace(interaction.user.id)
-    await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
 @bot.tree.command(name="setup-centre-exploration", description="[Admin] Poste ou remet à jour le message fixe du Centre des Explorations dans ce channel")
@@ -3639,6 +3544,14 @@ async def annonce(
 
     await channel.send(embed=embed)
     await interaction.response.send_message(f"✅ Annonce postée dans {channel.mention}.", ephemeral=True)
+
+
+@bot.tree.command(name="event", description="[Admin] Lance un event serveur (boost, défi collectif, chasse aux shiny)")
+@app_commands.checks.has_permissions(administrator=True)
+async def event_cmd(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        "🎉 Quel type d'event veux-tu lancer ?", view=evenements_module.VueChoixEvent(), ephemeral=True
+    )
 
 
 @bot.tree.command(name="pause-spawns", description="[Admin] Met en pause les spawns")
