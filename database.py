@@ -1014,6 +1014,15 @@ def init_db():
         except sqlite3.OperationalError:
             pass  # la colonne existe déjà
 
+    # Migration : Précision / Esquive (6e et 7e dimension de boost) — indépendantes des 5
+    # stats offensives/défensives, gèrent les changements de chance de toucher/d'esquiver
+    # (Regard Vif, Voile Sable, Œil Composé, Pieds Confus, Agitation...).
+    for colonne in ("stage_precision", "stage_esquive"):
+        try:
+            cur.execute(f"ALTER TABLE combat_boosts ADD COLUMN {colonne} INTEGER NOT NULL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # la colonne existe déjà
+
     # Attaques à deux tours (charge type Lance-Soleil, recharge type Ultimaton/Ultralaser) —
     # voir ATTAQUES_CHARGE / ATTAQUES_RECHARGE dans pokemon_data.py.
     cur.execute(
@@ -1025,6 +1034,35 @@ def init_db():
             attaque_en_charge TEXT,
             doit_recharger INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (combat_id, user_id, pokemon_nom)
+        )
+        """
+    )
+
+    # Attaques de FURIE (ex: Colère/Dracocolère) : verrouille sur la même attaque 2-3
+    # tours d'affilée dès le premier usage (pas de tour de charge préalable, contrairement
+    # à combat_charge ci-dessus), puis confusion automatique à la fin du verrouillage.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_furie (
+            combat_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            pokemon_nom TEXT NOT NULL,
+            attaque TEXT NOT NULL,
+            tours_restants INTEGER NOT NULL,
+            PRIMARY KEY (combat_id, user_id, pokemon_nom)
+        )
+        """
+    )
+
+    # Météo de combat (Soleil/Pluie/Tempête de sable/Grêle) — un seul état par combat,
+    # affecte les DEUX joueurs également (contrairement aux pièges de terrain qui sont
+    # par côté, voir combat_terrain plus haut).
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_meteo (
+            combat_id INTEGER PRIMARY KEY,
+            type TEXT NOT NULL,
+            tours_restants INTEGER NOT NULL
         )
         """
     )
@@ -4085,28 +4123,29 @@ def obtenir_attaques_equipees(user_id: int, pokemon_nom: str, combat_id: int = N
 # --- Boosts de stats en combat (stages -6..+6, réinitialisés au changement de Pokémon) ---
 
 def obtenir_boosts(combat_id: int, user_id: int, pokemon_nom: str) -> dict:
-    """Retourne {'atk','def','atk_spe','def_spe','vit'} (0 partout si jamais boosté)."""
+    """Retourne {'atk','def','atk_spe','def_spe','vit','precision','esquive'} (0 partout
+    si jamais boosté)."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
-        "SELECT stage_atk, stage_def, stage_atk_spe, stage_def_spe, stage_vit FROM combat_boosts "
-        "WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        "SELECT stage_atk, stage_def, stage_atk_spe, stage_def_spe, stage_vit, stage_precision, stage_esquive "
+        "FROM combat_boosts WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
         (combat_id, user_id, pokemon_nom),
     )
     row = cur.fetchone()
     conn.close()
     if row is None:
-        return {"atk": 0, "def": 0, "atk_spe": 0, "def_spe": 0, "vit": 0}
+        return {"atk": 0, "def": 0, "atk_spe": 0, "def_spe": 0, "vit": 0, "precision": 0, "esquive": 0}
     return {
         "atk": row["stage_atk"], "def": row["stage_def"],
         "atk_spe": row["stage_atk_spe"], "def_spe": row["stage_def_spe"],
-        "vit": row["stage_vit"],
+        "vit": row["stage_vit"], "precision": row["stage_precision"], "esquive": row["stage_esquive"],
     }
 
 
 def modifier_boost(combat_id: int, user_id: int, pokemon_nom: str, stat: str, delta: int) -> int:
-    """Applique un delta de stage à une stat (atk/def/atk_spe/def_spe/vit), borné entre
-    -6 et +6. Retourne le nouveau stage."""
+    """Applique un delta de stage à une stat (atk/def/atk_spe/def_spe/vit/precision/esquive),
+    borné entre -6 et +6. Retourne le nouveau stage."""
     boosts = obtenir_boosts(combat_id, user_id, pokemon_nom)
     nouveau = max(-6, min(6, boosts[stat] + delta))
     boosts[stat] = nouveau
@@ -4116,16 +4155,21 @@ def modifier_boost(combat_id: int, user_id: int, pokemon_nom: str, stat: str, de
     cur.execute(
         """
         INSERT INTO combat_boosts
-            (combat_id, user_id, pokemon_nom, stage_atk, stage_def, stage_atk_spe, stage_def_spe, stage_vit)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (combat_id, user_id, pokemon_nom, stage_atk, stage_def, stage_atk_spe, stage_def_spe, stage_vit, stage_precision, stage_esquive)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(combat_id, user_id, pokemon_nom) DO UPDATE SET
             stage_atk = excluded.stage_atk,
             stage_def = excluded.stage_def,
             stage_atk_spe = excluded.stage_atk_spe,
             stage_def_spe = excluded.stage_def_spe,
-            stage_vit = excluded.stage_vit
+            stage_vit = excluded.stage_vit,
+            stage_precision = excluded.stage_precision,
+            stage_esquive = excluded.stage_esquive
         """,
-        (combat_id, user_id, pokemon_nom, boosts["atk"], boosts["def"], boosts["atk_spe"], boosts["def_spe"], boosts["vit"]),
+        (
+            combat_id, user_id, pokemon_nom, boosts["atk"], boosts["def"], boosts["atk_spe"], boosts["def_spe"],
+            boosts["vit"], boosts["precision"], boosts["esquive"],
+        ),
     )
     conn.commit()
     conn.close()
@@ -4159,19 +4203,21 @@ def copier_boosts(combat_id: int, user_id: int, nom_source: str, nom_dest: str):
     cur.execute(
         """
         INSERT INTO combat_boosts
-            (combat_id, user_id, pokemon_nom, stage_atk, stage_def, stage_atk_spe, stage_def_spe, stage_vit)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (combat_id, user_id, pokemon_nom, stage_atk, stage_def, stage_atk_spe, stage_def_spe, stage_vit, stage_precision, stage_esquive)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(combat_id, user_id, pokemon_nom) DO UPDATE SET
             stage_atk = excluded.stage_atk,
             stage_def = excluded.stage_def,
             stage_atk_spe = excluded.stage_atk_spe,
             stage_def_spe = excluded.stage_def_spe,
-            stage_vit = excluded.stage_vit
+            stage_vit = excluded.stage_vit,
+            stage_precision = excluded.stage_precision,
+            stage_esquive = excluded.stage_esquive
         """,
         (
             combat_id, user_id, nom_dest,
             boosts_source["atk"], boosts_source["def"], boosts_source["atk_spe"],
-            boosts_source["def_spe"], boosts_source["vit"],
+            boosts_source["def_spe"], boosts_source["vit"], boosts_source["precision"], boosts_source["esquive"],
         ),
     )
     conn.commit()
@@ -4231,6 +4277,102 @@ def reinitialiser_charge(combat_id: int, user_id: int, pokemon_nom: str):
     )
     conn.commit()
     conn.close()
+
+
+# --- Attaques de FURIE (ex: Colère/Dracocolère) : verrouillage 2-3 tours + confusion ---
+
+def obtenir_furie(combat_id: int, user_id: int, pokemon_nom: str) -> dict | None:
+    """Retourne {'attaque': str, 'tours_restants': int} si ce Pokémon est actuellement
+    verrouillé sur une attaque de furie, sinon None."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT attaque, tours_restants FROM combat_furie WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    if row is None:
+        return None
+    return {"attaque": row["attaque"], "tours_restants": row["tours_restants"]}
+
+
+def definir_furie(combat_id: int, user_id: int, pokemon_nom: str, attaque: str | None, tours_restants: int = 0):
+    """attaque=None efface le verrouillage (fin de la furie, ou le Pokémon quitte le terrain)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    if attaque is None:
+        cur.execute(
+            "DELETE FROM combat_furie WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+            (combat_id, user_id, pokemon_nom),
+        )
+    else:
+        cur.execute(
+            """
+            INSERT INTO combat_furie (combat_id, user_id, pokemon_nom, attaque, tours_restants)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(combat_id, user_id, pokemon_nom) DO UPDATE SET
+                attaque = excluded.attaque, tours_restants = excluded.tours_restants
+            """,
+            (combat_id, user_id, pokemon_nom, attaque, tours_restants),
+        )
+    conn.commit()
+    conn.close()
+
+
+# --- Météo de combat (Soleil/Pluie/Tempête de sable/Grêle) -----------------------------
+
+def obtenir_meteo(combat_id: int) -> dict | None:
+    """Retourne {'type': str, 'tours_restants': int} ou None si ciel dégagé."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT type, tours_restants FROM combat_meteo WHERE combat_id = ?", (combat_id,))
+    row = cur.fetchone()
+    conn.close()
+    if row is None:
+        return None
+    return {"type": row["type"], "tours_restants": row["tours_restants"]}
+
+
+def definir_meteo(combat_id: int, type_meteo: str | None, tours: int = 5):
+    """type_meteo=None efface la météo (ciel dégagé). Une nouvelle météo remplace
+    toujours l'ancienne (pas de cumul), avec sa propre durée (5 tours par défaut)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    if type_meteo is None:
+        cur.execute("DELETE FROM combat_meteo WHERE combat_id = ?", (combat_id,))
+    else:
+        cur.execute(
+            """
+            INSERT INTO combat_meteo (combat_id, type, tours_restants) VALUES (?, ?, ?)
+            ON CONFLICT(combat_id) DO UPDATE SET type = excluded.type, tours_restants = excluded.tours_restants
+            """,
+            (combat_id, type_meteo, tours),
+        )
+    conn.commit()
+    conn.close()
+
+
+def decrementer_meteo(combat_id: int) -> str | None:
+    """À appeler une fois par tour résolu. Retourne le type de météo qui vient de
+    prendre fin à l'instant (pour un message de log), sinon None."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT type, tours_restants FROM combat_meteo WHERE combat_id = ?", (combat_id,))
+    row = cur.fetchone()
+    if row is None:
+        conn.close()
+        return None
+    nouveau = row["tours_restants"] - 1
+    if nouveau <= 0:
+        cur.execute("DELETE FROM combat_meteo WHERE combat_id = ?", (combat_id,))
+        conn.commit()
+        conn.close()
+        return row["type"]
+    cur.execute("UPDATE combat_meteo SET tours_restants = ? WHERE combat_id = ?", (nouveau, combat_id))
+    conn.commit()
+    conn.close()
+    return None
 
 
 def obtenir_attaque_verrouillee(combat_id: int, user_id: int, pokemon_nom: str) -> str | None:
@@ -5166,11 +5308,12 @@ def obtenir_pp(combat_id: int, user_id: int, pokemon_nom: str, attaque_nom: str,
     return pp_max
 
 
-def consommer_pp(combat_id: int, user_id: int, pokemon_nom: str, attaque_nom: str, pp_max: int) -> int:
-    """Consomme 1 PP (initialise d'abord si jamais utilisée). Retourne le PP restant
-    après consommation (jamais négatif)."""
+def consommer_pp(combat_id: int, user_id: int, pokemon_nom: str, attaque_nom: str, pp_max: int, montant: int = 1) -> int:
+    """Consomme `montant` PP (initialise d'abord si jamais utilisée) — montant=2 pour
+    une attaque utilisée contre un Pokémon avec Pression. Retourne le PP restant après
+    consommation (jamais négatif)."""
     pp_actuel = obtenir_pp(combat_id, user_id, pokemon_nom, attaque_nom, pp_max)
-    nouveau_pp = max(0, pp_actuel - 1)
+    nouveau_pp = max(0, pp_actuel - montant)
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
