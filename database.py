@@ -2478,6 +2478,20 @@ def obtenir_captures_sans_talent() -> list:
     return resultats
 
 
+def obtenir_captures_avec_talent() -> list:
+    """(id, pokemon_nom, capacite) de TOUTES les captures ayant déjà un talent — pour que
+    /backfill-talents puisse repérer celles dont le talent actuel ne correspond plus aux
+    vraies aptitudes curatées de l'espèce (attribué avant que sa curation n'existe) et le
+    re-tirer. Le filtrage précis (quelles espèces/talents sont concernés) se fait côté
+    Python dans main.py, contre capacites.POKEMON_CAPACITES."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT id, pokemon_nom, capacite FROM captures WHERE capacite IS NOT NULL")
+    resultats = [(row["id"], row["pokemon_nom"], row["capacite"]) for row in cur.fetchall()]
+    conn.close()
+    return resultats
+
+
 def definir_capacite_capture(capture_id: int, capacite: str):
     conn = get_connexion()
     cur = conn.cursor()

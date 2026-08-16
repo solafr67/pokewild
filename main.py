@@ -1,3 +1,9 @@
+from dotenv import load_dotenv
+
+load_dotenv()  # charge un fichier .env s'il existe (utile en local/test) — ne fait rien
+# en production si le fichier n'existe pas, les vraies variables d'environnement système
+# (définies par le service systemd) continuent de fonctionner exactement comme avant.
+
 import asyncio
 import json
 import random

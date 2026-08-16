@@ -1,9 +1,11 @@
+import io
 import random
 import time
 
 import discord
 
 import capacites as capacites_module
+import combat_visuel
 import formes_objets as formes_objets_module
 import config
 import database
@@ -429,6 +431,44 @@ def _declencher_fouille_entree(combat_id: int, user_id: int, pokemon_nom: str, a
     info_objet_adv = capacites_module.infos_objet(objet_adv)
     texte_objet = f"**{info_objet_adv['nom']}**" if info_objet_adv else "aucun objet"
     log.append(f"  🔍 **{pokemon_nom}** (Fouille) — **{nom_actif_adv}** tient : {texte_objet}")
+
+
+def _generer_fichier_scene_combat(combat_id: int, noms: dict) -> discord.File | None:
+    """Génère l'image de la scène de combat (fond + sprites + PV) pour le tour en cours.
+    Retourne None si un souci purement visuel survient (sprite/fond introuvable) — ne doit
+    JAMAIS empêcher l'affichage du texte du combat, qui reste la source de vérité."""
+    try:
+        combat = database.obtenir_combat(combat_id)
+        if combat is None:
+            return None
+        j1, j2 = combat["joueur1_id"], combat["joueur2_id"]
+        nom_actif_j1, nom_actif_j2 = combat["actif1_nom"], combat["actif2_nom"]
+
+        def _infos_cote(user_id: int, nom_actif: str):
+            equipe = database.obtenir_equipe_pvp(combat_id, user_id)
+            row = next((r for r in equipe if r["pokemon_nom"] == nom_actif), None)
+            if row is None:
+                return None
+            objet = database.obtenir_objet_combat(combat_id, user_id, nom_actif)
+            pokemon = formes_objets_module.pokemon_effectif(obtenir_pokemon_par_nom(nom_actif), objet)
+            nom_affiche = formes_objets_module.nom_affichage(nom_actif, objet)
+            return pokemon, nom_affiche, row["niveau"], row["pv_actuels"], row["pv_max"]
+
+        infos_j1 = _infos_cote(j1, nom_actif_j1)
+        infos_j2 = _infos_cote(j2, nom_actif_j2)
+        if infos_j1 is None or infos_j2 is None:
+            return None
+
+        png_bytes = combat_visuel.generer_image_combat(
+            infos_j1[0], infos_j1[1], infos_j1[2], infos_j1[3], infos_j1[4], False,
+            infos_j2[0], infos_j2[1], infos_j2[2], infos_j2[3], infos_j2[4], False,
+        )
+        if png_bytes is None:
+            return None
+        return discord.File(io.BytesIO(png_bytes), filename="scene_combat.png")
+    except Exception as e:
+        print(f"⚠️ Erreur en générant la scène visuelle du combat {combat_id} (le texte s'affiche quand même) : {e}")
+        return None
 
 
 async def resoudre_tour(combat_id: int) -> list:
@@ -1733,9 +1773,13 @@ async def _tick_resolution_pvp(bot, combat_id: int, thread_id: int, message_id: 
         }
         embeds = construire_embeds_combat(combat_id, log_tour=log, noms=noms)
         vue = VueActionCombat(combat_id, nouveau_tour, avec_choix_ko=bool(database.obtenir_choix_ko(combat_id)))
+        fichier_scene = _generer_fichier_scene_combat(combat_id, noms)
         try:
             msg = await thread.fetch_message(message_id)
-            await msg.edit(embeds=embeds, view=vue)
+            if fichier_scene:
+                await msg.edit(embeds=embeds, view=vue, attachments=[fichier_scene])
+            else:
+                await msg.edit(embeds=embeds, view=vue)
         except discord.HTTPException:
             pass  # message disparu ou édition refusée : le prochain tick retentera
         return False
