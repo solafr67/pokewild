@@ -203,9 +203,23 @@ async def _lancer_combat_draft(etat: EtatDraft):
                 # module) : jamais le vrai talent de la capture du joueur, s'il en a une.
                 database.definir_capacite_combat(combat_id, user_id, nom, capacites_module.capacite_pour_espece(nom))
 
-    combat_id = await combat_module.lancer_combat_avec_equipes(
-        etat.bot, etat.joueur1, etat.joueur2, etat.channel_original, equipe1, equipe2, avant_lancement=_preparer_combat
-    )
+    try:
+        combat_id = await combat_module.lancer_combat_avec_equipes(
+            etat.bot, etat.joueur1, etat.joueur2, etat.channel_original, equipe1, equipe2, avant_lancement=_preparer_combat
+        )
+    except Exception:
+        import traceback
+
+        print(f"⚠️ Erreur en lançant le combat Draft PvP ({etat.joueur1.id} vs {etat.joueur2.id}) :")
+        traceback.print_exc()
+        try:
+            await etat.message_public.reply(
+                "❌ Une erreur a empêché le lancement du combat — réessaie avec `/defi-draft`. "
+                "(Erreur journalisée pour investigation.)"
+            )
+        except discord.HTTPException:
+            pass
+        return
 
     combat_row = database.obtenir_combat(combat_id)
     mention_fil = ""

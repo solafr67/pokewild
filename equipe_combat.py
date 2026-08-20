@@ -63,6 +63,7 @@ def charger_preset_combat(user_id: int, nom_preset: str) -> tuple:
 def construire_embed_equipe(user: discord.abc.User) -> discord.Embed:
     noms_equipe = database.obtenir_equipe_combat(user.id)
     stats = _stats_par_espece(user.id)
+    favori_surnom = database.obtenir_favori_surnom_par_espece(user.id)
     # Si le joueur est actuellement en raid, afficher les PV du pool de RAID (séparé) —
     # sinon la barre de vie affichée ici ne bougeait jamais pendant un raid (elle lisait
     # toujours le pool normal, jamais touché par un combat de raid), rendant impossible
@@ -78,6 +79,8 @@ def construire_embed_equipe(user: discord.abc.User) -> discord.Embed:
             emoji_rarete = EMOJI_RARETE[pokemon["rarete"]] if pokemon else ""
             shiny_txt = " ✨" if info and info["shiny"] else ""
             pc_txt = info["pc"] if info else "?"
+            surnom_info = favori_surnom.get(nom, {})
+            surnom_txt = f" *({surnom_info['surnom']})*" if surnom_info.get("surnom") else ""
 
             niveau, xp = database.obtenir_niveau_pokemon(user.id, nom)
             niveau_max = niveaux_pokemon.niveau_max_pour_rarete(pokemon["rarete"]) if pokemon else 100
@@ -88,7 +91,7 @@ def construire_embed_equipe(user: discord.abc.User) -> discord.Embed:
             ko_txt = " 💀 K.O." if pv_actuels <= 0 else ""
 
             lignes.append(
-                f"{i + 1}. {emoji_rarete} **{nom}**{shiny_txt} — {niveau_txt} — {pc_txt} PC — "
+                f"{i + 1}. {emoji_rarete} **{nom}**{surnom_txt}{shiny_txt} — {niveau_txt} — {pc_txt} PC — "
                 f"❤️ {pv_actuels}/{pv_max} PV{ko_txt}"
             )
         else:
@@ -127,6 +130,51 @@ class ModalRechercheEquipe(discord.ui.Modal):
         await interaction.response.edit_message(
             embed=construire_embed_equipe(interaction.user), view=self.vue_parente
         )
+
+
+class VueChoixRenommer(discord.ui.View):
+    """Sélection éphémère parmi les Pokémon de l'équipe active — choisir en ouvre la
+    fenêtre de saisie du surnom pour l'exemplaire au meilleur PC de cette espèce (celui
+    que représente cet emplacement d'équipe, qui ne référence que le nom de l'espèce)."""
+
+    def __init__(self, user_id: int, equipe_actuelle: list, vue_equipe: "VueEquipeCombat"):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        self.vue_equipe = vue_equipe
+        options = [discord.SelectOption(label=nom, value=nom) for nom in equipe_actuelle]
+        select = discord.ui.Select(placeholder="Choisis un Pokémon…", options=options)
+        select.callback = self._on_select
+        self.add_item(select)
+
+    async def _on_select(self, interaction: discord.Interaction):
+        nom_espece = interaction.data["values"][0]
+        capture_id = database.obtenir_meilleure_capture_id(self.user_id, nom_espece)
+        if capture_id is None:
+            await interaction.response.send_message("Cet exemplaire n'est plus disponible.", ephemeral=True)
+            return
+        surnom_actuel = None
+        for row in database.obtenir_toutes_captures_detaillees(self.user_id):
+            if row["id"] == capture_id:
+                surnom_actuel = row["surnom"]
+                break
+        await interaction.response.send_modal(
+            ModalDefinirSurnomEquipe(self.vue_equipe, capture_id, nom_espece, surnom_actuel)
+        )
+
+
+class ModalDefinirSurnomEquipe(discord.ui.Modal, title="Donner un surnom"):
+    surnom_input = discord.ui.TextInput(label="Surnom (vide pour effacer)", max_length=32, required=False)
+
+    def __init__(self, vue_equipe: "VueEquipeCombat", capture_id: int, nom_espece: str, surnom_actuel: str | None):
+        super().__init__(title=f"Surnommer {nom_espece}"[:45])
+        self.vue_equipe = vue_equipe
+        self.capture_id = capture_id
+        self.surnom_input.default = surnom_actuel or ""
+
+    async def on_submit(self, interaction: discord.Interaction):
+        nouveau_surnom = self.surnom_input.value.strip()
+        database.definir_surnom_capture(self.capture_id, nouveau_surnom or None)
+        await interaction.response.edit_message(embed=construire_embed_equipe(interaction.user), view=self.vue_equipe)
 
 
 class VueEquipeCombat(discord.ui.View):
@@ -239,6 +287,13 @@ class VueEquipeCombat(discord.ui.View):
         bouton_recherche.callback = self._on_rechercher
         self.add_item(bouton_recherche)
 
+        if equipe_actuelle:
+            bouton_renommer = discord.ui.Button(
+                label="Renommer", emoji="✏️", style=discord.ButtonStyle.secondary, row=3
+            )
+            bouton_renommer.callback = self._on_renommer
+            self.add_item(bouton_renommer)
+
         bouton_soigner = discord.ui.Button(
             label="Soigner", emoji="❤️‍🩹", style=discord.ButtonStyle.success, row=4
         )
@@ -317,6 +372,16 @@ class VueEquipeCombat(discord.ui.View):
         if not await self._verifier_proprietaire(interaction):
             return
         await interaction.response.send_modal(ModalRechercheEquipe(self))
+
+    async def _on_renommer(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        equipe_actuelle = database.obtenir_equipe_combat(self.user_id)
+        if not equipe_actuelle:
+            await interaction.response.send_message("Ton équipe est vide !", ephemeral=True)
+            return
+        vue = VueChoixRenommer(self.user_id, equipe_actuelle, self)
+        await interaction.response.send_message("Quel Pokémon de ton équipe veux-tu renommer ?", view=vue, ephemeral=True)
 
     async def _on_page_ajout_precedente(self, interaction: discord.Interaction):
         if not await self._verifier_proprietaire(interaction):

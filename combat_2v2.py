@@ -24,6 +24,8 @@ from PIL import Image
 
 import discord
 
+import combat_visuel
+
 import config
 import capacites as capacites_module
 import formes_objets as formes_objets_module
@@ -47,6 +49,18 @@ from combat import (
     METEO_TYPES_IMMUNISES,
     NOM_LUTTE,
     STATUTS_INFO,
+    TERRAIN_INFO,
+    ATTAQUES_TERRAIN_ZONE,
+    ATTAQUES_ECRANS,
+    ECRANS_INFO,
+    ATTAQUES_EFFETS_GLOBAUX,
+    EFFETS_GLOBAUX_INFO,
+    ATTAQUES_ZONE_AVEC_ALLIE,
+    ATTAQUES_ZONE_TOUTES,
+    calculer_degats_zone,
+    ATTAQUES_PRIORITE_POSITIVE,
+    ATTAQUES_SEISME,
+    _est_au_sol,
     XP_DEFAITE,
     XP_VICTOIRE,
     _appliquer_hazards_entree,
@@ -299,203 +313,73 @@ async def _telecharger_image(session: aiohttp.ClientSession, url: str) -> Image.
         return None
 
 
-async def _composer_sprites_equipe(nom1: str, nom2: str, couleur_equipe: tuple = (54, 57, 63)) -> bytes | None:
-    """Une image STATIQUE unique avec les 2 sprites actifs d'une équipe côte à côte —
-    c'est le seul moyen fiable d'avoir 2 sprites sur UNE rangée : Discord n'affiche
-    jamais deux embeds côte à côte (ils s'empilent toujours verticalement), donc on
-    fusionne les deux images nous-mêmes plutôt que de compter sur la mise en page Discord.
-    Contrepartie assumée : image fixe (première frame), plus animée.
+def _generer_fichier_scene_combat_2v2(combat_id: int, noms: dict, log_tour: list = None, type_combat: str = "dresseur") -> discord.File | None:
+    """Équivalent 2v2 de combat._generer_fichier_scene_combat — rassemble les données des
+    4 combattants (jusqu'à 2 par équipe) et appelle combat_visuel.generer_image_combat_2v2.
+    Un membre abandonné ou dont l'équipe entière est K.O. passe None (voir docstring de
+    generer_image_combat_2v2 — ce combattant est simplement absent de la scène, pas
+    d'erreur). Ne doit JAMAIS empêcher l'affichage du texte du combat en cas d'échec."""
+    try:
+        joueurs = _joueurs(combat_id)
+        if not joueurs:
+            return None
 
-    Esthétique : chaque sprite repose sur une carte arrondie légèrement teintée de la
-    couleur de l'équipe (les sprites à fond transparent flottaient sans contraste sur le
-    fond de l'embed sinon), séparés par une fine ligne verticale, avec une marge autour
-    de l'ensemble pour ne pas coller aux bords de l'embed."""
-    cle = (tuple(sorted((nom1, nom2))), couleur_equipe)
-    if cle in _cache_sprites_composes:
-        return _cache_sprites_composes[cle]
-
-    pokemon1, pokemon2 = obtenir_pokemon_par_nom(nom1), obtenir_pokemon_par_nom(nom2)
-    url1, url2 = sprite_anime(pokemon1), sprite_anime(pokemon2)
-    if not url1 or not url2:
-        return None
-
-    async with aiohttp.ClientSession() as session:
-        img1, img2 = await asyncio.gather(
-            _telecharger_image(session, url1), _telecharger_image(session, url2)
-        )
-    if img1 is None or img2 is None:
-        return None
-
-    def _redimensionner(img: Image.Image) -> Image.Image:
-        ratio = TAILLE_SPRITE_COMPOSE / img.height
-        return img.resize((max(1, round(img.width * ratio)), TAILLE_SPRITE_COMPOSE), Image.LANCZOS)
-
-    img1, img2 = _redimensionner(img1), _redimensionner(img2)
-
-    from PIL import ImageDraw
-
-    marge_ext = 16  # respiration autour de l'ensemble, pour ne pas coller aux bords de l'embed
-    marge_carte = 14  # espace entre le sprite et le bord de sa carte
-    ecart_cartes = 10  # espace entre les 2 cartes
-    hauteur_carte = TAILLE_SPRITE_COMPOSE + marge_carte * 2
-    largeur_carte_1 = img1.width + marge_carte * 2
-    largeur_carte_2 = img2.width + marge_carte * 2
-    largeur_totale = marge_ext * 2 + largeur_carte_1 + ecart_cartes + largeur_carte_2
-    hauteur_totale = marge_ext * 2 + hauteur_carte
-
-    canevas = Image.new("RGBA", (largeur_totale, hauteur_totale), (0, 0, 0, 0))
-    dessin = ImageDraw.Draw(canevas)
-
-    r, g, b = couleur_equipe
-    fond_carte = (r, g, b, 60)  # carte très subtile, juste assez pour détacher le sprite du fond
-    contour_carte = (r, g, b, 130)
-
-    x1 = marge_ext
-    dessin.rounded_rectangle(
-        [x1, marge_ext, x1 + largeur_carte_1, marge_ext + hauteur_carte],
-        radius=14, fill=fond_carte, outline=contour_carte, width=2,
-    )
-    canevas.paste(img1, (x1 + marge_carte, marge_ext + marge_carte), img1)
-
-    x2 = x1 + largeur_carte_1 + ecart_cartes
-    dessin.rounded_rectangle(
-        [x2, marge_ext, x2 + largeur_carte_2, marge_ext + hauteur_carte],
-        radius=14, fill=fond_carte, outline=contour_carte, width=2,
-    )
-    canevas.paste(img2, (x2 + marge_carte, marge_ext + marge_carte), img2)
-
-    tampon = io.BytesIO()
-    canevas.save(tampon, format="PNG")
-    resultat = tampon.getvalue()
-    _cache_sprites_composes[cle] = resultat
-    return resultat
-
-
-async def construire_embeds_2v2(combat_id: int, noms: dict, log_tour: list = None) -> tuple:
-    """Un embed PAR ÉQUIPE (2 rangées), avec les 2 sprites actifs composés en une seule
-    image côte à côte (voir _composer_sprites_equipe — Discord n'aligne jamais deux
-    embeds côte à côte et un embed n'accepte qu'UNE image, donc c'est la seule façon
-    fiable d'avoir les 2 sprites ensemble sur une rangée).
-
-    Affichage à deux visages selon QUI contrôle l'équipe :
-    - 2 sièges du MÊME joueur réel (double combat solo, ou l'un des 2 dresseurs d'un duo
-      vu de son propre côté — non, en pratique ça ne concerne que le joueur humain,
-      jamais 2 dresseurs IA qui restent 2 entités distinctes) → une seule bannière avec
-      SON nom (pas de "Joueur (2)"), 2 champs "Pokémon" sobres, réserve FUSIONNÉE en une
-      seule liste — c'est visuellement UNE équipe de 6, pas deux équipes de 3.
-    - 2 sièges de contrôleurs DIFFÉRENTS (lobby 2v2 à 4 joueurs, ou les 2 dresseurs d'un
-      duo) → inchangé, un champ par personne avec son nom et sa propre réserve.
-
-    Retourne (embeds, fichiers) — fichiers doit être joint au message (files= pour un
-    envoi, attachments= pour une édition), les embeds y font référence via
-    "attachment://<nom_du_fichier>"."""
-    combat = database.obtenir_combat(combat_id)
-    joueurs = _joueurs(combat_id)
-    if combat is None or not joueurs:
-        return [discord.Embed(description="Combat introuvable.", color=discord.Color.red())], []
-
-    embeds = []
-    fichiers = []
-    for equipe, couleur, prefixe in ((1, discord.Color.blue(), "🔵"), (2, discord.Color.red(), "🔴")):
-        membres = [j for j in joueurs if j["equipe"] == equipe]
-        controleurs = {controleur_reel(j["user_id"]) for j in membres}
-        equipe_unifiee = len(controleurs) == 1 and len(membres) == 2
-
-        if equipe_unifiee:
-            reel_id = next(iter(controleurs))
-            nom_capitaine = noms.get(reel_id, f"Joueur…{str(reel_id)[-4:]}")
-            prets = sum(1 for j in membres if j["action"] is not None and not j["abandonne"])
-            actifs_ok = sum(1 for j in membres if not j["abandonne"] and not _joueur_hors_combat(combat_id, j))
-            if any(j["abandonne"] for j in membres) and actifs_ok == 0:
-                statut_txt = "🏳️ a abandonné"
-            elif actifs_ok == 0:
-                statut_txt = "💀 équipe K.O."
-            elif prets == actifs_ok:
-                statut_txt = "✅ prêt"
-            else:
-                statut_txt = f"⏳ {prets}/{actifs_ok} prêt"
-            embed = discord.Embed(color=couleur, title=f"{prefixe} {nom_capitaine} — {statut_txt}")
-        else:
-            embed = discord.Embed(color=couleur, title=f"{prefixe} Équipe {equipe}")
-
-        actifs_pour_image = []
-        reserve_fusionnee = []
-        for j in membres:
-            nom_joueur = noms.get(j["user_id"], f"Joueur…{str(j['user_id'])[-4:]}")
-            en_tete_champ = j["actif_nom"] or nom_joueur  # unifiée : juste le nom du Pokémon
-
+        def _infos_combattant(j: dict):
             if j["abandonne"]:
-                if not equipe_unifiee:
-                    embed.add_field(name=f"🏳️ {nom_joueur}", value="*A abandonné*", inline=True)
-                continue
-
+                return None
             eq = database.obtenir_equipe_pvp(combat_id, j["user_id"])
             row = _row_actif(combat_id, j["user_id"], j["actif_nom"])
-            statut_solo = "✅" if j["action"] else "⏳"
-
             if row is None or all(r["pv_actuels"] <= 0 for r in eq):
-                if not equipe_unifiee:
-                    embed.add_field(name=f"💀 {nom_joueur}", value="*Équipe entière K.O.*", inline=True)
-                continue
+                return None
+            objet = database.obtenir_objet_combat(combat_id, j["user_id"], j["actif_nom"])
+            pokemon = formes_objets_module.pokemon_effectif(obtenir_pokemon_par_nom(j["actif_nom"]), objet)
+            nom_affiche = formes_objets_module.nom_affichage(j["actif_nom"], objet)
+            statut = database.obtenir_statut(combat_id, j["user_id"], j["actif_nom"])
+            code_statut = statut[0] if statut else None
+            boosts = database.obtenir_boosts(combat_id, j["user_id"], j["actif_nom"])
+            equipe_vivante = [r["pv_actuels"] > 0 for r in eq]
+            # Identifiant du vrai contrôleur (pas le siège) — un joueur humain en double
+            # combat solo-vs-duo a ses 2 sièges stockés sous des ID différents (id_reel et
+            # id_delegue(id_reel), voir demarrer_duo_dresseur), chacun avec SA PROPRE
+            # moitié de la réserve. Sans ramener les deux au même ID ici, la scène
+            # visuelle les prendrait pour 2 joueurs différents et dupliquerait les
+            # Poké Balls au lieu de les regrouper.
+            id_reel = j["user_id"] - DELEGUE_OFFSET if est_delegue(j["user_id"]) else j["user_id"]
+            return {
+                "pokemon": pokemon, "nom_affiche": nom_affiche, "niveau": row["niveau"],
+                "pv": row["pv_actuels"], "pv_max": row["pv_max"], "shiny": False,
+                "code_statut": code_statut, "boosts": boosts, "equipe_vivante": equipe_vivante,
+                "cle_controleur": id_reel,
+            }
 
-            statut_actif = database.obtenir_statut(combat_id, j["user_id"], j["actif_nom"])
-            emoji_statut = (
-                f" {STATUTS_INFO[statut_actif[0]]['emoji']}"
-                if statut_actif and statut_actif[0] in STATUTS_INFO
-                else ""
-            )
-            barre = f"{_barre_pv(row['pv_actuels'], row['pv_max'], longueur=8)}\n❤️ {row['pv_actuels']}/{row['pv_max']} PV"
+        equipe_joueur = [_infos_combattant(j) for j in joueurs if j["equipe"] == 1][:2]
+        equipe_adversaire = [_infos_combattant(j) for j in joueurs if j["equipe"] == 2][:2]
+        if not any(equipe_joueur) or not any(equipe_adversaire):
+            return None
 
-            if equipe_unifiee:
-                nom_champ = f"{statut_solo} {j['actif_nom']}{emoji_statut}"
-                embed.add_field(name=nom_champ, value=barre, inline=True)
-                reserve_fusionnee.append(_bloc_reserve(eq, j["actif_nom"]))
-            else:
-                statut_txt = "✅ prêt" if j["action"] else "⏳ choisit..."
-                valeur = f"**{j['actif_nom']}**{emoji_statut}\n{barre}\n{_bloc_reserve(eq, j['actif_nom'])}"
-                embed.add_field(name=f"{nom_joueur} — {statut_txt}", value=valeur[:1024], inline=True)
+        combat = database.obtenir_combat(combat_id)
+        meteo_active = database.obtenir_meteo(combat_id)
+        terrain_actif = database.obtenir_terrain_zone(combat_id)
 
-            actifs_pour_image.append(j["actif_nom"])
+        log_precedent = database.obtenir_log_precedent(combat_id)
+        png_bytes = combat_visuel.generer_image_combat_2v2(
+            equipe_joueur, equipe_adversaire, log_tour=log_tour, noms=noms,
+            tour=combat["tour"] if combat else None,
+            meteo_type=meteo_active["type"] if meteo_active else None,
+            terrain_type=terrain_actif["type"] if terrain_actif else None,
+            log_precedent=log_precedent,
+            tour_precedent=(combat["tour"] - 1) if (combat and log_precedent) else None,
+            type_combat=type_combat,
+        )
+        if log_tour:
+            database.definir_log_precedent(combat_id, log_tour)
+        if png_bytes is None:
+            return None
+        return discord.File(io.BytesIO(png_bytes), filename="scene_combat_2v2.png")
+    except Exception as e:
+        print(f"⚠️ Erreur en générant la scène visuelle du combat 2v2 {combat_id} (le texte s'affiche quand même) : {e}")
+        return None
 
-        if equipe_unifiee and reserve_fusionnee:
-            reserve_texte = " • ".join(r for r in reserve_fusionnee if r and r != "*Aucune réserve*")
-            embed.add_field(
-                name="Réserve", value=(reserve_texte or "*Aucune*")[:1024], inline=False
-            )
-
-        if len(actifs_pour_image) == 2:
-            couleur_rgb = (52, 120, 246) if equipe == 1 else (237, 66, 69)
-            image_bytes = await _composer_sprites_equipe(*actifs_pour_image, couleur_equipe=couleur_rgb)
-            if image_bytes:
-                nom_fichier = f"equipe{equipe}_{combat_id}_{combat['tour']}.png"
-                fichiers.append(discord.File(io.BytesIO(image_bytes), filename=nom_fichier))
-                embed.set_image(url=f"attachment://{nom_fichier}")
-        elif len(actifs_pour_image) == 1:
-            # Un seul actif encore debout côté équipe : son sprite seul suffit, pas besoin
-            # de composition (évite un aller-retour réseau pour une image à un seul sprite).
-            pokemon = obtenir_pokemon_par_nom(actifs_pour_image[0])
-            url_sprite = sprite_anime(pokemon)
-            if url_sprite:
-                embed.set_thumbnail(url=url_sprite)
-
-        embeds.append(embed)
-
-    dernier = discord.Embed(color=discord.Color.dark_grey())
-    dernier.set_author(name=f"⚔️ Tour {combat['tour']} — 2v2")
-    if log_tour:
-        texte_log = "\n".join(log_tour)
-        if len(texte_log) > 4000:
-            texte_log = texte_log[:4000] + "\n… *(log du tour tronqué)*"
-        dernier.description = texte_log
-    temps_restant = max(0, combat["date_limite_tour"] - int(time.time()))
-    dernier.set_footer(text=f"Tour résolu quand tout le monde a joué, ou dans ~{temps_restant}s")
-    embeds.append(dernier)
-    return embeds, fichiers
-
-
-# ----------------------------------------------------------------------------
-# Résolution d'un tour (miroir fidèle du moteur 1v1, généralisé à 4 acteurs + ciblage)
-# ----------------------------------------------------------------------------
 
 async def resoudre_tour_2v2(combat_id: int) -> list:
     log = []
@@ -529,6 +413,7 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
             database.reinitialiser_charge(combat_id, j["user_id"], ancien_nom)
             database.reinitialiser_verrouillage_choix(combat_id, j["user_id"], ancien_nom)
             database.definir_furie(combat_id, j["user_id"], ancien_nom, None)
+            database.retirer_requiem(combat_id, j["user_id"], ancien_nom)  # Requiem : échappe au K.O. en changeant
             database.definir_actif_2v2(combat_id, j["user_id"], nouveau)
             log.append(f"<@{j['user_id']}> rappelle **{ancien_nom}** et envoie **{nouveau}** !")
             _appliquer_hazards_entree(combat_id, j["user_id"], nouveau, log)
@@ -586,6 +471,10 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
         statut_actuel = database.obtenir_statut(combat_id, j["user_id"], nom)
         if statut_actuel and statut_actuel[0] == "paralysis":
             vitesse /= 2
+        if database.obtenir_ecran(combat_id, database.equipe_cle_pour_joueur(combat_id, j["user_id"]), "vent_arriere"):
+            vitesse *= 2
+        if database.obtenir_effet_global(combat_id, "trick_room"):
+            vitesse = -vitesse
         # action = "attaque:Nom@cible_user_id" — ou vide si l'acteur n'agit que par sa
         # charge/recharge en cours (le nom réel sera résolu au moment de son tour).
         if action.startswith("attaque:"):
@@ -617,6 +506,9 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                 nom_attaque = etat_furie["attaque"]
 
         vitesse_effective = vitesse - 1_000_000 if nom_attaque in ATTAQUES_PRIORITE_BASSE_ECHOUE_SI_TOUCHE else vitesse
+        # Priorité +1 "classique" — voir combat.py pour l'explication complète.
+        if nom_attaque in ATTAQUES_PRIORITE_POSITIVE:
+            vitesse_effective = vitesse + 1_000_000
         if nom_attaque and nom_attaque != NOM_LUTTE:
             attaque_pour_priorite = obtenir_attaque(nom_attaque)
             if (
@@ -734,6 +626,88 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
         cibles = _cibles_vivantes(combat_id, joueurs_maj, equipe_adverse)
         if not cibles:
             continue  # plus personne en face : la fin de combat sera constatée après
+
+        # --- Attaques de zone (Séisme/Explosion/Surf/etc.) : touchent PLUSIEURS cibles
+        # à la fois au lieu d'une seule — voir combat.ATTAQUES_ZONE_TOUTES. Résolution
+        # entièrement séparée du chemin normal ci-dessous (continue en sortie), la cible
+        # choisie par le joueur est ignorée puisque ces attaques touchent tout le monde
+        # d'applicable automatiquement.
+        if nom_attaque in ATTAQUES_ZONE_TOUTES:
+            cibles_zone = list(cibles)
+            if nom_attaque in ATTAQUES_ZONE_AVEC_ALLIE:
+                allie = next(
+                    (j for j in joueurs_maj if j["equipe"] == equipes[user_id] and j["user_id"] != user_id and not j["abandonne"]),
+                    None,
+                )
+                if allie:
+                    row_allie = _row_actif(combat_id, allie["user_id"], allie["actif_nom"])
+                    if row_allie is not None and row_allie["pv_actuels"] > 0:
+                        cibles_zone.append((allie["user_id"], allie["actif_nom"], row_allie))
+
+            if attaque.get("puissance"):
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+                for cible_zone_id, nom_def_zone, row_def_zone in cibles_zone:
+                    # Garde Large (bouclier d'équipe, 1 tour) : bloque les attaques de
+                    # zone pour l'équipe protégée — vérifié par cible individuellement
+                    # (protège aussi bien contre un adversaire que contre son propre
+                    # allié, comme dans les vrais jeux).
+                    cle_cible_garde = database.equipe_cle_pour_joueur(combat_id, cible_zone_id)
+                    if database.obtenir_ecran(combat_id, cle_cible_garde, "garde_large"):
+                        log.append(f"  🌐 La Garde Large protège **{nom_def_zone}** !")
+                        continue
+                    capacite_atk_zone = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+                    degats_zone, multi_type_zone, crit_zone = calculer_degats_zone(
+                        combat_id, user_id, nom_atk, row_atk, attaque, capacite_atk_zone,
+                        cible_zone_id, nom_def_zone, row_def_zone, len(cibles_zone),
+                    )
+                    if multi_type_zone == 0.0:
+                        log.append(f"  🚫 Ça n'affecte pas **{nom_def_zone}** !")
+                        continue
+                    pv_apres_zone = database.appliquer_degats_pvp(combat_id, cible_zone_id, nom_def_zone, degats_zone)
+                    log.append(f"  → **{nom_def_zone}** perd {degats_zone} PV" + (" (coup critique !)" if crit_zone else ""))
+                    if multi_type_zone >= 2.0:
+                        log.append("  🔥 C'est super efficace !")
+                    elif multi_type_zone < 1.0:
+                        log.append("  ❄️ Ce n'est pas très efficace...")
+                    if pv_apres_zone <= 0:
+                        log.append(f"  💀 **{nom_def_zone}** est K.O. !")
+            else:
+                # Attaque de zone de STATUT (ex: Rugissement baisse l'Attaque des deux
+                # adversaires à la fois) — CORRECTIF : avant, ce cas ne faisait RIEN et
+                # sautait silencieusement le tour du joueur (aucun log, aucun effet).
+                # Appliquée à CHAQUE cible séparément, chacune avec sa propre immunité/
+                # protection (Garde Large, immunité de type déjà gérée par definir_statut).
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+                changements_zone = attaque.get("stats", [])
+                ailment_zone = attaque.get("ailment")
+                for cible_zone_id, nom_def_zone, row_def_zone in cibles_zone:
+                    cle_cible_garde = database.equipe_cle_pour_joueur(combat_id, cible_zone_id)
+                    if database.obtenir_ecran(combat_id, cle_cible_garde, "garde_large"):
+                        log.append(f"  🌐 La Garde Large protège **{nom_def_zone}** !")
+                        continue
+                    if changements_zone:
+                        capacite_cible_zone = database.obtenir_capacite_combat(combat_id, cible_zone_id, nom_def_zone)
+                        double_stat_zone = capacites_module.double_les_boosts(capacite_cible_zone)
+                        morceaux_zone = []
+                        for stat, delta in changements_zone:
+                            delta_reel = delta * 2 if double_stat_zone else delta
+                            nouveau_stage = database.modifier_boost(combat_id, cible_zone_id, nom_def_zone, stat, delta_reel)
+                            signe = "+" if delta_reel > 0 else ""
+                            morceaux_zone.append(f"{signe}{delta_reel} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
+                        log.append(f"  📊 **{nom_def_zone}** : {', '.join(morceaux_zone)}")
+                    if ailment_zone in STATUTS_INFO:
+                        compteur_zone = 0
+                        if ailment_zone == "sleep":
+                            compteur_zone = random.randint(1, 3)
+                        elif ailment_zone == "confusion":
+                            compteur_zone = random.randint(1, 4)
+                        if database.definir_statut(combat_id, cible_zone_id, nom_def_zone, ailment_zone, compteur_zone):
+                            info_zone = STATUTS_INFO[ailment_zone]
+                            log.append(f"  {info_zone['emoji']} **{nom_def_zone}** est {info_zone['nom']} !")
+                        else:
+                            log.append(f"  ❌ **{nom_def_zone}** n'est pas affecté(e) !")
+            continue
+
         cible = next((c for c in cibles if c[0] == cible_voulue), None)
         redirigee = cible is None and cible_voulue is not None
         if cible is None:
@@ -751,6 +725,28 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                 f"mais sa concentration a été brisée par les dégâts subis !"
             )
             continue
+
+        # Champ Psychique — voir combat.py pour l'explication complète.
+        if nom_attaque in ATTAQUES_PRIORITE_POSITIVE:
+            terrain_pour_priorite = database.obtenir_terrain_zone(combat_id)
+            if terrain_pour_priorite and terrain_pour_priorite["type"] == "psychique":
+                pok_def_priorite = formes_objets_module.pokemon_effectif(
+                    obtenir_pokemon_par_nom(nom_def), database.obtenir_objet_combat(combat_id, adversaire_id, nom_def)
+                )
+                capacite_def_priorite = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
+                if _est_au_sol(pok_def_priorite, capacite_def_priorite, combat_id):
+                    log.append(
+                        f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... "
+                        f"mais le Champ Psychique protège **{nom_def}** !"
+                    )
+                    continue
+            cle_def_tatami = database.equipe_cle_pour_joueur(combat_id, adversaire_id)
+            if database.obtenir_ecran(combat_id, cle_def_tatami, "tatamigaeshi"):
+                log.append(
+                    f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... "
+                    f"mais le Tatamigaeshi protège **{nom_def}** !"
+                )
+                continue
 
         # Test de précision — voir combat.py pour l'explication complète.
         boosts_atk = database.obtenir_boosts(combat_id, user_id, nom_atk)
@@ -773,6 +769,8 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                 bool(statut_def_pour_esquive and statut_def_pour_esquive[0] == "confusion"),
             )
             precision_effective *= (1 - bonus_esquive)
+            if database.obtenir_effet_global(combat_id, "gravite"):
+                precision_effective *= 5 / 3
             if random.random() * 100 > precision_effective:
                 log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... mais rate !")
                 continue
@@ -787,6 +785,108 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                 database.definir_meteo(combat_id, meteo_declenchee, 5)
                 log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
                 log.append(f"  {METEO_INFO[meteo_declenchee]['emoji']} {METEO_INFO[meteo_declenchee]['texte_debut']}")
+            continue
+
+        # Terrain de zone — voir combat.py pour l'explication complète.
+        terrain_declenche = ATTAQUES_TERRAIN_ZONE.get(nom_attaque)
+        if terrain_declenche:
+            terrain_actuel = database.obtenir_terrain_zone(combat_id)
+            if terrain_actuel and terrain_actuel["type"] == terrain_declenche:
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... mais ça n'a aucun effet !")
+            else:
+                database.definir_terrain_zone(combat_id, terrain_declenche, 5)
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+                log.append(f"  {TERRAIN_INFO[terrain_declenche]['emoji']} {TERRAIN_INFO[terrain_declenche]['texte_debut']}")
+            continue
+
+        # Écrans d'équipe — voir combat.py pour l'explication complète. En 2v2, une seule
+        # activation par le lanceur protège les 2 membres du camp (equipe_cle = equipe1/2).
+        info_ecran = ATTAQUES_ECRANS.get(nom_attaque)
+        if info_ecran:
+            type_ecran, duree_ecran = info_ecran
+            meteo_pour_voile = database.obtenir_meteo(combat_id)
+            if type_ecran == "voile_aurore" and not (meteo_pour_voile and meteo_pour_voile["type"] == "grele"):
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... mais ça n'a aucun effet !")
+                continue
+            equipe_cle = database.equipe_cle_pour_joueur(combat_id, user_id)
+            database.activer_ecran(combat_id, equipe_cle, type_ecran, duree_ecran)
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            log.append(f"  {ECRANS_INFO[type_ecran]['emoji']} L'équipe de <@{user_id}> {ECRANS_INFO[type_ecran]['texte_debut']}")
+            continue
+
+        # Brume — voir combat.py pour l'explication complète.
+        if nom_attaque == "Brume":
+            database.reinitialiser_boosts_combat(combat_id)
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            log.append("  🌫️ Tous les changements de stats sont annulés !")
+            continue
+
+        # Aromathérapie / Glas de Soin — voir combat.py pour l'explication complète.
+        if nom_attaque in ("Aromathérapie", "Glas de Soin"):
+            nb_gueris = database.retirer_tous_statuts_joueur(combat_id, user_id)
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            if nb_gueris:
+                log.append(f"  💚 Toute l'équipe de <@{user_id}> est guérie de ses problèmes de statut !")
+            else:
+                log.append("  💚 Personne dans l'équipe n'avait de problème de statut.")
+            continue
+
+        # Fontaine de Vie : soigne le lanceur ET son allié (contrairement au 1v1, il y a
+        # bien un allié en 2v2).
+        if nom_attaque == "Fontaine de Vie":
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            soin_fontaine = max(1, round(row_atk["pv_max"] * 0.25))
+            database.soigner_pvp(combat_id, user_id, nom_atk, soin_fontaine)
+            log.append(f"  💧 **{nom_atk}** récupère {soin_fontaine} PV !")
+            allie_fontaine = next(
+                (j for j in _joueurs(combat_id) if j["equipe"] == equipes[user_id] and j["user_id"] != user_id and not j["abandonne"]),
+                None,
+            )
+            if allie_fontaine and allie_fontaine["actif_nom"]:
+                row_allie_fontaine = _row_actif(combat_id, allie_fontaine["user_id"], allie_fontaine["actif_nom"])
+                if row_allie_fontaine is not None and row_allie_fontaine["pv_actuels"] > 0:
+                    soin_allie = max(1, round(row_allie_fontaine["pv_max"] * 0.25))
+                    database.soigner_pvp(combat_id, allie_fontaine["user_id"], allie_fontaine["actif_nom"], soin_allie)
+                    log.append(f"  💧 **{allie_fontaine['actif_nom']}** récupère {soin_allie} PV !")
+            continue
+
+        # Effets globaux à durée — voir combat.py pour l'explication complète.
+        info_effet_global = ATTAQUES_EFFETS_GLOBAUX.get(nom_attaque)
+        if info_effet_global:
+            type_effet, duree_effet = info_effet_global
+            if database.obtenir_effet_global(combat_id, type_effet):
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... mais ça n'a aucun effet !")
+            else:
+                database.activer_effet_global(combat_id, type_effet, duree_effet)
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+                log.append(f"  {EFFETS_GLOBAUX_INFO[type_effet]['emoji']} {EFFETS_GLOBAUX_INFO[type_effet]['texte_debut']}")
+            continue
+
+        # Requiem : affecte les 4 Pokémon actifs du terrain (pas juste 2 comme en 1v1).
+        if nom_attaque == "Requiem":
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            log.append("  🎵 Tous les Pokémon sur le terrain ayant entendu la chanson s'affaibliront dans 3 tours !")
+            for j_requiem in _joueurs(combat_id):
+                if j_requiem["abandonne"] or not j_requiem["actif_nom"]:
+                    continue
+                database.definir_requiem(combat_id, j_requiem["user_id"], j_requiem["actif_nom"], 3)
+            continue
+
+        # Garde Florale : +1 Défense pour TOUS les Pokémon Plante actifs (les 4).
+        if nom_attaque == "Garde Florale":
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            nb_boostes = 0
+            for j_florale in _joueurs(combat_id):
+                if j_florale["abandonne"] or not j_florale["actif_nom"]:
+                    continue
+                pok_florale = obtenir_pokemon_par_nom(j_florale["actif_nom"])
+                if pok_florale and "plante" in pok_florale.get("types", []):
+                    database.modifier_boost(combat_id, j_florale["user_id"], j_florale["actif_nom"], "def", 1)
+                    nb_boostes += 1
+            if nb_boostes:
+                log.append(f"  🌸 {nb_boostes} Pokémon Plante sur le terrain voient leur Défense augmenter !")
+            else:
+                log.append("  🌸 Aucun Pokémon Plante sur le terrain pour en profiter.")
             continue
 
         if attaque.get("puissance"):
@@ -838,8 +938,12 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                 continue
 
             est_special = attaque.get("classe") == "special"
+            wonder_room_actif = bool(database.obtenir_effet_global(combat_id, "wonder_room"))
             stat_off = row_atk["atq_spe"] if est_special else row_atk["atq"]
-            stat_def = row_def["def_spe"] if est_special else row_def["defe"]
+            if wonder_room_actif:
+                stat_def = row_def["defe"] if est_special else row_def["def_spe"]
+            else:
+                stat_def = row_def["def_spe"] if est_special else row_def["defe"]
 
             statut_atk_burn = database.obtenir_statut(combat_id, user_id, nom_atk)
             capacite_atk_burn = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
@@ -848,7 +952,7 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
 
             variance = random.uniform(0.85, 1.15)
             cle_boost_off = "atk_spe" if est_special else "atk"
-            cle_boost_def = "def_spe" if est_special else "def"
+            cle_boost_def = ("def" if est_special else "def_spe") if wonder_room_actif else ("def_spe" if est_special else "def")
             objet_atk = database.obtenir_objet_combat(combat_id, user_id, nom_atk)
             mult_stat_choix = capacites_module.multiplicateur_stat_objet(objet_atk, cle_boost_off)
 
@@ -889,10 +993,34 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                 capacite_atk, meteo_active["type"] if meteo_active else None, attaque["type"]
             )
 
+            # Terrain de zone — voir combat.py pour l'explication complète.
+            mult_terrain = 1.0
+            terrain_actif = database.obtenir_terrain_zone(combat_id)
+            if terrain_actif and _est_au_sol(pok_atk, capacite_atk, combat_id):
+                info_terrain = TERRAIN_INFO[terrain_actif["type"]]
+                if attaque["type"] == info_terrain["type_associe"]:
+                    mult_terrain = 1.3
+            if terrain_actif and terrain_actif["type"] == "herbu" and nom_attaque in ATTAQUES_SEISME:
+                if _est_au_sol(pok_def, capacite_def, combat_id):
+                    mult_terrain *= 0.5
+
+            # Écrans d'équipe — voir combat.py pour l'explication complète.
+            mult_ecran = 1.0
+            if not est_critique:
+                equipe_cle_def = database.equipe_cle_pour_joueur(combat_id, adversaire_id)
+                ecrans_def = database.obtenir_tous_ecrans_equipe(combat_id, equipe_cle_def)
+                if "voile_aurore" in ecrans_def:
+                    mult_ecran = 0.5
+                elif not est_special and "reflet" in ecrans_def:
+                    mult_ecran = 0.5
+                elif est_special and "voile_lumiere" in ecrans_def:
+                    mult_ecran = 0.5
+
             mult_critique = capacites_module.multiplicateur_degats_critique(capacite_atk) if est_critique else 1.0
+            mult_lance_boue = 0.5 if attaque["type"] == "electrik" and database.obtenir_effet_global(combat_id, "lance_boue") else 1.0
             degats = max(1, round(
                 ((2 * row_atk["niveau"] / 5 + 2) * attaque["puissance"] * stat_off_boostee / stat_def_boostee / 50 + 2)
-                * multi_type * stab * variance * bonus_badge * mult_talent_objet * mult_meteo * mult_critique
+                * multi_type * stab * variance * bonus_badge * mult_talent_objet * mult_meteo * mult_terrain * mult_ecran * mult_lance_boue * mult_critique
             ))
 
             # Ceinture Force (objet, se consomme) OU Rustique (aptitude, permanent).
@@ -1147,6 +1275,16 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
             changements = attaque.get("stats", [])
             ailment = attaque.get("ailment")
 
+            # Prévention (bouclier d'équipe, 1 tour) — voir combat.py pour l'explication.
+            if attaque.get("cible") == "adversaire":
+                cle_def_prevention = database.equipe_cle_pour_joueur(combat_id, adversaire_id)
+                if database.obtenir_ecran(combat_id, cle_def_prevention, "prevention"):
+                    log.append(
+                        f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... "
+                        f"mais la Prévention protège **{nom_def}** !"
+                    )
+                    continue
+
             # Éjection forcée de l'adversaire ciblé (Cyclone) — voir combat.py pour
             # l'explication complète. En 2v2, seul le Pokémon ciblé (nom_def/adversaire_id)
             # est éjecté, pas toute l'équipe adverse.
@@ -1260,6 +1398,52 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
     meteo_qui_sexpire = database.decrementer_meteo(combat_id)
     if meteo_qui_sexpire:
         log.append(f"{METEO_INFO[meteo_qui_sexpire]['emoji']} {METEO_INFO[meteo_qui_sexpire]['texte_fin']}")
+
+    # --- Champ Herbu : soin de fin de tour (1/16 PV max) pour les 4 actifs au sol ---
+    terrain_actif_fin_tour = database.obtenir_terrain_zone(combat_id)
+    if terrain_actif_fin_tour and terrain_actif_fin_tour["type"] == "herbu":
+        for j in _joueurs(combat_id):
+            if j["abandonne"] or not j["actif_nom"]:
+                continue
+            row_h2 = _row_actif(combat_id, j["user_id"], j["actif_nom"])
+            if row_h2 is None or row_h2["pv_actuels"] <= 0 or row_h2["pv_actuels"] >= row_h2["pv_max"]:
+                continue
+            pok_h2 = formes_objets_module.pokemon_effectif(
+                obtenir_pokemon_par_nom(j["actif_nom"]), database.obtenir_objet_combat(combat_id, j["user_id"], j["actif_nom"])
+            )
+            if not _est_au_sol(pok_h2, database.obtenir_capacite_combat(combat_id, j["user_id"], j["actif_nom"]), combat_id):
+                continue
+            soin_herbu = max(1, round(row_h2["pv_max"] / 16))
+            database.soigner_pvp(combat_id, j["user_id"], j["actif_nom"], soin_herbu)
+            log.append(f"{TERRAIN_INFO['herbu']['emoji']} **{j['actif_nom']}** est soigné par le Champ Herbu : +{soin_herbu} PV")
+
+    terrain_qui_sexpire = database.decrementer_terrain_zone(combat_id)
+    if terrain_qui_sexpire:
+        log.append(f"{TERRAIN_INFO[terrain_qui_sexpire]['emoji']} {TERRAIN_INFO[terrain_qui_sexpire]['texte_fin']}")
+
+    # --- Écrans d'équipe : décompte de durée — UNE fois par équipe (pas par joueur,
+    # sinon un camp à 2 joueurs verrait son écran décompter deux fois plus vite) ---
+    equipes_deja_decrementees = set()
+    for j in _joueurs(combat_id):
+        cle = f"equipe{j['equipe']}"
+        if cle in equipes_deja_decrementees:
+            continue
+        equipes_deja_decrementees.add(cle)
+        for type_ecran_expire in database.decrementer_ecrans_equipe(combat_id, cle):
+            nom_equipe_log = f"Équipe {j['equipe']}"
+            log.append(f"{ECRANS_INFO[type_ecran_expire]['emoji']} {ECRANS_INFO[type_ecran_expire]['texte_fin'].format(equipe=nom_equipe_log)}")
+
+    # --- Effets globaux (Distorsion/Zone Étrange/Zone Magique/Gravité) : décompte ---
+    for type_effet_expire in database.decrementer_effets_globaux(combat_id):
+        log.append(f"{EFFETS_GLOBAUX_INFO[type_effet_expire]['emoji']} {EFFETS_GLOBAUX_INFO[type_effet_expire]['texte_fin']}")
+
+    # --- Requiem : compte à rebours pour les 4 actifs, K.O. direct de ceux à 0 ---
+    actifs_requiem_2v2 = [
+        (j["user_id"], j["actif_nom"]) for j in _joueurs(combat_id) if not j["abandonne"] and j["actif_nom"]
+    ]
+    for user_id_requiem, nom_requiem in database.decrementer_requiem_actifs(combat_id, actifs_requiem_2v2):
+        database.appliquer_degats_pvp(combat_id, user_id_requiem, nom_requiem, 999999)
+        log.append(f"🎵 **{nom_requiem}** s'effondre, à bout de souffle... 💀 K.O. !")
 
     # --- Dégâts de fin de tour : brûlure et poison, sur les 4 actifs ---
     for j in _joueurs(combat_id):
@@ -1542,10 +1726,13 @@ async def _tick_resolution_2v2(bot, combat_id: int, thread_id: int, message_id: 
             for uid in [j["user_id"] for j in joueurs]:
                 pass  # PvP : pas de synchronisation vers le pool persistant, comme en 1v1
             log_propre = _nettoyer_log_2v2(log, joueurs, noms_ia)
-            embeds, fichiers = await construire_embeds_2v2(combat_id, noms, log_tour=log_propre)
+            fichier_scene = _generer_fichier_scene_combat_2v2(combat_id, noms, log_tour=log_propre)
             try:
                 msg = await thread.fetch_message(message_id)
-                await msg.edit(embeds=embeds, view=None, attachments=fichiers)
+                if fichier_scene:
+                    await msg.edit(embeds=[], view=None, attachments=[fichier_scene])
+                else:
+                    await msg.edit(embeds=[], view=None)
             except discord.HTTPException:
                 pass
             await _annoncer_victoire(bot, combat_id, thread, joueurs, equipe_gagnante, noms, par_abandon)
@@ -1555,11 +1742,14 @@ async def _tick_resolution_2v2(bot, combat_id: int, thread_id: int, message_id: 
     database.vider_actions_2v2(combat_id)
     database.passer_tour_pvp(combat_id, int(time.time()) + DUREE_TOUR_2V2)
     log_propre = _nettoyer_log_2v2(log, joueurs, noms_ia)
-    embeds, fichiers = await construire_embeds_2v2(combat_id, noms, log_tour=log_propre)
+    fichier_scene = _generer_fichier_scene_combat_2v2(combat_id, noms, log_tour=log_propre)
     vue = VueAction2v2(combat_id, avec_choix_ko=bool(database.obtenir_choix_ko(combat_id)))
     try:
         msg = await thread.fetch_message(message_id)
-        await msg.edit(embeds=embeds, view=vue, attachments=fichiers)
+        if fichier_scene:
+            await msg.edit(embeds=[], view=vue, attachments=[fichier_scene])
+        else:
+            await msg.edit(embeds=[], view=vue)
     except discord.HTTPException:
         pass
     return False
@@ -1729,7 +1919,21 @@ class VueAction2v2(discord.ui.View):
 
     async def _flux_changer(self, interaction: discord.Interaction, j):
         equipe = database.obtenir_equipe_pvp(self.combat_id, j["user_id"])
-        vivants = [r for r in equipe if r["pv_actuels"] > 0 and r["pokemon_nom"] != j["actif_nom"]]
+        # Exclut aussi l'actif de l'AUTRE siège du même joueur réel (réserve partagée
+        # depuis ce tour-ci — voir demarrer_duo_dresseur) : impossible d'envoyer le même
+        # Pokémon aux deux emplacements actifs à la fois.
+        actif_coequipier = next(
+            (
+                autre["actif_nom"] for autre in _joueurs(self.combat_id)
+                if autre["user_id"] != j["user_id"] and autre["equipe"] == j["equipe"]
+                and controleur_reel(autre["user_id"]) == controleur_reel(j["user_id"])
+            ),
+            None,
+        )
+        vivants = [
+            r for r in equipe
+            if r["pv_actuels"] > 0 and r["pokemon_nom"] != j["actif_nom"] and r["pokemon_nom"] != actif_coequipier
+        ]
         if not vivants:
             await interaction.response.send_message("Tu n'as plus d'autres Pokémon vivants !", ephemeral=True)
             return
@@ -1785,7 +1989,18 @@ class VueAction2v2(discord.ui.View):
         siege_id = choix_en_attente[0]["user_id"]
         j = self._joueur(siege_id)
         equipe = database.obtenir_equipe_pvp(self.combat_id, siege_id)
-        vivants = [r for r in equipe if r["pv_actuels"] > 0 and r["pokemon_nom"] != (j["actif_nom"] if j else None)]
+        actif_coequipier = next(
+            (
+                autre["actif_nom"] for autre in _joueurs(self.combat_id)
+                if autre["user_id"] != siege_id and j and autre["equipe"] == j["equipe"]
+                and controleur_reel(autre["user_id"]) == controleur_reel(siege_id)
+            ),
+            None,
+        )
+        vivants = [
+            r for r in equipe
+            if r["pv_actuels"] > 0 and r["pokemon_nom"] != (j["actif_nom"] if j else None) and r["pokemon_nom"] != actif_coequipier
+        ]
         if not vivants:
             await interaction.response.send_message("Tu n'as plus d'autres Pokémon vivants !", ephemeral=True)
             return
@@ -2142,9 +2357,12 @@ async def demarrer_combat_2v2(bot, channel, inscrits: dict, noms: dict, message_
     conn.close()
 
     mentions = " ".join(f"<@{u}>" for u in inscrits)
-    embeds, fichiers = await construire_embeds_2v2(combat_id, noms)
+    fichier_scene = _generer_fichier_scene_combat_2v2(combat_id, noms)
     vue = VueAction2v2(combat_id)
-    msg = await thread.send(content=f"{mentions} — le combat 2v2 commence ! Choisissez vos actions.", embeds=embeds, view=vue, files=fichiers)
+    msg = await thread.send(
+        content=f"{mentions} — le combat 2v2 commence ! Choisissez vos actions.", view=vue,
+        file=fichier_scene if fichier_scene else discord.utils.MISSING,
+    )
 
     if message_lobby is not None:
         try:
@@ -2199,10 +2417,11 @@ async def demarrer_duo_dresseur(bot, joueur: discord.Member, dresseur_id: int, a
             await channel.send(texte)
         return
 
-    milieu = max(1, len(equipe_joueur_vivante) // 2 + len(equipe_joueur_vivante) % 2)
-    moitie_a = equipe_joueur_vivante[:milieu]
-    moitie_b = equipe_joueur_vivante[milieu:] or [equipe_joueur_vivante[-1]]
-    # (le "or" ci-dessus ne devrait jamais servir vu la garde len>=2 ci-dessus, filet de sécurité)
+    # Réserve UNIQUE et partagée entre les 2 sièges (voir plus bas) — seuls les 2 PREMIERS
+    # Pokémon vivants de la liste servent d'actifs de départ, un par siège (forcément 2
+    # espèces différentes puisque ce sont 2 éléments distincts de la même liste).
+    actif_depart_1 = equipe_joueur_vivante[0]
+    actif_depart_2 = equipe_joueur_vivante[1]
 
     id_reel = joueur.id
     id_delegue_val = id_delegue(joueur.id)
@@ -2220,44 +2439,44 @@ async def demarrer_duo_dresseur(bot, joueur: discord.Member, dresseur_id: int, a
 
     # --- Ancrage combat_pvp (comme le PvP 2v2) : réel + 1er dresseur IA comme "capitaines" ---
     date_limite = int(time.time()) + DUREE_TOUR_2V2
-    combat_id = database.creer_combat(id_reel, dresseurs_module.ID_DRESSEUR_BASE - joueur.id, moitie_a[0][0]["nom"], equipe_ia_1[0]["nom"], date_limite)
+    combat_id = database.creer_combat(id_reel, dresseurs_module.ID_DRESSEUR_BASE - joueur.id, actif_depart_1[0]["nom"], equipe_ia_1[0]["nom"], date_limite)
     id_ia_1 = dresseurs_module.ID_DRESSEUR_BASE - combat_id * 2
     id_ia_2 = dresseurs_module.ID_DRESSEUR_BASE - combat_id * 2 - 1
 
     database.creer_joueurs_2v2(combat_id, [
-        (id_reel, 1, moitie_a[0][0]["nom"]),
-        (id_delegue_val, 1, moitie_b[0][0]["nom"]),
+        (id_reel, 1, actif_depart_1[0]["nom"]),
+        (id_delegue_val, 1, actif_depart_2[0]["nom"]),
         (id_ia_1, 2, equipe_ia_1[0]["nom"]),
         (id_ia_2, 2, equipe_ia_2[0]["nom"]),
     ])
 
     # Équipe du joueur : insertion directe avec PV RÉELS (pas via initialiser_equipe_combat_pvp,
-    # qui met tout le monde à pleine vie — ici on veut les PV persistants, comme un dresseur solo).
-    # Talent/objet : toujours résolus via id_reel (jamais id_delegue_val, qui n'existe pas dans
-    # captures) — les deux sièges représentent le même vrai joueur.
+    # qui met tout le monde à pleine vie — ici on veut les PV persistants, comme un dresseur
+    # solo). RÉSERVE UNIQUE stockée sous id_reel uniquement (plus de scission en 2 moitiés) —
+    # les 2 sièges partagent la même réserve complète, comme dans les vrais jeux : n'importe
+    # quel Pokémon vivant peut remplacer n'importe quel actif, pas seulement "sa moitié".
     conn = database.get_connexion()
     cur = conn.cursor()
-    for siege_id, moitie in ((id_reel, moitie_a), (id_delegue_val, moitie_b)):
-        for i, (stats, pv_actuels) in enumerate(moitie):
-            cur.execute(
-                "SELECT capacite, objet_tenu FROM captures WHERE user_id = ? AND pokemon_nom = ? ORDER BY pc DESC LIMIT 1",
-                (id_reel, stats["nom"]),
-            )
-            row_source = cur.fetchone()
-            capacite = row_source["capacite"] if row_source else None
-            objet_tenu = row_source["objet_tenu"] if row_source else None
-            cur.execute(
-                """
-                INSERT INTO combat_equipe
-                    (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau, capacite, objet_tenu)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    combat_id, siege_id, stats["nom"], stats["pv"], pv_actuels, i,
-                    stats["attaque"], stats["defense"], stats["attaque_spe"], stats["defense_spe"], stats["vitesse"],
-                    stats["niveau"], capacite, objet_tenu,
-                ),
-            )
+    for i, (stats, pv_actuels) in enumerate(equipe_joueur_vivante):
+        cur.execute(
+            "SELECT capacite, objet_tenu FROM captures WHERE user_id = ? AND pokemon_nom = ? ORDER BY pc DESC LIMIT 1",
+            (id_reel, stats["nom"]),
+        )
+        row_source = cur.fetchone()
+        capacite = row_source["capacite"] if row_source else None
+        objet_tenu = row_source["objet_tenu"] if row_source else None
+        cur.execute(
+            """
+            INSERT INTO combat_equipe
+                (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau, capacite, objet_tenu)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                combat_id, id_reel, stats["nom"], stats["pv"], pv_actuels, i,
+                stats["attaque"], stats["defense"], stats["attaque_spe"], stats["defense_spe"], stats["vitesse"],
+                stats["niveau"], capacite, objet_tenu,
+            ),
+        )
     conn.commit()
     conn.close()
 
@@ -2317,11 +2536,11 @@ async def demarrer_duo_dresseur(bot, joueur: discord.Member, dresseur_id: int, a
         print(f"⚠️ Erreur au 1er tour IA du duo dresseur {combat_id} :")
         traceback.print_exc()
 
-    embeds, fichiers = await construire_embeds_2v2(combat_id, noms)
+    fichier_scene = _generer_fichier_scene_combat_2v2(combat_id, noms)
     vue = VueAction2v2(combat_id)
     msg = await thread.send(
         content=f"{joueur.mention} ⚔️ **{sous_noms[0]}** et **{sous_noms[1]}** ({archetype['nom']}) vous défient en double combat !",
-        embeds=embeds, view=vue, files=fichiers,
+        view=vue, file=fichier_scene if fichier_scene else discord.utils.MISSING,
     )
 
     if interaction is not None:
@@ -2402,12 +2621,12 @@ async def demarrer_combat_double(bot, joueur1: discord.Member, joueur2: discord.
         joueur2.id: joueur2.display_name, id2_delegue: f"{joueur2.display_name} (2)",
     }
 
-    embeds, fichiers = await construire_embeds_2v2(combat_id, noms)
+    fichier_scene = _generer_fichier_scene_combat_2v2(combat_id, noms)
     vue = VueAction2v2(combat_id)
     msg = await thread.send(
         content=f"{joueur1.mention} {joueur2.mention} — le combat 1v1 en double commence ! "
                 f"Chacun contrôle 2 Pokémon actifs.",
-        embeds=embeds, view=vue, files=fichiers,
+        view=vue, file=fichier_scene if fichier_scene else discord.utils.MISSING,
     )
 
     journal.logger(f"⚔️ Combat double lancé : <@{joueur1.id}> vs <@{joueur2.id}> (1v1, format 2v2, équipes de 6).")

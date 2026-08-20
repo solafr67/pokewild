@@ -140,7 +140,7 @@ async def _lancer_etape(bot, joueur: discord.Member, channel: discord.TextChanne
     await dresseurs_module.demarrer_combat_dresseur(
         bot, joueur, dresseur_id, channel,
         multiplicateur_pc=multiplicateur, apres_combat=_apres_combat, archetype_direct=archetype,
-        thread_existant=thread_existant, gerer_suppression_fil=False,
+        thread_existant=thread_existant, gerer_suppression_fil=False, type_combat="repaire",
     )
 
 

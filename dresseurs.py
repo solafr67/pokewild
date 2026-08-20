@@ -366,6 +366,7 @@ async def demarrer_combat_dresseur(
     archetype_direct: dict = None,
     thread_existant: discord.Thread = None,
     gerer_suppression_fil: bool = True,
+    type_combat: str = "dresseur",
 ):
     dresseur_row = database.obtenir_dresseur_actif(dresseur_id)
     archetype = archetype_direct or next(
@@ -466,14 +467,24 @@ async def demarrer_combat_dresseur(
     conn.close()
 
     noms = {joueur.id: joueur.display_name, id_dresseur_combat: archetype["nom"]}
-    embeds = combat_module.construire_embeds_combat(combat_id, noms=noms)
     vue = combat_module.VueActionCombat(combat_id, 1)
 
-    msg = await thread.send(
-        content=f"{joueur.mention} ⚔️ **{archetype['nom']}** te défie ! Choisis ton action ci-dessous.",
-        embeds=embeds,
-        view=vue,
-    )
+    fichier_scene = combat_module._generer_fichier_scene_combat(combat_id, noms, type_combat=type_combat)
+    try:
+        msg = await thread.send(
+            content=f"{joueur.mention} ⚔️ **{archetype['nom']}** te défie ! Choisis ton action ci-dessous.",
+            view=vue,
+            file=fichier_scene if fichier_scene else discord.utils.MISSING,
+        )
+    except discord.HTTPException as e:
+        # Ne doit JAMAIS laisser le fil silencieux — si l'envoi avec image échoue pour une
+        # raison quelconque (fichier trop lourd, souci Discord...), on retente sans image
+        # plutôt que de planter tout le lancement du combat sans aucun message visible.
+        print(f"⚠️ Échec de l'envoi du message initial du combat dresseur {combat_id} avec image ({e}), nouvelle tentative sans image.")
+        msg = await thread.send(
+            content=f"{joueur.mention} ⚔️ **{archetype['nom']}** te défie ! Choisis ton action ci-dessous.",
+            view=vue,
+        )
 
     # L'IA joue immédiatement son premier tour (le joueur n'attend jamais après elle).
     # Protégé : si CE tour-ci plante pour une raison imprévue, le combat ne doit jamais
@@ -493,7 +504,7 @@ async def demarrer_combat_dresseur(
             pass
 
     bot.loop.create_task(
-        _boucle_resolution_dresseur(bot, combat_id, thread.id, msg.id, dresseur_id, joueur.id, id_dresseur_combat, archetype, pc_cible, apres_combat, gerer_suppression_fil)
+        _boucle_resolution_dresseur(bot, combat_id, thread.id, msg.id, dresseur_id, joueur.id, id_dresseur_combat, archetype, pc_cible, apres_combat, gerer_suppression_fil, type_combat)
     )
 
 
@@ -553,7 +564,7 @@ async def _jouer_tour_ia(combat_id: int, dresseur_id: int):
     database.enregistrer_action_pvp(combat_id, dresseur_id, action)
 
 
-async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dresseur_id, joueur_id, id_dresseur_combat, archetype, pc_cible, apres_combat=None, gerer_suppression_fil=True):
+async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dresseur_id, joueur_id, id_dresseur_combat, archetype, pc_cible, apres_combat=None, gerer_suppression_fil=True, type_combat="dresseur"):
     import asyncio
 
     # Toute exception non prévue dans le corps de la boucle tuait la tâche asyncio EN
@@ -570,7 +581,7 @@ async def _boucle_resolution_dresseur(bot, combat_id, thread_id, message_id, dre
         try:
             await _tick_resolution_dresseur(
                 bot, combat_id, thread_id, message_id, dresseur_id, joueur_id,
-                id_dresseur_combat, archetype, pc_cible, apres_combat, gerer_suppression_fil,
+                id_dresseur_combat, archetype, pc_cible, apres_combat, gerer_suppression_fil, type_combat,
             )
             echecs_consecutifs = 0
         except _CombatTermine:
@@ -611,7 +622,7 @@ class _CombatTermine(Exception):
     """Signal interne : le combat est fini (ou son fil a disparu), la boucle doit s'arrêter."""
 
 
-async def _tick_resolution_dresseur(bot, combat_id, thread_id, message_id, dresseur_id, joueur_id, id_dresseur_combat, archetype, pc_cible, apres_combat=None, gerer_suppression_fil=True):
+async def _tick_resolution_dresseur(bot, combat_id, thread_id, message_id, dresseur_id, joueur_id, id_dresseur_combat, archetype, pc_cible, apres_combat=None, gerer_suppression_fil=True, type_combat="dresseur"):
         combat = database.obtenir_combat(combat_id)
         if not combat or not combat["actif"]:
             raise _CombatTermine
@@ -752,13 +763,16 @@ async def _tick_resolution_dresseur(bot, combat_id, thread_id, message_id, dress
         combat = database.obtenir_combat(combat_id)
         utilisateur = bot.get_user(joueur_id)
         noms = {joueur_id: (utilisateur.display_name if utilisateur else "Toi"), id_dresseur_combat: archetype["nom"]}
-        embeds = combat_module.construire_embeds_combat(combat_id, log_tour=log, noms=noms)
         vue = combat_module.VueActionCombat(
             combat_id, combat["tour"], avec_choix_ko=bool(database.obtenir_choix_ko(combat_id))
         )
+        fichier_scene = combat_module._generer_fichier_scene_combat(combat_id, noms, log_tour=log, type_combat=type_combat)
         try:
             msg = await thread.fetch_message(message_id)
-            await msg.edit(embeds=embeds, view=vue)
+            if fichier_scene:
+                await msg.edit(view=vue, attachments=[fichier_scene])
+            else:
+                await msg.edit(view=vue)
         except discord.HTTPException:
             pass  # message disparu ou édition refusée : le prochain tick retentera
 

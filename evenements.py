@@ -48,6 +48,7 @@ class VueChoixEvent(discord.ui.View):
             discord.SelectOption(label="Boost XP", value="boost_xp", emoji="📈", description="Augmente l'XP gagnée (dresseur et Pokémon) pour tout le serveur"),
             discord.SelectOption(label="Défi collectif du serveur", value="defi_collectif", emoji="🎯", description="Objectif commun à tous les joueurs, récompense à l'atteinte"),
             discord.SelectOption(label="Chasse aux Shiny", value="chasse_shiny", emoji="🌟", description="Fenêtre chronométrée, boost de shiny + classement des trouvailles"),
+            discord.SelectOption(label="Capture Classée", value="capture_rarete", emoji="🏆", description="Chaque capture (spawn classique) rapporte des points selon la rareté"),
         ],
     )
     async def choisir(self, interaction: discord.Interaction, select: discord.ui.Select):
@@ -61,6 +62,8 @@ class VueChoixEvent(discord.ui.View):
             )
         elif valeur == "chasse_shiny":
             await interaction.response.send_modal(ModalDureeChasseShiny())
+        elif valeur == "capture_rarete":
+            await interaction.response.send_modal(ModalDureeCaptureRarete())
 
 
 # --- Boost global : durée --------------------------------------------------------------
@@ -281,5 +284,107 @@ def construire_embed_chasse_shiny_terminee(classement: list) -> discord.Embed:
         description="\n".join(lignes),
         color=discord.Color.purple(),
     )
+    embed.set_footer(text="🔴 Event terminé")
+    return embed
+
+
+# --- Capture Classée : durée, classement live (mis à jour toutes les 30 min), fin -------
+
+BAREME_CAPTURE_RARETE_TEXTE = (
+    "Pokémon Commun → **+1** point\n"
+    "Pokémon Peu Commun → **+3** points\n"
+    "Pokémon Rare → **+6** points\n"
+    "Pokémon Hyper Rare → **+10** points\n"
+    "Pokémon Légendaire → **+15** points\n"
+    "Pokémon Shiny → **+25** points (en plus des points de rareté)\n\n"
+    "**Chaque capture compte** — un doublon rapporte autant de points qu'une nouvelle "
+    "capture. Seules les captures du **spawn classique** sont comptabilisées (le spawn "
+    "VIP ne rapporte aucun point, pour rester équitable)."
+)
+
+
+class ModalDureeCaptureRarete(discord.ui.Modal, title="Capture Classée"):
+    duree_input = discord.ui.TextInput(
+        label="Durée de l'event (en minutes)",
+        placeholder="Ex: 1440",
+        required=True,
+        max_length=6,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        minutes = _duree_invalide(self.duree_input.value)
+        if minutes is None:
+            await interaction.response.send_message("❌ Durée invalide — donne un nombre entier de minutes supérieur à 0.", ephemeral=True)
+            return
+
+        channel = interaction.guild.get_channel(config.CHANNEL_EVENT_ID) if interaction.guild else None
+        channel_id = channel.id if channel else None
+        event_id = database.demarrer_event_capture_rarete(minutes * 60, channel_id)
+
+        await interaction.response.send_message(
+            f"✅ Capture Classée lancée pour **{minutes} minute(s)** !",
+            ephemeral=True,
+        )
+        if channel:
+            message = await channel.send(
+                content=_contenu_ping_event(),
+                embed=construire_embed_capture_rarete_classement(minutes, []),
+                allowed_mentions=ALLOWED_MENTIONS_ROLE_EVENT,
+            )
+            database.definir_message_event_capture_rarete(event_id, message.id)
+
+
+def construire_embed_capture_rarete_classement(minutes_totales: int, classement: list) -> discord.Embed:
+    """Un SEUL embed réutilisé à la fois pour l'annonce initiale (classement vide) et
+    chaque mise à jour périodique (toutes les 30 min, voir main.py) — juste le classement
+    live qui se remplit avec le temps, le barème reste affiché en permanence."""
+    medailles = ["🥇", "🥈", "🥉"]
+    if classement:
+        lignes_classement = [
+            f"{medailles[i] if i < 3 else f'**{i + 1}.**'} <@{user_id}> — **{points}** point(s)"
+            for i, (user_id, points) in enumerate(classement[:10])
+        ]
+        texte_classement = "\n".join(lignes_classement)
+    else:
+        texte_classement = "*Aucune capture pour l'instant — sois le premier !*"
+
+    embed = discord.Embed(
+        title="🏆 Event en cours : Capture Classée !",
+        description=(
+            f"Pendant **{minutes_totales} minute(s)**, chaque capture (spawn classique "
+            f"uniquement) rapporte des points selon sa rareté !\n\n{BAREME_CAPTURE_RARETE_TEXTE}\n\n"
+            f"**Classement actuel :**\n{texte_classement}"
+        ),
+        color=discord.Color.gold(),
+    )
+    embed.set_footer(text="🟢 Event en cours — classement mis à jour toutes les 30 minutes")
+    return embed
+
+
+def construire_embed_capture_rarete_terminee(classement: list) -> discord.Embed:
+    if not classement:
+        embed = discord.Embed(
+            title="🏆 Capture Classée terminée",
+            description="Personne n'a marqué de points pendant cet event... la prochaine sera la bonne !",
+            color=discord.Color.dark_gold(),
+        )
+        embed.set_footer(text="🔴 Event terminé")
+        return embed
+    medailles = ["🥇", "🥈", "🥉"]
+    lignes = [
+        f"{medailles[i] if i < 3 else f'**{i + 1}.**'} <@{user_id}> — **{points}** point(s)"
+        for i, (user_id, points) in enumerate(classement[:10])
+    ]
+    embed = discord.Embed(
+        title="🏆 Capture Classée terminée — Podium !",
+        description="\n".join(lignes),
+        color=discord.Color.gold(),
+    )
+    if len(classement) >= 3:
+        embed.add_field(
+            name="🎉 Félicitations au podium !",
+            value=f"<@{classement[0][0]}>, <@{classement[1][0]}> et <@{classement[2][0]}> repartent avec les récompenses mises en jeu !",
+            inline=False,
+        )
     embed.set_footer(text="🔴 Event terminé")
     return embed

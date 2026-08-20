@@ -133,7 +133,9 @@ class SelectionBallView(discord.ui.View):
             )
             est_shiny = self.vue_spawn.force_shiny or (random.random() < chance_shiny)
 
-            objet_forme_obtenu = database.ajouter_capture(user_id, self.pokemon["nom"], self.pc, shiny=est_shiny, ivs=self.ivs)
+            objet_forme_obtenu = database.ajouter_capture(
+                user_id, self.pokemon["nom"], self.pc, shiny=est_shiny, ivs=self.ivs, source=self.vue_spawn.type_spawn
+            )
 
             # Le niveau suit l'espèce (comme le PC déjà affiché) : on ne l'écrase que s'il
             # est plus haut que celui déjà acquis pour cette espèce, pour ne jamais faire
@@ -318,7 +320,7 @@ class SelectionBallView(discord.ui.View):
 class VueSpawn(discord.ui.View):
     """Vue attachée au message de spawn public. Chaque joueur peut tenter une seule capture."""
 
-    def __init__(self, pokemon: dict, pc: int, niveau: int, ivs: dict, force_shiny: bool = False):
+    def __init__(self, pokemon: dict, pc: int, niveau: int, ivs: dict, force_shiny: bool = False, type_spawn: str = None):
         super().__init__(timeout=None)  # le spawn suivant remplacera celui-ci, pas de timeout fixe
         self.pokemon = pokemon
         self.pc = pc
@@ -326,6 +328,7 @@ class VueSpawn(discord.ui.View):
         self.ivs = ivs
         self.tentatives = set()
         self.force_shiny = force_shiny
+        self.type_spawn = type_spawn  # "classique"/"VIP" — voir SelectionBallView, event Capture Classée
 
     @discord.ui.button(label="Capturer", style=discord.ButtonStyle.primary, emoji="🎯")
     async def capturer(self, interaction: discord.Interaction, button: discord.ui.Button):

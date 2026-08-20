@@ -16,6 +16,7 @@ OPTIONS_TRI = [
     ("rarete", "Rareté"),
     ("pc_desc", "PC : fort → faible"),
     ("pc_asc", "PC : faible → fort"),
+    ("favoris", "Favoris d'abord"),
 ]
 
 
@@ -445,6 +446,8 @@ class VueChoixOffre(discord.ui.View):
             self.toutes_captures.sort(key=lambda row: -row["pc"])
         elif self.tri == "pc_asc":
             self.toutes_captures.sort(key=lambda row: row["pc"])
+        elif self.tri == "favoris":
+            self.toutes_captures.sort(key=lambda row: (not row["favori"], cle_tri_alphabetique_fr(row["pokemon_nom"])))
         else:
             self.toutes_captures.sort(key=lambda row: cle_tri_alphabetique_fr(row["pokemon_nom"]))
 
@@ -457,9 +460,11 @@ class VueChoixOffre(discord.ui.View):
         options = []
         for row in page_captures:
             shiny_txt = " ✨" if row["shiny"] else ""
+            etoile = "⭐ " if row["favori"] else ""
+            surnom_txt = f" ({row['surnom']})" if row["surnom"] else ""
             options.append(
                 discord.SelectOption(
-                    label=f"{row['pokemon_nom']}{shiny_txt} — {row['pc']} PC"[:100],
+                    label=f"{etoile}{row['pokemon_nom']}{surnom_txt}{shiny_txt} — {row['pc']} PC"[:100],
                     value=str(row["id"]),
                     default=(row["id"] in self.selection),
                 )

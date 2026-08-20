@@ -118,6 +118,23 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    # Event "Capture Classée" : chaque capture (classique uniquement, VIP exclu, doublons
+    # comptés comme les nouvelles) rapporte des points selon la rareté — voir
+    # evenements.py pour le barème. Même structure que chasse_shiny_evenement ci-dessus.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS event_capture_rarete (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date_debut INTEGER NOT NULL,
+            date_fin INTEGER NOT NULL,
+            actif INTEGER NOT NULL DEFAULT 1,
+            channel_annonce_id INTEGER,
+            annoncee INTEGER NOT NULL DEFAULT 0,
+            message_id INTEGER
+        )
+        """
+    )
+
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS joueur_race (
@@ -491,6 +508,30 @@ def init_db():
     # automatique (/relacher) sans avoir à le décocher manuellement à chaque fois.
     try:
         cur.execute("ALTER TABLE captures ADD COLUMN verrouille INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
+    # Migration : favoris — épingler ses exemplaires préférés pour les retrouver vite
+    # dans les listes (Pokédex/PC), pur confort, aucun effet sur le jeu.
+    try:
+        cur.execute("ALTER TABLE captures ADD COLUMN favori INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
+    # Migration : surnom — personnalisation d'un exemplaire précis pour l'attachement,
+    # indépendant de tout aspect économique. NULL = pas de surnom (nom d'espèce affiché
+    # normalement partout ailleurs dans le bot, qui continue de fonctionner par nom
+    # d'espèce — le surnom n'apparaît que dans les écrans dédiés Pokédex/PC).
+    try:
+        cur.execute("ALTER TABLE captures ADD COLUMN surnom TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+    # Migration : source de la capture ("classique"/"VIP" pour les spawns sauvages, None
+    # pour tout le reste — dons admin, œufs/élevage, raids...). Sert notamment à l'event
+    # "Capture Classée" (voir evenements.py) qui ne doit compter QUE le spawn classique.
+    try:
+        cur.execute("ALTER TABLE captures ADD COLUMN source TEXT")
     except sqlite3.OperationalError:
         pass
 
@@ -1063,6 +1104,75 @@ def init_db():
             combat_id INTEGER PRIMARY KEY,
             type TEXT NOT NULL,
             tours_restants INTEGER NOT NULL
+        )
+        """
+    )
+
+    # Terrain de zone (Champ Électrifié/Herbu/Brumeux/Psychique) : effet actif sur tout
+    # le terrain pendant plusieurs tours, distinct de la météo (peut coexister).
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_terrain_zone (
+            combat_id INTEGER PRIMARY KEY,
+            type TEXT NOT NULL,
+            tours_restants INTEGER NOT NULL
+        )
+        """
+    )
+
+    # Écrans d'équipe (Reflet, Mur Lumière, Voile Aurore, Vent Arrière, Rune Protect,
+    # Garde Large, Prévention, Tatamigaeshi) — clé d'équipe unifiée 1v1/2v2 : en 1v1
+    # equipe_cle = str(user_id) du joueur protégé, en 2v2 "equipe1"/"equipe2".
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_ecrans (
+            combat_id INTEGER NOT NULL,
+            equipe_cle TEXT NOT NULL,
+            type_effet TEXT NOT NULL,
+            tours_restants INTEGER NOT NULL,
+            PRIMARY KEY (combat_id, equipe_cle, type_effet)
+        )
+        """
+    )
+
+    # Effets globaux à durée (Lot C) : Distorsion (trick_room), Zone Étrange
+    # (wonder_room), Zone Magique (magic_room), Gravité (gravite), Verrou Enchanté
+    # (verrou_enchante), Lance-Boue (lance_boue) — plusieurs peuvent être actifs EN MÊME
+    # TEMPS (comme dans les vrais jeux), d'où une table à part de combat_meteo/
+    # combat_terrain_zone qui ne gèrent chacune qu'un seul état à la fois.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_effets_globaux (
+            combat_id INTEGER NOT NULL,
+            type_effet TEXT NOT NULL,
+            tours_restants INTEGER NOT NULL,
+            PRIMARY KEY (combat_id, type_effet)
+        )
+        """
+    )
+
+    # Requiem (Chant du Trépas) : compte à rebours PAR Pokémon touché (pas un état
+    # global) — celui qui l'a lancé est affecté aussi, comme tout le monde sur le terrain.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_requiem (
+            combat_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            pokemon_nom TEXT NOT NULL,
+            tours_restants INTEGER NOT NULL,
+            PRIMARY KEY (combat_id, user_id, pokemon_nom)
+        )
+        """
+    )
+
+    # Journal du tour PRÉCÉDENT — conservé pour l'affichage dans la scène visuelle (voir
+    # combat_visuel.py) : le joueur peut ainsi comparer avec ce que l'adversaire a fait
+    # au tour d'avant sans que ça disparaisse dès que le tour suivant se résout.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_log_precedent (
+            combat_id INTEGER PRIMARY KEY,
+            log_json TEXT NOT NULL
         )
         """
     )
@@ -2601,19 +2711,23 @@ def possede_badge_arene(user_id: int, type_pokemon: str) -> bool:
 
 
 def accorder_badge_arene(user_id: int, type_pokemon: str) -> bool:
-    """Retourne True si c'est un NOUVEAU badge (première fois), False s'il l'avait déjà."""
-    if possede_badge_arene(user_id, type_pokemon):
-        return False
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT OR IGNORE INTO arene_badges (user_id, type_pokemon, date_obtenu) VALUES (?, ?, ?)",
-        (user_id, type_pokemon, int(time.time())),
-    )
-    conn.commit()
-    conn.close()
+    """Retourne True si c'est un NOUVEAU badge (première fois), False s'il l'avait déjà.
+    avancer_quete_principale est appelée dans TOUS les cas (badge nouveau ou déjà
+    possédé) — sinon un joueur qui a déjà tous les badges d'arène avant d'atteindre
+    l'étape de quête correspondante reste bloqué indéfiniment, l'événement "badge_arene"
+    ne se déclenchant plus jamais pour lui."""
+    deja_possede = possede_badge_arene(user_id, type_pokemon)
+    if not deja_possede:
+        conn = get_connexion()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT OR IGNORE INTO arene_badges (user_id, type_pokemon, date_obtenu) VALUES (?, ?, ?)",
+            (user_id, type_pokemon, int(time.time())),
+        )
+        conn.commit()
+        conn.close()
     avancer_quete_principale(user_id, "badge_arene")
-    return True
+    return not deja_possede
 
 
 def obtenir_badges_arene(user_id: int) -> set:
@@ -2706,19 +2820,21 @@ def possede_badge_repaire(user_id: int, equipe_mechante: str) -> bool:
 
 
 def accorder_badge_repaire(user_id: int, equipe_mechante: str) -> bool:
-    """Retourne True si c'est un NOUVEAU badge (première fois), False s'il l'avait déjà."""
-    if possede_badge_repaire(user_id, equipe_mechante):
-        return False
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT OR IGNORE INTO repaire_badges (user_id, equipe_mechante, date_obtenu) VALUES (?, ?, ?)",
-        (user_id, equipe_mechante, int(time.time())),
-    )
-    conn.commit()
-    conn.close()
+    """Retourne True si c'est un NOUVEAU badge (première fois), False s'il l'avait déjà.
+    avancer_quete_principale est appelée dans TOUS les cas — même raison que
+    accorder_badge_arene ci-dessus."""
+    deja_possede = possede_badge_repaire(user_id, equipe_mechante)
+    if not deja_possede:
+        conn = get_connexion()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT OR IGNORE INTO repaire_badges (user_id, equipe_mechante, date_obtenu) VALUES (?, ?, ?)",
+            (user_id, equipe_mechante, int(time.time())),
+        )
+        conn.commit()
+        conn.close()
     avancer_quete_principale(user_id, "badge_repaire")
-    return True
+    return not deja_possede
 
 
 def obtenir_badges_repaire(user_id: int) -> set:
@@ -2861,7 +2977,7 @@ def definir_objet_tenu_reel(user_id: int, pokemon_nom: str, objet: str | None):
     conn.close()
 
 
-def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False, ivs: dict = None) -> str | None:
+def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False, ivs: dict = None, source: str = None) -> str | None:
     import capacites as capacites_module
     import formes_objets as formes_objets_module
     import random as _random
@@ -2876,15 +2992,15 @@ def ajouter_capture(user_id: int, pokemon_nom: str, pc: int, shiny: bool = False
         INSERT INTO captures (
             user_id, pokemon_nom, pc, date_capture, shiny,
             iv_pv, iv_attaque, iv_defense, iv_attaque_spe, iv_defense_spe, iv_vitesse,
-            capacite
+            capacite, source
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             user_id, pokemon_nom, pc, int(time.time()), int(shiny),
             ivs.get("pv"), ivs.get("attaque"), ivs.get("defense"),
             ivs.get("attaque_spe"), ivs.get("defense_spe"), ivs.get("vitesse"),
-            capacites_module.capacite_pour_espece(pokemon_nom),
+            capacites_module.capacite_pour_espece(pokemon_nom), source,
         ),
     )
     # Compteurs à VIE (jamais décrémentés, même si la capture est relâchée plus tard) —
@@ -2930,6 +3046,47 @@ def obtenir_pokedex_joueur(user_id: int):
     )
     resultats = cur.fetchall()
     conn.close()
+    return resultats
+
+
+def obtenir_meilleure_capture_id(user_id: int, pokemon_nom: str) -> int | None:
+    """L'id de l'exemplaire au PC le plus élevé pour cette espèce chez ce joueur —
+    c'est cet exemplaire précis que représente un emplacement de l'équipe de combat
+    (qui ne référence l'espèce que par son nom, pas par id individuel). Utilisé pour
+    savoir QUEL exemplaire surnommer/consulter depuis l'équipe de combat."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id FROM captures WHERE user_id = ? AND pokemon_nom = ? ORDER BY pc DESC, id ASC LIMIT 1",
+        (user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["id"] if row else None
+
+
+def obtenir_favori_surnom_par_espece(user_id: int) -> dict:
+    """Retourne {pokemon_nom: {"favori": bool, "surnom": str|None}} — favori=True si AU
+    MOINS un exemplaire de l'espèce est favori, surnom=celui du meilleur PC (même
+    exemplaire "représentatif" que obtenir_meilleure_capture_id). Utilisé par le Pokédex
+    et l'équipe de combat pour afficher l'étoile/le surnom au niveau de l'espèce."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT pokemon_nom, pc, favori, surnom FROM captures WHERE user_id = ? ORDER BY pokemon_nom, pc DESC, id ASC",
+        (user_id,),
+    )
+    resultats = {}
+    for row in cur.fetchall():
+        entry = resultats.setdefault(row["pokemon_nom"], {"favori": False, "surnom": None, "_meilleur_pc_vu": -1})
+        if row["favori"]:
+            entry["favori"] = True
+        if row["pc"] > entry["_meilleur_pc_vu"]:
+            entry["_meilleur_pc_vu"] = row["pc"]
+            entry["surnom"] = row["surnom"]
+    conn.close()
+    for entry in resultats.values():
+        del entry["_meilleur_pc_vu"]
     return resultats
 
 
@@ -3123,15 +3280,15 @@ def obtenir_doublons_detailles(user_id: int):
 
 def obtenir_toutes_captures_detaillees(user_id: int):
     """Retourne TOUS les exemplaires de la collection du joueur (id, pokemon_nom, pc, shiny,
-    verrouille, rang) triés par nom puis par PC décroissant. Rang = 1 signifie que c'est le
-    seul/meilleur exemplaire de son espèce — utile pour afficher un avertissement si
-    l'utilisateur tente de relâcher le dernier représentant d'une espèce (perte de
-    l'entrée Pokédex)."""
+    verrouille, favori, surnom, rang) triés par nom puis par PC décroissant. Rang = 1
+    signifie que c'est le seul/meilleur exemplaire de son espèce — utile pour afficher un
+    avertissement si l'utilisateur tente de relâcher le dernier représentant d'une espèce
+    (perte de l'entrée Pokédex)."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         """
-        SELECT id, pokemon_nom, pc, shiny, verrouille,
+        SELECT id, pokemon_nom, pc, shiny, verrouille, favori, surnom,
                ROW_NUMBER() OVER (PARTITION BY pokemon_nom ORDER BY pc DESC, id ASC) AS rang,
                COUNT(*) OVER (PARTITION BY pokemon_nom) AS total_espece
         FROM captures
@@ -3166,6 +3323,39 @@ def obtenir_captures_verrouillees(user_id: int):
     resultats = cur.fetchall()
     conn.close()
     return resultats
+
+
+def definir_favori_capture(capture_id: int, favori: bool):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE captures SET favori = ? WHERE id = ?", (int(favori), capture_id))
+    conn.commit()
+    conn.close()
+
+
+def obtenir_captures_favorites(user_id: int):
+    """Tous les exemplaires épinglés en favori d'un joueur (id, pokemon_nom, pc, shiny,
+    surnom) — pur confort d'affichage, aucun effet sur le jeu."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, pokemon_nom, pc, shiny, surnom FROM captures WHERE user_id = ? AND favori = 1 "
+        "ORDER BY pokemon_nom COLLATE ALPHABET_FR ASC, pc DESC",
+        (user_id,),
+    )
+    resultats = cur.fetchall()
+    conn.close()
+    return resultats
+
+
+def definir_surnom_capture(capture_id: int, surnom: str | None):
+    """surnom=None (ou chaîne vide) efface le surnom — l'exemplaire réaffiche alors son
+    nom d'espèce normal partout."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE captures SET surnom = ? WHERE id = ?", (surnom or None, capture_id))
+    conn.commit()
+    conn.close()
 
 
 def relacher_tous_doublons(user_id: int) -> dict:
@@ -3691,10 +3881,27 @@ def initialiser_equipe_combat_pvp(combat_id: int, user_id: int, equipe: list, id
     conn.close()
 
 
+# Seuil du 2e siège synthétique d'un joueur humain en double combat solo-vs-duo (voir
+# combat_2v2.id_delegue/DELEGUE_OFFSET) — dupliqué ici en dur plutôt qu'importé, pour ne
+# pas faire dépendre ce module générique de combat_2v2.py. Les fonctions ci-dessous qui
+# touchent la RÉSERVE (combat_equipe) redirigent automatiquement un ID délégué vers l'ID
+# réel du joueur : la réserve est UNIQUE et partagée entre ses 2 sièges, jamais dupliquée
+# — sans ça, un même Pokémon aurait 2 PV différents selon le siège consulté.
+DELEGUE_OFFSET = 2_000_000_000_000_000_000
+
+
+def _id_equipe(user_id: int) -> int:
+    """Résout un ID de siège délégué vers l'ID réel du joueur, pour toute fonction qui
+    lit/écrit la réserve de combat (combat_equipe) — jamais pour les données propres au
+    SIÈGE lui-même (actif courant, action du tour), qui restent bien séparées par siège."""
+    return user_id - DELEGUE_OFFSET if user_id >= DELEGUE_OFFSET else user_id
+
+
 def obtenir_capacite_combat(combat_id: int, user_id: int, pokemon_nom: str) -> str | None:
     """Talent SNAPSHOTÉ pour ce combat précis (voir initialiser_equipe_combat_pvp) — à
     utiliser dans le moteur de combat plutôt que obtenir_capacite_reelle, pour que ça
     fonctionne identiquement pour un vrai joueur ET un dresseur/boss IA."""
+    user_id = _id_equipe(user_id)
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
@@ -3708,6 +3915,7 @@ def obtenir_capacite_combat(combat_id: int, user_id: int, pokemon_nom: str) -> s
 
 def obtenir_objet_combat(combat_id: int, user_id: int, pokemon_nom: str) -> str | None:
     """Objet tenu SNAPSHOTÉ pour ce combat précis — voir obtenir_capacite_combat."""
+    user_id = _id_equipe(user_id)
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
@@ -3723,11 +3931,28 @@ def definir_objet_combat(combat_id: int, user_id: int, pokemon_nom: str, objet: 
     """Consomme/retire l'objet tenu SNAPSHOTÉ pour ce combat (baie utilisée, Ceinture
     Force déclenchée...) — n'affecte JAMAIS l'objet réel hors combat (captures.objet_tenu),
     seulement cette instance de combat."""
+    user_id = _id_equipe(user_id)
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         "UPDATE combat_equipe SET objet_tenu = ? WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
         (objet, combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def definir_capacite_combat(combat_id: int, user_id: int, pokemon_nom: str, capacite: str | None):
+    """Écrase le talent SNAPSHOTÉ pour ce combat précis (voir obtenir_capacite_combat) —
+    utilisé par le Draft PvP pour imposer un talent tiré au hasard après l'initialisation
+    normale de l'équipe, qui aurait sinon copié le vrai talent de la capture du joueur.
+    N'affecte jamais le talent réel hors combat."""
+    user_id = _id_equipe(user_id)
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_equipe SET capacite = ? WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (capacite, combat_id, user_id, pokemon_nom),
     )
     conn.commit()
     conn.close()
@@ -3743,6 +3968,7 @@ def obtenir_combat(combat_id: int):
 
 
 def obtenir_equipe_pvp(combat_id: int, user_id: int):
+    user_id = _id_equipe(user_id)
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
@@ -3790,6 +4016,7 @@ def incrementer_potions_soin_utilisees(combat_id: int, user_id: int):
 
 def appliquer_degats_pvp(combat_id: int, user_id: int, pokemon_nom: str, degats: int) -> int:
     """Applique des dégâts au Pokémon actif d'un joueur. Retourne les PV restants."""
+    user_id = _id_equipe(user_id)
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
@@ -3808,6 +4035,7 @@ def appliquer_degats_pvp(combat_id: int, user_id: int, pokemon_nom: str, degats:
 
 def soigner_pvp(combat_id: int, user_id: int, pokemon_nom: str, montant: int) -> int:
     """Soigne un Pokémon pendant le combat. Retourne les nouveaux PV."""
+    user_id = _id_equipe(user_id)
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
@@ -4389,6 +4617,329 @@ def decrementer_meteo(combat_id: int) -> str | None:
     return None
 
 
+# --- Terrain de zone (Champ Électrifié/Herbu/Brumeux/Psychique) ------------------------
+
+def obtenir_terrain_zone(combat_id: int) -> dict | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT type, tours_restants FROM combat_terrain_zone WHERE combat_id = ?", (combat_id,))
+    row = cur.fetchone()
+    conn.close()
+    if row is None:
+        return None
+    return {"type": row["type"], "tours_restants": row["tours_restants"]}
+
+
+def definir_terrain_zone(combat_id: int, type_terrain: str | None, tours: int = 5):
+    conn = get_connexion()
+    cur = conn.cursor()
+    if type_terrain is None:
+        cur.execute("DELETE FROM combat_terrain_zone WHERE combat_id = ?", (combat_id,))
+    else:
+        cur.execute(
+            """
+            INSERT INTO combat_terrain_zone (combat_id, type, tours_restants) VALUES (?, ?, ?)
+            ON CONFLICT(combat_id) DO UPDATE SET type = excluded.type, tours_restants = excluded.tours_restants
+            """,
+            (combat_id, type_terrain, tours),
+        )
+    conn.commit()
+    conn.close()
+
+
+def decrementer_terrain_zone(combat_id: int) -> str | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT type, tours_restants FROM combat_terrain_zone WHERE combat_id = ?", (combat_id,))
+    row = cur.fetchone()
+    if row is None:
+        conn.close()
+        return None
+    nouveau = row["tours_restants"] - 1
+    if nouveau <= 0:
+        cur.execute("DELETE FROM combat_terrain_zone WHERE combat_id = ?", (combat_id,))
+        conn.commit()
+        conn.close()
+        return row["type"]
+    cur.execute("UPDATE combat_terrain_zone SET tours_restants = ? WHERE combat_id = ?", (nouveau, combat_id))
+    conn.commit()
+    conn.close()
+    return None
+
+
+# --- Écrans d'équipe (Reflet, Mur Lumière, Voile Aurore, Vent Arrière, Rune Protect,
+# --- Garde Large, Prévention, Tatamigaeshi) ---------------------------------------------
+
+def equipe_cle_pour_joueur(combat_id: int, user_id: int) -> str:
+    """Clé d'équipe unifiée 1v1/2v2 : en 1v1 chaque camp = 1 joueur, donc equipe_cle =
+    str(user_id) directement. En 2v2, regarde dans combat_2v2_joueurs si présent."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT equipe FROM combat_2v2_joueurs WHERE combat_id = ? AND user_id = ?", (combat_id, user_id))
+    row = cur.fetchone()
+    conn.close()
+    if row is not None:
+        return f"equipe{row['equipe']}"
+    return str(user_id)
+
+
+def activer_ecran(combat_id: int, equipe_cle: str, type_effet: str, tours: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO combat_ecrans (combat_id, equipe_cle, type_effet, tours_restants) VALUES (?, ?, ?, ?)
+        ON CONFLICT(combat_id, equipe_cle, type_effet) DO UPDATE SET tours_restants = excluded.tours_restants
+        """,
+        (combat_id, equipe_cle, type_effet, tours),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_ecran(combat_id: int, equipe_cle: str, type_effet: str) -> int | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT tours_restants FROM combat_ecrans WHERE combat_id = ? AND equipe_cle = ? AND type_effet = ?",
+        (combat_id, equipe_cle, type_effet),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["tours_restants"] if row else None
+
+
+def obtenir_tous_ecrans_equipe(combat_id: int, equipe_cle: str) -> list:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT type_effet, tours_restants FROM combat_ecrans WHERE combat_id = ? AND equipe_cle = ?",
+        (combat_id, equipe_cle),
+    )
+    resultats = [{"type_effet": row["type_effet"], "tours_restants": row["tours_restants"]} for row in cur.fetchall()]
+    conn.close()
+    return resultats
+
+
+def decrementer_ecrans_equipe(combat_id: int, equipe_cle: str) -> list:
+    """À appeler une fois par tour résolu, PAR ÉQUIPE (pas par joueur — en 2v2, appeler
+    une seule fois par equipe_cle, sinon un camp à 2 joueurs verrait ses écrans décompter
+    deux fois plus vite). Retourne la liste des type_effet qui viennent d'expirer."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT type_effet, tours_restants FROM combat_ecrans WHERE combat_id = ? AND equipe_cle = ?",
+        (combat_id, equipe_cle),
+    )
+    rows = cur.fetchall()
+    expires = []
+    for row in rows:
+        nouveau = row["tours_restants"] - 1
+        if nouveau <= 0:
+            cur.execute(
+                "DELETE FROM combat_ecrans WHERE combat_id = ? AND equipe_cle = ? AND type_effet = ?",
+                (combat_id, equipe_cle, row["type_effet"]),
+            )
+            expires.append(row["type_effet"])
+        else:
+            cur.execute(
+                "UPDATE combat_ecrans SET tours_restants = ? WHERE combat_id = ? AND equipe_cle = ? AND type_effet = ?",
+                (nouveau, combat_id, equipe_cle, row["type_effet"]),
+            )
+    conn.commit()
+    conn.close()
+    return expires
+
+
+# --- Lot B : Brume / Aromathérapie ------------------------------------------------------
+
+def retirer_tous_statuts_joueur(combat_id: int, user_id: int) -> int:
+    """Guérit TOUTE l'équipe de ce joueur (pas juste le Pokémon actif) — Aromathérapie/
+    Glas de Soin. Retourne le nombre de Pokémon effectivement guéris (pour le log)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) AS n FROM combat_statuts WHERE combat_id = ? AND user_id = ?", (combat_id, user_id))
+    nb = cur.fetchone()["n"]
+    cur.execute("DELETE FROM combat_statuts WHERE combat_id = ? AND user_id = ?", (combat_id, user_id))
+    conn.commit()
+    conn.close()
+    return nb
+
+
+def reinitialiser_boosts_combat(combat_id: int):
+    """Brume : remet TOUS les stages de stats (des DEUX/QUATRE Pokémon actifs, tous
+    camps confondus) à zéro d'un coup — supprime toutes les lignes combat_boosts de ce
+    combat plutôt que de cibler un Pokémon précis."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM combat_boosts WHERE combat_id = ?", (combat_id,))
+    conn.commit()
+    conn.close()
+
+
+# --- Effets globaux à durée (Distorsion/Zone Étrange/Zone Magique/Gravité/Verrou
+# --- Enchanté/Lance-Boue) ----------------------------------------------------------------
+
+def activer_effet_global(combat_id: int, type_effet: str, tours: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO combat_effets_globaux (combat_id, type_effet, tours_restants) VALUES (?, ?, ?)
+        ON CONFLICT(combat_id, type_effet) DO UPDATE SET tours_restants = excluded.tours_restants
+        """,
+        (combat_id, type_effet, tours),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_effet_global(combat_id: int, type_effet: str) -> int | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT tours_restants FROM combat_effets_globaux WHERE combat_id = ? AND type_effet = ?",
+        (combat_id, type_effet),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["tours_restants"] if row else None
+
+
+def decrementer_effets_globaux(combat_id: int) -> list:
+    """À appeler une fois par tour résolu. Retourne la liste des type_effet qui viennent
+    d'expirer à l'instant (pour un message de log)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT type_effet, tours_restants FROM combat_effets_globaux WHERE combat_id = ?", (combat_id,))
+    rows = cur.fetchall()
+    expires = []
+    for row in rows:
+        nouveau = row["tours_restants"] - 1
+        if nouveau <= 0:
+            cur.execute(
+                "DELETE FROM combat_effets_globaux WHERE combat_id = ? AND type_effet = ?",
+                (combat_id, row["type_effet"]),
+            )
+            expires.append(row["type_effet"])
+        else:
+            cur.execute(
+                "UPDATE combat_effets_globaux SET tours_restants = ? WHERE combat_id = ? AND type_effet = ?",
+                (nouveau, combat_id, row["type_effet"]),
+            )
+    conn.commit()
+    conn.close()
+    return expires
+
+
+# --- Requiem (Chant du Trépas) : compte à rebours par Pokémon --------------------------
+
+def obtenir_requiem(combat_id: int, user_id: int, pokemon_nom: str) -> int | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT tours_restants FROM combat_requiem WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["tours_restants"] if row else None
+
+
+def definir_requiem(combat_id: int, user_id: int, pokemon_nom: str, tours: int = 3):
+    """N'écrase JAMAIS un compte à rebours déjà en cours (comme dans les vrais jeux —
+    relancer Requiem sur un Pokémon déjà affecté ne réinitialise pas son compteur)."""
+    if obtenir_requiem(combat_id, user_id, pokemon_nom) is not None:
+        return
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO combat_requiem (combat_id, user_id, pokemon_nom, tours_restants) VALUES (?, ?, ?, ?)",
+        (combat_id, user_id, pokemon_nom, tours),
+    )
+    conn.commit()
+    conn.close()
+
+
+def retirer_requiem(combat_id: int, user_id: int, pokemon_nom: str):
+    """À appeler quand ce Pokémon quitte le terrain (switch) — échappe au K.O., comme
+    dans les vrais jeux."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM combat_requiem WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def decrementer_requiem_actifs(combat_id: int, actifs: list) -> list:
+    """À appeler une fois par tour résolu, avec la liste des (user_id, pokemon_nom)
+    actuellement ACTIFS sur le terrain (le compte à rebours ne progresse que pour eux).
+    Retourne [(user_id, pokemon_nom)] de ceux qui viennent d'atteindre 0 (K.O. à
+    appliquer par l'appelant)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    tombes = []
+    for user_id, pokemon_nom in actifs:
+        cur.execute(
+            "SELECT tours_restants FROM combat_requiem WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+            (combat_id, user_id, pokemon_nom),
+        )
+        row = cur.fetchone()
+        if row is None:
+            continue
+        nouveau = row["tours_restants"] - 1
+        if nouveau <= 0:
+            cur.execute(
+                "DELETE FROM combat_requiem WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+                (combat_id, user_id, pokemon_nom),
+            )
+            tombes.append((user_id, pokemon_nom))
+        else:
+            cur.execute(
+                "UPDATE combat_requiem SET tours_restants = ? WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+                (nouveau, combat_id, user_id, pokemon_nom),
+            )
+    conn.commit()
+    conn.close()
+    return tombes
+
+
+# --- Journal du tour précédent (pour l'affichage visuel, voir combat_visuel.py) --------
+
+def obtenir_log_precedent(combat_id: int) -> list | None:
+    """Retourne le journal du tour précédent (liste de lignes), ou None si c'est le
+    premier tour du combat (rien à afficher en "précédent" pour l'instant)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT log_json FROM combat_log_precedent WHERE combat_id = ?", (combat_id,))
+    row = cur.fetchone()
+    conn.close()
+    if row is None:
+        return None
+    import json
+    return json.loads(row["log_json"])
+
+
+def definir_log_precedent(combat_id: int, log: list):
+    """À appeler après avoir affiché le journal d'un tour — le mémorise pour qu'il reste
+    visible (en second plan) quand le tour suivant se résout."""
+    import json
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO combat_log_precedent (combat_id, log_json) VALUES (?, ?)
+        ON CONFLICT(combat_id) DO UPDATE SET log_json = excluded.log_json
+        """,
+        (combat_id, json.dumps(log)),
+    )
+    conn.commit()
+    conn.close()
+
+
 def obtenir_attaque_verrouillee(combat_id: int, user_id: int, pokemon_nom: str) -> str | None:
     """Attaque imposée par un Objet Choix tenu (Bandeau/Spécs/Bandana Choix) — None si le
     Pokémon n'a encore rien utilisé depuis son entrée en jeu (ou ne tient pas cet objet)."""
@@ -4903,6 +5454,132 @@ def arreter_chasse_shiny():
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute("UPDATE chasse_shiny_evenement SET actif = 0 WHERE actif = 1")
+    conn.commit()
+    conn.close()
+
+
+# --- Events serveur : Capture Classée (/event) — points selon la rareté, spawn
+# classique uniquement (VIP exclu), doublons comptés comme les nouvelles captures ---
+
+BAREME_POINTS_CAPTURE_RARETE = {
+    "commun": 1,
+    "peu_commun": 3,
+    "rare": 6,
+    "hyper_rare": 10,
+    "legendaire": 15,
+}
+BONUS_POINTS_SHINY_CAPTURE_RARETE = 25
+
+
+def demarrer_event_capture_rarete(duree_secondes: int, channel_annonce_id: int | None = None) -> int:
+    """Démarre un nouvel event Capture Classée, désactivant silencieusement tout event du
+    même type encore actif (un seul à la fois). Retourne l'id du nouvel event."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE event_capture_rarete SET actif = 0 WHERE actif = 1")
+    maintenant = int(time.time())
+    cur.execute(
+        """
+        INSERT INTO event_capture_rarete (date_debut, date_fin, actif, channel_annonce_id, annoncee)
+        VALUES (?, ?, 1, ?, 0)
+        """,
+        (maintenant, maintenant + duree_secondes, channel_annonce_id),
+    )
+    event_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return event_id
+
+
+def obtenir_event_capture_rarete_actif() -> dict | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM event_capture_rarete WHERE actif = 1 LIMIT 1")
+    row = cur.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def definir_message_event_capture_rarete(event_id: int, message_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE event_capture_rarete SET message_id = ? WHERE id = ?", (message_id, event_id))
+    conn.commit()
+    conn.close()
+
+
+def obtenir_events_capture_rarete_a_terminer() -> list:
+    """Events actifs dont la date de fin est dépassée — pour la boucle de vérification."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM event_capture_rarete WHERE actif = 1 AND date_fin <= ?", (int(time.time()),))
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def _classement_capture_rarete(date_debut: int, date_fin: int) -> list:
+    """Calcule le classement par points pour la fenêtre donnée — SEULES les captures de
+    source='classique' comptent (VIP exclu), CHAQUE capture compte (doublons inclus,
+    pas de déduplication par espèce). Un import de pokemon_data ICI (pas en tête de
+    fichier) pour éviter tout souci d'ordre d'import au chargement du module."""
+    from pokemon_data import obtenir_pokemon_par_nom
+
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT user_id, pokemon_nom, shiny FROM captures WHERE source = 'classique' AND date_capture BETWEEN ? AND ?",
+        (date_debut, date_fin),
+    )
+    rows = cur.fetchall()
+    conn.close()
+
+    points_par_joueur = {}
+    for row in rows:
+        pokemon = obtenir_pokemon_par_nom(row["pokemon_nom"])
+        points = BAREME_POINTS_CAPTURE_RARETE.get(pokemon["rarete"], 0) if pokemon else 0
+        if row["shiny"]:
+            points += BONUS_POINTS_SHINY_CAPTURE_RARETE
+        points_par_joueur[row["user_id"]] = points_par_joueur.get(row["user_id"], 0) + points
+
+    return sorted(points_par_joueur.items(), key=lambda kv: -kv[1])
+
+
+def classement_event_capture_rarete_en_cours(event_id: int) -> list:
+    """Classement LIVE d'un event encore actif — pour les mises à jour périodiques
+    (toutes les 30 min) affichées dans le channel d'annonce, sans clôturer l'event."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT date_debut, date_fin FROM event_capture_rarete WHERE id = ?", (event_id,))
+    event = cur.fetchone()
+    conn.close()
+    if event is None:
+        return []
+    # borne haute = maintenant (l'event est encore en cours, date_fin n'est pas encore atteinte)
+    return _classement_capture_rarete(event["date_debut"], min(event["date_fin"], int(time.time())))
+
+
+def terminer_event_capture_rarete(event_id: int) -> list:
+    """Clôture l'event et retourne le classement final [(user_id, points)] trié
+    décroissant."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT date_debut, date_fin FROM event_capture_rarete WHERE id = ?", (event_id,))
+    event = cur.fetchone()
+    if event is None:
+        conn.close()
+        return []
+    classement = _classement_capture_rarete(event["date_debut"], event["date_fin"])
+    cur.execute("UPDATE event_capture_rarete SET actif = 0, annoncee = 1 WHERE id = ?", (event_id,))
+    conn.commit()
+    conn.close()
+    return classement
+
+
+def arreter_event_capture_rarete():
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE event_capture_rarete SET actif = 0 WHERE actif = 1")
     conn.commit()
     conn.close()
 
@@ -6663,6 +7340,7 @@ def synchroniser_pv_persistant_depuis_combat(combat_id: int, user_id: int):
     """Recopie les PV de fin de combat (table combat_equipe, propre à ce match) vers le
     pool PERSISTANT (etat_combat_pokemon), partagé avec les raids — les dégâts subis en
     PvE restent donc jusqu'au prochain soin, au lieu de se réinitialiser à chaque combat."""
+    user_id = _id_equipe(user_id)
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(

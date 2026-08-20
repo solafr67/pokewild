@@ -363,6 +363,39 @@ ATTAQUES_TERRAIN = {
     "Pics Toxik": "toxic_spikes",     # empoisonne le Pokémon qui entre
 }
 
+# Terrain de zone (Champ Électrifié/Herbu/Brumeux/Psychique), écrans d'équipe (Reflet,
+# Mur Lumière...), et effets globaux à durée (Distorsion, Gravité...) — définis ICI (pas
+# dans combat.py, qui IMPORTE ces 3 depuis pokemon_data) pour que la vérification
+# "cette attaque est-elle utilisable ?" ci-dessous (utilisable/est_utilisable) puisse les
+# reconnaître sans créer d'import circulaire (combat.py importe déjà tout depuis
+# pokemon_data.py, jamais l'inverse).
+ATTAQUES_TERRAIN_ZONE = {
+    "Champ Électrifié": "electrique",
+    "Champ Herbu": "herbu",
+    "Champ Brumeux": "brumeux",
+    "Champ Psychique": "psychique",
+}
+ATTAQUES_ECRANS = {
+    "Protection": ("reflet", 5),
+    "Mur Lumière": ("voile_lumiere", 5),
+    "Voile Aurore": ("voile_aurore", 5),
+    "Vent Arrière": ("vent_arriere", 4),
+    "Rune Protect": ("rune_protect", 5),
+    "Garde Large": ("garde_large", 1),
+    "Prévention": ("prevention", 1),
+    "Tatamigaeshi": ("tatamigaeshi", 1),
+}
+ATTAQUES_EFFETS_GLOBAUX = {
+    "Distorsion": ("trick_room", 5),
+    "Zone Étrange": ("wonder_room", 5),
+    "Zone Magique": ("magic_room", 5),
+    "Gravité": ("gravite", 5),
+    "Verrou Enchanté": ("verrou_enchante", 2),
+    "Lance-Boue": ("lance_boue", 5),
+}
+# Attaques spéciales à effet unique, ne rentrant dans aucune des catégories ci-dessus.
+ATTAQUES_SPECIALES_ZONE = {"Requiem", "Brume", "Aromathérapie", "Glas de Soin", "Fontaine de Vie", "Garde Florale"}
+
 # Attaques à deux tours, gérées en combat. Liste tenue à la main (le nom français exact
 # n'est pas exposé de façon fiable par la PokéAPI) — pas forcément exhaustive. Si une
 # attaque à deux tours manque à l'appel, ajoute son nom français exact ici.
@@ -376,6 +409,8 @@ ATTAQUES_CHARGE = {
     "Choc Glace",
     "Éclat Glace",
     "Géocontrôle",
+    "Vol",
+    "Damoclès",
 }
 # RECHARGE : attaque immédiatement à pleine puissance, puis 1 tour de repos forcé.
 ATTAQUES_RECHARGE = {
@@ -398,12 +433,33 @@ ATTAQUES_FURIE = {
 }
 
 
+def _a_un_effet_de_jeu(nom: str) -> bool:
+    """True si cette attaque a un effet géré en combat — dégâts, changement de stats,
+    altération de statut, piège d'entrée (Pics...), terrain de zone (Champ Herbu...),
+    écran d'équipe (Reflet...), effet global (Distorsion...), ou une des attaques
+    spéciales à effet unique (Requiem, Brume...). Sans ça, une attaque du Pokédex reste
+    invisible pour le joueur même si elle est dans son movepool — c'est ce filtre qui
+    a empêché des attaques comme Zénith ou Danse Pluie d'apparaître au Maître des Types
+    tant que leurs mécaniques n'étaient reconnues nulle part ici."""
+    attaque = ATTAQUES[nom]
+    return bool(
+        attaque.get("puissance")
+        or attaque.get("stats")
+        or attaque.get("ailment")
+        or nom in ATTAQUES_TERRAIN
+        or attaque.get("meteo")
+        or nom in ATTAQUES_TERRAIN_ZONE
+        or nom in ATTAQUES_ECRANS
+        or nom in ATTAQUES_EFFETS_GLOBAUX
+        or nom in ATTAQUES_SPECIALES_ZONE
+    )
+
+
 def toutes_attaques_utilisables() -> list:
     """Toutes les attaques ayant un effet en jeu, tous Pokémon confondus (triées par
     nom) — utilisé par la Boutique CT, qui n'est pas rattachée à un Pokémon précis."""
     def utilisable(nom):
-        a = ATTAQUES[nom]
-        return bool(a.get("puissance") or a.get("stats") or a.get("ailment") or nom in ATTAQUES_TERRAIN)
+        return _a_un_effet_de_jeu(nom)
 
     return sorted(n for n in ATTAQUES if utilisable(n))
 
@@ -423,13 +479,7 @@ def attaques_apprenables(pokemon: dict, niveau: int = None) -> list:
         return [ATTAQUE_DEFAUT_NOM]
 
     def est_utilisable(nom):
-        attaque = ATTAQUES[nom]
-        return bool(
-            attaque.get("puissance")
-            or attaque.get("stats")
-            or attaque.get("ailment")
-            or nom in ATTAQUES_TERRAIN
-        )
+        return _a_un_effet_de_jeu(nom)
 
     def est_debloquee(nom):
         if niveau is None:

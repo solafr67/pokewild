@@ -538,6 +538,328 @@ class ModalRechercheVerrouillage(discord.ui.Modal, title="Rechercher un Pokémon
         await interaction.response.edit_message(embed=construire_embed_verrouillage(self.vue_parente.user_id), view=self.vue_parente)
 
 
+# ----------------------------------------------------------------------------
+# Favoris — épingler ses exemplaires préférés pour les retrouver vite, pur confort
+# d'affichage (aucun effet sur le jeu). Même schéma que le verrouillage ci-dessus.
+# ----------------------------------------------------------------------------
+
+CAPTURES_PAR_PAGE_FAVORIS = 25
+OPTIONS_TRI_FAVORIS = [
+    ("alphabetique", "Alphabétique"),
+    ("pc_desc", "PC : fort → faible"),
+    ("favoris_dabord", "Favoris d'abord"),
+]
+
+
+def construire_embed_favoris(user_id: int) -> discord.Embed:
+    nb_favoris = len(database.obtenir_captures_favorites(user_id))
+    embed = discord.Embed(
+        title="⭐ Favoris",
+        description=(
+            "Coche les exemplaires à épingler en **favori** — pur confort pour les retrouver "
+            "vite dans tes listes, aucun effet sur le jeu. Reclique sur un exemplaire déjà "
+            "coché pour le retirer des favoris.\n\n"
+            f"⭐ **{nb_favoris}** exemplaire(s) actuellement en favori."
+        ),
+        color=discord.Color.gold(),
+    )
+    return embed
+
+
+class VueFavoris(discord.ui.View):
+    """Sélection paginée/triable/cherchable de TOUTE la collection — cocher un exemplaire
+    l'épingle en favori, le décocher le retire (appliqué immédiatement à chaque clic)."""
+
+    def __init__(self, user_id: int, page: int = 0):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        self.page = page
+        self.tri = "alphabetique"
+        self.recherche = None
+        self.toutes_captures = database.obtenir_toutes_captures_detaillees(user_id)
+        self._trier_captures()
+        self._construire_composants()
+
+    def _captures_affichees(self) -> list:
+        captures = self.toutes_captures
+        if self.recherche:
+            terme = cle_tri_alphabetique_fr(self.recherche)
+            captures = [row for row in captures if terme in cle_tri_alphabetique_fr(row["pokemon_nom"])]
+        return captures
+
+    def _trier_captures(self):
+        if self.tri == "pc_desc":
+            self.toutes_captures.sort(key=lambda row: -row["pc"])
+        elif self.tri == "favoris_dabord":
+            self.toutes_captures.sort(key=lambda row: (not row["favori"], cle_tri_alphabetique_fr(row["pokemon_nom"])))
+        else:
+            self.toutes_captures.sort(key=lambda row: cle_tri_alphabetique_fr(row["pokemon_nom"]))
+
+    def _construire_composants(self):
+        self.clear_items()
+        captures_affichees = self._captures_affichees()
+        debut = self.page * CAPTURES_PAR_PAGE_FAVORIS
+        page_captures = captures_affichees[debut : debut + CAPTURES_PAR_PAGE_FAVORIS]
+
+        options = []
+        for row in page_captures:
+            shiny_txt = " ✨" if row["shiny"] else ""
+            prefixe = "⭐ " if row["favori"] else ""
+            nom_affiche = f"{row['surnom']} ({row['pokemon_nom']})" if row["surnom"] else row["pokemon_nom"]
+            options.append(
+                discord.SelectOption(
+                    label=f"{prefixe}{nom_affiche}{shiny_txt} — {row['pc']} PC"[:100],
+                    value=str(row["id"]),
+                )
+            )
+        if options:
+            select = discord.ui.Select(placeholder="Coche pour épingler / décoche pour retirer…", options=options, min_values=0, max_values=len(options), row=0)
+            select.callback = self._on_select
+            self.add_item(select)
+
+        select_tri = discord.ui.Select(
+            placeholder="Trier par...",
+            options=[discord.SelectOption(label=libelle, value=valeur, default=(valeur == self.tri)) for valeur, libelle in OPTIONS_TRI_FAVORIS],
+            row=1,
+        )
+        select_tri.callback = self._on_select_tri
+        self.add_item(select_tri)
+
+        nb_pages = max(1, (len(captures_affichees) + CAPTURES_PAR_PAGE_FAVORIS - 1) // CAPTURES_PAR_PAGE_FAVORIS)
+        if nb_pages > 1:
+            bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=2, disabled=self.page == 0)
+            bouton_prec.callback = self._page_prec
+            self.add_item(bouton_prec)
+            bouton_suiv = discord.ui.Button(label="▶", style=discord.ButtonStyle.secondary, row=2, disabled=self.page >= nb_pages - 1)
+            bouton_suiv.callback = self._page_suiv
+            self.add_item(bouton_suiv)
+
+        bouton_recherche = discord.ui.Button(
+            label=f"Recherche : {self.recherche}" if self.recherche else "Rechercher",
+            emoji="🔍",
+            style=discord.ButtonStyle.primary if self.recherche else discord.ButtonStyle.secondary,
+            row=2,
+        )
+        bouton_recherche.callback = self._on_rechercher
+        self.add_item(bouton_recherche)
+        if self.recherche:
+            bouton_effacer = discord.ui.Button(label="Effacer", emoji="❌", style=discord.ButtonStyle.secondary, row=2)
+            bouton_effacer.callback = self._on_effacer_recherche
+            self.add_item(bouton_effacer)
+
+    async def _rafraichir(self, interaction: discord.Interaction):
+        self.toutes_captures = database.obtenir_toutes_captures_detaillees(self.user_id)
+        self._trier_captures()
+        self._construire_composants()
+        await interaction.response.edit_message(embed=construire_embed_favoris(self.user_id), view=self)
+
+    async def _on_select(self, interaction: discord.Interaction):
+        ids_coches = {int(v) for v in interaction.data["values"]}
+        captures_affichees = self._captures_affichees()
+        debut = self.page * CAPTURES_PAR_PAGE_FAVORIS
+        page_captures = captures_affichees[debut : debut + CAPTURES_PAR_PAGE_FAVORIS]
+
+        for row in page_captures:
+            nouvel_etat = row["id"] in ids_coches
+            if bool(row["favori"]) != nouvel_etat:
+                database.definir_favori_capture(row["id"], nouvel_etat)
+
+        await self._rafraichir(interaction)
+
+    async def _on_select_tri(self, interaction: discord.Interaction):
+        self.tri = interaction.data["values"][0]
+        self.page = 0
+        await self._rafraichir(interaction)
+
+    async def _page_prec(self, interaction: discord.Interaction):
+        self.page = max(0, self.page - 1)
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+    async def _page_suiv(self, interaction: discord.Interaction):
+        self.page += 1
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+    async def _on_rechercher(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(ModalRechercheFavoris(self))
+
+    async def _on_effacer_recherche(self, interaction: discord.Interaction):
+        self.recherche = None
+        self.page = 0
+        await self._rafraichir(interaction)
+
+
+class ModalRechercheFavoris(discord.ui.Modal, title="Rechercher un Pokémon"):
+    recherche_input = discord.ui.TextInput(label="Nom (ou partie du nom)", placeholder="Ex : Rat", required=False)
+
+    def __init__(self, vue_parente: VueFavoris):
+        super().__init__()
+        self.vue_parente = vue_parente
+        self.recherche_input.default = vue_parente.recherche or ""
+
+    async def on_submit(self, interaction: discord.Interaction):
+        terme = self.recherche_input.value.strip()
+        self.vue_parente.recherche = terme or None
+        self.vue_parente.page = 0
+        self.vue_parente._construire_composants()
+        await interaction.response.edit_message(embed=construire_embed_favoris(self.vue_parente.user_id), view=self.vue_parente)
+
+
+# ----------------------------------------------------------------------------
+# Surnoms — personnalisation d'un exemplaire précis pour l'attachement, indépendant
+# de tout aspect économique. Contrairement au verrouillage/favoris (case à cocher),
+# choisir un exemplaire ici ouvre une fenêtre de saisie de texte pour son surnom.
+# ----------------------------------------------------------------------------
+
+CAPTURES_PAR_PAGE_SURNOM = 25
+
+
+def construire_embed_surnoms(user_id: int) -> discord.Embed:
+    nb_surnommes = sum(1 for row in database.obtenir_toutes_captures_detaillees(user_id) if row["surnom"])
+    embed = discord.Embed(
+        title="✏️ Surnoms",
+        description=(
+            "Choisis un exemplaire dans la liste pour lui donner un **surnom** — pure "
+            "personnalisation, affiché à la place du nom d'espèce dans tes listes Pokédex/PC. "
+            "Laisse le champ vide pour effacer un surnom existant.\n\n"
+            f"✏️ **{nb_surnommes}** exemplaire(s) actuellement surnommé(s)."
+        ),
+        color=discord.Color.purple(),
+    )
+    return embed
+
+
+class VueSurnoms(discord.ui.View):
+    """Sélection paginée/triable/cherchable de TOUTE la collection — choisir un exemplaire
+    ouvre une fenêtre de saisie pour lui donner (ou changer/effacer) son surnom."""
+
+    def __init__(self, user_id: int, page: int = 0):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        self.page = page
+        self.recherche = None
+        self.toutes_captures = database.obtenir_toutes_captures_detaillees(user_id)
+        self.toutes_captures.sort(key=lambda row: cle_tri_alphabetique_fr(row["pokemon_nom"]))
+        self._construire_composants()
+
+    def _captures_affichees(self) -> list:
+        captures = self.toutes_captures
+        if self.recherche:
+            terme = cle_tri_alphabetique_fr(self.recherche)
+            captures = [row for row in captures if terme in cle_tri_alphabetique_fr(row["pokemon_nom"])]
+        return captures
+
+    def _construire_composants(self):
+        self.clear_items()
+        captures_affichees = self._captures_affichees()
+        debut = self.page * CAPTURES_PAR_PAGE_SURNOM
+        page_captures = captures_affichees[debut : debut + CAPTURES_PAR_PAGE_SURNOM]
+
+        options = []
+        for row in page_captures:
+            shiny_txt = " ✨" if row["shiny"] else ""
+            nom_affiche = f"{row['surnom']} ({row['pokemon_nom']})" if row["surnom"] else row["pokemon_nom"]
+            options.append(
+                discord.SelectOption(
+                    label=f"{nom_affiche}{shiny_txt} — {row['pc']} PC"[:100],
+                    value=str(row["id"]),
+                )
+            )
+        if options:
+            select = discord.ui.Select(placeholder="Choisis un exemplaire à surnommer…", options=options, row=0)
+            select.callback = self._on_select
+            self.add_item(select)
+
+        nb_pages = max(1, (len(captures_affichees) + CAPTURES_PAR_PAGE_SURNOM - 1) // CAPTURES_PAR_PAGE_SURNOM)
+        if nb_pages > 1:
+            bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=1, disabled=self.page == 0)
+            bouton_prec.callback = self._page_prec
+            self.add_item(bouton_prec)
+            bouton_suiv = discord.ui.Button(label="▶", style=discord.ButtonStyle.secondary, row=1, disabled=self.page >= nb_pages - 1)
+            bouton_suiv.callback = self._page_suiv
+            self.add_item(bouton_suiv)
+
+        bouton_recherche = discord.ui.Button(
+            label=f"Recherche : {self.recherche}" if self.recherche else "Rechercher",
+            emoji="🔍",
+            style=discord.ButtonStyle.primary if self.recherche else discord.ButtonStyle.secondary,
+            row=1,
+        )
+        bouton_recherche.callback = self._on_rechercher
+        self.add_item(bouton_recherche)
+        if self.recherche:
+            bouton_effacer = discord.ui.Button(label="Effacer", emoji="❌", style=discord.ButtonStyle.secondary, row=1)
+            bouton_effacer.callback = self._on_effacer_recherche
+            self.add_item(bouton_effacer)
+
+    async def _rafraichir(self, interaction: discord.Interaction):
+        self.toutes_captures = database.obtenir_toutes_captures_detaillees(self.user_id)
+        self.toutes_captures.sort(key=lambda row: cle_tri_alphabetique_fr(row["pokemon_nom"]))
+        self._construire_composants()
+        await interaction.response.edit_message(embed=construire_embed_surnoms(self.user_id), view=self)
+
+    async def _on_select(self, interaction: discord.Interaction):
+        capture_id = int(interaction.data["values"][0])
+        row = next((r for r in self.toutes_captures if r["id"] == capture_id), None)
+        if row is None:
+            await interaction.response.send_message("Cet exemplaire n'est plus disponible.", ephemeral=True)
+            return
+        await interaction.response.send_modal(ModalDefinirSurnom(self, capture_id, row["pokemon_nom"], row["surnom"]))
+
+    async def _page_prec(self, interaction: discord.Interaction):
+        self.page = max(0, self.page - 1)
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+    async def _page_suiv(self, interaction: discord.Interaction):
+        self.page += 1
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+    async def _on_rechercher(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(ModalRechercheSurnoms(self))
+
+    async def _on_effacer_recherche(self, interaction: discord.Interaction):
+        self.recherche = None
+        self.page = 0
+        await self._rafraichir(interaction)
+
+
+class ModalDefinirSurnom(discord.ui.Modal, title="Donner un surnom"):
+    surnom_input = discord.ui.TextInput(label="Surnom (vide pour effacer)", max_length=32, required=False)
+
+    def __init__(self, vue_parente: VueSurnoms, capture_id: int, nom_espece: str, surnom_actuel: str | None):
+        super().__init__(title=f"Surnommer {nom_espece}"[:45])
+        self.vue_parente = vue_parente
+        self.capture_id = capture_id
+        self.surnom_input.default = surnom_actuel or ""
+
+    async def on_submit(self, interaction: discord.Interaction):
+        nouveau_surnom = self.surnom_input.value.strip()
+        database.definir_surnom_capture(self.capture_id, nouveau_surnom or None)
+        self.vue_parente.toutes_captures = database.obtenir_toutes_captures_detaillees(self.vue_parente.user_id)
+        self.vue_parente.toutes_captures.sort(key=lambda row: cle_tri_alphabetique_fr(row["pokemon_nom"]))
+        self.vue_parente._construire_composants()
+        await interaction.response.edit_message(embed=construire_embed_surnoms(self.vue_parente.user_id), view=self.vue_parente)
+
+
+class ModalRechercheSurnoms(discord.ui.Modal, title="Rechercher un Pokémon"):
+    recherche_input = discord.ui.TextInput(label="Nom (ou partie du nom)", placeholder="Ex : Rat", required=False)
+
+    def __init__(self, vue_parente: VueSurnoms):
+        super().__init__()
+        self.vue_parente = vue_parente
+        self.recherche_input.default = vue_parente.recherche or ""
+
+    async def on_submit(self, interaction: discord.Interaction):
+        terme = self.recherche_input.value.strip()
+        self.vue_parente.recherche = terme or None
+        self.vue_parente.page = 0
+        self.vue_parente._construire_composants()
+        await interaction.response.edit_message(embed=construire_embed_surnoms(self.vue_parente.user_id), view=self.vue_parente)
+
+
 class VueSuppressionLibre(discord.ui.View):
     """Vue éphémère pour supprimer n'importe quel Pokémon de sa collection (y compris
     les uniques) afin de libérer de la place. Affiche un avertissement ⚠️ si l'exemplaire

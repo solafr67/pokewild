@@ -64,6 +64,7 @@ def construire_lignes(
     filtrée (pas le numéro national du Pokédex) — ex: en filtrant sur la génération 1,
     Bulbizarre devient 1/151 plutôt que son 1/1025 habituel toutes générations confondues."""
     captures_par_nom = _agreger_captures(user_id)
+    favori_surnom_par_nom = database.obtenir_favori_surnom_par_espece(user_id)
 
     especes = POKEDEX
     if filtre_rarete:
@@ -74,6 +75,8 @@ def construire_lignes(
         especes = [p for p in especes if p["nom"] not in captures_par_nom]
     elif filtre_capture == "captures":
         especes = [p for p in especes if p["nom"] in captures_par_nom]
+    elif filtre_capture == "favoris":
+        especes = [p for p in especes if favori_surnom_par_nom.get(p["nom"], {}).get("favori")]
     if recherche:
         terme = cle_tri_alphabetique_fr(recherche)
         especes = [p for p in especes if terme in cle_tri_alphabetique_fr(p["nom"])]
@@ -84,6 +87,11 @@ def construire_lignes(
         especes = sorted(especes, key=lambda p: (p.get("generation", 0), cle_tri_alphabetique_fr(p["nom"])))
     elif tri == "numero":
         especes = sorted(especes, key=lambda p: p.get("numero", 9999))
+    elif tri == "favoris":
+        especes = sorted(
+            especes,
+            key=lambda p: (not favori_surnom_par_nom.get(p["nom"], {}).get("favori"), cle_tri_alphabetique_fr(p["nom"])),
+        )
     else:
         especes = sorted(especes, key=lambda p: cle_tri_alphabetique_fr(p["nom"]))
 
@@ -93,11 +101,14 @@ def construire_lignes(
         emoji = EMOJI_RARETE[p["rarete"]]
         prefixe = f"`{position}/{total_liste}`"
         info = captures_par_nom.get(p["nom"])
+        favori_surnom = favori_surnom_par_nom.get(p["nom"], {})
+        etoile = "⭐ " if favori_surnom.get("favori") else ""
+        surnom_txt = f" *({favori_surnom['surnom']})*" if favori_surnom.get("surnom") else ""
         if info:
             shiny_txt = " ✨" if info["shiny"] else ""
             niveau, _xp = database.obtenir_niveau_pokemon(user_id, p["nom"])
             lignes.append(
-                f"{prefixe} {emoji} **{p['nom']}**{shiny_txt} — ×{info['quantite']} "
+                f"{prefixe} {emoji} {etoile}**{p['nom']}**{surnom_txt}{shiny_txt} — ×{info['quantite']} "
                 f"(Niv. {niveau} — meilleur PC : {info['meilleur_pc']})"
             )
         else:
@@ -115,6 +126,7 @@ class VuePokedex(discord.ui.View):
         ("alphabetique", "Alphabétique"),
         ("numero", "Ordre du Pokédex"),
         ("rarete", "Rareté"),
+        ("favoris", "Favoris d'abord"),
     ]
     OPTIONS_RARETE = [
         (None, "Toutes les raretés"),
@@ -236,6 +248,23 @@ class VuePokedex(discord.ui.View):
             )
             bouton_effacer.callback = self._on_effacer_recherche
             self.add_item(bouton_effacer)
+
+        bouton_favoris = discord.ui.Button(label="Favoris", emoji="⭐", style=discord.ButtonStyle.secondary, row=4)
+        bouton_favoris.callback = self._on_ouvrir_favoris
+        self.add_item(bouton_favoris)
+
+    async def _on_ouvrir_favoris(self, interaction: discord.Interaction):
+        # Import différé : profil.py importe déjà pokedex.py, un import en tête de
+        # fichier créerait une boucle.
+        import profil as profil_module
+
+        vue = profil_module.VueFavoris(self.proprietaire_id)
+        if not vue.toutes_captures:
+            await interaction.response.send_message("Tu n'as aucun Pokémon à épingler en favori !", ephemeral=True)
+            return
+        await interaction.response.send_message(
+            embed=profil_module.construire_embed_favoris(self.proprietaire_id), view=vue, ephemeral=True
+        )
 
     def construire_embed(self) -> discord.Embed:
         debut = self.page * TAILLE_PAGE

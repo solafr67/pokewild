@@ -20,6 +20,9 @@ from pokemon_data import (
     ATTAQUES_PRIORITE_BASSE_ECHOUE_SI_TOUCHE,
     ATTAQUES_RECHARGE,
     ATTAQUES_TERRAIN,
+    ATTAQUES_TERRAIN_ZONE,
+    ATTAQUES_ECRANS,
+    ATTAQUES_EFFETS_GLOBAUX,
     EMOJI_RARETE,
     EMOJI_TYPES,
     IV_DEFAUT,
@@ -63,6 +66,66 @@ METEO_INFO = {
     "grele":  {"emoji": "🌨️", "texte_debut": "Il commence à grêler !", "texte_fin": "La grêle s'arrête."},
 }
 METEO_TYPES_IMMUNISES = {"sable": {"roche", "sol", "acier"}, "grele": {"glace"}}
+
+# Terrain de zone (Électrique/Herbu/Brumeux/Psychique) — affecte uniquement les Pokémon
+# AU SOL (pas Vol, pas Lévitation) : boost +30% sur le type assorti, effets spéciaux
+# propres à chacun (voir _est_au_sol / _appliquer_effets_terrain plus bas).
+TERRAIN_INFO = {
+    "electrique": {"emoji": "⚡", "type_associe": "electrik", "texte_debut": "Un champ électrique recouvre la zone !", "texte_fin": "Le champ électrique se dissipe."},
+    "herbu":      {"emoji": "🌿", "type_associe": "plante", "texte_debut": "Un champ herbu recouvre la zone !", "texte_fin": "Le champ herbu se dissipe."},
+    "brumeux":    {"emoji": "🌫️", "type_associe": "fee", "texte_debut": "Un champ brumeux recouvre la zone !", "texte_fin": "Le champ brumeux se dissipe."},
+    "psychique":  {"emoji": "🔮", "type_associe": "psy", "texte_debut": "Un champ psychique recouvre la zone !", "texte_fin": "Le champ psychique se dissipe."},
+}
+ATTAQUES_PRIORITE_POSITIVE = {"Vive-Attaque", "Ombre Portée", "Poing Éclair", "Direct Toxik"}
+ATTAQUES_SEISME = {"Séisme", "Ampleur"}
+
+# Attaques de zone (2v2 uniquement — en 1v1 elles se comportent normalement, un seul
+# adversaire possible de toute façon) : touchent plusieurs cibles à la fois, avec -25%
+# de dégâts par cible RÉELLEMENT touchée (comme dans les vrais jeux). Deux catégories
+# selon que l'allié du lanceur est touché aussi ou non — voir
+# https://www.pokepedia.fr/Capacité_de_zone (les capacités exclusives à Pokémon XD sont
+# volontairement absentes, hors-scope).
+ATTAQUES_ZONE_AVEC_ALLIE = {
+    "Séisme", "Ampleur", "Bang Sonique", "Caboche-Kaboum", "Centrifugifle", "Cradovague",
+    "Destruction", "Ébullilave", "Explosion", "Incendie", "Parabocharge", "Piétisol",
+    "Surf", "Synchropeine", "Tempête Florale",
+}
+ATTAQUES_ZONE_ADVERSAIRES = {
+    "Abattage", "Aboiement", "Acide", "Blizzard", "Calcination", "Canicule", "Carapiège",
+    "Chant Antique", "Coupe-Vent", "Doux Parfum", "Draco-Énergie", "Éboulement",
+    "Éclat Magique", "Éclat Spectral", "Écume", "Ère Glaciaire", "Éruption", "Feu Envieux",
+    "Force Chtonienne", "Gaz Toxik", "Giclédo", "Lame Pangéenne", "Mégaphone", "Météores",
+    "Mimi-Queue", "Mortier Matcha", "Myria-Flèches", "Myria-Vagues", "Ocroupi",
+    "Onde Originelle", "Orage Adamantin", "Ouragan", "Overdrive", "Piège de Venin",
+    "Pika-Splash", "Poudreuse", "Ruée d'Or", "Rugissement", "Sanction Suprême", "Sécrétion",
+    "Séduction", "Spore Coton", "Survinsecte", "Toile Élek", "Toupie Éclat", "Trou Noir",
+    "Typhon Fulgurant", "Typhon Hivernal", "Typhon Passionné", "Typhon Pyrosable",
+    "Vent Glace", "Vibrécaille", "Voix Enjôleuse",
+}
+ATTAQUES_ZONE_TOUTES = ATTAQUES_ZONE_AVEC_ALLIE | ATTAQUES_ZONE_ADVERSAIRES
+
+# Écrans/buffs d'équipe (Lot A) — protègent tout le CAMP du lanceur, pas juste lui.
+ECRANS_INFO = {
+    "reflet": {"emoji": "🛡️", "nom_affiche": "Reflet", "texte_debut": "protège l'équipe des attaques physiques !", "texte_fin": "Le Reflet de l'équipe de {equipe} disparaît."},
+    "voile_lumiere": {"emoji": "✨", "nom_affiche": "Mur Lumière", "texte_debut": "protège l'équipe des attaques spéciales !", "texte_fin": "Le Mur Lumière de l'équipe de {equipe} disparaît."},
+    "voile_aurore": {"emoji": "🌈", "nom_affiche": "Voile Aurore", "texte_debut": "protège l'équipe de toutes les attaques !", "texte_fin": "Le Voile Aurore de l'équipe de {equipe} disparaît."},
+    "vent_arriere": {"emoji": "💨", "nom_affiche": "Vent Arrière", "texte_debut": "double la Vitesse de l'équipe !", "texte_fin": "Le Vent Arrière de l'équipe de {equipe} retombe."},
+    "rune_protect": {"emoji": "🔰", "nom_affiche": "Rune Protect", "texte_debut": "protège l'équipe de tout problème de statut !", "texte_fin": "L'effet de Rune Protect de l'équipe de {equipe} se dissipe."},
+    "garde_large": {"emoji": "🌐", "nom_affiche": "Garde Large", "texte_debut": "protège l'équipe des attaques de zone ce tour-ci !", "texte_fin": "La Garde Large de l'équipe de {equipe} disparaît."},
+    "prevention": {"emoji": "🚧", "nom_affiche": "Prévention", "texte_debut": "protège l'équipe des attaques de statut ce tour-ci !", "texte_fin": "La Prévention de l'équipe de {equipe} disparaît."},
+    "tatamigaeshi": {"emoji": "🥋", "nom_affiche": "Tatamigaeshi", "texte_debut": "protège l'équipe des attaques prioritaires ce tour-ci !", "texte_fin": "Le Tatamigaeshi de l'équipe de {equipe} disparaît."},
+}
+
+# Effets globaux à durée (Lot C) — plusieurs actifs en même temps possibles.
+EFFETS_GLOBAUX_INFO = {
+    "trick_room": {"emoji": "🌀", "texte_debut": "Les Pokémon les plus lents agiront en premier !", "texte_fin": "L'espace revient à la normale."},
+    "wonder_room": {"emoji": "🔄", "texte_debut": "Défense et Défense Spéciale sont échangées pour tous !", "texte_fin": "Défense et Défense Spéciale reviennent à la normale."},
+    "magic_room": {"emoji": "🚫", "texte_debut": "Les effets des objets tenus sont supprimés !", "texte_fin": "Les effets des objets tenus reviennent à la normale."},
+    "gravite": {"emoji": "🌍", "texte_debut": "La gravité s'intensifie ! Tout le monde est plaqué au sol.", "texte_fin": "La gravité redevient normale."},
+    "verrou_enchante": {"emoji": "🔒", "texte_debut": "Personne ne peut changer de Pokémon pour le prochain tour !", "texte_fin": "Le verrou se relâche, les changements sont de nouveau possibles."},
+    "lance_boue": {"emoji": "💧", "texte_debut": "Les attaques Électrik sont affaiblies pour tout le monde !", "texte_fin": "L'effet de Lance-Boue se dissipe."},
+}
+
 DEGATS_BRULURE_POURCENT = 0.06   # 6% des PV max par tour
 DEGATS_POISON_POURCENT = 0.10    # 10% des PV max par tour
 CHANCE_PARALYSIE_SKIP = 0.25     # 25% de ne pas pouvoir agir
@@ -71,6 +134,102 @@ CHANCE_MUE = 0.30                # Mue : 30% de guérir son propre statut chaque
 CHANCE_CRITIQUE = 1 / 24         # Taux de critique officiel de base (pas de ratio par attaque pour l'instant)
 CHANCE_CONFUSION_SKIP = 0.33     # 33% de se blesser au lieu d'agir
 DOLLARS_VICTOIRE = 150
+
+
+def _est_au_sol(pokemon: dict, capacite: str | None, combat_id: int = None) -> bool:
+    """Un Pokémon Vol ou avec Lévitation n'est jamais affecté par le Terrain de zone
+    (ni les effets bénéfiques/malus, ni le boost de dégâts assorti) — SAUF sous Gravité,
+    qui plaque tout le monde au sol sans exception (si combat_id est fourni)."""
+    if combat_id is not None and database.obtenir_effet_global(combat_id, "gravite"):
+        return True
+    if pokemon and "vol" in pokemon.get("types", []):
+        return False
+    if capacite == "levitation":
+        return False
+    return True
+
+
+def calculer_degats_zone(
+    combat_id: int, user_id: int, nom_atk: str, row_atk: dict, attaque: dict, capacite_atk: str,
+    adversaire_id: int, nom_def: str, row_def: dict, nb_cibles_reelles: int,
+) -> tuple:
+    """Calcul de dégâts DÉDIÉ aux attaques de zone en 2v2 (Séisme/Explosion/Surf/etc.,
+    voir ATTAQUES_ZONE_TOUTES) — couvre le cœur de la formule (niveau, ATQ/DÉF avec
+    boosts, STAB, efficacité de type, coup critique, météo, terrain, brûlure, et le
+    -25% par cible réellement touchée) mais PAS les interactions plus exotiques du
+    combat normal (objets tenus consommables, Rustique/survie, ripostes au contact) —
+    scope volontairement réduit pour ce système, à étendre plus tard si besoin.
+    Retourne (degats: int, multi_type: float, est_critique: bool)."""
+    pok_atk = formes_objets_module.pokemon_effectif(
+        obtenir_pokemon_par_nom(nom_atk), database.obtenir_objet_combat(combat_id, user_id, nom_atk)
+    )
+    pok_def = formes_objets_module.pokemon_effectif(
+        obtenir_pokemon_par_nom(nom_def), database.obtenir_objet_combat(combat_id, adversaire_id, nom_def)
+    )
+    types_atk = pok_atk["types"] if pok_atk else ["normal"]
+    types_def = pok_def["types"] if pok_def else ["normal"]
+    capacite_def = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
+
+    multi_type = calculer_multiplicateur_type([attaque["type"]], types_def)
+    if multi_type == 0.0:
+        return 0, 0.0, False
+
+    est_special = attaque.get("classe") == "special"
+    boosts_atk = database.obtenir_boosts(combat_id, user_id, nom_atk)
+    boosts_def = database.obtenir_boosts(combat_id, adversaire_id, nom_def)
+    stat_off = row_atk["atq_spe"] if est_special else row_atk["atq"]
+    stat_def = row_def["def_spe"] if est_special else row_def["defe"]
+    cle_boost_off = "atk_spe" if est_special else "atk"
+    cle_boost_def = "def_spe" if est_special else "def"
+
+    est_critique = random.random() < CHANCE_CRITIQUE
+    stage_off = max(0, boosts_atk[cle_boost_off]) if est_critique else boosts_atk[cle_boost_off]
+    stage_def = min(0, boosts_def[cle_boost_def]) if est_critique else boosts_def[cle_boost_def]
+    stat_off_boostee = max(1, stat_off * mult_stage(stage_off))
+    stat_def_boostee = max(1, stat_def * mult_stage(stage_def))
+
+    statut_atk = database.obtenir_statut(combat_id, user_id, nom_atk)
+    if statut_atk and statut_atk[0] == "burn" and not est_special and capacite_atk != "tenacite":
+        stat_off_boostee *= 0.5
+
+    stab = 1.5 if attaque["type"] in types_atk else 1.0
+    variance = random.uniform(0.85, 1.0)
+    bonus_badge = 1.0
+
+    meteo_active = database.obtenir_meteo(combat_id)
+    mult_meteo = 1.0
+    if meteo_active:
+        if meteo_active["type"] == "soleil":
+            mult_meteo = 1.5 if attaque["type"] == "feu" else (0.5 if attaque["type"] == "eau" else 1.0)
+        elif meteo_active["type"] == "pluie":
+            mult_meteo = 1.5 if attaque["type"] == "eau" else (0.5 if attaque["type"] == "feu" else 1.0)
+
+    mult_terrain = 1.0
+    terrain_actif = database.obtenir_terrain_zone(combat_id)
+    if terrain_actif and _est_au_sol(pok_atk, capacite_atk, combat_id):
+        info_terrain = TERRAIN_INFO[terrain_actif["type"]]
+        if attaque["type"] == info_terrain["type_associe"]:
+            mult_terrain = 1.3
+    if terrain_actif and terrain_actif["type"] == "herbu" and nom_atk in ATTAQUES_SEISME:
+        if _est_au_sol(pok_def, capacite_def, combat_id):
+            mult_terrain *= 0.5
+
+    mult_zone = 0.75 if nb_cibles_reelles > 1 else 1.0
+    mult_critique = 1.5 if est_critique else 1.0
+    mult_lance_boue = 0.5 if attaque["type"] == "electrik" and database.obtenir_effet_global(combat_id, "lance_boue") else 1.0
+
+    degats = max(1, round(
+        ((2 * row_atk["niveau"] / 5 + 2) * attaque["puissance"] * stat_off_boostee / stat_def_boostee / 50 + 2)
+        * multi_type * stab * variance * bonus_badge * mult_meteo * mult_terrain * mult_zone * mult_lance_boue * mult_critique
+    ))
+    return degats, multi_type, est_critique
+
+
+def mult_stage(stage: int) -> float:
+    """Multiplicateur officiel Pokémon pour un stage de stat (-6..+6)."""
+    return (2 + stage) / 2 if stage >= 0 else 2 / (2 - stage)
+
+
 XP_VICTOIRE = 80
 XP_DEFAITE = 30
 
@@ -120,78 +279,6 @@ def _bloc_reserve(equipe, actif_nom: str) -> str:
         else:
             morceaux.append(f"{row['pokemon_nom']} ({row['pv_actuels']})")
     return " • ".join(morceaux) if morceaux else "*Aucune réserve*"
-
-
-def construire_embeds_combat(combat_id: int, log_tour: list = None, noms: dict = None) -> list:
-    """Construit les embeds du combat : un par joueur (sprite animé du Pokémon actif,
-    barre de PV, réserve), plus un embed de log si un tour vient d'être résolu."""
-    combat = database.obtenir_combat(combat_id)
-    if combat is None:
-        return [discord.Embed(description="Combat introuvable.", color=discord.Color.red())]
-
-    embeds = []
-    couleurs = [discord.Color.blue(), discord.Color.red()]
-    cotes = [
-        (combat["joueur1_id"], combat["actif1_nom"], combat["action1"]),
-        (combat["joueur2_id"], combat["actif2_nom"], combat["action2"]),
-    ]
-
-    for (user_id, actif_nom, action), couleur in zip(cotes, couleurs):
-        equipe = database.obtenir_equipe_pvp(combat_id, user_id)
-        actif_row = next((r for r in equipe if r["pokemon_nom"] == actif_nom), None)
-        objet_actif = database.obtenir_objet_combat(combat_id, user_id, actif_nom)
-        pokemon = formes_objets_module.pokemon_effectif(obtenir_pokemon_par_nom(actif_nom), objet_actif)
-        nom_affiche = formes_objets_module.nom_affichage(actif_nom, objet_actif)
-
-        nom_joueur = noms.get(user_id) if noms else None
-        nom_joueur = nom_joueur or f"Joueur {str(user_id)[-4:]}"
-        statut = "✅ prêt" if action else "⏳ choisit..."
-
-        embed = discord.Embed(color=couleur)
-        embed.set_author(name=f"{nom_joueur} — {statut}")
-        if actif_row:
-            # Émoji de statut à côté du nom (🔥 brûlé, 💤 endormi...)
-            statut_actif = database.obtenir_statut(combat_id, user_id, actif_nom)
-            emoji_statut = f" {STATUTS_INFO[statut_actif[0]]['emoji']}" if statut_actif and statut_actif[0] in STATUTS_INFO else ""
-            embed.title = f"{nom_affiche}{emoji_statut}"
-
-            description = (
-                f"{_barre_pv(actif_row['pv_actuels'], actif_row['pv_max'])}\n"
-                f"❤️ **{actif_row['pv_actuels']} / {actif_row['pv_max']} PV**"
-            )
-            # Boosts de stats affichés s'ils sont non nuls (📊 Atq +1 • Déf Spé -2)
-            boosts = database.obtenir_boosts(combat_id, user_id, actif_nom)
-            morceaux_boosts = [
-                f"{label} {boosts[stat]:+d}"
-                for stat, label in (
-                    ("atk", "Atq"), ("def", "Déf"), ("atk_spe", "Atq Spé"), ("def_spe", "Déf Spé"), ("vit", "Vit")
-                )
-                if boosts[stat] != 0
-            ]
-            if morceaux_boosts:
-                description += f"\n📊 {' • '.join(morceaux_boosts)}"
-            embed.description = description
-        url_sprite = sprite_anime(pokemon)
-        if url_sprite:
-            embed.set_thumbnail(url=url_sprite)
-        embed.add_field(name="Réserve", value=_bloc_reserve(equipe, actif_nom), inline=False)
-        embeds.append(embed)
-
-    dernier = discord.Embed(color=discord.Color.dark_grey())
-    dernier.set_author(name=f"⚔️ Tour {combat['tour']}")
-    if log_tour:
-        # Limite Discord : 4096 caractères par description d'embed — un tour très bavard
-        # (multi-K.O., pièges, statuts...) pouvait dépasser et faire échouer l'édition du
-        # message (erreur 400), ce qui tuait la boucle de résolution. On tronque proprement.
-        texte_log = "\n".join(log_tour)
-        if len(texte_log) > 4000:
-            texte_log = texte_log[:4000] + "\n… *(log du tour tronqué)*"
-        dernier.description = texte_log
-    temps_restant = max(0, combat["date_limite_tour"] - int(time.time()))
-    dernier.set_footer(text=f"Tour résolu quand les deux joueurs ont joué, ou dans ~{temps_restant}s")
-    embeds.append(dernier)
-
-    return embeds
 
 
 def _texte_efficacite(multi: float) -> str:
@@ -302,14 +389,24 @@ async def lancer_combat_avec_equipes(
     conn.close()
 
     noms = {joueur1.id: joueur1.display_name, joueur2.id: joueur2.display_name}
-    embeds = construire_embeds_combat(combat_id, noms=noms)
     vue = VueActionCombat(combat_id, 1)
 
-    msg = await thread.send(
-        content=f"{joueur1.mention} {joueur2.mention} ⚔️ Le combat commence ! Choisissez votre action ci-dessous.",
-        embeds=embeds,
-        view=vue,
-    )
+    fichier_scene = _generer_fichier_scene_combat(combat_id, noms)
+    try:
+        msg = await thread.send(
+            content=f"{joueur1.mention} {joueur2.mention} ⚔️ Le combat commence ! Choisissez votre action ci-dessous.",
+            view=vue,
+            file=fichier_scene if fichier_scene else discord.utils.MISSING,
+        )
+    except discord.HTTPException as e:
+        # Ne doit JAMAIS laisser le fil silencieux — si l'envoi avec image échoue pour une
+        # raison quelconque, on retente sans image plutôt que de planter tout le lancement
+        # du combat sans aucun message visible (même filet de sécurité que dresseurs.py).
+        print(f"⚠️ Échec de l'envoi du message initial du combat {combat_id} avec image ({e}), nouvelle tentative sans image.")
+        msg = await thread.send(
+            content=f"{joueur1.mention} {joueur2.mention} ⚔️ Le combat commence ! Choisissez votre action ci-dessous.",
+            view=vue,
+        )
 
     bot.loop.create_task(boucle_resolution_tour(bot, combat_id, thread.id, msg.id, DUREE_TOUR))
     return combat_id
@@ -433,10 +530,12 @@ def _declencher_fouille_entree(combat_id: int, user_id: int, pokemon_nom: str, a
     log.append(f"  🔍 **{pokemon_nom}** (Fouille) — **{nom_actif_adv}** tient : {texte_objet}")
 
 
-def _generer_fichier_scene_combat(combat_id: int, noms: dict) -> discord.File | None:
-    """Génère l'image de la scène de combat (fond + sprites + PV) pour le tour en cours.
-    Retourne None si un souci purement visuel survient (sprite/fond introuvable) — ne doit
-    JAMAIS empêcher l'affichage du texte du combat, qui reste la source de vérité."""
+def _generer_fichier_scene_combat(combat_id: int, noms: dict, log_tour: list = None, type_combat: str = "dresseur") -> discord.File | None:
+    """Génère l'image de la scène de combat (fond + sprites + HUD complet : PV, statut,
+    boosts, équipe en Poké Balls, log du tour) pour le tour en cours. Retourne None si un
+    souci purement visuel survient (sprite/fond introuvable) — ne doit JAMAIS empêcher
+    l'affichage du texte du combat, qui reste la source de vérité en cas d'échec.
+    type_combat sélectionne le fond ("dresseur" par défaut, "arene" ou "repaire")."""
     try:
         combat = database.obtenir_combat(combat_id)
         if combat is None:
@@ -452,17 +551,32 @@ def _generer_fichier_scene_combat(combat_id: int, noms: dict) -> discord.File | 
             objet = database.obtenir_objet_combat(combat_id, user_id, nom_actif)
             pokemon = formes_objets_module.pokemon_effectif(obtenir_pokemon_par_nom(nom_actif), objet)
             nom_affiche = formes_objets_module.nom_affichage(nom_actif, objet)
-            return pokemon, nom_affiche, row["niveau"], row["pv_actuels"], row["pv_max"]
+            statut = database.obtenir_statut(combat_id, user_id, nom_actif)
+            code_statut = statut[0] if statut else None
+            boosts = database.obtenir_boosts(combat_id, user_id, nom_actif)
+            equipe_vivante = [r["pv_actuels"] > 0 for r in equipe]
+            return pokemon, nom_affiche, row["niveau"], row["pv_actuels"], row["pv_max"], code_statut, boosts, equipe_vivante
 
         infos_j1 = _infos_cote(j1, nom_actif_j1)
         infos_j2 = _infos_cote(j2, nom_actif_j2)
         if infos_j1 is None or infos_j2 is None:
             return None
 
+        meteo_active = database.obtenir_meteo(combat_id)
+        terrain_actif = database.obtenir_terrain_zone(combat_id)
+
+        log_precedent = database.obtenir_log_precedent(combat_id)
         png_bytes = combat_visuel.generer_image_combat(
-            infos_j1[0], infos_j1[1], infos_j1[2], infos_j1[3], infos_j1[4], False,
-            infos_j2[0], infos_j2[1], infos_j2[2], infos_j2[3], infos_j2[4], False,
+            infos_j1[0], infos_j1[1], infos_j1[2], infos_j1[3], infos_j1[4], False, infos_j1[5], infos_j1[6], infos_j1[7],
+            infos_j2[0], infos_j2[1], infos_j2[2], infos_j2[3], infos_j2[4], False, infos_j2[5], infos_j2[6], infos_j2[7],
+            log_tour=log_tour, noms=noms, tour=combat["tour"],
+            meteo_type=meteo_active["type"] if meteo_active else None,
+            terrain_type=terrain_actif["type"] if terrain_actif else None,
+            log_precedent=log_precedent, tour_precedent=combat["tour"] - 1 if log_precedent else None,
+            type_combat=type_combat,
         )
+        if log_tour:
+            database.definir_log_precedent(combat_id, log_tour)
         if png_bytes is None:
             return None
         return discord.File(io.BytesIO(png_bytes), filename="scene_combat.png")
@@ -529,6 +643,7 @@ async def resoudre_tour(combat_id: int) -> list:
             database.reinitialiser_charge(combat_id, user_id, ancien_nom)
             database.reinitialiser_verrouillage_choix(combat_id, user_id, ancien_nom)
             database.definir_furie(combat_id, user_id, ancien_nom, None)
+            database.retirer_requiem(combat_id, user_id, ancien_nom)  # Requiem : échappe au K.O. en changeant
             database.changer_pokemon_actif_pvp(combat_id, user_id, nouveau)
             log.append(f"<@{user_id}> rappelle **{ancien_nom}** et envoie **{nouveau}** !")
             _appliquer_hazards_entree(combat_id, user_id, nouveau, log)
@@ -579,6 +694,10 @@ async def resoudre_tour(combat_id: int) -> list:
         if statut_actuel and statut_actuel[0] == "paralysis":
             vitesse /= 2  # la paralysie ralentit
 
+        # Vent Arrière (écran d'équipe) : double la Vitesse de toute l'équipe protégée.
+        if database.obtenir_ecran(combat_id, database.equipe_cle_pour_joueur(combat_id, user_id), "vent_arriere"):
+            vitesse *= 2
+
         # Objet Choix : force à répéter la même attaque tant que ce Pokémon reste sur le
         # terrain — remplace silencieusement le choix du joueur par l'attaque déjà
         # verrouillée s'il y en a une (comme les vrais jeux, où le menu ne propose même
@@ -599,10 +718,21 @@ async def resoudre_tour(combat_id: int) -> list:
         if etat_furie:
             nom_attaque_demandee = etat_furie["attaque"]
 
+        # Distorsion (Trick Room) : inverse l'ordre normal des Vitesses (le plus lent
+        # agit en premier) — mais ne touche PAS les priorités spéciales ci-dessous
+        # (Mitra-Poing, Farceur...), qui dominent toujours grâce à leurs gros décalages.
+        if database.obtenir_effet_global(combat_id, "trick_room"):
+            vitesse = -vitesse
+
         # Priorité très basse (Mitra-Poing et consorts) : force ce Pokémon à agir en
         # dernier ce tour-ci, peu importe sa Vitesse réelle — comme la priorité -3 des
         # vrais jeux.
         vitesse_effective = vitesse - 1_000_000 if nom_attaque_demandee in ATTAQUES_PRIORITE_BASSE_ECHOUE_SI_TOUCHE else vitesse
+        # Priorité +1 "classique" (Vive-Attaque, Poing Éclair, Ombre Portée, Direct
+        # Toxik) — même palier que Farceur juste en dessous, agit systématiquement avant
+        # les attaques normales peu importe la Vitesse relative.
+        if nom_attaque_demandee in ATTAQUES_PRIORITE_POSITIVE:
+            vitesse_effective = vitesse + 1_000_000
         # Farceur : priorité +1 sur les attaques de statut (puissance absente/None).
         if nom_attaque_demandee and nom_attaque_demandee != NOM_LUTTE:
             attaque_pour_priorite = obtenir_attaque(nom_attaque_demandee)
@@ -730,6 +860,30 @@ async def resoudre_tour(combat_id: int) -> list:
             )
             continue
 
+        # Champ Psychique : bloque toute attaque à priorité positive ciblant un Pokémon
+        # au sol (Vol/Lévitation restent affectables normalement).
+        if nom_attaque in ATTAQUES_PRIORITE_POSITIVE:
+            terrain_pour_priorite = database.obtenir_terrain_zone(combat_id)
+            if terrain_pour_priorite and terrain_pour_priorite["type"] == "psychique":
+                pok_def_priorite = formes_objets_module.pokemon_effectif(
+                    obtenir_pokemon_par_nom(nom_def), database.obtenir_objet_combat(combat_id, adversaire_id, nom_def)
+                )
+                capacite_def_priorite = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
+                if _est_au_sol(pok_def_priorite, capacite_def_priorite, combat_id):
+                    log.append(
+                        f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... "
+                        f"mais le Champ Psychique protège **{nom_def}** !"
+                    )
+                    continue
+            # Tatamigaeshi (bouclier d'équipe, 1 tour) : bloque toute attaque prioritaire.
+            cle_def_tatami = database.equipe_cle_pour_joueur(combat_id, adversaire_id)
+            if database.obtenir_ecran(combat_id, cle_def_tatami, "tatamigaeshi"):
+                log.append(
+                    f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... "
+                    f"mais le Tatamigaeshi protège **{nom_def}** !"
+                )
+                continue
+
         # Test de précision — combine le stage de Précision de l'attaquant et le stage
         # d'Esquive du défenseur (table de ratio propre à Précision/Esquive, différente
         # des 5 autres stats). Regard Vif ignore l'Esquive du défenseur.
@@ -756,6 +910,10 @@ async def resoudre_tour(combat_id: int) -> list:
                 bool(statut_def_pour_esquive and statut_def_pour_esquive[0] == "confusion"),
             )
             precision_effective *= (1 - bonus_esquive)
+            # Gravité : x5/3 sur la précision de TOUTES les attaques (offensives comme
+            # les autres, tant qu'elles ont un champ "precision" défini).
+            if database.obtenir_effet_global(combat_id, "gravite"):
+                precision_effective *= 5 / 3
             if random.random() * 100 > precision_effective:
                 log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... mais rate !")
                 continue
@@ -771,6 +929,108 @@ async def resoudre_tour(combat_id: int) -> list:
                 database.definir_meteo(combat_id, meteo_declenchee, 5)
                 log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
                 log.append(f"  {METEO_INFO[meteo_declenchee]['emoji']} {METEO_INFO[meteo_declenchee]['texte_debut']}")
+            continue
+
+        # Terrain de zone (Champ Électrifié/Herbu/Brumeux/Psychique) : même principe que
+        # la météo ci-dessus, mais table indépendante (les deux peuvent être actifs
+        # simultanément, comme dans les vrais jeux).
+        terrain_declenche = ATTAQUES_TERRAIN_ZONE.get(nom_attaque)
+        if terrain_declenche:
+            terrain_actuel = database.obtenir_terrain_zone(combat_id)
+            if terrain_actuel and terrain_actuel["type"] == terrain_declenche:
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... mais ça n'a aucun effet !")
+            else:
+                database.definir_terrain_zone(combat_id, terrain_declenche, 5)
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+                log.append(f"  {TERRAIN_INFO[terrain_declenche]['emoji']} {TERRAIN_INFO[terrain_declenche]['texte_debut']}")
+            continue
+
+        # Écrans d'équipe (Reflet/Mur Lumière/Voile Aurore/Vent Arrière/Rune Protect) —
+        # Voile Aurore exige la Grêle active (comme dans les vrais jeux), sinon échoue.
+        info_ecran = ATTAQUES_ECRANS.get(nom_attaque)
+        if info_ecran:
+            type_ecran, duree_ecran = info_ecran
+            meteo_pour_voile = database.obtenir_meteo(combat_id)
+            if type_ecran == "voile_aurore" and not (meteo_pour_voile and meteo_pour_voile["type"] == "grele"):
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... mais ça n'a aucun effet !")
+                continue
+            equipe_cle = database.equipe_cle_pour_joueur(combat_id, user_id)
+            database.activer_ecran(combat_id, equipe_cle, type_ecran, duree_ecran)
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            log.append(f"  {ECRANS_INFO[type_ecran]['emoji']} L'équipe de <@{user_id}> {ECRANS_INFO[type_ecran]['texte_debut']}")
+            continue
+
+        # Brume : réinitialise tous les stages de stats de tout le combat (soi, allié,
+        # adversaires), effet instantané sans durée à suivre.
+        if nom_attaque == "Brume":
+            database.reinitialiser_boosts_combat(combat_id)
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            log.append("  🌫️ Tous les changements de stats sont annulés !")
+            continue
+
+        # Aromathérapie / Glas de Soin : guérit TOUTE l'équipe du lanceur (pas juste
+        # l'actif) — effet instantané, identique pour les deux attaques.
+        if nom_attaque in ("Aromathérapie", "Glas de Soin"):
+            nb_gueris = database.retirer_tous_statuts_joueur(combat_id, user_id)
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            if nb_gueris:
+                log.append(f"  💚 Toute l'équipe de <@{user_id}> est guérie de ses problèmes de statut !")
+            else:
+                log.append("  💚 Personne dans l'équipe n'avait de problème de statut.")
+            continue
+
+        # Fontaine de Vie : soigne 25% des PV max du lanceur ET de son allié (1v1 : juste
+        # le lanceur, il n'y a pas d'allié).
+        if nom_attaque == "Fontaine de Vie":
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            soin_fontaine = max(1, round(row_atk["pv_max"] * 0.25))
+            database.soigner_pvp(combat_id, user_id, nom_atk, soin_fontaine)
+            log.append(f"  💧 **{nom_atk}** récupère {soin_fontaine} PV !")
+            continue
+
+        # Effets globaux à durée (Distorsion/Zone Étrange/Zone Magique/Gravité) — voir
+        # EFFETS_GLOBAUX_INFO. Plusieurs peuvent être actifs en même temps.
+        info_effet_global = ATTAQUES_EFFETS_GLOBAUX.get(nom_attaque)
+        if info_effet_global:
+            type_effet, duree_effet = info_effet_global
+            if database.obtenir_effet_global(combat_id, type_effet):
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... mais ça n'a aucun effet !")
+            else:
+                database.activer_effet_global(combat_id, type_effet, duree_effet)
+                log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+                log.append(f"  {EFFETS_GLOBAUX_INFO[type_effet]['emoji']} {EFFETS_GLOBAUX_INFO[type_effet]['texte_debut']}")
+            continue
+
+        # Requiem (Chant du Trépas) : affecte TOUS les Pokémon actifs sur le terrain
+        # (soi compris), compte à rebours de 3 tours avant K.O. — sauf switch entre-temps.
+        if nom_attaque == "Requiem":
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            log.append("  🎵 Tous les Pokémon sur le terrain ayant entendu la chanson s'affaibliront dans 3 tours !")
+            database.definir_requiem(combat_id, user_id, nom_atk, 3)
+            combat_pour_requiem = database.obtenir_combat(combat_id)
+            autre_id = combat_pour_requiem["joueur2_id"] if user_id == combat_pour_requiem["joueur1_id"] else combat_pour_requiem["joueur1_id"]
+            autre_nom = combat_pour_requiem["actif2_nom"] if user_id == combat_pour_requiem["joueur1_id"] else combat_pour_requiem["actif1_nom"]
+            if autre_nom:
+                database.definir_requiem(combat_id, autre_id, autre_nom, 3)
+            continue
+
+        # Garde Florale : +1 Défense pour TOUS les Pokémon Plante actifs sur le terrain
+        # (les deux camps), effet instantané sans durée à suivre.
+        if nom_attaque == "Garde Florale":
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** !")
+            combat_pour_florale = database.obtenir_combat(combat_id)
+            nb_boostes = 0
+            for uid_florale, nom_florale in ((j1, combat_pour_florale["actif1_nom"]), (j2, combat_pour_florale["actif2_nom"])):
+                if not nom_florale:
+                    continue
+                pok_florale = obtenir_pokemon_par_nom(nom_florale)
+                if pok_florale and "plante" in pok_florale.get("types", []):
+                    database.modifier_boost(combat_id, uid_florale, nom_florale, "def", 1)
+                    nb_boostes += 1
+            if nb_boostes:
+                log.append(f"  🌸 {nb_boostes} Pokémon Plante sur le terrain voient leur Défense augmenter !")
+            else:
+                log.append("  🌸 Aucun Pokémon Plante sur le terrain pour en profiter.")
             continue
 
         if attaque.get("puissance"):
@@ -842,8 +1102,14 @@ async def resoudre_tour(combat_id: int) -> list:
             # spécial selon la classe de l'attaque), déjà calculées via IV + niveau réels
             # et stockées dans combat_equipe au début du combat.
             est_special = attaque.get("classe") == "special"
+            # Zone Étrange (Wonder Room) : la DÉFENSE utilisée est inversée pour tout le
+            # monde — une attaque physique tape la Défense Spéciale, et inversement.
+            wonder_room_actif = bool(database.obtenir_effet_global(combat_id, "wonder_room"))
             stat_off = row_atk["atq_spe"] if est_special else row_atk["atq"]
-            stat_def = row_def["def_spe"] if est_special else row_def["defe"]
+            if wonder_room_actif:
+                stat_def = row_def["defe"] if est_special else row_def["def_spe"]
+            else:
+                stat_def = row_def["def_spe"] if est_special else row_def["defe"]
 
             # La Brûlure divise par deux l'Attaque physique (pas l'Attaque Spéciale) — sauf
             # pour un Pokémon avec Ténacité, qui en est justement immunisé dans les vrais jeux.
@@ -855,7 +1121,7 @@ async def resoudre_tour(combat_id: int) -> list:
             # séparément ci-dessous) : ((2×niveau/5 + 2) × puissance × Atq/Déf / 50) + 2.
             variance = random.uniform(0.85, 1.15)
             cle_boost_off = "atk_spe" if est_special else "atk"
-            cle_boost_def = "def_spe" if est_special else "def"
+            cle_boost_def = ("def" if est_special else "def_spe") if wonder_room_actif else ("def_spe" if est_special else "def")
             objet_atk = database.obtenir_objet_combat(combat_id, user_id, nom_atk)
             mult_stat_choix = capacites_module.multiplicateur_stat_objet(objet_atk, cle_boost_off)
 
@@ -909,10 +1175,40 @@ async def resoudre_tour(combat_id: int) -> list:
                 capacite_atk, meteo_active["type"] if meteo_active else None, attaque["type"]
             )  # Force Sable
 
+            # Terrain de zone : +30% sur le type assorti, mais UNIQUEMENT si l'attaquant
+            # est au sol (Vol/Lévitation ignorent totalement le Terrain).
+            mult_terrain = 1.0
+            terrain_actif = database.obtenir_terrain_zone(combat_id)
+            if terrain_actif and _est_au_sol(pok_atk, capacite_atk, combat_id):
+                info_terrain = TERRAIN_INFO[terrain_actif["type"]]
+                if attaque["type"] == info_terrain["type_associe"]:
+                    mult_terrain = 1.3
+            # Champ Herbu : Séisme/Ampleur infligent moitié moins de dégâts à une cible au sol.
+            if terrain_actif and terrain_actif["type"] == "herbu" and nom_attaque in ATTAQUES_SEISME:
+                if _est_au_sol(pok_def, capacite_def, combat_id):
+                    mult_terrain *= 0.5
+
+            # Écrans d'équipe (Reflet/Mur Lumière/Voile Aurore) : -50% de dégâts subis
+            # par l'équipe protégée, mais ignorés en cas de coup critique (comme dans
+            # les vrais jeux — un critique perce toujours les écrans).
+            mult_ecran = 1.0
+            if not est_critique:
+                equipe_cle_def = database.equipe_cle_pour_joueur(combat_id, adversaire_id)
+                ecrans_def = database.obtenir_tous_ecrans_equipe(combat_id, equipe_cle_def)
+                if "voile_aurore" in ecrans_def:
+                    mult_ecran = 0.5
+                elif not est_special and "reflet" in ecrans_def:
+                    mult_ecran = 0.5
+                elif est_special and "voile_lumiere" in ecrans_def:
+                    mult_ecran = 0.5
+
             mult_critique = capacites_module.multiplicateur_degats_critique(capacite_atk) if est_critique else 1.0
+            # Lance-Boue : -50% sur les attaques Électrik, pour tout le monde (pas
+            # spécifique à une équipe, contrairement aux écrans ci-dessus).
+            mult_lance_boue = 0.5 if attaque["type"] == "electrik" and database.obtenir_effet_global(combat_id, "lance_boue") else 1.0
             degats = max(1, round(
                 ((2 * row_atk["niveau"] / 5 + 2) * attaque["puissance"] * stat_off_boostee / stat_def_boostee / 50 + 2)
-                * multi_type * stab * variance * bonus_badge * mult_talent_objet * mult_meteo * mult_critique
+                * multi_type * stab * variance * bonus_badge * mult_talent_objet * mult_meteo * mult_terrain * mult_ecran * mult_lance_boue * mult_critique
             ))
 
             # Ceinture Force (objet à usage unique, se consomme) OU Rustique (aptitude
@@ -1214,6 +1510,17 @@ async def resoudre_tour(combat_id: int) -> list:
             changements = attaque.get("stats", [])
             ailment = attaque.get("ailment")
 
+            # Prévention (bouclier d'équipe, 1 tour) : bloque toute attaque de statut
+            # visant l'adversaire — pas les attaques de statut sur soi-même.
+            if attaque.get("cible") == "adversaire":
+                cle_def_prevention = database.equipe_cle_pour_joueur(combat_id, adversaire_id)
+                if database.obtenir_ecran(combat_id, cle_def_prevention, "prevention"):
+                    log.append(
+                        f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... "
+                        f"mais la Prévention protège **{nom_def}** !"
+                    )
+                    continue
+
             # Éjection forcée de l'adversaire (Cyclone) : contrairement à Change Éclair/
             # Demi-Tour (l'ATTAQUANT choisit de partir), ici c'est la CIBLE qui est éjectée
             # sans son consentement, vers un remplaçant tiré AU HASARD parmi ses Pokémon
@@ -1365,6 +1672,51 @@ async def resoudre_tour(combat_id: int) -> list:
     meteo_qui_sexpire = database.decrementer_meteo(combat_id)
     if meteo_qui_sexpire:
         log.append(f"{METEO_INFO[meteo_qui_sexpire]['emoji']} {METEO_INFO[meteo_qui_sexpire]['texte_fin']}")
+
+    # --- Champ Herbu : soin de fin de tour (1/16 PV max) pour les Pokémon au sol ---
+    terrain_actif_fin_tour = database.obtenir_terrain_zone(combat_id)
+    if terrain_actif_fin_tour and terrain_actif_fin_tour["type"] == "herbu":
+        combat_herbu_snapshot = database.obtenir_combat(combat_id)
+        for user_id in (j1, j2):
+            nom_actif_h2 = combat_herbu_snapshot["actif1_nom"] if user_id == j1 else combat_herbu_snapshot["actif2_nom"]
+            eq_h2 = database.obtenir_equipe_pvp(combat_id, user_id)
+            actif_row_h2 = next((r for r in eq_h2 if r["pokemon_nom"] == nom_actif_h2), None)
+            if actif_row_h2 is None or actif_row_h2["pv_actuels"] <= 0 or actif_row_h2["pv_actuels"] >= actif_row_h2["pv_max"]:
+                continue
+            pok_h2 = formes_objets_module.pokemon_effectif(
+                obtenir_pokemon_par_nom(nom_actif_h2), database.obtenir_objet_combat(combat_id, user_id, nom_actif_h2)
+            )
+            if not _est_au_sol(pok_h2, database.obtenir_capacite_combat(combat_id, user_id, nom_actif_h2), combat_id):
+                continue
+            soin_herbu = max(1, round(actif_row_h2["pv_max"] / 16))
+            database.soigner_pvp(combat_id, user_id, nom_actif_h2, soin_herbu)
+            log.append(f"{TERRAIN_INFO['herbu']['emoji']} **{nom_actif_h2}** est soigné par le Champ Herbu : +{soin_herbu} PV")
+
+    terrain_qui_sexpire = database.decrementer_terrain_zone(combat_id)
+    if terrain_qui_sexpire:
+        log.append(f"{TERRAIN_INFO[terrain_qui_sexpire]['emoji']} {TERRAIN_INFO[terrain_qui_sexpire]['texte_fin']}")
+
+    # --- Écrans d'équipe : décompte de durée pour les DEUX camps (1v1 : chaque camp
+    # = 1 joueur, donc equipe_cle = str(j1) et str(j2) directement) ---
+    for user_id_ecran in (j1, j2):
+        for type_ecran_expire in database.decrementer_ecrans_equipe(combat_id, database.equipe_cle_pour_joueur(combat_id, user_id_ecran)):
+            log.append(f"{ECRANS_INFO[type_ecran_expire]['emoji']} {ECRANS_INFO[type_ecran_expire]['texte_fin'].format(equipe=f'<@{user_id_ecran}>')}")
+
+    # --- Effets globaux (Distorsion/Zone Étrange/Zone Magique/Gravité) : décompte ---
+    for type_effet_expire in database.decrementer_effets_globaux(combat_id):
+        log.append(f"{EFFETS_GLOBAUX_INFO[type_effet_expire]['emoji']} {EFFETS_GLOBAUX_INFO[type_effet_expire]['texte_fin']}")
+
+    # --- Requiem : compte à rebours pour les DEUX actifs (pas les Pokémon en réserve),
+    # K.O. direct de ceux qui atteignent 0 ---
+    combat_pour_requiem_fin = database.obtenir_combat(combat_id)
+    actifs_requiem = []
+    if combat_pour_requiem_fin["actif1_nom"]:
+        actifs_requiem.append((j1, combat_pour_requiem_fin["actif1_nom"]))
+    if combat_pour_requiem_fin["actif2_nom"]:
+        actifs_requiem.append((j2, combat_pour_requiem_fin["actif2_nom"]))
+    for user_id_requiem, nom_requiem in database.decrementer_requiem_actifs(combat_id, actifs_requiem):
+        database.appliquer_degats_pvp(combat_id, user_id_requiem, nom_requiem, 999999)
+        log.append(f"🎵 **{nom_requiem}** s'effondre, à bout de souffle... 💀 K.O. !")
 
     # --- Dégâts de fin de tour : brûlure et poison ---
     combat = database.obtenir_combat(combat_id)
@@ -1771,15 +2123,14 @@ async def _tick_resolution_pvp(bot, combat_id: int, thread_id: int, message_id: 
             j1: (bot.get_user(j1).display_name if bot.get_user(j1) else f"Joueur {str(j1)[-4:]}"),
             j2: (bot.get_user(j2).display_name if bot.get_user(j2) else f"Joueur {str(j2)[-4:]}"),
         }
-        embeds = construire_embeds_combat(combat_id, log_tour=log, noms=noms)
         vue = VueActionCombat(combat_id, nouveau_tour, avec_choix_ko=bool(database.obtenir_choix_ko(combat_id)))
-        fichier_scene = _generer_fichier_scene_combat(combat_id, noms)
+        fichier_scene = _generer_fichier_scene_combat(combat_id, noms, log_tour=log)
         try:
             msg = await thread.fetch_message(message_id)
             if fichier_scene:
-                await msg.edit(embeds=embeds, view=vue, attachments=[fichier_scene])
+                await msg.edit(embeds=[], view=vue, attachments=[fichier_scene])
             else:
-                await msg.edit(embeds=embeds, view=vue)
+                await msg.edit(embeds=[], view=vue)
         except discord.HTTPException:
             pass  # message disparu ou édition refusée : le prochain tick retentera
         return False

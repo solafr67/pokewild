@@ -82,6 +82,8 @@ from profil import (
     construire_embed_profil,
     construire_apercu_relacher,
     construire_embed_verrouillage,
+    construire_embed_favoris,
+    construire_embed_surnoms,
     effectuer_relacher_tous,
     fichier_avatar_fiable,
     url_avatar_fiable,
@@ -89,6 +91,8 @@ from profil import (
     VueOuvrirPokedex,
     VueProfil,
     VueVerrouillage,
+    VueFavoris,
+    VueSurnoms,
 )
 import pokedex as pokedex_module
 import capacites as capacites_module
@@ -411,7 +415,7 @@ async def envoyer_spawn(
     pc = calculer_pc_derive(pokemon, ivs, niveau)
 
     embed = construire_embed_spawn(pokemon, pc, niveau, force_shiny=force_shiny, duree_avant_disparition=config.DUREE_AVANT_DISPARITION)
-    vue = VueSpawn(pokemon, pc, niveau, ivs, force_shiny=force_shiny)
+    vue = VueSpawn(pokemon, pc, niveau, ivs, force_shiny=force_shiny, type_spawn=nom_channel)
     message = await channel.send(embed=embed, view=vue)
 
     # Suivi en base le temps que le spawn est affiché : sa vue n'étant pas persistante
@@ -605,9 +609,46 @@ async def boucle_verification_evenements():
             if channel:
                 embed = evenements_module.construire_embed_chasse_shiny_terminee(classement)
                 await _editer_ou_envoyer(channel, chasse.get("message_id"), embed)
+
+        # Capture Classée arrivées à échéance
+        for event in database.obtenir_events_capture_rarete_a_terminer():
+            classement = database.terminer_event_capture_rarete(event["id"])
+            channel = bot.get_channel(event["channel_annonce_id"]) if event["channel_annonce_id"] else None
+            if channel:
+                embed = evenements_module.construire_embed_capture_rarete_terminee(classement)
+                await _editer_ou_envoyer(channel, event.get("message_id"), embed)
     except Exception as e:
         print(f"⚠️ Erreur dans boucle_verification_evenements (la boucle continue) : {e}")
         journal.logger(f"🔴 Erreur dans `boucle_verification_evenements` : {e}")
+
+
+@tasks.loop(minutes=30)
+async def boucle_classement_capture_rarete():
+    """Édite le message d'annonce de l'event Capture Classée (s'il y en a un actif) avec
+    le classement à jour — indépendante de boucle_verification_evenements (toutes les
+    60s) car un rafraîchissement toutes les 30 min suffit largement et évite d'éditer le
+    message bien plus souvent que nécessaire."""
+    DERNIERE_ACTIVITE_BOUCLES["classement_capture_rarete"] = time.time()
+    try:
+        event = database.obtenir_event_capture_rarete_actif()
+        if event is None:
+            return
+        channel = bot.get_channel(event["channel_annonce_id"]) if event["channel_annonce_id"] else None
+        if channel is None or not event.get("message_id"):
+            return
+        classement = database.classement_event_capture_rarete_en_cours(event["id"])
+        minutes_totales = round((event["date_fin"] - event["date_debut"]) / 60)
+        embed = evenements_module.construire_embed_capture_rarete_classement(minutes_totales, classement)
+        try:
+            message = await channel.fetch_message(event["message_id"])
+            await message.edit(embed=embed)
+        except discord.NotFound:
+            pass  # message supprimé entre-temps : la prochaine passe de 30 min retentera
+        except discord.HTTPException:
+            pass
+    except Exception as e:
+        print(f"⚠️ Erreur dans boucle_classement_capture_rarete (la boucle continue) : {e}")
+        journal.logger(f"🔴 Erreur dans `boucle_classement_capture_rarete` : {e}")
 
 
 @tasks.loop(hours=24)
@@ -1386,6 +1427,9 @@ async def on_ready():
 
     if not boucle_verification_evenements.is_running():
         boucle_verification_evenements.start()
+
+    if not boucle_classement_capture_rarete.is_running():
+        boucle_classement_capture_rarete.start()
 
     await poster_message_pokestop_si_absent()
     await poster_message_boutique_si_absent()
@@ -2326,6 +2370,24 @@ async def verrouiller_pokemon(interaction: discord.Interaction):
         await interaction.response.send_message("Tu n'as aucun Pokémon à verrouiller !", ephemeral=True)
         return
     await interaction.response.send_message(embed=construire_embed_verrouillage(interaction.user.id), view=vue, ephemeral=True)
+
+
+@bot.tree.command(name="favoris", description="Épingle tes Pokémon préférés pour les retrouver vite dans tes listes")
+async def favoris_cmd(interaction: discord.Interaction):
+    vue = VueFavoris(interaction.user.id)
+    if not vue.toutes_captures:
+        await interaction.response.send_message("Tu n'as aucun Pokémon à épingler en favori !", ephemeral=True)
+        return
+    await interaction.response.send_message(embed=construire_embed_favoris(interaction.user.id), view=vue, ephemeral=True)
+
+
+@bot.tree.command(name="surnommer", description="Donne un surnom à un de tes Pokémon (pure personnalisation)")
+async def surnommer_cmd(interaction: discord.Interaction):
+    vue = VueSurnoms(interaction.user.id)
+    if not vue.toutes_captures:
+        await interaction.response.send_message("Tu n'as aucun Pokémon à surnommer !", ephemeral=True)
+        return
+    await interaction.response.send_message(embed=construire_embed_surnoms(interaction.user.id), view=vue, ephemeral=True)
 
 
 

@@ -518,7 +518,10 @@ class VueCaptureRaid(discord.ui.View):
             )
             return
 
-        taux = min(1.0, TAUX_CAPTURE[self.boss["rarete"]]["honorball"] * database.multiplicateur_boost(user_id, "capture"))
+        # Raid en solo (un seul participant du début à la fin) : taux de capture doublé
+        # pour récompenser la prise de risque de l'avoir fait seul plutôt qu'à plusieurs.
+        mult_solo = 2.0 if len(participants) == 1 else 1.0
+        taux = min(1.0, TAUX_CAPTURE[self.boss["rarete"]]["honorball"] * database.multiplicateur_boost(user_id, "capture") * mult_solo)
         reussite = random.random() < taux
 
         if not reussite:
