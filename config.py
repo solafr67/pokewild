@@ -614,7 +614,7 @@ MULTIPLICATEURS_REPETITION_JOUR_ECO = [1.0, 0.6, 0.35, 0.2]
 # Explorations). Un reroll REMPLACE la race actuelle — pas de stockage de races
 # "débloquées" à switcher librement. Système de pity : après PITY_SEUIL rerolls sans
 # obtenir au moins "rare", le prochain reroll est garanti rare ou mieux.
-POIDS_TIRAGE_RACE = {"commun": 50, "peu_commun": 28, "rare": 13, "hyper_rare": 6, "legendaire": 3}
+POIDS_TIRAGE_RACE = {"commun": 50, "peu_commun": 28, "rare": 13, "hyper_rare": 6, "legendaire": 3, "secrete": 0.3}
 PITY_SEUIL = 10
 
 # --- Centre des Explorations ---

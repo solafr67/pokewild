@@ -52,6 +52,15 @@ RACES = [
      "description": "Chaque capture devient une leçon magistrale."},
     {"nom": "Avatar de la Chance", "palier": "legendaire", "bonus": {"shiny": 1.00},
      "description": "La chance elle-même semble le suivre pas à pas."},
+
+    # --- Secrète : encore plus rare que Légendaire, jamais garantie par le pity (voir
+    # tirer_race ci-dessous) — un pur coup de chance au-dessus du plancher habituel. ---
+    {"nom": "Élu des Cieux", "palier": "secrete", "bonus": {"xp": 0.35, "argent": 0.35, "capture": 0.35, "shiny": 0.35},
+     "description": "Une légende parmi les légendes — son nom se murmure plus qu'il ne se raconte."},
+    {"nom": "Ombre Insaisissable", "palier": "secrete", "bonus": {"shiny": 1.75},
+     "description": "Certains doutent même de son existence — jusqu'à croiser un chromatique dans son sillage."},
+    {"nom": "Architecte du Hasard", "palier": "secrete", "bonus": {"capture": 0.75},
+     "description": "Aucune ball ne lui échappe — on dit qu'il réécrit le destin d'un lancer avant même qu'il ne parte."},
 ]
 
 RACES_PAR_NOM = {r["nom"]: r for r in RACES}

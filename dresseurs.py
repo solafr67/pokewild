@@ -158,12 +158,18 @@ def _niveau_moyen_equipe(user_id: int) -> int:
 def _niveau_pour_pc_cible(pokemon: dict, pc_cible: int, niveau_reference: int = 50) -> int:
     """Trouve le niveau dont le PC dérivé (stats réelles, IV neutres) se rapproche le plus
     de pc_cible — recherche binaire, calculer_pc_derive croît avec le niveau. Bornée à
-    ±10 niveaux autour de niveau_reference (le niveau moyen de l'équipe du joueur) : sans
-    ça, une espèce à faibles stats de base (Métamorphe...) grimperait jusqu'à un niveau
+    ±25% de niveau_reference (le niveau moyen de l'équipe du joueur), minimum ±3 niveaux :
+    sans ça, une espèce à faibles stats de base (Métamorphe...) grimperait jusqu'à un niveau
     délirant pour égaler la cible de PC, donnant un adversaire artificiellement plus
-    costaud niveau pour niveau que toute l'équipe du joueur."""
-    bas = max(1, niveau_reference - 10)
-    haut = min(100, niveau_reference + 10)
+    costaud niveau pour niveau que toute l'équipe du joueur. Une fenêtre PROPORTIONNELLE
+    (pas un ±10 fixe) évite qu'elle devienne énorme à bas niveau : à Nv.10, ±10 couvrait
+    1-20 (x20 d'écart!), ce qui pouvait faire qu'un Tiboudet (Vitesse base 45) surclasse
+    en vitesse EFFECTIVE un Xerneas (Vitesse base 99) simplement parce que l'un grimpait
+    au max de la fenêtre pendant que l'autre tombait au minimum — un pur effet de bord de
+    l'équilibrage par PC, pas un choix voulu."""
+    ecart = max(3, round(niveau_reference * 0.25))
+    bas = max(1, niveau_reference - ecart)
+    haut = min(100, niveau_reference + ecart)
     while bas < haut:
         milieu = (bas + haut) // 2
         if calculer_pc_derive(pokemon, IV_DEFAUT, milieu) < pc_cible:

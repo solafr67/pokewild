@@ -24,6 +24,7 @@ EMOJI_RARETE = {
     "rare": "🔵",
     "hyper_rare": "🟣",
     "legendaire": "🟡",
+    "secrete": "⚫",
 }
 
 # Couleur d'embed Discord par rareté
@@ -33,6 +34,7 @@ COULEUR_RARETE = {
     "rare": 0x3498DB,         # bleu
     "hyper_rare": 0x9B59B6,   # violet
     "legendaire": 0xF1C40F,   # or
+    "secrete": 0x8B0000,      # rouge sombre — délibérément à part des autres teintes
 }
 
 NOM_BALL_AFFICHAGE = {
