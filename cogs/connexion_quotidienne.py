@@ -52,7 +52,11 @@ class ConnexionQuotidienneCog(commands.Cog):
             )
         if streak < cq.PLAFOND_SERIE:
             recompense_demain = cq.calculer_recompense(streak + 1)
-            embed.set_footer(text=f"Demain (jour {streak + 1}) : {cq.texte_recompense(recompense_demain)}")
+            embed.add_field(
+                name=f"Demain (jour {streak + 1})",
+                value=cq.texte_recompense(recompense_demain),
+                inline=False,
+            )
         else:
             embed.set_footer(text="Palier maximum atteint — récompense fixe désormais, plus un bonus d'objet tous les 7 jours.")
 

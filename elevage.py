@@ -10,6 +10,7 @@ import niveaux_pokemon
 import leveling
 import quetes_ui
 import race_ui
+from pokedex import ORDRE_RARETE
 from pokemon_data import (
     EMOJI_BALLS,
     EMOJI_OBJETS_DIVERS,
@@ -19,6 +20,7 @@ from pokemon_data import (
     NOM_SOIN_AFFICHAGE,
     calculer_pc_derive,
     cle_tri_alphabetique_fr,
+    obtenir_pokemon_par_nom,
     sprite_pokemon,
     tirer_ivs,
     tirer_niveau_spawn,
@@ -188,21 +190,48 @@ def construire_embed_caisson(user_id: int) -> discord.Embed:
     return embed
 
 
-class VueCaissonCroissance(discord.ui.View):
-    """Dépôt (select paginé des espèces possédées non déjà dedans) + retrait
-    (un bouton par emplacement occupé, crédite l'XP accumulée immédiatement)."""
+OPTIONS_TRI_CAISSON = [
+    ("alphabetique", "Alphabétique"),
+    ("rarete", "Rareté"),
+    ("niveau_asc", "Niveau (croissant — les plus faibles d'abord)"),
+]
 
-    def __init__(self, user_id: int, page: int = 0):
+
+class VueCaissonCroissance(discord.ui.View):
+    """Dépôt (select paginé + recherche + tri des espèces possédées non déjà dedans)
+    + retrait (un bouton par emplacement occupé, crédite l'XP accumulée immédiatement)."""
+
+    def __init__(self, user_id: int, page: int = 0, tri: str = "alphabetique", recherche: str = None):
         super().__init__(timeout=180)
         self.user_id = user_id
         self.page = page
+        self.tri = tri
+        self.recherche = recherche
         self.caisson = database.obtenir_caisson(user_id)
         self._construire_composants()
 
     def _especes_eligibles(self) -> list:
         deja_dedans = {info["pokemon_nom"] for info in self.caisson.values() if info}
-        noms_possedes = {row["pokemon_nom"] for row in database.obtenir_pokedex_joueur(self.user_id)}
-        return sorted(noms_possedes - deja_dedans, key=cle_tri_alphabetique_fr)
+        noms_possedes = list({row["pokemon_nom"] for row in database.obtenir_pokedex_joueur(self.user_id)} - deja_dedans)
+
+        if self.recherche:
+            terme = cle_tri_alphabetique_fr(self.recherche)
+            noms_possedes = [nom for nom in noms_possedes if terme in cle_tri_alphabetique_fr(nom)]
+
+        if self.tri == "rarete":
+            def cle_rarete(nom):
+                p = obtenir_pokemon_par_nom(nom)
+                return (ORDRE_RARETE.get(p["rarete"], 99) if p else 99, cle_tri_alphabetique_fr(nom))
+            noms_possedes.sort(key=cle_rarete)
+        elif self.tri == "niveau_asc":
+            def cle_niveau(nom):
+                niveau, _xp = database.obtenir_niveau_pokemon(self.user_id, nom)
+                return (niveau, cle_tri_alphabetique_fr(nom))
+            noms_possedes.sort(key=cle_niveau)
+        else:
+            noms_possedes.sort(key=cle_tri_alphabetique_fr)
+
+        return noms_possedes
 
     def _construire_composants(self):
         self.clear_items()
@@ -210,28 +239,61 @@ class VueCaissonCroissance(discord.ui.View):
         slots_libres = any(info is None for info in self.caisson.values())
         especes = self._especes_eligibles() if slots_libres else []
 
-        if especes:
-            debut = self.page * ESPECES_PAR_PAGE_CAISSON
-            page_especes = especes[debut : debut + ESPECES_PAR_PAGE_CAISSON]
-            options = [discord.SelectOption(label=nom[:100], value=nom) for nom in page_especes]
-            select = discord.ui.Select(placeholder="Déposer un Pokémon possédé", options=options, row=0)
-            select.callback = self._on_deposer
-            self.add_item(select)
+        if slots_libres:
+            if especes:
+                debut = self.page * ESPECES_PAR_PAGE_CAISSON
+                page_especes = especes[debut : debut + ESPECES_PAR_PAGE_CAISSON]
+                options = [discord.SelectOption(label=nom[:100], value=nom) for nom in page_especes]
+                select = discord.ui.Select(placeholder="Déposer un Pokémon possédé", options=options, row=0)
+                select.callback = self._on_deposer
+                self.add_item(select)
+            # Aucun résultat pour la recherche en cours : pas de select vide, les
+            # boutons de recherche/tri/effacement restent quand même disponibles plus bas.
+
+            select_tri = discord.ui.Select(
+                placeholder="Trier par...",
+                options=[
+                    discord.SelectOption(label=libelle, value=valeur, default=(valeur == self.tri))
+                    for valeur, libelle in OPTIONS_TRI_CAISSON
+                ],
+                row=1,
+            )
+            select_tri.callback = self._on_select_tri
+            self.add_item(select_tri)
 
             nb_pages = max(1, (len(especes) + ESPECES_PAR_PAGE_CAISSON - 1) // ESPECES_PAR_PAGE_CAISSON)
             if nb_pages > 1:
-                bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=1, disabled=self.page == 0)
+                bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=2, disabled=self.page == 0)
                 bouton_prec.callback = self._page_prec
                 self.add_item(bouton_prec)
-                bouton_suiv = discord.ui.Button(label="▶", style=discord.ButtonStyle.secondary, row=1, disabled=self.page >= nb_pages - 1)
+                bouton_suiv = discord.ui.Button(label="▶", style=discord.ButtonStyle.secondary, row=2, disabled=self.page >= nb_pages - 1)
                 bouton_suiv.callback = self._page_suiv
                 self.add_item(bouton_suiv)
 
+            bouton_recherche = discord.ui.Button(
+                label=f"Recherche : {self.recherche}" if self.recherche else "Rechercher",
+                emoji="🔍",
+                style=discord.ButtonStyle.primary if self.recherche else discord.ButtonStyle.secondary,
+                row=2,
+            )
+            bouton_recherche.callback = self._on_rechercher
+            self.add_item(bouton_recherche)
+            if self.recherche:
+                bouton_effacer = discord.ui.Button(label="Effacer", emoji="❌", style=discord.ButtonStyle.secondary, row=2)
+                bouton_effacer.callback = self._on_effacer_recherche
+                self.add_item(bouton_effacer)
+
+        # Tous les boutons Retirer sur UNE SEULE ligne (jusqu'à 3, tient largement dans
+        # la limite de 5 par ligne) — sans ça, avec le select de tri + la pagination/
+        # recherche qui prennent maintenant les lignes 1 et 2, il ne resterait que les
+        # lignes 3 et 4 pour au plus 3 boutons Retirer, un par ligne comme avant : ça ne
+        # suffit plus (ancien bug de dépassement de ligne déjà corrigé une fois, cette
+        # fois-ci le regroupement sur une seule ligne évite le problème pour de bon).
         for slot, info in self.caisson.items():
             if info is not None:
                 bouton = discord.ui.Button(
                     label=f"Retirer {info['pokemon_nom']} (emplacement {slot})",
-                    emoji="📤", style=discord.ButtonStyle.success, row=1 + slot,
+                    emoji="📤", style=discord.ButtonStyle.success, row=3,
                 )
                 bouton.callback = self._faire_retirer(slot)
                 self.add_item(bouton)
@@ -283,6 +345,44 @@ class VueCaissonCroissance(discord.ui.View):
         self.page += 1
         self._construire_composants()
         await interaction.response.edit_message(view=self)
+
+    async def _on_select_tri(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.tri = interaction.data["values"][0]
+        self.page = 0
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+    async def _on_rechercher(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        await interaction.response.send_modal(ModalRechercheCaisson(self))
+
+    async def _on_effacer_recherche(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.recherche = None
+        self.page = 0
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+
+class ModalRechercheCaisson(discord.ui.Modal, title="Rechercher un Pokémon"):
+    recherche_input = discord.ui.TextInput(label="Nom (ou partie du nom)", placeholder="Ex : Rat", required=False)
+
+    def __init__(self, vue_parente: VueCaissonCroissance):
+        super().__init__()
+        self.vue_parente = vue_parente
+        self.recherche_input.default = vue_parente.recherche or ""
+
+    async def on_submit(self, interaction: discord.Interaction):
+        self.vue_parente.recherche = self.recherche_input.value.strip() or None
+        self.vue_parente.page = 0
+        self.vue_parente._construire_composants()
+        await interaction.response.edit_message(
+            embed=construire_embed_caisson(self.vue_parente.user_id), view=self.vue_parente
+        )
 
 
 class VueTransformateur(discord.ui.View):

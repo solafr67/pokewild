@@ -86,7 +86,11 @@ def construire_embed_role_vip(membre: discord.Member) -> discord.Embed:
     if deja_possede:
         embed.set_footer(text="Tu as déjà ce rôle !")
     else:
-        embed.set_footer(text=f"Ton solde actuel : {database.obtenir_poke_dollars(membre.id)} {EMOJI_POKEDOLLAR}")
+        embed.add_field(
+            name="Ton solde actuel",
+            value=f"{database.obtenir_poke_dollars(membre.id)} {EMOJI_POKEDOLLAR}",
+            inline=False,
+        )
     return embed
 
 
