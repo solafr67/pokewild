@@ -3,12 +3,25 @@ import io
 
 import discord
 
+import capacites as capacites_module
 import database
+import formes_objets as formes_objets_module
 import journal
 from pokedex import ORDRE_RARETE
-from pokemon_data import EMOJI_POKEDOLLAR, cle_tri_alphabetique_fr, obtenir_pokemon_par_nom
+from pokemon_data import (
+    EMOJI_BALLS,
+    EMOJI_OBJETS_DIVERS,
+    EMOJI_POKEDOLLAR,
+    EMOJI_SOINS,
+    NOM_BALL_AFFICHAGE,
+    NOM_OBJETS_DIVERS,
+    NOM_SOIN_AFFICHAGE,
+    cle_tri_alphabetique_fr,
+    obtenir_pokemon_par_nom,
+)
 
 CAPTURES_PAR_PAGE = 25
+OBJETS_PAR_PAGE = 20
 DELAI_SUPPRESSION_FIL = 120
 
 OPTIONS_TRI = [
@@ -18,6 +31,25 @@ OPTIONS_TRI = [
     ("pc_asc", "PC : faible → fort"),
     ("favoris", "Favoris d'abord"),
 ]
+
+
+def _noms_objets_echangeables() -> dict:
+    """Catalogue combiné {objet_cle: nom_affiche} — mêmes 3 familles que /equiper-objet
+    et /objets-disponibles (balls/soins/divers + objets tenus + objets de transformation),
+    puisque tous partagent la même table inventaire_balls et sont donc tous échangeables."""
+    return {
+        **NOM_BALL_AFFICHAGE, **NOM_SOIN_AFFICHAGE, **NOM_OBJETS_DIVERS,
+        **{cle: info["nom"] for cle, info in capacites_module.OBJETS_TENUS.items()},
+        **{cle: info["objet_nom"] for cle, info in formes_objets_module.FORMES_OBJETS.items()},
+    }
+
+
+def _emojis_objets_echangeables() -> dict:
+    return {
+        **EMOJI_BALLS, **EMOJI_SOINS, **EMOJI_OBJETS_DIVERS,
+        **{cle: info["emoji"] for cle, info in capacites_module.OBJETS_TENUS.items()},
+        **{cle: info["objet_emoji"] for cle, info in formes_objets_module.FORMES_OBJETS.items()},
+    }
 
 
 async def _programmer_suppression_fil(channel):
@@ -32,8 +64,9 @@ async def _programmer_suppression_fil(channel):
         pass
 
 
-def _ligne_offre(captures: list, pd: int) -> str:
-    if not captures and pd == 0:
+def _ligne_offre(captures: list, pd: int, objets: dict = None) -> str:
+    objets = objets or {}
+    if not captures and pd == 0 and not objets:
         return "*Rien proposé pour l'instant*"
     lignes = []
     for row in captures[:15]:
@@ -41,6 +74,11 @@ def _ligne_offre(captures: list, pd: int) -> str:
         lignes.append(f"• {row['pokemon_nom']}{shiny_txt} ({row['pc']} PC)")
     if len(captures) > 15:
         lignes.append(f"*... et {len(captures) - 15} autre(s)*")
+    if objets:
+        noms = _noms_objets_echangeables()
+        emojis = _emojis_objets_echangeables()
+        for cle, quantite in objets.items():
+            lignes.append(f"• {emojis.get(cle, '')} {quantite}× {noms.get(cle, cle)}")
     if pd > 0:
         lignes.append(f"{EMOJI_POKEDOLLAR} {pd} Poké Dollars")
     return "\n".join(lignes) if lignes else "*Rien proposé pour l'instant*"
@@ -55,6 +93,8 @@ async def construire_message_echange(echange_id: int, noms: dict):
 
     offre_j1 = database.obtenir_offre_echange(echange_id, echange["joueur1_id"])
     offre_j2 = database.obtenir_offre_echange(echange_id, echange["joueur2_id"])
+    objets_j1 = database.obtenir_objets_offre_echange(echange_id, echange["joueur1_id"])
+    objets_j2 = database.obtenir_objets_offre_echange(echange_id, echange["joueur2_id"])
 
     embed = discord.Embed(title="🔄 Échange en cours", color=discord.Color.blurple())
 
@@ -64,8 +104,8 @@ async def construire_message_echange(echange_id: int, noms: dict):
     nom_j1 = noms.get(echange["joueur1_id"], "Joueur 1")
     nom_j2 = noms.get(echange["joueur2_id"], "Joueur 2")
 
-    embed.add_field(name=f"{nom_j1} — {statut_j1}", value=_ligne_offre(offre_j1, echange["joueur1_pd"]), inline=True)
-    embed.add_field(name=f"{nom_j2} — {statut_j2}", value=_ligne_offre(offre_j2, echange["joueur2_pd"]), inline=True)
+    embed.add_field(name=f"{nom_j1} — {statut_j1}", value=_ligne_offre(offre_j1, echange["joueur1_pd"], objets_j1), inline=True)
+    embed.add_field(name=f"{nom_j2} — {statut_j2}", value=_ligne_offre(offre_j2, echange["joueur2_pd"], objets_j2), inline=True)
     embed.set_footer(text="Modifier son offre annule les deux validations — il faut revalider après tout changement.")
 
     fichier = None
@@ -522,6 +562,10 @@ class VueChoixOffre(discord.ui.View):
         bouton_pd.callback = self._on_definir_pd
         self.add_item(bouton_pd)
 
+        bouton_objets = discord.ui.Button(label="Objets", emoji="🎒", style=discord.ButtonStyle.secondary, row=3)
+        bouton_objets.callback = self._on_objets
+        self.add_item(bouton_objets)
+
         bouton_confirmer = discord.ui.Button(label="Confirmer cette offre", emoji="✅", style=discord.ButtonStyle.success, row=3)
         bouton_confirmer.callback = self._on_confirmer
         self.add_item(bouton_confirmer)
@@ -571,6 +615,15 @@ class VueChoixOffre(discord.ui.View):
             return
         await interaction.response.send_modal(ModalMontantPD(self))
 
+    async def _on_objets(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        vue = VueChoixObjets(self.echange_id, self.user_id)
+        if not vue.cles_disponibles:
+            await interaction.response.send_message("Tu n'as aucun objet à proposer dans ton sac.", ephemeral=True)
+            return
+        await interaction.response.send_message(vue._texte_recap(), view=vue, ephemeral=True)
+
     async def _on_rechercher(self, interaction: discord.Interaction):
         if not await self._verifier(interaction):
             return
@@ -595,6 +648,143 @@ class VueChoixOffre(discord.ui.View):
             view=None,
         )
         await _rafraichir_message_principal(interaction.client, self.echange_id)
+
+
+class VueChoixObjets(discord.ui.View):
+    """Sélection des objets du sac à proposer, avec quantité par objet — même principe que
+    VueChoixOffre pour les Pokémon, mais chaque objet nécessite une quantité (via modal),
+    contrairement à une capture qui est une unité indivisible."""
+
+    def __init__(self, echange_id: int, user_id: int, page: int = 0):
+        super().__init__(timeout=180)
+        self.echange_id = echange_id
+        self.user_id = user_id
+        self.page = page
+
+        self.inventaire = database.obtenir_inventaire_balls(user_id)
+        self.objets = database.obtenir_objets_offre_echange(echange_id, user_id)
+        self.cles_disponibles = sorted(
+            (cle for cle, quantite in self.inventaire.items() if quantite > 0),
+            key=lambda cle: cle_tri_alphabetique_fr(_noms_objets_echangeables().get(cle, cle)),
+        )
+        self._construire_composants()
+
+    def _texte_recap(self) -> str:
+        if not self.objets:
+            return "🎒 Choisis les objets à proposer dans ton sac. Rien sélectionné pour l'instant."
+        noms = _noms_objets_echangeables()
+        emojis = _emojis_objets_echangeables()
+        lignes = [f"• {emojis.get(cle, '')} {quantite}× {noms.get(cle, cle)}" for cle, quantite in self.objets.items()]
+        return "🎒 Objets actuellement sélectionnés :\n" + "\n".join(lignes)
+
+    def _construire_composants(self):
+        self.clear_items()
+        noms = _noms_objets_echangeables()
+        debut = self.page * OBJETS_PAR_PAGE
+        page_cles = self.cles_disponibles[debut : debut + OBJETS_PAR_PAGE]
+
+        options = []
+        for cle in page_cles:
+            nom = noms.get(cle, cle)
+            possede = self.inventaire.get(cle, 0)
+            deja_propose = self.objets.get(cle, 0)
+            suffixe = f" — {deja_propose} déjà proposé(s)" if deja_propose else ""
+            options.append(
+                discord.SelectOption(label=f"{nom} (x{possede} en stock){suffixe}"[:100], value=cle)
+            )
+
+        if options:
+            select = discord.ui.Select(placeholder="Choisis un objet à ajouter ou modifier", options=options, row=0)
+            select.callback = self._on_select_objet
+            self.add_item(select)
+
+        nb_pages = max(1, (len(self.cles_disponibles) + OBJETS_PAR_PAGE - 1) // OBJETS_PAR_PAGE)
+        if nb_pages > 1:
+            bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=1, disabled=self.page == 0)
+            bouton_prec.callback = self._page_prec
+            self.add_item(bouton_prec)
+            bouton_suiv = discord.ui.Button(label="▶", style=discord.ButtonStyle.secondary, row=1, disabled=self.page >= nb_pages - 1)
+            bouton_suiv.callback = self._page_suiv
+            self.add_item(bouton_suiv)
+
+        bouton_confirmer = discord.ui.Button(label="Confirmer ces objets", emoji="✅", style=discord.ButtonStyle.success, row=2)
+        bouton_confirmer.callback = self._on_confirmer
+        self.add_item(bouton_confirmer)
+
+    async def _verifier(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ton offre !", ephemeral=True)
+            return False
+        return True
+
+    async def _on_select_objet(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        cle = interaction.data["values"][0]
+        nom = _noms_objets_echangeables().get(cle, cle)
+        await interaction.response.send_modal(
+            ModalQuantiteObjet(self, cle, nom, self.inventaire.get(cle, 0), self.objets.get(cle, 0))
+        )
+
+    async def _page_prec(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.page = max(0, self.page - 1)
+        self._construire_composants()
+        await interaction.response.edit_message(content=self._texte_recap(), view=self)
+
+    async def _page_suiv(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.page += 1
+        self._construire_composants()
+        await interaction.response.edit_message(content=self._texte_recap(), view=self)
+
+    async def _on_confirmer(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        database.definir_objets_offre_echange(self.echange_id, self.user_id, self.objets)
+        total = sum(self.objets.values())
+        await interaction.response.edit_message(
+            content=f"✅ Offre d'objets mise à jour : {total} objet(s) au total. Retourne dans le fil !",
+            view=None,
+        )
+        await _rafraichir_message_principal(interaction.client, self.echange_id)
+
+
+class ModalQuantiteObjet(discord.ui.Modal, title="Quantité à échanger"):
+    def __init__(self, vue_parent: VueChoixObjets, objet_cle: str, nom_affiche: str, max_quantite: int, quantite_actuelle: int):
+        super().__init__()
+        self.vue_parent = vue_parent
+        self.objet_cle = objet_cle
+        self.max_quantite = max_quantite
+        self.champ = discord.ui.TextInput(
+            label=f"{nom_affiche} (tu en as {max_quantite})"[:45],
+            placeholder=f"Un nombre entre 0 et {max_quantite} — 0 retire l'objet de l'offre",
+            default=str(quantite_actuelle) if quantite_actuelle else None,
+            required=True,
+            max_length=6,
+        )
+        self.add_item(self.champ)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            quantite = int(self.champ.value)
+        except ValueError:
+            await interaction.response.send_message("❌ Merci d'entrer un nombre entier.", ephemeral=True)
+            return
+        if quantite < 0 or quantite > self.max_quantite:
+            await interaction.response.send_message(
+                f"❌ Quantité invalide — choisis un nombre entre 0 et {self.max_quantite}.", ephemeral=True
+            )
+            return
+
+        if quantite == 0:
+            self.vue_parent.objets.pop(self.objet_cle, None)
+        else:
+            self.vue_parent.objets[self.objet_cle] = quantite
+        self.vue_parent._construire_composants()
+        await interaction.response.edit_message(content=self.vue_parent._texte_recap(), view=self.vue_parent)
 
 
 class ModalRechercheOffre(discord.ui.Modal, title="Rechercher un Pokémon"):

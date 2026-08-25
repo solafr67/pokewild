@@ -1,0 +1,1362 @@
+{
+  "Bulbizarre": {
+    "evolue_vers": "Herbizarre",
+    "niveau": 16
+  },
+  "Herbizarre": {
+    "evolue_vers": "Florizarre",
+    "niveau": 32
+  },
+  "Salamèche": {
+    "evolue_vers": "Reptincel",
+    "niveau": 16
+  },
+  "Reptincel": {
+    "evolue_vers": "Dracaufeu",
+    "niveau": 36
+  },
+  "Carapuce": {
+    "evolue_vers": "Carabaffe",
+    "niveau": 16
+  },
+  "Carabaffe": {
+    "evolue_vers": "Tortank",
+    "niveau": 36
+  },
+  "Chenipan": {
+    "evolue_vers": "Chrysacier",
+    "niveau": 7
+  },
+  "Chrysacier": {
+    "evolue_vers": "Papilusion",
+    "niveau": 10
+  },
+  "Aspicot": {
+    "evolue_vers": "Coconfort",
+    "niveau": 7
+  },
+  "Coconfort": {
+    "evolue_vers": "Dardargnan",
+    "niveau": 10
+  },
+  "Roucool": {
+    "evolue_vers": "Roucoups",
+    "niveau": 18
+  },
+  "Roucoups": {
+    "evolue_vers": "Roucarnage",
+    "niveau": 36
+  },
+  "Rattata d'Alola": {
+    "evolue_vers": "Rattatac d'Alola",
+    "niveau": 20
+  },
+  "Piafabec": {
+    "evolue_vers": "Rapasdepic",
+    "niveau": 20
+  },
+  "Abo": {
+    "evolue_vers": "Arbok",
+    "niveau": 22
+  },
+  "Sabelette d'Alola": {
+    "evolue_vers": "Sablaireau d'Alola",
+    "niveau": 22
+  },
+  "Nidoran♀": {
+    "evolue_vers": "Nidorina",
+    "niveau": 16
+  },
+  "Nidoran♂": {
+    "evolue_vers": "Nidorino",
+    "niveau": 16
+  },
+  "Nosferapti": {
+    "evolue_vers": "Nosferalto",
+    "niveau": 22
+  },
+  "Mystherbe": {
+    "evolue_vers": "Ortide",
+    "niveau": 21
+  },
+  "Paras": {
+    "evolue_vers": "Parasect",
+    "niveau": 24
+  },
+  "Mimitoss": {
+    "evolue_vers": "Aéromite",
+    "niveau": 31
+  },
+  "Taupiqueur d'Alola": {
+    "evolue_vers": "Triopikeur d'Alola",
+    "niveau": 26
+  },
+  "Miaouss de Galar": {
+    "evolue_vers": "Berserkatt",
+    "niveau": 28
+  },
+  "Psykokwak": {
+    "evolue_vers": "Akwakwak",
+    "niveau": 33
+  },
+  "Férosinge": {
+    "evolue_vers": "Colossinge",
+    "niveau": 28
+  },
+  "Ptitard": {
+    "evolue_vers": "Têtarte",
+    "niveau": 25
+  },
+  "Abra": {
+    "evolue_vers": "Kadabra",
+    "niveau": 16
+  },
+  "Machoc": {
+    "evolue_vers": "Machopeur",
+    "niveau": 28
+  },
+  "Chétiflor": {
+    "evolue_vers": "Boustiflor",
+    "niveau": 21
+  },
+  "Tentacool": {
+    "evolue_vers": "Tentacruel",
+    "niveau": 30
+  },
+  "Racaillou d'Alola": {
+    "evolue_vers": "Gravalanch d'Alola",
+    "niveau": 25
+  },
+  "Ponyta de Galar": {
+    "evolue_vers": "Galopa de Galar",
+    "niveau": 40
+  },
+  "Ramoloss de Galar": {
+    "evolue_vers": "Flagadoss de Galar",
+    "niveau": 37
+  },
+  "Magnéti": {
+    "evolue_vers": "Magnéton",
+    "niveau": 30
+  },
+  "Doduo": {
+    "evolue_vers": "Dodrio",
+    "niveau": 31
+  },
+  "Otaria": {
+    "evolue_vers": "Lamantine",
+    "niveau": 34
+  },
+  "Tadmorv d'Alola": {
+    "evolue_vers": "Grotadmorv d'Alola",
+    "niveau": 38
+  },
+  "Fantominus": {
+    "evolue_vers": "Spectrum",
+    "niveau": 25
+  },
+  "Soporifik": {
+    "evolue_vers": "Hypnomade",
+    "niveau": 26
+  },
+  "Krabby": {
+    "evolue_vers": "Krabboss",
+    "niveau": 28
+  },
+  "Voltorbe d'Hisui": {
+    "evolue_vers": "Électrode d'Hisui",
+    "niveau": 30
+  },
+  "Osselait": {
+    "evolue_vers": "Ossatueur d'Alola",
+    "niveau": 28
+  },
+  "Debugant": {
+    "evolue_vers": "Kapoera",
+    "niveau": 20
+  },
+  "Smogo": {
+    "evolue_vers": "Smogogo de Galar",
+    "niveau": 35
+  },
+  "Rhinocorne": {
+    "evolue_vers": "Rhinoféros",
+    "niveau": 42
+  },
+  "Hypotrempe": {
+    "evolue_vers": "Hypocéan",
+    "niveau": 32
+  },
+  "Poissirène": {
+    "evolue_vers": "Poissoroy",
+    "niveau": 33
+  },
+  "Lippouti": {
+    "evolue_vers": "Lippoutou",
+    "niveau": 30
+  },
+  "Élekid": {
+    "evolue_vers": "Élektek",
+    "niveau": 30
+  },
+  "Magby": {
+    "evolue_vers": "Magmar",
+    "niveau": 30
+  },
+  "Magicarpe": {
+    "evolue_vers": "Léviator",
+    "niveau": 20
+  },
+  "Amonita": {
+    "evolue_vers": "Amonistar",
+    "niveau": 40
+  },
+  "Kabuto": {
+    "evolue_vers": "Kabutops",
+    "niveau": 40
+  },
+  "Minidraco": {
+    "evolue_vers": "Draco",
+    "niveau": 30
+  },
+  "Draco": {
+    "evolue_vers": "Dracolosse",
+    "niveau": 55
+  },
+  "Germignon": {
+    "evolue_vers": "Macronium",
+    "niveau": 16
+  },
+  "Macronium": {
+    "evolue_vers": "Méganium",
+    "niveau": 32
+  },
+  "Héricendre": {
+    "evolue_vers": "Feurisson",
+    "niveau": 17
+  },
+  "Feurisson": {
+    "evolue_vers": "Typhlosion d'Hisui",
+    "niveau": 36
+  },
+  "Kaiminus": {
+    "evolue_vers": "Crocrodil",
+    "niveau": 18
+  },
+  "Crocrodil": {
+    "evolue_vers": "Aligatueur",
+    "niveau": 30
+  },
+  "Fouinette": {
+    "evolue_vers": "Fouinar",
+    "niveau": 15
+  },
+  "Hoothoot": {
+    "evolue_vers": "Noarfang",
+    "niveau": 20
+  },
+  "Coxy": {
+    "evolue_vers": "Coxyclaque",
+    "niveau": 18
+  },
+  "Mimigal": {
+    "evolue_vers": "Migalos",
+    "niveau": 22
+  },
+  "Loupio": {
+    "evolue_vers": "Lanturn",
+    "niveau": 27
+  },
+  "Natu": {
+    "evolue_vers": "Xatu",
+    "niveau": 25
+  },
+  "Wattouat": {
+    "evolue_vers": "Lainergie",
+    "niveau": 15
+  },
+  "Lainergie": {
+    "evolue_vers": "Pharamp",
+    "niveau": 30
+  },
+  "Marill": {
+    "evolue_vers": "Azumarill",
+    "niveau": 18
+  },
+  "Granivol": {
+    "evolue_vers": "Floravol",
+    "niveau": 18
+  },
+  "Floravol": {
+    "evolue_vers": "Cotovol",
+    "niveau": 27
+  },
+  "Axoloto de Paldea": {
+    "evolue_vers": "Terraiste",
+    "niveau": 20
+  },
+  "Okéoké": {
+    "evolue_vers": "Qulbutoké",
+    "niveau": 15
+  },
+  "Pomdepik": {
+    "evolue_vers": "Foretress",
+    "niveau": 31
+  },
+  "Snubbull": {
+    "evolue_vers": "Granbull",
+    "niveau": 23
+  },
+  "Teddiursa": {
+    "evolue_vers": "Ursaring",
+    "niveau": 30
+  },
+  "Limagma": {
+    "evolue_vers": "Volcaropod",
+    "niveau": 38
+  },
+  "Marcacrin": {
+    "evolue_vers": "Cochignon",
+    "niveau": 33
+  },
+  "Rémoraid": {
+    "evolue_vers": "Octillery",
+    "niveau": 25
+  },
+  "Malosse": {
+    "evolue_vers": "Démolosse",
+    "niveau": 24
+  },
+  "Phanpy": {
+    "evolue_vers": "Donphan",
+    "niveau": 25
+  },
+  "Embrylex": {
+    "evolue_vers": "Ymphect",
+    "niveau": 30
+  },
+  "Ymphect": {
+    "evolue_vers": "Tyranocif",
+    "niveau": 55
+  },
+  "Arcko": {
+    "evolue_vers": "Massko",
+    "niveau": 16
+  },
+  "Massko": {
+    "evolue_vers": "Jungko",
+    "niveau": 36
+  },
+  "Poussifeu": {
+    "evolue_vers": "Galifeu",
+    "niveau": 16
+  },
+  "Galifeu": {
+    "evolue_vers": "Braségali",
+    "niveau": 36
+  },
+  "Gobou": {
+    "evolue_vers": "Flobio",
+    "niveau": 16
+  },
+  "Flobio": {
+    "evolue_vers": "Laggron",
+    "niveau": 36
+  },
+  "Medhyèna": {
+    "evolue_vers": "Grahyèna",
+    "niveau": 18
+  },
+  "Zigzaton de Galar": {
+    "evolue_vers": "Linéon de Galar",
+    "niveau": 20
+  },
+  "Chenipotte": {
+    "evolue_vers": "Blindalys",
+    "niveau": 7
+  },
+  "Armulys": {
+    "evolue_vers": "Charmillon",
+    "niveau": 10
+  },
+  "Blindalys": {
+    "evolue_vers": "Papinox",
+    "niveau": 10
+  },
+  "Nénupiot": {
+    "evolue_vers": "Lombre",
+    "niveau": 14
+  },
+  "Grainipiot": {
+    "evolue_vers": "Pifeuil",
+    "niveau": 14
+  },
+  "Nirondelle": {
+    "evolue_vers": "Hélédelle",
+    "niveau": 22
+  },
+  "Goélise": {
+    "evolue_vers": "Bekipan",
+    "niveau": 25
+  },
+  "Tarsal": {
+    "evolue_vers": "Kirlia",
+    "niveau": 20
+  },
+  "Kirlia": {
+    "evolue_vers": "Gardevoir",
+    "niveau": 30
+  },
+  "Arakdo": {
+    "evolue_vers": "Maskadra",
+    "niveau": 22
+  },
+  "Balignon": {
+    "evolue_vers": "Chapignon",
+    "niveau": 23
+  },
+  "Parecool": {
+    "evolue_vers": "Vigoroth",
+    "niveau": 18
+  },
+  "Vigoroth": {
+    "evolue_vers": "Monaflèmit",
+    "niveau": 36
+  },
+  "Ningale": {
+    "evolue_vers": "Ninjask",
+    "niveau": 20
+  },
+  "Chuchmur": {
+    "evolue_vers": "Ramboum",
+    "niveau": 20
+  },
+  "Ramboum": {
+    "evolue_vers": "Brouhabam",
+    "niveau": 40
+  },
+  "Makuhita": {
+    "evolue_vers": "Hariyama",
+    "niveau": 24
+  },
+  "Galekid": {
+    "evolue_vers": "Galegon",
+    "niveau": 32
+  },
+  "Galegon": {
+    "evolue_vers": "Galeking",
+    "niveau": 42
+  },
+  "Méditikka": {
+    "evolue_vers": "Charmina",
+    "niveau": 37
+  },
+  "Dynavolt": {
+    "evolue_vers": "Élecsprint",
+    "niveau": 26
+  },
+  "Gloupti": {
+    "evolue_vers": "Avaltout",
+    "niveau": 26
+  },
+  "Carvanha": {
+    "evolue_vers": "Sharpedo",
+    "niveau": 30
+  },
+  "Wailmer": {
+    "evolue_vers": "Wailord",
+    "niveau": 40
+  },
+  "Chamallot": {
+    "evolue_vers": "Camérupt",
+    "niveau": 33
+  },
+  "Spoink": {
+    "evolue_vers": "Groret",
+    "niveau": 32
+  },
+  "Kraknoix": {
+    "evolue_vers": "Vibraninf",
+    "niveau": 35
+  },
+  "Vibraninf": {
+    "evolue_vers": "Libégon",
+    "niveau": 45
+  },
+  "Cacnea": {
+    "evolue_vers": "Cacturne",
+    "niveau": 32
+  },
+  "Tylton": {
+    "evolue_vers": "Altaria",
+    "niveau": 35
+  },
+  "Barloche": {
+    "evolue_vers": "Barbicha",
+    "niveau": 30
+  },
+  "Écrapince": {
+    "evolue_vers": "Colhomard",
+    "niveau": 30
+  },
+  "Balbuto": {
+    "evolue_vers": "Kaorine",
+    "niveau": 36
+  },
+  "Lilia": {
+    "evolue_vers": "Vacilys",
+    "niveau": 40
+  },
+  "Anorith": {
+    "evolue_vers": "Armaldo",
+    "niveau": 40
+  },
+  "Polichombr": {
+    "evolue_vers": "Branette",
+    "niveau": 37
+  },
+  "Skelénox": {
+    "evolue_vers": "Téraclope",
+    "niveau": 37
+  },
+  "Stalgamin": {
+    "evolue_vers": "Oniglali",
+    "niveau": 42
+  },
+  "Obalie": {
+    "evolue_vers": "Phogleur",
+    "niveau": 32
+  },
+  "Phogleur": {
+    "evolue_vers": "Kaimorse",
+    "niveau": 44
+  },
+  "Draby": {
+    "evolue_vers": "Drackhaus",
+    "niveau": 30
+  },
+  "Drackhaus": {
+    "evolue_vers": "Drattak",
+    "niveau": 50
+  },
+  "Terhal": {
+    "evolue_vers": "Métang",
+    "niveau": 20
+  },
+  "Métang": {
+    "evolue_vers": "Métalosse",
+    "niveau": 45
+  },
+  "Tortipouss": {
+    "evolue_vers": "Boskara",
+    "niveau": 18
+  },
+  "Boskara": {
+    "evolue_vers": "Torterra",
+    "niveau": 32
+  },
+  "Ouisticram": {
+    "evolue_vers": "Chimpenfeu",
+    "niveau": 14
+  },
+  "Chimpenfeu": {
+    "evolue_vers": "Simiabraz",
+    "niveau": 36
+  },
+  "Tiplouf": {
+    "evolue_vers": "Prinplouf",
+    "niveau": 16
+  },
+  "Prinplouf": {
+    "evolue_vers": "Pingoléon",
+    "niveau": 36
+  },
+  "Étourmi": {
+    "evolue_vers": "Étourvol",
+    "niveau": 14
+  },
+  "Étourvol": {
+    "evolue_vers": "Étouraptor",
+    "niveau": 34
+  },
+  "Keunotor": {
+    "evolue_vers": "Castorno",
+    "niveau": 15
+  },
+  "Crikzik": {
+    "evolue_vers": "Mélokrik",
+    "niveau": 10
+  },
+  "Lixy": {
+    "evolue_vers": "Luxio",
+    "niveau": 15
+  },
+  "Luxio": {
+    "evolue_vers": "Luxray",
+    "niveau": 30
+  },
+  "Kranidos": {
+    "evolue_vers": "Charkos",
+    "niveau": 30
+  },
+  "Dinoclier": {
+    "evolue_vers": "Bastiodon",
+    "niveau": 30
+  },
+  "Cheniti": {
+    "evolue_vers": "Papilord",
+    "niveau": 20
+  },
+  "Apitrini": {
+    "evolue_vers": "Apireine",
+    "niveau": 21
+  },
+  "Mustébouée": {
+    "evolue_vers": "Mustéflott",
+    "niveau": 26
+  },
+  "Ceribou": {
+    "evolue_vers": "Ceriflor",
+    "niveau": 25
+  },
+  "Sancoki": {
+    "evolue_vers": "Tritosor",
+    "niveau": 30
+  },
+  "Baudrive": {
+    "evolue_vers": "Grodrive",
+    "niveau": 28
+  },
+  "Chaglam": {
+    "evolue_vers": "Chaffreux",
+    "niveau": 38
+  },
+  "Moufouette": {
+    "evolue_vers": "Moufflair",
+    "niveau": 34
+  },
+  "Archéomire": {
+    "evolue_vers": "Archéodong",
+    "niveau": 33
+  },
+  "Griknot": {
+    "evolue_vers": "Carmache",
+    "niveau": 24
+  },
+  "Carmache": {
+    "evolue_vers": "Carchacrok",
+    "niveau": 48
+  },
+  "Hippopotas": {
+    "evolue_vers": "Hippodocus",
+    "niveau": 34
+  },
+  "Rapion": {
+    "evolue_vers": "Drascore",
+    "niveau": 40
+  },
+  "Cradopaud": {
+    "evolue_vers": "Coatox",
+    "niveau": 37
+  },
+  "Écayon": {
+    "evolue_vers": "Luminéon",
+    "niveau": 31
+  },
+  "Blizzi": {
+    "evolue_vers": "Blizzaroi",
+    "niveau": 40
+  },
+  "Vipélierre": {
+    "evolue_vers": "Lianaja",
+    "niveau": 17
+  },
+  "Lianaja": {
+    "evolue_vers": "Majaspic",
+    "niveau": 36
+  },
+  "Gruikui": {
+    "evolue_vers": "Grotichon",
+    "niveau": 17
+  },
+  "Grotichon": {
+    "evolue_vers": "Roitiflam",
+    "niveau": 36
+  },
+  "Moustillon": {
+    "evolue_vers": "Mateloutre",
+    "niveau": 17
+  },
+  "Mateloutre": {
+    "evolue_vers": "Clamiral d'Hisui",
+    "niveau": 36
+  },
+  "Ratentif": {
+    "evolue_vers": "Miradar",
+    "niveau": 20
+  },
+  "Ponchiot": {
+    "evolue_vers": "Ponchien",
+    "niveau": 16
+  },
+  "Ponchien": {
+    "evolue_vers": "Mastouffe",
+    "niveau": 32
+  },
+  "Chacripan": {
+    "evolue_vers": "Léopardus",
+    "niveau": 20
+  },
+  "Poichigeon": {
+    "evolue_vers": "Colombeau",
+    "niveau": 21
+  },
+  "Colombeau": {
+    "evolue_vers": "Déflaisan",
+    "niveau": 32
+  },
+  "Zébibron": {
+    "evolue_vers": "Zéblitz",
+    "niveau": 27
+  },
+  "Nodulithe": {
+    "evolue_vers": "Géolithe",
+    "niveau": 25
+  },
+  "Rototaupe": {
+    "evolue_vers": "Minotaupe",
+    "niveau": 31
+  },
+  "Charpenti": {
+    "evolue_vers": "Ouvrifier",
+    "niveau": 25
+  },
+  "Tritonde": {
+    "evolue_vers": "Batracné",
+    "niveau": 25
+  },
+  "Batracné": {
+    "evolue_vers": "Crapustule",
+    "niveau": 36
+  },
+  "Larveyette": {
+    "evolue_vers": "Couverdure",
+    "niveau": 20
+  },
+  "Venipatte": {
+    "evolue_vers": "Scobolide",
+    "niveau": 22
+  },
+  "Scobolide": {
+    "evolue_vers": "Brutapode",
+    "niveau": 30
+  },
+  "Mascaïman": {
+    "evolue_vers": "Escroco",
+    "niveau": 29
+  },
+  "Escroco": {
+    "evolue_vers": "Crocorible",
+    "niveau": 40
+  },
+  "Darumarond de Galar": {
+    "evolue_vers": "Darumacho de Galar",
+    "niveau": 35
+  },
+  "Crabicoque": {
+    "evolue_vers": "Crabaraque",
+    "niveau": 34
+  },
+  "Baggiguane": {
+    "evolue_vers": "Baggaïd",
+    "niveau": 39
+  },
+  "Tutafeh": {
+    "evolue_vers": "Tutankafer",
+    "niveau": 34
+  },
+  "Carapagos": {
+    "evolue_vers": "Mégapagos",
+    "niveau": 37
+  },
+  "Arkéapti": {
+    "evolue_vers": "Aéroptéryx",
+    "niveau": 37
+  },
+  "Miamiasme": {
+    "evolue_vers": "Miasmax",
+    "niveau": 36
+  },
+  "Zorua d'Hisui": {
+    "evolue_vers": "Zoroark d'Hisui",
+    "niveau": 30
+  },
+  "Scrutella": {
+    "evolue_vers": "Mesmérella",
+    "niveau": 32
+  },
+  "Mesmérella": {
+    "evolue_vers": "Sidérella",
+    "niveau": 41
+  },
+  "Nucléos": {
+    "evolue_vers": "Méios",
+    "niveau": 32
+  },
+  "Méios": {
+    "evolue_vers": "Symbios",
+    "niveau": 41
+  },
+  "Couaneton": {
+    "evolue_vers": "Lakmécygne",
+    "niveau": 35
+  },
+  "Sorbébé": {
+    "evolue_vers": "Sorboul",
+    "niveau": 35
+  },
+  "Sorboul": {
+    "evolue_vers": "Sorbouboul",
+    "niveau": 47
+  },
+  "Vivaldaim": {
+    "evolue_vers": "Haydaim",
+    "niveau": 34
+  },
+  "Trompignon": {
+    "evolue_vers": "Gaulet",
+    "niveau": 39
+  },
+  "Viskuse": {
+    "evolue_vers": "Moyade",
+    "niveau": 40
+  },
+  "Statitik": {
+    "evolue_vers": "Mygavolt",
+    "niveau": 36
+  },
+  "Grindur": {
+    "evolue_vers": "Noacier",
+    "niveau": 40
+  },
+  "Tic": {
+    "evolue_vers": "Clic",
+    "niveau": 38
+  },
+  "Clic": {
+    "evolue_vers": "Cliticlic",
+    "niveau": 49
+  },
+  "Anchwatt": {
+    "evolue_vers": "Lampéroie",
+    "niveau": 39
+  },
+  "Lewsor": {
+    "evolue_vers": "Neitram",
+    "niveau": 42
+  },
+  "Funécire": {
+    "evolue_vers": "Mélancolux",
+    "niveau": 41
+  },
+  "Coupenotte": {
+    "evolue_vers": "Incisache",
+    "niveau": 38
+  },
+  "Incisache": {
+    "evolue_vers": "Tranchodon",
+    "niveau": 48
+  },
+  "Polarhume": {
+    "evolue_vers": "Polagriffe",
+    "niveau": 37
+  },
+  "Kungfouine": {
+    "evolue_vers": "Shaofouine",
+    "niveau": 50
+  },
+  "Gringolem": {
+    "evolue_vers": "Golemastoc",
+    "niveau": 43
+  },
+  "Scalpion": {
+    "evolue_vers": "Scalproie",
+    "niveau": 52
+  },
+  "Furaiglon": {
+    "evolue_vers": "Gueriaigle d'Hisui",
+    "niveau": 54
+  },
+  "Vostourno": {
+    "evolue_vers": "Vaututrice",
+    "niveau": 54
+  },
+  "Solochi": {
+    "evolue_vers": "Diamat",
+    "niveau": 50
+  },
+  "Diamat": {
+    "evolue_vers": "Trioxhydre",
+    "niveau": 64
+  },
+  "Pyronille": {
+    "evolue_vers": "Pyrax",
+    "niveau": 59
+  },
+  "Marisson": {
+    "evolue_vers": "Boguérisse",
+    "niveau": 16
+  },
+  "Boguérisse": {
+    "evolue_vers": "Blindépique",
+    "niveau": 36
+  },
+  "Feunnec": {
+    "evolue_vers": "Roussil",
+    "niveau": 16
+  },
+  "Roussil": {
+    "evolue_vers": "Goupelin",
+    "niveau": 36
+  },
+  "Grenousse": {
+    "evolue_vers": "Croâporal",
+    "niveau": 16
+  },
+  "Croâporal": {
+    "evolue_vers": "Amphinobi",
+    "niveau": 36
+  },
+  "Sapereau": {
+    "evolue_vers": "Excavarenne",
+    "niveau": 20
+  },
+  "Passerouge": {
+    "evolue_vers": "Braisillon",
+    "niveau": 17
+  },
+  "Braisillon": {
+    "evolue_vers": "Flambusard",
+    "niveau": 35
+  },
+  "Lépidonille": {
+    "evolue_vers": "Pérégrain",
+    "niveau": 9
+  },
+  "Pérégrain": {
+    "evolue_vers": "Prismillon",
+    "niveau": 12
+  },
+  "Hélionceau": {
+    "evolue_vers": "Némélios",
+    "niveau": 35
+  },
+  "Flabébé": {
+    "evolue_vers": "Floette",
+    "niveau": 19
+  },
+  "Cabriolaine": {
+    "evolue_vers": "Chevroum",
+    "niveau": 32
+  },
+  "Pandespiègle": {
+    "evolue_vers": "Pandarbare",
+    "niveau": 32
+  },
+  "Psystigri": {
+    "evolue_vers": "Mistigrix",
+    "niveau": 25
+  },
+  "Monorpale": {
+    "evolue_vers": "Dimoclès",
+    "niveau": 35
+  },
+  "Sepiatop": {
+    "evolue_vers": "Sepiatroce",
+    "niveau": 30
+  },
+  "Opermine": {
+    "evolue_vers": "Golgopathe",
+    "niveau": 39
+  },
+  "Venalgue": {
+    "evolue_vers": "Kravarech",
+    "niveau": 48
+  },
+  "Flingouste": {
+    "evolue_vers": "Gamblast",
+    "niveau": 37
+  },
+  "Ptyranidur": {
+    "evolue_vers": "Rexillius",
+    "niveau": 39
+  },
+  "Amagara": {
+    "evolue_vers": "Dragmara",
+    "niveau": 39
+  },
+  "Mucuscule": {
+    "evolue_vers": "Mucuscule d'Hisui",
+    "niveau": 40
+  },
+  "Mucuscule d'Hisui": {
+    "evolue_vers": "Muplodocus d'Hisui",
+    "niveau": 50
+  },
+  "Grelaçon": {
+    "evolue_vers": "Séracrawl d'Hisui",
+    "niveau": 37
+  },
+  "Sonistrelle": {
+    "evolue_vers": "Bruyverne",
+    "niveau": 48
+  },
+  "Brindibou": {
+    "evolue_vers": "Efflèche",
+    "niveau": 17
+  },
+  "Efflèche": {
+    "evolue_vers": "Archéduc d'Hisui",
+    "niveau": 36
+  },
+  "Flamiaou": {
+    "evolue_vers": "Matoufeu",
+    "niveau": 17
+  },
+  "Matoufeu": {
+    "evolue_vers": "Félinferno",
+    "niveau": 34
+  },
+  "Otaquin": {
+    "evolue_vers": "Otarlette",
+    "niveau": 17
+  },
+  "Otarlette": {
+    "evolue_vers": "Oratoria",
+    "niveau": 34
+  },
+  "Picassaut": {
+    "evolue_vers": "Piclairon",
+    "niveau": 14
+  },
+  "Piclairon": {
+    "evolue_vers": "Bazoucan",
+    "niveau": 28
+  },
+  "Manglouton": {
+    "evolue_vers": "Argouste",
+    "niveau": 20
+  },
+  "Larvibule": {
+    "evolue_vers": "Chrysapile",
+    "niveau": 20
+  },
+  "Bombydou": {
+    "evolue_vers": "Rubombelle",
+    "niveau": 25
+  },
+  "Rocabot": {
+    "evolue_vers": "Lougaroc",
+    "niveau": 25
+  },
+  "Vorastérie": {
+    "evolue_vers": "Prédastérie",
+    "niveau": 38
+  },
+  "Tiboudet": {
+    "evolue_vers": "Bourrinos",
+    "niveau": 30
+  },
+  "Araqua": {
+    "evolue_vers": "Tarenbulle",
+    "niveau": 22
+  },
+  "Mimantis": {
+    "evolue_vers": "Floramantis",
+    "niveau": 34
+  },
+  "Spododo": {
+    "evolue_vers": "Lampignon",
+    "niveau": 24
+  },
+  "Tritox": {
+    "evolue_vers": "Malamandre",
+    "niveau": 33
+  },
+  "Nounourson": {
+    "evolue_vers": "Chelours",
+    "niveau": 27
+  },
+  "Croquine": {
+    "evolue_vers": "Candine",
+    "niveau": 18
+  },
+  "Sovkipou": {
+    "evolue_vers": "Sarmuraï",
+    "niveau": 30
+  },
+  "Bacabouh": {
+    "evolue_vers": "Trépassable",
+    "niveau": 42
+  },
+  "Bébécaille": {
+    "evolue_vers": "Écaïd",
+    "niveau": 35
+  },
+  "Écaïd": {
+    "evolue_vers": "Ékaïser",
+    "niveau": 45
+  },
+  "Cosmog": {
+    "evolue_vers": "Cosmovum",
+    "niveau": 43
+  },
+  "Cosmovum": {
+    "evolue_vers": "Lunala",
+    "niveau": 53
+  },
+  "Ouistempo": {
+    "evolue_vers": "Badabouin",
+    "niveau": 16
+  },
+  "Badabouin": {
+    "evolue_vers": "Gorythmic",
+    "niveau": 35
+  },
+  "Flambino": {
+    "evolue_vers": "Lapyro",
+    "niveau": 16
+  },
+  "Lapyro": {
+    "evolue_vers": "Pyrobut",
+    "niveau": 35
+  },
+  "Larméléon": {
+    "evolue_vers": "Arrozard",
+    "niveau": 16
+  },
+  "Arrozard": {
+    "evolue_vers": "Lézargus",
+    "niveau": 35
+  },
+  "Rongourmand": {
+    "evolue_vers": "Rongrigou",
+    "niveau": 24
+  },
+  "Minisange": {
+    "evolue_vers": "Bleuseille",
+    "niveau": 18
+  },
+  "Bleuseille": {
+    "evolue_vers": "Corvaillus",
+    "niveau": 38
+  },
+  "Larvadar": {
+    "evolue_vers": "Coléodôme",
+    "niveau": 10
+  },
+  "Coléodôme": {
+    "evolue_vers": "Astronelle",
+    "niveau": 30
+  },
+  "Goupilou": {
+    "evolue_vers": "Roublenard",
+    "niveau": 18
+  },
+  "Tournicoton": {
+    "evolue_vers": "Blancoton",
+    "niveau": 20
+  },
+  "Moumouton": {
+    "evolue_vers": "Moumouflon",
+    "niveau": 24
+  },
+  "Khélocrok": {
+    "evolue_vers": "Torgamord",
+    "niveau": 22
+  },
+  "Voltoutou": {
+    "evolue_vers": "Fulgudog",
+    "niveau": 25
+  },
+  "Charbi": {
+    "evolue_vers": "Wagomine",
+    "niveau": 18
+  },
+  "Wagomine": {
+    "evolue_vers": "Monthracite",
+    "niveau": 34
+  },
+  "Dunaja": {
+    "evolue_vers": "Dunaconda",
+    "niveau": 36
+  },
+  "Embrochet": {
+    "evolue_vers": "Hastacuda",
+    "niveau": 26
+  },
+  "Toxizap": {
+    "evolue_vers": "Salarsen",
+    "niveau": 30
+  },
+  "Grillepattes": {
+    "evolue_vers": "Scolocendre",
+    "niveau": 28
+  },
+  "Bibichut": {
+    "evolue_vers": "Chapotus",
+    "niveau": 32
+  },
+  "Chapotus": {
+    "evolue_vers": "Sorcilence",
+    "niveau": 42
+  },
+  "Grimalin": {
+    "evolue_vers": "Fourbelin",
+    "niveau": 32
+  },
+  "Fourbelin": {
+    "evolue_vers": "Angoliath",
+    "niveau": 42
+  },
+  "Linéon de Galar": {
+    "evolue_vers": "Ixon",
+    "niveau": 35
+  },
+  "Corayon de Galar": {
+    "evolue_vers": "Corayôme",
+    "niveau": 38
+  },
+  "M. Mime de Galar": {
+    "evolue_vers": "M. Glaquette",
+    "niveau": 42
+  },
+  "Charibari": {
+    "evolue_vers": "Pachyradjah",
+    "niveau": 34
+  },
+  "Fantyrm": {
+    "evolue_vers": "Dispareptil",
+    "niveau": 50
+  },
+  "Dispareptil": {
+    "evolue_vers": "Lanssorien",
+    "niveau": 60
+  },
+  "Poussacha": {
+    "evolue_vers": "Matourgeon",
+    "niveau": 16
+  },
+  "Matourgeon": {
+    "evolue_vers": "Miascarade",
+    "niveau": 36
+  },
+  "Chochodile": {
+    "evolue_vers": "Crocogril",
+    "niveau": 16
+  },
+  "Crocogril": {
+    "evolue_vers": "Flâmigator",
+    "niveau": 36
+  },
+  "Coiffeton": {
+    "evolue_vers": "Canarbello",
+    "niveau": 16
+  },
+  "Canarbello": {
+    "evolue_vers": "Palmaval",
+    "niveau": 36
+  },
+  "Gourmelet": {
+    "evolue_vers": "Fragroin",
+    "niveau": 18
+  },
+  "Tissenboule": {
+    "evolue_vers": "Filentrappe",
+    "niveau": 15
+  },
+  "Lilliterelle": {
+    "evolue_vers": "Gambex",
+    "niveau": 24
+  },
+  "Pohm": {
+    "evolue_vers": "Pohmotte",
+    "niveau": 18
+  },
+  "Pâtachiot": {
+    "evolue_vers": "Briochien",
+    "niveau": 26
+  },
+  "Olivini": {
+    "evolue_vers": "Olivado",
+    "niveau": 25
+  },
+  "Olivado": {
+    "evolue_vers": "Arboliva",
+    "niveau": 35
+  },
+  "Selutin": {
+    "evolue_vers": "Amassel",
+    "niveau": 24
+  },
+  "Amassel": {
+    "evolue_vers": "Gigansel",
+    "niveau": 38
+  },
+  "Zapétrel": {
+    "evolue_vers": "Fulgulairo",
+    "niveau": 25
+  },
+  "Grondogue": {
+    "evolue_vers": "Dogrino",
+    "niveau": 30
+  },
+  "Gribouraigne": {
+    "evolue_vers": "Tag-Tag",
+    "niveau": 28
+  },
+  "Terracool": {
+    "evolue_vers": "Terracruel",
+    "niveau": 30
+  },
+  "Flotillon": {
+    "evolue_vers": "Cléopsytra",
+    "niveau": 35
+  },
+  "Forgerette": {
+    "evolue_vers": "Forgella",
+    "niveau": 24
+  },
+  "Forgella": {
+    "evolue_vers": "Forgelina",
+    "niveau": 38
+  },
+  "Taupikeau": {
+    "evolue_vers": "Triopikeau",
+    "niveau": 26
+  },
+  "Dofin": {
+    "evolue_vers": "Superdofin",
+    "niveau": 38
+  },
+  "Vrombi": {
+    "evolue_vers": "Vrombotor",
+    "niveau": 40
+  },
+  "Germéclat": {
+    "evolue_vers": "Floréclat",
+    "niveau": 35
+  },
+  "Toutombe": {
+    "evolue_vers": "Tomberro",
+    "niveau": 30
+  },
+  "Frigodo": {
+    "evolue_vers": "Cryodo",
+    "niveau": 35
+  },
+  "Cryodo": {
+    "evolue_vers": "Glaivodo",
+    "niveau": 54
+  }
+}

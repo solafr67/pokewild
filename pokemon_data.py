@@ -141,7 +141,7 @@ EFFICACITE_TYPES = {
     "psy":      {"combat": 2.0, "poison": 2.0, "psy": 0.5, "acier": 0.5, "tenebres": 0.0},
     "insecte":  {"plante": 2.0, "psy": 2.0, "tenebres": 2.0, "feu": 0.5, "combat": 0.5, "vol": 0.5, "spectre": 0.5, "acier": 0.5, "fee": 0.5},
     "roche":    {"feu": 2.0, "glace": 2.0, "vol": 2.0, "insecte": 2.0, "combat": 0.5, "sol": 0.5, "acier": 0.5},
-    "spectre":  {"spectre": 2.0, "psy": 2.0, "normal": 0.0, "combat": 0.0, "tenebres": 0.5},
+    "spectre":  {"spectre": 2.0, "psy": 2.0, "normal": 0.0, "tenebres": 0.5},
     "dragon":   {"dragon": 2.0, "acier": 0.5, "fee": 0.0},
     "tenebres": {"spectre": 2.0, "psy": 2.0, "combat": 0.5, "tenebres": 0.5, "fee": 0.5},
     "acier":    {"glace": 2.0, "roche": 2.0, "fee": 2.0, "feu": 0.5, "eau": 0.5, "electrik": 0.5, "acier": 0.5},
@@ -173,6 +173,15 @@ def sprite_pokemon(pokemon: dict, shiny: bool = False) -> str | None:
     deux formes afficheraient le même sprite."""
     if not pokemon:
         return None
+
+    # Repli direct vers le CDN Showdown pour les Pokémon pas encore mirorés/corrigés dans
+    # notre propre dépôt (sprites_corriges/) — voir formes_objets.py::FORMES_OBJETS, qui
+    # renseigne ce champ pour les 9 formes obtenues par objet (Shaymin Céleste, Giratina
+    # Origine...). Uniquement pour le sprite NON-shiny (Showdown ne propose pas de variante
+    # shiny distincte pour ces formes légendaires dans son dossier `ani/`).
+    if not shiny and pokemon.get("sprite_gif_url_showdown"):
+        return pokemon["sprite_gif_url_showdown"]
+
     numero = pokemon.get("numero_sprite") or pokemon.get("numero")
     if not numero:
         return pokemon.get("sprite_shiny") if shiny else pokemon.get("sprite")
@@ -325,6 +334,38 @@ else:
     ATTAQUES = {ATTAQUE_DEFAUT_NOM: dict(ATTAQUE_DEFAUT)}
     print("⚔️ attaques_complet.json introuvable — relance generer_pokedex.py pour débloquer les attaques.")
 
+# --- Évolutions par niveau (générées depuis les CSV publics de PokeAPI, voir la mémoire
+# du projet pour la méthode exacte) — UNIQUEMENT les évolutions déclenchées par le niveau
+# (pas pierre/échange/amitié/etc., qui n'ont pas de sens dans les modes de jeu actuels du
+# bot). {nom_espece_de_base: {"evolue_vers": nom_espece_suivante, "niveau": seuil}} ---
+
+CHEMIN_JSON_EVOLUTIONS = os.path.join(os.path.dirname(__file__), "evolutions_par_niveau.json")
+
+if os.path.exists(CHEMIN_JSON_EVOLUTIONS):
+    with open(CHEMIN_JSON_EVOLUTIONS, encoding="utf-8") as f:
+        EVOLUTIONS_PAR_NIVEAU = json.load(f)
+    print(f"🧬 evolutions_par_niveau.json chargé — {len(EVOLUTIONS_PAR_NIVEAU)} évolutions disponibles.")
+else:
+    EVOLUTIONS_PAR_NIVEAU = {}
+    print("🧬 evolutions_par_niveau.json introuvable — aucun Pokémon n'évoluera.")
+
+
+def evoluer_si_possible(pokemon_nom: str, niveau: int) -> tuple:
+    """Applique la chaîne d'évolutions par niveau tant qu'elle s'applique (gère le cas
+    d'un saut de plusieurs niveaux d'un coup qui franchit 2 seuils en même temps, ex.
+    Chenipan -> Chrysacier -> Papilusion en un seul saut). Retourne (nom_final,
+    chaine_evolutions) où chaine_evolutions est la liste des noms intermédiaires
+    traversés (vide si aucune évolution n'a eu lieu)."""
+    chaine = []
+    nom_actuel = pokemon_nom
+    while True:
+        info = EVOLUTIONS_PAR_NIVEAU.get(nom_actuel)
+        if info is None or niveau < info["niveau"]:
+            break
+        nom_actuel = info["evolue_vers"]
+        chaine.append(nom_actuel)
+    return nom_actuel, chaine
+
 if ATTAQUE_DEFAUT_NOM not in ATTAQUES:
     ATTAQUES[ATTAQUE_DEFAUT_NOM] = dict(ATTAQUE_DEFAUT)
 
@@ -412,7 +453,6 @@ ATTAQUES_CHARGE = {
     "Éclat Glace",
     "Géocontrôle",
     "Vol",
-    "Damoclès",
 }
 # RECHARGE : attaque immédiatement à pleine puissance, puis 1 tour de repos forcé.
 ATTAQUES_RECHARGE = {

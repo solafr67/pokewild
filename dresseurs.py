@@ -155,7 +155,27 @@ def _niveau_moyen_equipe(user_id: int) -> int:
     return round(sum(niveaux) / len(niveaux)) if niveaux else 25
 
 
-def _niveau_pour_pc_cible(pokemon: dict, pc_cible: int, niveau_reference: int = 50) -> int:
+def _niveau_max_equipe(user_id: int) -> int:
+    """Niveau du Pokémon le plus haut niveau de l'équipe de combat du joueur — sert de
+    plafond DUR pour l'adversaire (niveau_max_equipe + 5, voir _niveau_pour_pc_cible) :
+    contrairement au niveau moyen (qui peut être tiré vers le bas par des Pokémon plus
+    faibles de l'équipe), une équipe avec un seul Pokémon très haut niveau et plusieurs
+    plus bas ne doit jamais faire apparaître un adversaire encore bien plus fort que ce
+    Pokémon le plus fort — c'était le vrai bug signalé (équipe plafonnant à 75, adversaire
+    à 98, alors que le niveau moyen bas de l'équipe autorisait une fenêtre proportionnelle
+    bien plus haute que 75)."""
+    noms = database.obtenir_equipe_combat_disponible(user_id)
+    captures = database.obtenir_pokedex_joueur(user_id)
+    especes_possedees = {row["pokemon_nom"] for row in captures}
+    niveaux = [
+        database.obtenir_niveau_pokemon(user_id, nom)[0] for nom in noms if nom in especes_possedees
+    ]
+    return max(niveaux) if niveaux else 25
+
+
+def _niveau_pour_pc_cible(
+    pokemon: dict, pc_cible: int, niveau_reference: int = 50, niveau_max_equipe: int = None
+) -> int:
     """Trouve le niveau dont le PC dérivé (stats réelles, IV neutres) se rapproche le plus
     de pc_cible — recherche binaire, calculer_pc_derive croît avec le niveau. Bornée à
     ±25% de niveau_reference (le niveau moyen de l'équipe du joueur), minimum ±3 niveaux :
@@ -166,10 +186,18 @@ def _niveau_pour_pc_cible(pokemon: dict, pc_cible: int, niveau_reference: int = 
     1-20 (x20 d'écart!), ce qui pouvait faire qu'un Tiboudet (Vitesse base 45) surclasse
     en vitesse EFFECTIVE un Xerneas (Vitesse base 99) simplement parce que l'un grimpait
     au max de la fenêtre pendant que l'autre tombait au minimum — un pur effet de bord de
-    l'équilibrage par PC, pas un choix voulu."""
+    l'équilibrage par PC, pas un choix voulu.
+    PLAFOND DUR additionnel : niveau_max_equipe + 5 si fourni. Le niveau moyen de l'équipe
+    (niveau_reference) peut être tiré vers le bas par des Pokémon plus faibles de l'équipe,
+    ce qui laissait passer un adversaire bien plus fort que le meilleur Pokémon réel du
+    joueur (équipe plafonnant à 75, adversaire à 98) — le plafond dur empêche ça peu importe
+    à quel point la moyenne d'équipe est basse."""
     ecart = max(3, round(niveau_reference * 0.25))
     bas = max(1, niveau_reference - ecart)
     haut = min(100, niveau_reference + ecart)
+    if niveau_max_equipe is not None:
+        haut = min(haut, niveau_max_equipe + 5)
+        bas = min(bas, haut)
     while bas < haut:
         milieu = (bas + haut) // 2
         if calculer_pc_derive(pokemon, IV_DEFAUT, milieu) < pc_cible:
@@ -179,13 +207,17 @@ def _niveau_pour_pc_cible(pokemon: dict, pc_cible: int, niveau_reference: int = 
     return bas
 
 
-def generer_equipe_dresseur(archetype: dict, pc_cible: int, niveau_reference: int = 50) -> list:
+def generer_equipe_dresseur(
+    archetype: dict, pc_cible: int, niveau_reference: int = 50, niveau_max_equipe: int = None
+) -> list:
     """Sélectionne une équipe de Pokémon correspondant au thème de l'archétype, dont le
     PC cumulé vise pc_cible (± la variance configurée). IV neutres (profil moyen, pas
     d'individualité pour un dresseur synthétique) — le niveau varie pour s'approcher de la
     cible de PC, mais reste borné autour de niveau_reference (typiquement le niveau moyen
     de l'équipe du joueur) pour un adversaire crédible plutôt qu'un Pokémon faible
-    surexploité au niveau 100. Retourne une liste de dicts {nom, niveau, pv, attaque,
+    surexploité au niveau 100. niveau_max_equipe (niveau du meilleur Pokémon réel du
+    joueur) impose un plafond dur supplémentaire : niveau_max_equipe + 5 (voir
+    _niveau_pour_pc_cible). Retourne une liste de dicts {nom, niveau, pv, attaque,
     defense, attaque_spe, defense_spe, vitesse}, prête pour
     database.initialiser_equipe_combat_pvp."""
     types_theme = archetype["types_theme"]
@@ -213,7 +245,7 @@ def generer_equipe_dresseur(archetype: dict, pc_cible: int, niveau_reference: in
     equipe = []
     for pokemon in choisis:
         pc_individuel = max(50, round(pc_par_pokemon * random.uniform(0.8, 1.2)))
-        niveau = _niveau_pour_pc_cible(pokemon, pc_individuel, niveau_reference)
+        niveau = _niveau_pour_pc_cible(pokemon, pc_individuel, niveau_reference, niveau_max_equipe)
         stats = calculer_toutes_stats(pokemon, IV_DEFAUT, niveau)
         if not stats:
             stats = {"pv": 120, "attaque": 60, "defense": 60, "attaque_spe": 60, "defense_spe": 60, "vitesse": 60}
@@ -384,7 +416,8 @@ async def demarrer_combat_dresseur(
         pc_cible = 500  # équipe joueur vide/non chiffrée : petit combat par défaut
 
     niveau_reference = _niveau_moyen_equipe(joueur.id)
-    equipe_dresseur = generer_equipe_dresseur(archetype, pc_cible, niveau_reference)
+    niveau_max_equipe = _niveau_max_equipe(joueur.id)
+    equipe_dresseur = generer_equipe_dresseur(archetype, pc_cible, niveau_reference, niveau_max_equipe)
 
     # --- Équipe du joueur : vraies stats (IV + niveau réels), PV persistants (partagés
     # avec les raids) potentiellement déjà entamés depuis un combat précédent ---

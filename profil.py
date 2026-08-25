@@ -14,6 +14,7 @@ import pokedex as pokedex_module
 import quetes as quetes_module
 import quetes_ui
 import races
+import saison as saison_module
 from pokemon_data import (
     EMOJI_BALLS,
     EMOJI_OBJETS_DIVERS,
@@ -392,7 +393,7 @@ class VueVerrouillage(discord.ui.View):
         self.page = page
         self.tri = "alphabetique"
         self.recherche = None
-        self.doublons_uniquement = True  # actif par défaut : c'est ce qu'on vient verrouiller la plupart du temps
+        self.doublons_uniquement = False  # tout affiché par défaut — bascule dispo via le bouton dédié
         self.toutes_captures = database.obtenir_toutes_captures_detaillees(user_id)
         self._trier_captures()
         self._construire_composants()
@@ -1301,6 +1302,16 @@ class VueOuvrirPokedex(discord.ui.View):
         embed = construire_embed_tableau_bord_clan(interaction.user.id)
         vue = VueTableauBordClan(interaction.user.id)
         await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
+
+    @discord.ui.button(
+        label="Passe Saisonnier",
+        style=discord.ButtonStyle.secondary,
+        emoji="🎫",
+        custom_id="profil_passe_saison_bouton",  # requis pour la persistance après redémarrage
+    )
+    async def passe_saison(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = saison_module.construire_embed_statut(interaction.user.id)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 class VueProfil(discord.ui.View):

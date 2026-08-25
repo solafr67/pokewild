@@ -21,6 +21,7 @@ def construire_embed_boutique() -> discord.Embed:
     embed.add_field(name="💊 Potions", value="Potion/Super/Hyper Potion/Total Soin", inline=True)
     embed.add_field(name="📈 Améliorations", value="Extensions de stockage", inline=True)
     embed.add_field(name="🎒 Objets", value="Objets tenus de combat (talents, Objets Choix, baies...)", inline=True)
+    embed.add_field(name="🎖️ Rôle VIP", value="Accès permanent au channel spawn-vip", inline=True)
     embed.set_footer(text="Ton solde s'affiche au moment de l'achat, visible seulement par toi.")
     return embed
 
@@ -54,6 +55,75 @@ class VueBoutique(discord.ui.View):
     async def categorie_objets(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(
             embed=construire_embed_categorie_objets(interaction.user.id), view=VueCategorieObjets(), ephemeral=True
+        )
+
+    @discord.ui.button(label="Rôle VIP", emoji="🎖️", style=discord.ButtonStyle.secondary, custom_id="boutique_role_vip")
+    async def role_vip(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(
+            embed=construire_embed_role_vip(interaction.user), view=VueAchatRoleVip(), ephemeral=True
+        )
+
+
+# ----------------------------------------------------------------------------
+# Catégorie Rôle PokéVIP — achat permanent, unique, donne accès au channel
+# spawn-vip (le rôle existait déjà, attribué à la main aux joueurs fidèles ; ceci
+# ajoute une seconde voie d'accès, achetable, sans rien retirer à la première).
+# ----------------------------------------------------------------------------
+
+def construire_embed_role_vip(membre: discord.Member) -> discord.Embed:
+    role = membre.guild.get_role(config.ROLE_VIP_ID)
+    deja_possede = role in membre.roles if role else False
+
+    embed = discord.Embed(
+        title="🎖️ Rôle PokéVIP",
+        description=(
+            "Un achat **permanent, à vie** — donne accès au channel spawn-vip, où les "
+            "chances de rareté sont meilleures qu'en spawn classique.\n\n"
+            f"**Prix : {config.PRIX_ROLE_VIP} {EMOJI_POKEDOLLAR} Poké Dollars**"
+        ),
+        color=discord.Color.gold(),
+    )
+    if deja_possede:
+        embed.set_footer(text="Tu as déjà ce rôle !")
+    else:
+        embed.set_footer(text=f"Ton solde actuel : {database.obtenir_poke_dollars(membre.id)} {EMOJI_POKEDOLLAR}")
+    return embed
+
+
+class VueAchatRoleVip(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=120)
+
+    @discord.ui.button(label="Confirmer l'achat", emoji="✅", style=discord.ButtonStyle.success)
+    async def confirmer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role = interaction.guild.get_role(config.ROLE_VIP_ID)
+        if role is None:
+            await interaction.response.send_message("❌ Le rôle VIP est introuvable sur ce serveur (contacte un admin).", ephemeral=True)
+            return
+
+        if role in interaction.user.roles:
+            await interaction.response.send_message("Tu as déjà le rôle PokéVIP !", ephemeral=True)
+            return
+
+        solde = database.obtenir_poke_dollars(interaction.user.id)
+        if solde < config.PRIX_ROLE_VIP:
+            manque = config.PRIX_ROLE_VIP - solde
+            await interaction.response.send_message(
+                f"❌ Il te manque {manque} {EMOJI_POKEDOLLAR} Poké Dollars pour te l'offrir.", ephemeral=True
+            )
+            return
+
+        try:
+            await interaction.user.add_roles(role, reason="Achat boutique — Rôle PokéVIP")
+        except (discord.Forbidden, discord.HTTPException) as e:
+            await interaction.response.send_message(f"❌ Impossible de t'attribuer le rôle : {e}", ephemeral=True)
+            return
+
+        database.ajouter_poke_dollars(interaction.user.id, -config.PRIX_ROLE_VIP)
+        journal.logger(f"🎖️ <@{interaction.user.id}> a acheté le rôle PokéVIP pour {config.PRIX_ROLE_VIP} Poké Dollars.")
+
+        await interaction.response.edit_message(
+            content=f"🎖️ Rôle PokéVIP obtenu ! Bienvenue dans le channel spawn-vip.", embed=None, view=None
         )
 
 

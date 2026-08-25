@@ -137,6 +137,18 @@ class SelectionBallView(discord.ui.View):
                 user_id, self.pokemon["nom"], self.pc, shiny=est_shiny, ivs=self.ivs, source=self.vue_spawn.type_spawn
             )
 
+            # Points de l'event "Capture Classée" (/event), s'il y en a un actif — crédités
+            # ICI, une fois pour toutes, au moment même de la capture. Ne PAS recalculer ces
+            # points plus tard depuis la table captures (ancien bug corrigé : un joueur qui
+            # relâche un doublon capturé pendant l'event perdait les points déjà gagnés,
+            # puisque l'ancien calcul recomptait à chaque fois les captures encore présentes
+            # en base plutôt que de stocker un score permanent).
+            if self.vue_spawn.type_spawn == "classique":
+                event_actif = database.obtenir_event_capture_rarete_actif()
+                if event_actif:
+                    points_event = database.calculer_points_event_capture_rarete(self.pokemon["rarete"], est_shiny)
+                    database.ajouter_points_event_capture_rarete(event_actif["id"], user_id, points_event)
+
             # Le niveau suit l'espèce (comme le PC déjà affiché) : on ne l'écrase que s'il
             # est plus haut que celui déjà acquis pour cette espèce, pour ne jamais faire
             # régresser un Pokémon déjà entraîné via l'XP d'équipe.
@@ -148,7 +160,10 @@ class SelectionBallView(discord.ui.View):
 
             dollars_gagnes = round(10 * database.multiplicateur_boost(user_id, "argent"))
             database.ajouter_poke_dollars(user_id, dollars_gagnes)
-            quetes_completees = database.incrementer_progression_quete(user_id, "capture", {"rarete": self.pokemon["rarete"]})
+            quetes_completees = database.incrementer_progression_quete(
+                user_id, "capture",
+                {"rarete": self.pokemon["rarete"], "shiny": est_shiny, "type": self.pokemon.get("types", [None])[0]},
+            )
 
             shiny_txt = " ✨SHINY✨" if est_shiny else ""
             journal.logger(

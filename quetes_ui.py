@@ -5,7 +5,7 @@ import discord
 import config
 import database
 import quetes as quetes_module
-from pokemon_data import EMOJI_POKEDOLLAR, EMOJI_SOINS, NOM_SOIN_AFFICHAGE
+from pokemon_data import EMOJI_POKEDOLLAR, EMOJI_SOINS, NOM_OBJETS_DIVERS, NOM_SOIN_AFFICHAGE
 
 OBJETS_BONUS_JOUR = ["hyperball", "totalsoin"]
 
@@ -72,7 +72,11 @@ def construire_embed_centre() -> discord.Embed:
             "fais déjà — capturer, raider, combattre, explorer. Reset chaque jour à minuit "
             "(UTC), et chaque semaine.\n\n"
             "Des **accomplissements** à paliers existent aussi, avec un titre cosmétique "
-            "à afficher sur ton profil."
+            "à afficher sur ton profil.\n\n"
+            "📃 Un PNJ te propose aussi 3 **Contrats** tirés au sort chaque jour — des "
+            "missions ponctuelles (capture ciblée, combats...) payées sur le champ dès "
+            "qu'elles sont remplies, mais qui disparaissent si tu ne les termines pas "
+            "avant le reset du lendemain."
         ),
         color=discord.Color.dark_teal(),
     )
@@ -94,6 +98,36 @@ class VueCentreQuetes(discord.ui.View):
     async def voir_principale(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = construire_embed_quete_principale(interaction.user.id)
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @discord.ui.button(label="Contrats", style=discord.ButtonStyle.secondary, emoji="📃", custom_id="quetes_contrats_voir")
+    async def voir_contrats(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = construire_embed_contrats(interaction.user.id)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+def construire_embed_contrats(user_id: int) -> discord.Embed:
+    contrats = database.obtenir_contrats_du_jour(user_id)
+    embed = discord.Embed(
+        title="📃 Contrats du jour",
+        description="Payés automatiquement dès qu'ils sont remplis — mais ils disparaissent au reset de demain si tu ne les termines pas à temps.",
+        color=discord.Color.dark_gold(),
+    )
+    for contrat in contrats:
+        if contrat["complete"]:
+            statut = "✅ Remplie !"
+        else:
+            statut = f"{contrat['compteur']}/{contrat['cible']}"
+        recompense = contrat["recompense"]
+        morceaux_recompense = [f"{recompense['dollars']} {EMOJI_POKEDOLLAR}", f"{recompense['xp']} XP"]
+        if recompense.get("objet"):
+            cle_objet, quantite = recompense["objet"]
+            morceaux_recompense.append(f"{quantite}× {NOM_OBJETS_DIVERS.get(cle_objet, cle_objet)}")
+        embed.add_field(
+            name=f"{contrat['emoji']} {contrat['nom']}",
+            value=f"{statut}\n💰 {', '.join(morceaux_recompense)}",
+            inline=False,
+        )
+    return embed
 
 
 def _ligne_quete(user_id: int, quete: dict, type_quete: str) -> str:

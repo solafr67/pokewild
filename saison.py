@@ -11,8 +11,11 @@ paliers de niveau de dresseur déjà en place.
 import time
 from datetime import datetime, timezone
 
+import discord
+
 import config
 import database
+import leveling
 
 # Saison 1 exceptionnelle : du 20 juillet au 30 août 2026 (41 jours, plus longue que les
 # suivantes) pour démarrer tout de suite plutôt que d'attendre le 1er août. À partir de la
@@ -148,3 +151,40 @@ def obtenir_statut(user_id: int) -> dict:
         "points_requis_palier": max(1, points_fin_palier - points_debut_palier),
         "temps_restant": temps_restant_saison(),
     }
+
+
+def construire_embed_statut(user_id: int) -> discord.Embed:
+    """Embed de statut du passe saisonnier — partagé entre /passe-saison (main.py) et le
+    bouton "Passe Saisonnier" du profil (profil.py), pour ne pas dupliquer la logique
+    d'affichage à deux endroits."""
+    statut = obtenir_statut(user_id)
+    jours_restants = statut["temps_restant"] // 86400
+    heures_restantes = (statut["temps_restant"] % 86400) // 3600
+
+    embed = discord.Embed(
+        title=f"🎫 Passe Saisonnier — Saison {statut['saison']}",
+        color=discord.Color.blurple(),
+    )
+    if statut["palier"] >= statut["palier_max"]:
+        embed.description = f"🏆 Palier maximum atteint ({statut['palier_max']}/{statut['palier_max']}) !"
+    else:
+        embed.description = (
+            f"Palier **{statut['palier']}/{statut['palier_max']}**\n"
+            f"{leveling.barre_progression(statut['points_dans_palier'], statut['points_requis_palier'])} "
+            f"({statut['points_dans_palier']}/{statut['points_requis_palier']} points)"
+        )
+
+    prochain_palier = min(statut["palier"] + 1, statut["palier_max"])
+    if prochain_palier > statut["palier"]:
+        embed.add_field(
+            name=f"Prochaine récompense (palier {prochain_palier})",
+            value=texte_recompense_palier(prochain_palier),
+            inline=False,
+        )
+    embed.add_field(
+        name="Fin de la saison",
+        value=f"Dans {jours_restants}j {heures_restantes}h",
+        inline=False,
+    )
+    embed.set_footer(text="Progresse en jouant normalement — toute XP de dresseur gagnée alimente aussi le passe.")
+    return embed

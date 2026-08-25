@@ -12,9 +12,9 @@ def construire_embed_race(user_id: int) -> discord.Embed:
 
     if race_nom is None:
         embed = discord.Embed(
-            title="🧬 Ta Race de dresseur",
+            title="🧬 Ta Mutation de dresseur",
             description=(
-                "Tu n'as pas encore de Race ! Obtiens un 🔮 **Cristal de Mutation** au "
+                "Tu n'as pas encore de Mutation ! Obtiens un 🔮 **Cristal de Mutation** au "
                 "Centre des Explorations pour en tirer une au hasard."
             ),
             color=discord.Color.dark_grey(),
@@ -23,7 +23,7 @@ def construire_embed_race(user_id: int) -> discord.Embed:
         race = races.obtenir_race_par_nom(race_nom)
         emoji = EMOJI_RARETE[race["palier"]]
         embed = discord.Embed(
-            title=f"🧬 Ta Race : {emoji} {race['nom']}",
+            title=f"🧬 Ta Mutation : {emoji} {race['nom']}",
             description=f"*{race['description']}*\n\n{races.texte_bonus(race['bonus'])}",
             color=COULEUR_RARETE[race["palier"]],
         )
@@ -50,7 +50,7 @@ class VueRace(discord.ui.View):
 
     async def _on_reroll(self, interaction: discord.Interaction):
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("Ce n'est pas ta Race !", ephemeral=True)
+            await interaction.response.send_message("Ce n'est pas ta Mutation !", ephemeral=True)
             return
 
         if not database.retirer_ball(self.user_id, "cristal_mutation"):
@@ -61,14 +61,20 @@ class VueRace(discord.ui.View):
         nouvelle_race, nouveau_pity = races.tirer_race(pity_actuel)
         database.definir_race(self.user_id, nouvelle_race["nom"], nouveau_pity)
         journal.logger(
-            f"🔮 <@{self.user_id}> a utilisé un Cristal de Mutation — nouvelle Race : "
+            f"🔮 <@{self.user_id}> a utilisé un Cristal de Mutation — nouvelle Mutation : "
             f"**{nouvelle_race['nom']}** ({nouvelle_race['palier']})."
         )
 
         emoji = EMOJI_RARETE[nouvelle_race["palier"]]
         embed = discord.Embed(
-            title=f"🔮 Nouvelle Race obtenue : {emoji} {nouvelle_race['nom']} !",
+            title=f"🔮 Nouvelle Mutation obtenue : {emoji} {nouvelle_race['nom']} !",
             description=f"*{nouvelle_race['description']}*\n\n{races.texte_bonus(nouvelle_race['bonus'])}",
             color=COULEUR_RARETE[nouvelle_race["palier"]],
         )
-        await interaction.response.edit_message(embed=embed, view=None)
+        nb_cristaux_restants = database.obtenir_inventaire_balls(self.user_id).get("cristal_mutation", 0)
+        embed.add_field(name="🔮 Cristaux de Mutation possédés", value=str(nb_cristaux_restants), inline=True)
+        embed.add_field(name="Pity (rerolls sans rare+)", value=f"{nouveau_pity}/10", inline=True)
+        # Nouvelle vue attachée directement au résultat (au lieu de view=None) — permet de
+        # relancer un reroll à la chaîne sans repasser par le bouton "Ma Mutation" du message
+        # fixe du Laboratoire à chaque fois. Se désactive tout seul si 0 cristal restant.
+        await interaction.response.edit_message(embed=embed, view=VueRace(self.user_id))

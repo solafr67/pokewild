@@ -74,6 +74,8 @@ COOLDOWN_POKESTOP = 300  # 5 minutes, en secondes
 
 # --- Rôle VIP (pour vérifier l'accès si besoin dans le code) ---
 ROLE_VIP_ID = _id_env("ROLE_VIP_ID", 1524443826956271838)
+PRIX_ROLE_VIP = 30000  # achat permanent, unique — donne accès au channel spawn-vip (meilleures
+# raretés). Anciennement attribué à la main aux joueurs fidèles.
 ROLE_PING_RAID_ID = _id_env("ROLE_PING_RAID_ID", 1525883524396355675)
 ROLE_PING_EVENT_ID = _id_env("ROLE_PING_EVENT_ID", 1537908441518051328)
 ROLE_PING_ANNONCE_ID = _id_env("ROLE_PING_ANNONCE_ID", 1537908347091820655)
@@ -823,5 +825,169 @@ QUETE_PRINCIPALE_CHAPITRES = [
         "evenement": "gladio_victoire",
         "cible": 1,
         "recompense": {"dollars": 500, "xp": 300, "objet": "cristal_mutation"},
+    },
+
+    # ========================================================================
+    # PARTIE 2 : LES TERRES CENDRÉES — région hostile, chapitres nettement plus
+    # longs/durs que la Partie 1 (qui reste un tutoriel en comparaison). Certains
+    # chapitres utilisent un "filtre" (rareté, shiny) en plus de l'événement/cible —
+    # voir database/__init__.py::avancer_quete_principale pour le mécanisme.
+    # ========================================================================
+    {
+        "titre": "Les Terres Cendrées",
+        "intro": (
+            "Gladio t'attendait à la frontière. \"Ce que tu as traversé jusqu'ici n'était "
+            "qu'un début,\" dit-il, le regard tourné vers l'horizon brûlé. \"Les Terres "
+            "Cendrées n'accueillent pas les dresseurs — elles les testent.\"\n\n"
+            "Le ciel y est plus gris, les Pokémon plus méfiants, et la terre elle-même "
+            "semble se souvenir d'un désastre ancien. Il va falloir reconstituer une "
+            "équipe à la hauteur.\n\n"
+            "**Objectif : capturer 15 Pokémon.**"
+        ),
+        "outro": (
+            "Ton équipe a doublé de taille, mais tu sens déjà que la région ne te fera "
+            "aucun cadeau. Les premiers dresseurs locaux n'ont pas la même retenue que "
+            "ceux d'avant."
+        ),
+        "evenement": "capture",
+        "cible": 15,
+        "recompense": {"dollars": 500, "xp": 200},
+    },
+    {
+        "titre": "Dresseurs Aguerris",
+        "intro": (
+            "Les dresseurs des Terres Cendrées n'ont rien de commun avec ceux que tu as "
+            "affrontés jusqu'ici — ils se sont endurcis dans cette terre hostile, et "
+            "n'acceptent de te laisser passer qu'après une démonstration de force "
+            "répétée.\n\n"
+            "**Objectif : gagner 5 combats contre des dresseurs.**"
+        ),
+        "outro": "Cinq victoires plus tard, ta réputation commence à circuler. Une rumeur insistante parle d'arènes locales, tenues par des Champions bien plus coriaces que ceux d'avant.",
+        "evenement": "pve_victoire",
+        "cible": 5,
+        "recompense": {"dollars": 600, "xp": 250},
+    },
+    {
+        "titre": "Maîtres de Plusieurs Types",
+        "intro": (
+            "Ici, un seul badge ne suffit pas à prouver quoi que ce soit — les Champions "
+            "des Terres Cendrées exigent qu'un dresseur démontre sa maîtrise sur "
+            "plusieurs types avant de le considérer comme une menace sérieuse.\n\n"
+            "**Objectif : obtenir 4 badges d'Arène.**"
+        ),
+        "outro": "Quatre badges plus tard, même les Champions les plus fiers commencent à te regarder différemment. Mais l'Arène n'est pas la seule institution de cette région à s'être endurcie...",
+        "evenement": "badge_arene",
+        "cible": 4,
+        "recompense": {"dollars": 800, "xp": 320},
+    },
+    {
+        "titre": "Chasseur de Raretés",
+        "intro": (
+            "Les Terres Cendrées abritent des espèces qu'on ne croise nulle part "
+            "ailleurs — rares, méfiantes, et bien décidées à le rester. Seul un dresseur "
+            "patient et déterminé parvient à en croiser suffisamment sur son chemin.\n\n"
+            "**Objectif : capturer 4 Pokémon Rares ou mieux.**"
+        ),
+        "outro": "Ta collection s'enrichit d'espèces que peu de dresseurs peuvent se targuer d'avoir croisées. Gladio, en l'observant, hoche la tête sans un mot — venant de lui, c'est un compliment.",
+        "evenement": "capture",
+        "filtre": {"rarete": ["rare", "hyper_rare", "legendaire"]},
+        "cible": 4,
+        "recompense": {"dollars": 900, "xp": 350, "objet": "superball"},
+    },
+    {
+        "titre": "L'Alliance de l'Ombre",
+        "intro": (
+            "Ce que tu redoutais se confirme : les quatre organisations criminelles que "
+            "tu croyais dispersées se sont regroupées ici, dans l'ombre des Terres "
+            "Cendrées, sous une bannière commune. Chacune tient encore un repaire — il "
+            "faudra tous les démanteler.\n\n"
+            "**Objectif : obtenir les 4 badges de Repaire (une organisation à la fois).**"
+        ),
+        "outro": (
+            "Les quatre repaires tombent l'un après l'autre. Ce qui restait de "
+            "l'Alliance de l'Ombre se disperse — mais son véritable instigateur, "
+            "celui qui les a réunis, reste dans l'ombre pour l'instant."
+        ),
+        "evenement": "badge_repaire",
+        "cible": 4,
+        "recompense": {"dollars": 1200, "xp": 450, "objet": "hyperball"},
+    },
+    {
+        "titre": "Rang de Vétéran",
+        "intro": (
+            "Ta réputation attire maintenant d'autres dresseurs, de vrais rivaux "
+            "humains, venus mesurer leur force à la tienne. Une seule victoire ne "
+            "suffira plus à asseoir ton rang ici.\n\n"
+            "**Objectif : gagner 5 combats PvP.**"
+        ),
+        "outro": "Cinq adversaires vaincus, cinq styles différents affrontés. Tu commences à comprendre pourquoi cette région forge des dresseurs si redoutables.",
+        "evenement": "pvp_victoire",
+        "cible": 5,
+        "recompense": {"dollars": 1000, "xp": 400},
+    },
+    {
+        "titre": "L'Éclat Rare",
+        "intro": (
+            "Une légende locale circule : dans les Terres Cendrées, un Pokémon aux "
+            "couleurs inversées porterait chance à quiconque le croise — à condition "
+            "d'être assez attentif pour le remarquer avant qu'il ne s'échappe.\n\n"
+            "**Objectif : capturer 1 Pokémon Shiny.**"
+        ),
+        "outro": "L'éclat scintillant ne t'a pas échappé. Le voir dans ton équipe suffit presque à te faire oublier la dureté du chemin parcouru jusqu'ici.",
+        "evenement": "capture",
+        "filtre": {"shiny": True},
+        "cible": 1,
+        "recompense": {"dollars": 1100, "xp": 420, "objet": "cristal_mutation"},
+    },
+    {
+        "titre": "Force Combinée",
+        "intro": (
+            "Les Pokémon les plus puissants des Terres Cendrées ne se laissent affronter "
+            "qu'en nombre — l'orgueil individuel n'a pas sa place ici, seule la "
+            "coopération permet de renverser ces géants.\n\n"
+            "**Objectif : remporter 4 Raids.**"
+        ),
+        "outro": "Quatre victoires en groupe plus tard, tu as appris ce que cette région essayait de t'enseigner depuis le début : ici, personne ne s'en sort seul.",
+        "evenement": "raid_victoire",
+        "cible": 4,
+        "recompense": {"dollars": 1000, "xp": 400},
+    },
+    {
+        "titre": "Le Retour de Gladio",
+        "intro": (
+            "\"Tu as changé,\" te dit Gladio, un sourire carnassier aux lèvres. \"Mais "
+            "changé assez ? Je ne me contenterai pas d'une seule réponse — prouve-le-moi, "
+            "encore, et encore.\"\n\n"
+            "**Objectif : battre Gladio 3 fois.**"
+        ),
+        "outro": (
+            "Après la troisième victoire, Gladio ne sourit plus en coin — il rit, "
+            "franchement, presque surpris de lui-même. \"D'accord. D'accord ! T'es "
+            "vraiment devenu quelqu'un d'autre. Ne t'arrête pas en si bon chemin, "
+            "il reste une dernière chose à régler ici.\""
+        ),
+        "evenement": "gladio_victoire",
+        "cible": 3,
+        "recompense": {"dollars": 1500, "xp": 600, "objet": "cristal_mutation"},
+    },
+    {
+        "titre": "L'Épreuve des Terres Cendrées",
+        "intro": (
+            "Ce que la région t'a réservé jusqu'ici n'était qu'une mise à l'épreuve. "
+            "Ceux qui prétendent réellement maîtriser les Terres Cendrées doivent "
+            "prouver qu'ils peuvent constituer une équipe digne des espèces les plus "
+            "redoutables qui y vivent — pas une seule, mais plusieurs.\n\n"
+            "**Objectif : capturer 10 Pokémon Hyper Rares ou mieux.**"
+        ),
+        "outro": (
+            "Dix captures d'exception plus tard, il n'y a plus grand-chose à prouver. "
+            "Gladio te regarde en silence un long moment, puis hausse les épaules avec "
+            "un sourire sincère : \"Bon. Les Terres Cendrées t'appartiennent autant "
+            "qu'à moi, maintenant. La suite de l'histoire, c'est à toi de l'écrire.\""
+        ),
+        "evenement": "capture",
+        "filtre": {"rarete": ["hyper_rare", "legendaire"]},
+        "cible": 10,
+        "recompense": {"dollars": 2000, "xp": 800, "objet": "cristal_mutation"},
     },
 ]

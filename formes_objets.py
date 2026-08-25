@@ -44,7 +44,8 @@ FORMES_OBJETS = {
         "espece": "Shaymin",
         "forme_nom": "Shaymin (Forme Céleste)",
         "numero_sprite": 10006,
-        "sprite_gif_disponible": True,  # vrai GIF animé Showdown vérifié disponible (voir sprites_formes_legendaires.zip)
+        "sprite_gif_url_showdown": "https://play.pokemonshowdown.com/sprites/ani/shaymin-sky.gif",
+        "sprite_gif_disponible": True,  # PAS encore mirroré/corrigé dans sprites_corriges/ (vérifié le 25/08 : 404 sur les 9 formes à cet endroit précis) — mais le GIF existe réellement sur le CDN officiel Showdown (confirmé au moins pour shaymin-sky, giratina-origin, palkia-origin), voir sprite_gif_url_showdown ci-dessous pour le repli direct utilisé en attendant qu'un vrai mirroring/correction soit fait.
         "types": ["plante", "vol"],
         "stats_detaillees": {"pv": 100, "attaque": 103, "defense": 75, "attaque_spe": 120, "defense_spe": 75, "vitesse": 127},
     },
@@ -55,7 +56,8 @@ FORMES_OBJETS = {
         "espece": "Giratina",
         "forme_nom": "Giratina (Origine)",
         "numero_sprite": 10007,
-        "sprite_gif_disponible": True,  # vrai GIF animé Showdown vérifié disponible (voir sprites_formes_legendaires.zip)
+        "sprite_gif_url_showdown": "https://play.pokemonshowdown.com/sprites/ani/giratina-origin.gif",
+        "sprite_gif_disponible": True,  # PAS encore mirroré/corrigé dans sprites_corriges/ (vérifié le 25/08 : 404 sur les 9 formes à cet endroit précis) — mais le GIF existe réellement sur le CDN officiel Showdown (confirmé au moins pour shaymin-sky, giratina-origin, palkia-origin), voir sprite_gif_url_showdown ci-dessous pour le repli direct utilisé en attendant qu'un vrai mirroring/correction soit fait.
         "types": ["spectre", "dragon"],
         "stats_detaillees": {"pv": 150, "attaque": 120, "defense": 100, "attaque_spe": 120, "defense_spe": 100, "vitesse": 90},
     },
@@ -66,7 +68,8 @@ FORMES_OBJETS = {
         "espece": "Dialga",
         "forme_nom": "Dialga (Origine)",
         "numero_sprite": 10245,
-        "sprite_gif_disponible": True,  # vrai GIF animé Showdown vérifié disponible (voir sprites_formes_legendaires.zip)
+        "sprite_gif_url_showdown": "https://play.pokemonshowdown.com/sprites/ani/dialga-origin.gif",
+        "sprite_gif_disponible": True,  # PAS encore mirroré/corrigé dans sprites_corriges/ (vérifié le 25/08 : 404 sur les 9 formes à cet endroit précis) — mais le GIF existe réellement sur le CDN officiel Showdown (confirmé au moins pour shaymin-sky, giratina-origin, palkia-origin), voir sprite_gif_url_showdown ci-dessous pour le repli direct utilisé en attendant qu'un vrai mirroring/correction soit fait.
         "types": ["acier", "dragon"],
         "stats_detaillees": {"pv": 100, "attaque": 100, "defense": 100, "attaque_spe": 150, "defense_spe": 120, "vitesse": 110},
     },
@@ -77,7 +80,8 @@ FORMES_OBJETS = {
         "espece": "Palkia",
         "forme_nom": "Palkia (Origine)",
         "numero_sprite": 10246,
-        "sprite_gif_disponible": True,  # vrai GIF animé Showdown vérifié disponible (voir sprites_formes_legendaires.zip)
+        "sprite_gif_url_showdown": "https://play.pokemonshowdown.com/sprites/ani/palkia-origin.gif",
+        "sprite_gif_disponible": True,  # PAS encore mirroré/corrigé dans sprites_corriges/ (vérifié le 25/08 : 404 sur les 9 formes à cet endroit précis) — mais le GIF existe réellement sur le CDN officiel Showdown (confirmé au moins pour shaymin-sky, giratina-origin, palkia-origin), voir sprite_gif_url_showdown ci-dessous pour le repli direct utilisé en attendant qu'un vrai mirroring/correction soit fait.
         "types": ["eau", "dragon"],
         "stats_detaillees": {"pv": 90, "attaque": 100, "defense": 100, "attaque_spe": 150, "defense_spe": 120, "vitesse": 120},
     },
@@ -88,7 +92,8 @@ FORMES_OBJETS = {
         "espece": "Kyogre",
         "forme_nom": "Primo-Kyogre",
         "numero_sprite": 10077,
-        "sprite_gif_disponible": True,  # vrai GIF animé Showdown vérifié disponible (voir sprites_formes_legendaires.zip)
+        "sprite_gif_url_showdown": "https://play.pokemonshowdown.com/sprites/ani/kyogre-primal.gif",
+        "sprite_gif_disponible": True,  # PAS encore mirroré/corrigé dans sprites_corriges/ (vérifié le 25/08 : 404 sur les 9 formes à cet endroit précis) — mais le GIF existe réellement sur le CDN officiel Showdown (confirmé au moins pour shaymin-sky, giratina-origin, palkia-origin), voir sprite_gif_url_showdown ci-dessous pour le repli direct utilisé en attendant qu'un vrai mirroring/correction soit fait.
         "types": ["eau"],
         "stats_detaillees": {"pv": 100, "attaque": 150, "defense": 90, "attaque_spe": 180, "defense_spe": 160, "vitesse": 90},
     },
@@ -99,7 +104,8 @@ FORMES_OBJETS = {
         "espece": "Groudon",
         "forme_nom": "Primo-Groudon",
         "numero_sprite": 10078,
-        "sprite_gif_disponible": True,  # vrai GIF animé Showdown vérifié disponible (voir sprites_formes_legendaires.zip)
+        "sprite_gif_url_showdown": "https://play.pokemonshowdown.com/sprites/ani/groudon-primal.gif",
+        "sprite_gif_disponible": True,  # PAS encore mirroré/corrigé dans sprites_corriges/ (vérifié le 25/08 : 404 sur les 9 formes à cet endroit précis) — mais le GIF existe réellement sur le CDN officiel Showdown (confirmé au moins pour shaymin-sky, giratina-origin, palkia-origin), voir sprite_gif_url_showdown ci-dessous pour le repli direct utilisé en attendant qu'un vrai mirroring/correction soit fait.
         "types": ["sol", "feu"],
         "stats_detaillees": {"pv": 100, "attaque": 180, "defense": 160, "attaque_spe": 150, "defense_spe": 90, "vitesse": 90},
     },
@@ -110,7 +116,8 @@ FORMES_OBJETS = {
         "espece": "Hoopa",
         "forme_nom": "Hoopa Déchaîné",
         "numero_sprite": 10086,
-        "sprite_gif_disponible": True,  # vrai GIF animé Showdown vérifié disponible (voir sprites_formes_legendaires.zip)
+        "sprite_gif_url_showdown": "https://play.pokemonshowdown.com/sprites/ani/hoopa-unbound.gif",
+        "sprite_gif_disponible": True,  # PAS encore mirroré/corrigé dans sprites_corriges/ (vérifié le 25/08 : 404 sur les 9 formes à cet endroit précis) — mais le GIF existe réellement sur le CDN officiel Showdown (confirmé au moins pour shaymin-sky, giratina-origin, palkia-origin), voir sprite_gif_url_showdown ci-dessous pour le repli direct utilisé en attendant qu'un vrai mirroring/correction soit fait.
         "types": ["psy", "tenebres"],
         "stats_detaillees": {"pv": 80, "attaque": 160, "defense": 60, "attaque_spe": 170, "defense_spe": 130, "vitesse": 80},
     },
@@ -121,7 +128,8 @@ FORMES_OBJETS = {
         "espece": "Zacian",
         "forme_nom": "Zacian (Épée Suprême)",
         "numero_sprite": 10188,
-        "sprite_gif_disponible": True,  # vrai GIF animé Showdown vérifié disponible (voir sprites_formes_legendaires.zip)
+        "sprite_gif_url_showdown": "https://play.pokemonshowdown.com/sprites/ani/zacian-crowned.gif",
+        "sprite_gif_disponible": True,  # PAS encore mirroré/corrigé dans sprites_corriges/ (vérifié le 25/08 : 404 sur les 9 formes à cet endroit précis) — mais le GIF existe réellement sur le CDN officiel Showdown (confirmé au moins pour shaymin-sky, giratina-origin, palkia-origin), voir sprite_gif_url_showdown ci-dessous pour le repli direct utilisé en attendant qu'un vrai mirroring/correction soit fait.
         "types": ["fee", "acier"],
         "stats_detaillees": {"pv": 92, "attaque": 150, "defense": 115, "attaque_spe": 80, "defense_spe": 115, "vitesse": 148},
     },
@@ -132,7 +140,8 @@ FORMES_OBJETS = {
         "espece": "Zamazenta",
         "forme_nom": "Zamazenta (Bouclier Suprême)",
         "numero_sprite": 10189,
-        "sprite_gif_disponible": True,  # vrai GIF animé Showdown vérifié disponible (voir sprites_formes_legendaires.zip)
+        "sprite_gif_url_showdown": "https://play.pokemonshowdown.com/sprites/ani/zamazenta-crowned.gif",
+        "sprite_gif_disponible": True,  # PAS encore mirroré/corrigé dans sprites_corriges/ (vérifié le 25/08 : 404 sur les 9 formes à cet endroit précis) — mais le GIF existe réellement sur le CDN officiel Showdown (confirmé au moins pour shaymin-sky, giratina-origin, palkia-origin), voir sprite_gif_url_showdown ci-dessous pour le repli direct utilisé en attendant qu'un vrai mirroring/correction soit fait.
         "types": ["combat", "acier"],
         "stats_detaillees": {"pv": 92, "attaque": 130, "defense": 145, "attaque_spe": 80, "defense_spe": 145, "vitesse": 128},
     },
@@ -171,6 +180,7 @@ def pokemon_effectif(pokemon: dict, objet_tenu: str | None) -> dict:
         "stats_detaillees": forme["stats_detaillees"],
         "numero_sprite": forme["numero_sprite"],
         "sprite_gif_disponible": forme["sprite_gif_disponible"],
+        "sprite_gif_url_showdown": forme.get("sprite_gif_url_showdown"),
     }
 
 

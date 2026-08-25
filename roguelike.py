@@ -23,6 +23,7 @@ from pokemon_data import (
     IV_DEFAUT,
     calculer_multiplicateur_type,
     calculer_toutes_stats,
+    evoluer_si_possible,
     obtenir_pokemon_par_nom,
     sprite_pokemon,
 )
@@ -124,13 +125,19 @@ def _emoji_types_pokemon(pokemon: dict) -> str:
 
 
 def _attaques_disponibles(pokemon_nom: str) -> list:
+    """Retourne au maximum 4 attaques (comme dans les vrais jeux) — ATTAQUE_NEUTRE
+    systématiquement en premier, puis un tirage parmi celles des 1-2 types du Pokémon.
+    Bug corrigé : avant, un Pokémon bi-type cumulait TOUTES les attaques des deux
+    pools de type sans aucun plafond (un Pokémon Plante/Poison pouvait se retrouver
+    avec 5 attaques ou plus au lieu de 4 maximum)."""
     pokemon = obtenir_pokemon_par_nom(pokemon_nom)
     if not pokemon:
         return [ATTAQUE_NEUTRE]
-    attaques = [ATTAQUE_NEUTRE]
+    pool_types = []
     for t in pokemon.get("types", [])[:2]:
-        attaques.extend(MOUVEPOOL_PAR_TYPE.get(t, []))
-    return attaques
+        pool_types.extend(MOUVEPOOL_PAR_TYPE.get(t, []))
+    nb_a_tirer = min(3, len(pool_types))
+    return [ATTAQUE_NEUTRE] + random.sample(pool_types, nb_a_tirer)
 
 
 def _niveau_pour_etage(salle_index: int) -> int:
@@ -334,16 +341,17 @@ class VueCombatRoguelike(discord.ui.View):
             await interaction.response.send_message("Ton Pokémon actif est K.O. !", ephemeral=True)
             return
 
+        attaques_disponibles = _attaques_disponibles(actif["pokemon_nom"])
         options = [
             discord.SelectOption(label=f"{a['nom']} — {a['puissance']} pcs", value=str(i), emoji=EMOJI_TYPES.get(a["type"]))
-            for i, a in enumerate(_attaques_disponibles(actif["pokemon_nom"]))
+            for i, a in enumerate(attaques_disponibles)
         ]
         select = discord.ui.Select(placeholder="Choisis ton attaque…", options=options)
 
         async def on_select(inter: discord.Interaction):
             await inter.response.defer()
             index = int(select.values[0])
-            attaque = _attaques_disponibles(actif["pokemon_nom"])[index]
+            attaque = attaques_disponibles[index]
             await resoudre_tour_roguelike(inter.client, run_id, attaque)
 
         select.callback = on_select
@@ -514,6 +522,41 @@ async def avancer_salle(bot, run_id: int):
 
     chemin = json_module.loads(run["chemin"])
     nouvel_index = database.avancer_salle_roguelike(run_id)
+
+    # Fait monter l'équipe du joueur au niveau attendu de CETTE salle — sans ça, l'équipe
+    # restait figée au niveau où elle a rejoint (souvent le niveau de départ) alors que
+    # les ennemis montent en niveau à chaque salle via _niveau_pour_etage, créant un
+    # déséquilibre de plus en plus injuste au fil de la run. On ne fait JAMAIS redescendre
+    # un niveau (un membre recruté en avance sur la courbe reste tel quel tant que la
+    # formule ne l'a pas rattrapé), et on préserve le POURCENTAGE de vie actuel plutôt que
+    # de soigner gratuitement à chaque montée.
+    niveau_attendu = _niveau_pour_etage(nouvel_index)
+    annonces_evolution = []
+    for membre in database.obtenir_equipe_roguelike(run_id):
+        if membre["niveau"] >= niveau_attendu:
+            continue
+        # Applique la chaîne d'évolution AVANT de calculer les nouvelles stats — sans ça,
+        # les PV/attaque seraient calculés sur l'ancienne espèce alors que le Pokémon a
+        # déjà changé de forme à ce niveau (voir evoluer_si_possible, gère aussi le cas
+        # d'un saut de plusieurs niveaux qui franchit 2 seuils d'évolution d'un coup).
+        nom_final, chaine = evoluer_si_possible(membre["pokemon_nom"], niveau_attendu)
+        if chaine:
+            annonces_evolution.append(f"✨ **{membre['pokemon_nom']}** a évolué en **{nom_final}** !")
+
+        nouvelles_stats = _generer_stats(nom_final, niveau_attendu)
+        ratio_pv = membre["pv_actuels"] / membre["pv_max"] if membre["pv_max"] > 0 else 0
+        nouveaux_pv_actuels = max(1, round(nouvelles_stats["pv"] * ratio_pv)) if membre["pv_actuels"] > 0 else 0
+        database.mettre_a_jour_niveau_membre_roguelike(
+            run_id, membre["position"], niveau_attendu, nouvelles_stats["pv"], nouveaux_pv_actuels,
+            pokemon_nom=nom_final if chaine else None,
+        )
+
+    if annonces_evolution:
+        thread_pour_annonce = bot.get_channel(int(run["thread_id"])) or await bot.fetch_channel(int(run["thread_id"]))
+        try:
+            await thread_pour_annonce.send("\n".join(annonces_evolution))
+        except discord.HTTPException:
+            pass  # purement informatif, ne doit jamais bloquer la suite de la run
 
     if nouvel_index >= len(chemin):
         await _conclure_run(bot, run_id, victoire=True)

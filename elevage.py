@@ -3,6 +3,7 @@ import time
 
 import discord
 
+import caisson_croissance as caisson_croissance_module
 import config
 import database
 import niveaux_pokemon
@@ -17,6 +18,7 @@ from pokemon_data import (
     NOM_OBJETS_DIVERS,
     NOM_SOIN_AFFICHAGE,
     calculer_pc_derive,
+    cle_tri_alphabetique_fr,
     sprite_pokemon,
     tirer_ivs,
     tirer_niveau_spawn,
@@ -49,20 +51,26 @@ def _oeufs_disponibles(user_id: int) -> list:
 
 
 # ----------------------------------------------------------------------------
-# Message fixe du Laboratoire (Race + Incubateur)
+# Message fixe du Laboratoire (Mutation + Incubateur + Transformateur)
 # ----------------------------------------------------------------------------
 
 def construire_embed_labo() -> discord.Embed:
     embed = discord.Embed(
         title="🧪 Le Laboratoire",
         description=(
-            "Deux choses à faire ici :\n\n"
-            "🧬 **Ta Race de dresseur** — bonus permanents, tirés avec un Cristal de Mutation "
-            "(obtenu en Exploration).\n\n"
+            "Quatre choses à faire ici :\n\n"
+            "🧬 **Ta Mutation de dresseur** — bonus permanents, tirés avec un Cristal de "
+            "Mutation (obtenu en Exploration).\n\n"
             "🥚 **Ton incubateur** — place un œuf trouvé au PokéStop ou en Exploration pour "
             "le faire éclore. Chaque palier d'œuf garantit un Pokémon de sa rareté (ou "
             "légèrement mieux, sauf Légendaire), avec une chance de shiny doublée par rapport "
-            "à un spawn sauvage."
+            "à un spawn sauvage.\n\n"
+            "🔬 **Le Transformateur** — convertis 10 objets d'un palier en 1 du palier "
+            "supérieur (Poké Ball → Super Ball → Hyper Ball ; Potion → Super Potion → Hyper "
+            "Potion), pratique pour ne pas laisser traîner un surplus.\n\n"
+            f"🧫 **Le Caisson de Croissance** — place jusqu'à {database.NB_SLOTS_CAISSON} "
+            f"Pokémon possédés dedans, ils gagnent de l'XP passivement au fil du temps "
+            f"({caisson_croissance_module.XP_PAR_HEURE} XP/heure chacun), même sans jouer."
         ),
         color=discord.Color.teal(),
     )
@@ -76,7 +84,7 @@ class VueLaboratoire(discord.ui.View):
         super().__init__(timeout=None)
 
     @discord.ui.button(
-        label="Ma Race", style=discord.ButtonStyle.primary, emoji="🧬", custom_id="labo_race_bouton"
+        label="Ma Mutation", style=discord.ButtonStyle.primary, emoji="🧬", custom_id="labo_race_bouton"
     )
     async def race(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = race_ui.construire_embed_race(interaction.user.id)
@@ -96,6 +104,14 @@ class VueLaboratoire(discord.ui.View):
     async def transformateur(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = construire_embed_transformateur(interaction.user.id)
         vue = VueTransformateur(interaction.user.id)
+        await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
+
+    @discord.ui.button(
+        label="Caisson de Croissance", style=discord.ButtonStyle.secondary, emoji="🧫", custom_id="labo_caisson_bouton"
+    )
+    async def caisson(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = construire_embed_caisson(interaction.user.id)
+        vue = VueCaissonCroissance(interaction.user.id)
         await interaction.response.send_message(embed=embed, view=vue, ephemeral=True)
 
 
@@ -139,6 +155,134 @@ def construire_embed_transformateur(user_id: int) -> discord.Embed:
             inline=True,
         )
     return embed
+
+
+# ----------------------------------------------------------------------------
+# Caisson de Croissance — 3 emplacements, XP passive au fil du temps (voir
+# caisson_croissance.py pour le calcul, réutilise niveaux_pokemon.gagner_xp_equipe).
+# ----------------------------------------------------------------------------
+
+ESPECES_PAR_PAGE_CAISSON = 20
+
+
+def construire_embed_caisson(user_id: int) -> discord.Embed:
+    caisson = database.obtenir_caisson(user_id)
+    lignes = []
+    maintenant = int(time.time())
+    for slot in range(1, database.NB_SLOTS_CAISSON + 1):
+        info = caisson[slot]
+        if info is None:
+            lignes.append(f"**Emplacement {slot}** — *vide*")
+        else:
+            xp_attente = caisson_croissance_module.xp_en_attente(info["date_debut"])
+            secondes = maintenant - info["date_debut"]
+            heures, minutes = secondes // 3600, (secondes % 3600) // 60
+            lignes.append(
+                f"**Emplacement {slot}** — {info['pokemon_nom']} (depuis {heures}h{minutes:02d}, "
+                f"{xp_attente} XP en attente)"
+            )
+    embed = discord.Embed(title="🧫 Caisson de Croissance", description="\n".join(lignes), color=discord.Color.teal())
+    embed.set_footer(
+        text=f"{caisson_croissance_module.XP_PAR_HEURE} XP/heure par Pokémon — récupère l'XP en le retirant."
+    )
+    return embed
+
+
+class VueCaissonCroissance(discord.ui.View):
+    """Dépôt (select paginé des espèces possédées non déjà dedans) + retrait
+    (un bouton par emplacement occupé, crédite l'XP accumulée immédiatement)."""
+
+    def __init__(self, user_id: int, page: int = 0):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        self.page = page
+        self.caisson = database.obtenir_caisson(user_id)
+        self._construire_composants()
+
+    def _especes_eligibles(self) -> list:
+        deja_dedans = {info["pokemon_nom"] for info in self.caisson.values() if info}
+        noms_possedes = {row["pokemon_nom"] for row in database.obtenir_pokedex_joueur(self.user_id)}
+        return sorted(noms_possedes - deja_dedans, key=cle_tri_alphabetique_fr)
+
+    def _construire_composants(self):
+        self.clear_items()
+
+        slots_libres = any(info is None for info in self.caisson.values())
+        especes = self._especes_eligibles() if slots_libres else []
+
+        if especes:
+            debut = self.page * ESPECES_PAR_PAGE_CAISSON
+            page_especes = especes[debut : debut + ESPECES_PAR_PAGE_CAISSON]
+            options = [discord.SelectOption(label=nom[:100], value=nom) for nom in page_especes]
+            select = discord.ui.Select(placeholder="Déposer un Pokémon possédé", options=options, row=0)
+            select.callback = self._on_deposer
+            self.add_item(select)
+
+            nb_pages = max(1, (len(especes) + ESPECES_PAR_PAGE_CAISSON - 1) // ESPECES_PAR_PAGE_CAISSON)
+            if nb_pages > 1:
+                bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=1, disabled=self.page == 0)
+                bouton_prec.callback = self._page_prec
+                self.add_item(bouton_prec)
+                bouton_suiv = discord.ui.Button(label="▶", style=discord.ButtonStyle.secondary, row=1, disabled=self.page >= nb_pages - 1)
+                bouton_suiv.callback = self._page_suiv
+                self.add_item(bouton_suiv)
+
+        for slot, info in self.caisson.items():
+            if info is not None:
+                bouton = discord.ui.Button(
+                    label=f"Retirer {info['pokemon_nom']} (emplacement {slot})",
+                    emoji="📤", style=discord.ButtonStyle.success, row=1 + slot,
+                )
+                bouton.callback = self._faire_retirer(slot)
+                self.add_item(bouton)
+
+    async def _verifier(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ton Caisson !", ephemeral=True)
+            return False
+        return True
+
+    async def _on_deposer(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        pokemon_nom = interaction.data["values"][0]
+        succes, message = caisson_croissance_module.deposer(self.user_id, pokemon_nom)
+        prefixe = "✅ " if succes else "❌ "
+        self.caisson = database.obtenir_caisson(self.user_id)
+        self._construire_composants()
+        await interaction.response.edit_message(
+            content=f"{prefixe}{message}", embed=construire_embed_caisson(self.user_id), view=self
+        )
+
+    def _faire_retirer(self, slot: int):
+        async def callback(interaction: discord.Interaction):
+            if not await self._verifier(interaction):
+                return
+            resultat = caisson_croissance_module.retirer(self.user_id, slot)
+            if resultat is None:
+                await interaction.response.send_message("Cet emplacement est déjà vide.", ephemeral=True)
+                return
+            texte = f"✅ **{resultat['pokemon_nom']}** retiré — +{resultat['xp_gagnee']} XP crédités !"
+            if resultat["montees_niveau"]:
+                texte += "\n" + niveaux_pokemon.texte_montees_niveau(resultat["montees_niveau"])
+            self.caisson = database.obtenir_caisson(self.user_id)
+            self._construire_composants()
+            await interaction.response.edit_message(content=texte, embed=construire_embed_caisson(self.user_id), view=self)
+        return callback
+
+    async def _page_prec(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.page = max(0, self.page - 1)
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+    async def _page_suiv(self, interaction: discord.Interaction):
+        if not await self._verifier(interaction):
+            return
+        self.page += 1
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
 
 
 class VueTransformateur(discord.ui.View):

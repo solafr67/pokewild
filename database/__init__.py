@@ -34,6 +34,13 @@ def get_connexion():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.create_collation("ALPHABET_FR", _collation_alphabet_fr)
+    # WAL : permet à des lectures et une écriture de se produire en même temps (au lieu du
+    # mode par défaut "rollback journal" qui bloque tout lecteur pendant une écriture) —
+    # réduit fortement les erreurs "database is locked" quand plusieurs boucles/commandes
+    # tapent la DB en même temps (spawns, combats, quêtes...). busy_timeout : si un verrou
+    # persiste malgré tout, SQLite réessaie pendant 5s au lieu d'échouer immédiatement.
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 
@@ -681,6 +688,68 @@ def init_db():
 
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS connexion_quotidienne (
+            user_id INTEGER PRIMARY KEY,
+            streak INTEGER NOT NULL DEFAULT 0,
+            dernier_jour INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS recap_hebdo_snapshot (
+            user_id INTEGER PRIMARY KEY,
+            date_snapshot INTEGER NOT NULL DEFAULT 0,
+            victoires_pvp INTEGER NOT NULL DEFAULT 0,
+            victoires_pve INTEGER NOT NULL DEFAULT 0,
+            captures_totales INTEGER NOT NULL DEFAULT 0,
+            explorations_terminees INTEGER NOT NULL DEFAULT 0,
+            shiny_totaux INTEGER NOT NULL DEFAULT 0,
+            poke_dollars INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS event_capture_rarete_points (
+            event_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            points INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (event_id, user_id)
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS caisson_croissance_slots (
+            user_id INTEGER NOT NULL,
+            slot INTEGER NOT NULL,
+            pokemon_nom TEXT NOT NULL,
+            date_debut INTEGER NOT NULL,
+            PRIMARY KEY (user_id, slot)
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS contrats_actifs (
+            user_id INTEGER NOT NULL,
+            jour INTEGER NOT NULL,
+            position INTEGER NOT NULL,
+            contrat_id TEXT NOT NULL,
+            compteur INTEGER NOT NULL DEFAULT 0,
+            complete INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, jour, position)
+        )
+        """
+    )
+
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS parrainage_paliers_recus (
             user_id INTEGER NOT NULL,
             palier INTEGER NOT NULL,
@@ -815,6 +884,18 @@ def init_db():
             capture_id INTEGER NOT NULL,
             proposant_id INTEGER NOT NULL,
             PRIMARY KEY (echange_id, capture_id)
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS echange_objets (
+            echange_id INTEGER NOT NULL,
+            proposant_id INTEGER NOT NULL,
+            objet_cle TEXT NOT NULL,
+            quantite INTEGER NOT NULL,
+            PRIMARY KEY (echange_id, proposant_id, objet_cle)
         )
         """
     )
@@ -1401,15 +1482,22 @@ def obtenir_progression_quete_principale(user_id: int) -> dict:
     return {"chapitre": row["chapitre"], "compteur": row["compteur"], "termine": bool(row["termine"])}
 
 
-def avancer_quete_principale(user_id: int, evenement: str, montant: int = 1) -> dict | None:
+def avancer_quete_principale(user_id: int, evenement: str, contexte: dict = None, montant: int = 1) -> dict | None:
     """Fait progresser la quête principale si `evenement` correspond à l'objectif du
     chapitre EN COURS du joueur (les événements pour un chapitre déjà passé ou pas encore
     atteint sont ignorés silencieusement). Retourne un dict de notification de chapitre
     tout juste complété (titre/outro/récompense + éventuel nouveau chapitre à annoncer) si
     CET appel vient de faire franchir le seuil, sinon None. La récompense est créditée
-    immédiatement (pas d'étape de réclamation séparée, contrairement aux quêtes jour/semaine)."""
+    immédiatement (pas d'étape de réclamation séparée, contrairement aux quêtes jour/semaine).
+
+    `contexte`/`filtre` optionnels (même mécanique que les quêtes jour/semaine) — un
+    chapitre SANS "filtre" dans sa définition se comporte exactement comme avant
+    (rétrocompatible avec tous les chapitres de la Partie 1), un chapitre AVEC "filtre"
+    exige en plus une correspondance exacte (ou une valeur parmi une liste) sur le
+    contexte transmis — ex: {"rarete": ["rare", "hyper_rare", "legendaire"]}."""
     import config
 
+    contexte = contexte or {}
     chapitres = config.QUETE_PRINCIPALE_CHAPITRES
     progression = obtenir_progression_quete_principale(user_id)
     if progression["termine"]:
@@ -1422,6 +1510,16 @@ def avancer_quete_principale(user_id: int, evenement: str, montant: int = 1) -> 
     chapitre_actuel = chapitres[index_chapitre]
     if chapitre_actuel["evenement"] != evenement:
         return None
+
+    filtre = chapitre_actuel.get("filtre")
+    if filtre:
+        for cle, attendu in filtre.items():
+            valeur_reelle = contexte.get(cle)
+            if isinstance(attendu, list):
+                if valeur_reelle not in attendu:
+                    return None
+            elif valeur_reelle != attendu:
+                return None
 
     conn = get_connexion()
     cur = conn.cursor()
@@ -1742,55 +1840,9 @@ def obtenir_toutes_paires_capturees() -> list:
     return resultats
 
 
-def reinitialiser_pool_raid_joueur(user_id: int):
-    """(Re)synchronise le pool de PV du raid (etat_combat_pokemon_raid) sur l'état RÉEL et
-    ACTUEL du joueur (etat_combat_pokemon, le pool "normal") — appelé au démarrage du
-    combat de CHAQUE raid.
+# reinitialiser_pool_raid_joueur, joueur_dans_raid_actif : déplacées dans
+# database/raids.py (avec le reste du domaine raid, voir plus bas dans ce fichier).
 
-    Historique : la 1ère version de cette fonction se contentait de VIDER le pool raid
-    (donc, faute de ligne, obtenir_pv_actuels le lisait comme "plein" par défaut). Ça
-    corrigeait bien le bug du boss increvable (une équipe K.O. par un raid précédent ne
-    restait plus bloquée à vie), MAIS ça soignait aussi gratuitement, sans potion,
-    n'importe quel dégât pris juste avant en combat dresseur/Arène/PvP (signalé par un
-    joueur : "je sors d'un combat dresseur, je lance un raid, mon équipe est full vie").
-    En copiant l'état RÉEL du pool normal au lieu de tout remettre à plein, on corrige les
-    deux bugs à la fois : l'équipe entre dans le raid dans l'état où elle était vraiment
-    (blessée si elle l'était, pleine sinon), sans jamais rester bloquée par une VIEILLE
-    riposte de raid oubliée. Les dégâts pris PENDANT ce raid sont resynchronisés vers le
-    pool normal à la fin du raid (voir terminer_raid) : la blessure persiste après,
-    comme n'importe quel autre combat — plus de soin gratuit d'un côté ni de l'autre."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM etat_combat_pokemon_raid WHERE user_id = ?", (user_id,))
-    cur.execute(
-        """
-        INSERT INTO etat_combat_pokemon_raid (user_id, pokemon_nom, pv_actuels)
-        SELECT user_id, pokemon_nom, pv_actuels FROM etat_combat_pokemon WHERE user_id = ?
-        """,
-        (user_id,),
-    )
-    conn.commit()
-    conn.close()
-
-
-def joueur_dans_raid_actif(user_id: int) -> bool:
-    """True si ce joueur est actuellement inscrit à un raid en cours — sert à savoir si
-    le soin depuis le profil doit cibler le pool de PV du raid (voir contexte="raid" sur
-    obtenir_pv_actuels/modifier_pv_pokemon) plutôt que le pool normal."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT 1 FROM raid_participants rp
-        JOIN raid_actuel r ON r.id = rp.raid_id
-        WHERE rp.user_id = ? AND r.actif = 1
-        LIMIT 1
-        """,
-        (user_id,),
-    )
-    trouve = cur.fetchone() is not None
-    conn.close()
-    return trouve
 
 
 def obtenir_points_saison(user_id: int, saison: int) -> int:
@@ -1820,91 +1872,10 @@ def ajouter_points_saison(user_id: int, saison: int, montant: int) -> int:
     return total
 
 
-def enregistrer_parrainage(filleul_id: int, inviteur_id: int) -> bool:
-    """Enregistre qu'un nouveau membre (filleul_id) a rejoint via l'invitation de
-    inviteur_id — EN ATTENTE de confirmation (voir confirmer_parrainage), pas encore
-    compté dans les récompenses. Retourne False si ce filleul est déjà enregistré (ne
-    compte jamais deux fois, même s'il quitte et revient)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT 1 FROM parrainages WHERE filleul_id = ?", (filleul_id,))
-    if cur.fetchone() is not None:
-        conn.close()
-        return False
-    cur.execute(
-        "INSERT INTO parrainages (filleul_id, inviteur_id, date_join, confirme) VALUES (?, ?, ?, 0)",
-        (filleul_id, inviteur_id, int(time.time())),
-    )
-    conn.commit()
-    conn.close()
-    return True
+# Domaine parrainage (enregistrer_parrainage, compter_parrainages, etc.) déplacé dans
+# database/parrainage.py — voir le `from .parrainage import *` en fin de fichier.
+# (est_booster_serveur/definir_booster_serveur restent ici, pas un vrai domaine à part.)
 
-
-def supprimer_parrainage_non_confirme(filleul_id: int):
-    """À appeler quand un filleul quitte le serveur AVANT d'être confirmé (voir
-    config.PARRAINAGE_DELAI_JOURS) — son parrainage ne doit jamais compter. Ne fait rien
-    si le parrainage est déjà confirmé (aucune reprise après coup)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM parrainages WHERE filleul_id = ? AND confirme = 0", (filleul_id,))
-    conn.commit()
-    conn.close()
-
-
-def obtenir_parrainages_a_confirmer(delai_secondes: int) -> list:
-    """Parrainages encore en attente dont le délai minimum (config.PARRAINAGE_DELAI_JOURS)
-    est écoulé — à vérifier (le filleul est-il toujours là ?) puis confirmer si oui."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    seuil = int(time.time()) - delai_secondes
-    cur.execute(
-        "SELECT filleul_id, inviteur_id FROM parrainages WHERE confirme = 0 AND date_join <= ?",
-        (seuil,),
-    )
-    resultats = [(row["filleul_id"], row["inviteur_id"]) for row in cur.fetchall()]
-    conn.close()
-    return resultats
-
-
-def confirmer_parrainage(filleul_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE parrainages SET confirme = 1 WHERE filleul_id = ?", (filleul_id,))
-    conn.commit()
-    conn.close()
-
-
-def compter_parrainages(inviteur_id: int) -> int:
-    """Ne compte que les parrainages CONFIRMÉS (filleul resté le délai minimum)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT COUNT(*) AS n FROM parrainages WHERE inviteur_id = ? AND confirme = 1",
-        (inviteur_id,),
-    )
-    n = cur.fetchone()["n"]
-    conn.close()
-    return n
-
-
-def obtenir_paliers_parrainage_recus(user_id: int) -> set:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT palier FROM parrainage_paliers_recus WHERE user_id = ?", (user_id,))
-    resultats = {row["palier"] for row in cur.fetchall()}
-    conn.close()
-    return resultats
-
-
-def marquer_palier_parrainage_recu(user_id: int, palier: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT OR IGNORE INTO parrainage_paliers_recus (user_id, palier) VALUES (?, ?)",
-        (user_id, palier),
-    )
-    conn.commit()
-    conn.close()
 
 
 def est_booster_serveur(user_id: int) -> bool:
@@ -1927,27 +1898,9 @@ def definir_booster_serveur(user_id: int, actif: bool):
     conn.close()
 
 
-def obtenir_record_plus_ou_moins(user_id: int) -> int:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT meilleur_score FROM record_plus_ou_moins WHERE user_id = ?", (user_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row["meilleur_score"] if row else 0
+# Domaine Plus ou Moins (obtenir/definir_record_plus_ou_moins) déplacé dans
+# database/plus_ou_moins.py — voir le `from .plus_ou_moins import *` en fin de fichier.
 
-
-def definir_record_plus_ou_moins(user_id: int, score: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO record_plus_ou_moins (user_id, meilleur_score) VALUES (?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET meilleur_score = excluded.meilleur_score
-        """,
-        (user_id, score),
-    )
-    conn.commit()
-    conn.close()
 
 
 def _assurer_joueur_existe(cur, user_id: int):
@@ -2016,322 +1969,9 @@ def ajouter_xp(user_id: int, montant: int) -> int:
 
 # --- Équipes ---
 
-def obtenir_statut_equipe(user_id: int):
-    """Retourne (equipe_actuelle, peut_changer_gratuitement, secondes_avant_prochain_changement)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    _assurer_joueur_existe(cur, user_id)
-    conn.commit()
-    cur.execute("SELECT team, team_last_change FROM users WHERE user_id = ?", (user_id,))
-    row = cur.fetchone()
-    conn.close()
-
-    equipe = row["team"]
-    if equipe is None:
-        return equipe, True, 0  # premier choix toujours gratuit
-
-    dernier_changement = row["team_last_change"] or 0
-    temps_ecoule = time.time() - dernier_changement
-    if temps_ecoule >= config.COOLDOWN_CHANGEMENT_EQUIPE:
-        return equipe, True, 0
-
-    return equipe, False, int(config.COOLDOWN_CHANGEMENT_EQUIPE - temps_ecoule)
-
-
-def changer_equipe(user_id: int, nouvelle_equipe: str):
-    """Change le clan d'un joueur et enregistre la date du changement (à n'appeler qu'après
-    avoir vérifié via obtenir_statut_equipe que c'est autorisé). Remet aussi à zéro sa
-    contribution personnelle (rang au sein du clan) — elle ne suit pas le joueur d'une
-    équipe à l'autre, comme demandé."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    _assurer_joueur_existe(cur, user_id)
-    cur.execute(
-        "UPDATE users SET team = ?, team_last_change = ? WHERE user_id = ?",
-        (nouvelle_equipe, int(time.time()), user_id),
-    )
-    cur.execute(
-        """
-        INSERT INTO clan_contribution (user_id, equipe, points) VALUES (?, ?, 0)
-        ON CONFLICT(user_id) DO UPDATE SET equipe = excluded.equipe, points = 0
-        """,
-        (user_id, nouvelle_equipe),
-    )
-    conn.commit()
-    conn.close()
-
-
-def obtenir_equipe(user_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    _assurer_joueur_existe(cur, user_id)
-    conn.commit()
-    cur.execute("SELECT team FROM users WHERE user_id = ?", (user_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row["team"] if row else None
-
-
-def classement_equipes():
-    """Retourne un score par équipe : nombre de captures À VIE (jamais réduit par un
-    relâcher de doublon) + somme des PC des membres (celle-ci reste "en direct", cohérent
-    puisque c'est une mesure de la force ACTUELLE de l'équipe, pas d'un cumul historique)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT
-            u.team AS equipe,
-            COALESCE((
-                SELECT SUM(s.captures_totales) FROM stats_lifetime s
-                JOIN users u2 ON u2.user_id = s.user_id WHERE u2.team = u.team
-            ), 0) AS total_captures,
-            COALESCE((
-                SELECT SUM(c.pc) FROM captures c
-                JOIN users u3 ON u3.user_id = c.user_id WHERE u3.team = u.team
-            ), 0) AS total_pc
-        FROM users u
-        WHERE u.team IS NOT NULL
-        GROUP BY u.team
-        """
-    )
-    resultats = cur.fetchall()
-    conn.close()
-    return resultats
-
-
-def classement_contribution_clan(equipe: str, limite: int = 10) -> list:
-    """Top contributeurs AU SEIN d'une équipe précise (classement interne)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT user_id, points FROM clan_contribution WHERE equipe = ? ORDER BY points DESC LIMIT ?",
-        (equipe, limite),
-    )
-    resultats = cur.fetchall()
-    conn.close()
-    return resultats
-
-
-def obtenir_contribution_clan(user_id: int) -> int:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT points FROM clan_contribution WHERE user_id = ?", (user_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row["points"] if row else 0
-
-
-def _debut_semaine_courante() -> int:
-    """Timestamp (UTC, 00:00) du lundi de la semaine en cours — sert de clé stable pour
-    savoir si un nouvel objectif hebdomadaire doit être généré."""
-    maintenant = time.gmtime()
-    jours_depuis_lundi = maintenant.tm_wday  # 0 = lundi
-    minuit_aujourdhui = int(time.time()) - (maintenant.tm_hour * 3600 + maintenant.tm_min * 60 + maintenant.tm_sec)
-    return minuit_aujourdhui - jours_depuis_lundi * 86400
-
-
-def obtenir_objectif_semaine_actif() -> dict:
-    """Retourne l'objectif hebdomadaire de clan en cours — le CRÉE s'il n'existe pas
-    encore pour cette semaine (1er appel de la semaine, par n'importe quel joueur ou par
-    la boucle de fond). Toujours le même objectif pour les 3 équipes, tirage aléatoire
-    dans OBJECTIFS_CLAN_POSSIBLES (voir config.py)."""
-    import random as _random
-
-    semaine_debut = _debut_semaine_courante()
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM clan_objectif_semaine WHERE semaine_debut = ?", (semaine_debut,))
-    row = cur.fetchone()
-
-    if row is None:
-        type_choisi, cible = _random.choice(config.OBJECTIFS_CLAN_POSSIBLES)
-        cur.execute(
-            "INSERT INTO clan_objectif_semaine (semaine_debut, type, cible) VALUES (?, ?, ?)",
-            (semaine_debut, type_choisi, cible),
-        )
-        objectif_id = cur.lastrowid
-        for equipe in config.COULEURS_EQUIPES:
-            cur.execute(
-                "INSERT INTO clan_objectif_progres (objectif_id, equipe, progres) VALUES (?, ?, 0)",
-                (objectif_id, equipe),
-            )
-        conn.commit()
-        resultat = {"id": objectif_id, "semaine_debut": semaine_debut, "type": type_choisi, "cible": cible}
-    else:
-        resultat = dict(row)
-
-    conn.close()
-    return resultat
-
-
-def obtenir_progres_objectif(objectif_id: int, equipe: str) -> dict:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT * FROM clan_objectif_progres WHERE objectif_id = ? AND equipe = ?",
-        (objectif_id, equipe),
-    )
-    row = cur.fetchone()
-    conn.close()
-    return dict(row) if row else {"progres": 0, "complete_le": None, "butin_recupere": 0}
-
-
-def obtenir_tous_progres_objectif(objectif_id: int) -> dict:
-    """{equipe: dict(progres, complete_le, butin_recupere)} pour les 3 équipes d'un coup."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM clan_objectif_progres WHERE objectif_id = ?", (objectif_id,))
-    resultats = {row["equipe"]: dict(row) for row in cur.fetchall()}
-    conn.close()
-    return resultats
-
-
-def ajouter_contribution_clan(user_id: int, categorie: str, points: int):
-    """Ajoute des points de contribution à un joueur (rang personnel au sein de son
-    équipe) ET fait avancer l'objectif hebdomadaire de SON équipe si `categorie`
-    correspond au type de l'objectif actif. Ne fait rien si le joueur n'a pas encore
-    choisi d'équipe. `categorie` : "capture" ou "combat".
-
-    Si l'équipe vient tout juste d'atteindre l'objectif avec cet appel, récompense
-    IMMÉDIATEMENT tous ses membres actuels (voir config.CLAN_OBJECTIF_RECOMPENSE_BASE /
-    CLAN_OBJECTIF_BONUS_PREMIER) — pas de réclamation manuelle séparée, pour rester simple."""
-    equipe = obtenir_equipe(user_id)
-    if not equipe:
-        return
-
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO clan_contribution (user_id, equipe, points) VALUES (?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET points = points + excluded.points
-        """,
-        (user_id, equipe, points),
-    )
-    conn.commit()
-    conn.close()
-
-    objectif = obtenir_objectif_semaine_actif()
-    if objectif["type"] != categorie:
-        return
-
-    progres_avant = obtenir_progres_objectif(objectif["id"], equipe)
-    if progres_avant["complete_le"]:
-        return  # cette équipe a déjà fini cet objectif cette semaine, plus rien à avancer
-
-    conn = get_connexion()
-    cur = conn.cursor()
-    nouveau_progres = progres_avant["progres"] + points
-    vient_de_finir = progres_avant["progres"] < objectif["cible"] <= nouveau_progres
-    if vient_de_finir:
-        cur.execute(
-            "UPDATE clan_objectif_progres SET progres = ?, complete_le = ? WHERE objectif_id = ? AND equipe = ?",
-            (nouveau_progres, int(time.time()), objectif["id"], equipe),
-        )
-    else:
-        cur.execute(
-            "UPDATE clan_objectif_progres SET progres = ? WHERE objectif_id = ? AND equipe = ?",
-            (nouveau_progres, objectif["id"], equipe),
-        )
-    conn.commit()
-    conn.close()
-
-    if vient_de_finir:
-        _distribuer_recompense_objectif_clan(objectif["id"], equipe)
-
-
-def _distribuer_recompense_objectif_clan(objectif_id: int, equipe: str):
-    """Verse la récompense à TOUS les membres actuels de l'équipe qui vient de finir
-    l'objectif — un bonus supplémentaire si c'est la toute première équipe des 3 à
-    l'avoir fait cette semaine (déterminé par le complete_le le plus ancien)."""
-    import journal
-
-    tous_progres = obtenir_tous_progres_objectif(objectif_id)
-    completions = [(e, p["complete_le"]) for e, p in tous_progres.items() if p["complete_le"]]
-    premiere_equipe = min(completions, key=lambda t: t[1])[0] if completions else None
-    est_premiere = equipe == premiere_equipe
-
-    recompense = config.CLAN_OBJECTIF_RECOMPENSE_BASE + (config.CLAN_OBJECTIF_BONUS_PREMIER if est_premiere else 0)
-
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT user_id FROM users WHERE team = ?", (equipe,))
-    membres = [row["user_id"] for row in cur.fetchall()]
-    conn.close()
-
-    for membre_id in membres:
-        ajouter_poke_dollars(membre_id, recompense)
-
-    cur_texte = "🏆 première équipe à finir !" if est_premiere else "objectif atteint"
-    journal.logger(
-        f"🛡️ Clan {equipe} a atteint l'objectif hebdomadaire ({cur_texte}) — "
-        f"{recompense} PD versés à {len(membres)} membre(s)."
-    )
-
-
-def cloturer_saison_clan_si_necessaire():
-    """Archive le classement du mois PRÉCÉDENT dans clan_saison_historique, une seule
-    fois par mois — à appeler périodiquement (boucle de fond). Ne fait rien tant qu'on
-    est encore dans le même mois que la dernière clôture."""
-    import journal
-
-    maintenant = time.gmtime()
-    saison_actuelle = time.strftime("%Y-%m", maintenant)
-
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT MAX(saison) AS derniere FROM clan_saison_historique")
-    row = cur.fetchone()
-    derniere_saison_archivee = row["derniere"] if row else None
-    conn.close()
-
-    if derniere_saison_archivee == saison_actuelle:
-        return  # déjà fait pour ce mois-ci
-
-    premier_du_mois = time.struct_time((maintenant.tm_year, maintenant.tm_mon, 1, 0, 0, 0, 0, 0, 0))
-    dernier_jour_mois_precedent = time.gmtime(time.mktime(premier_du_mois) - 86400)
-    saison_a_archiver = time.strftime("%Y-%m", dernier_jour_mois_precedent)
-
-    if derniere_saison_archivee == saison_a_archiver:
-        return  # déjà archivé
-
-    classement = sorted(classement_equipes(), key=lambda r: r["total_pc"], reverse=True)
-    if not classement:
-        return
-
-    conn = get_connexion()
-    cur = conn.cursor()
-    for rang, row in enumerate(classement, start=1):
-        cur.execute(
-            "INSERT OR IGNORE INTO clan_saison_historique (saison, equipe, rang, score) VALUES (?, ?, ?, ?)",
-            (saison_a_archiver, row["equipe"], rang, row["total_pc"]),
-        )
-    conn.commit()
-    conn.close()
-    journal.logger(f"🛡️ Saison de clan {saison_a_archiver} archivée ({len(classement)} équipe(s) classée(s)).")
-
-
-def obtenir_historique_saisons_clan(limite_saisons: int = 6) -> list:
-    """Les N dernières saisons archivées, plus récente d'abord — [(saison, [(equipe,
-    rang, score), ...]), ...]."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT DISTINCT saison FROM clan_saison_historique ORDER BY saison DESC LIMIT ?",
-        (limite_saisons,),
-    )
-    saisons = [row["saison"] for row in cur.fetchall()]
-
-    resultats = []
-    for saison in saisons:
-        cur.execute(
-            "SELECT equipe, rang, score FROM clan_saison_historique WHERE saison = ? ORDER BY rang ASC",
-            (saison,),
-        )
-        resultats.append((saison, [(r["equipe"], r["rang"], r["score"]) for r in cur.fetchall()]))
-    conn.close()
-    return resultats
+# Domaine clan (obtenir_statut_equipe, changer_equipe, obtenir_equipe,
+# classement_equipes, contribution/objectifs/historique clan) déplacé dans
+# database/clan.py — voir le `from .clan import *` en fin de fichier.
 
 
 def classement_captures_individuelles(limite: int = 5):
@@ -2629,269 +2269,11 @@ def definir_ivs_capture(capture_id: int, ivs: dict):
     conn.close()
 
 
-def creer_arene_spawn(type_arene: str, channel_id: int, date_expiration: int) -> int:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO arene_spawn (type_arene, channel_id, date_expiration) VALUES (?, ?, ?)",
-        (type_arene, str(channel_id), date_expiration),
-    )
-    arene_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return arene_id
-
-
-def obtenir_arene_spawn(arene_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM arene_spawn WHERE id = ?", (arene_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def obtenir_run_arene(arene_id: int, user_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM arene_runs WHERE arene_spawn_id = ? AND user_id = ?", (arene_id, user_id))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def creer_run_arene(arene_id: int, user_id: int) -> bool:
-    """Crée le run d'un joueur pour cette arène — retourne False s'il en a déjà un
-    (une seule tentative par joueur et par spawn, gagnée ou perdue)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT 1 FROM arene_runs WHERE arene_spawn_id = ? AND user_id = ?", (arene_id, user_id))
-    if cur.fetchone() is not None:
-        conn.close()
-        return False
-    cur.execute(
-        "INSERT INTO arene_runs (arene_spawn_id, user_id, etape, statut) VALUES (?, ?, 0, 'en_cours')",
-        (arene_id, user_id),
-    )
-    conn.commit()
-    conn.close()
-    return True
-
-
-def avancer_run_arene(arene_id: int, user_id: int, nouvelle_etape: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE arene_runs SET etape = ? WHERE arene_spawn_id = ? AND user_id = ?",
-        (nouvelle_etape, arene_id, user_id),
-    )
-    conn.commit()
-    conn.close()
-
-
-def terminer_run_arene(arene_id: int, user_id: int, statut: str):
-    """statut : 'victoire' (Champion battu) ou 'defaite'."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE arene_runs SET statut = ? WHERE arene_spawn_id = ? AND user_id = ?",
-        (statut, arene_id, user_id),
-    )
-    conn.commit()
-    conn.close()
-
-
-def possede_badge_arene(user_id: int, type_pokemon: str) -> bool:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT 1 FROM arene_badges WHERE user_id = ? AND type_pokemon = ?", (user_id, type_pokemon))
-    trouve = cur.fetchone() is not None
-    conn.close()
-    return trouve
-
-
-def accorder_badge_arene(user_id: int, type_pokemon: str) -> bool:
-    """Retourne True si c'est un NOUVEAU badge (première fois), False s'il l'avait déjà.
-    avancer_quete_principale est appelée dans TOUS les cas (badge nouveau ou déjà
-    possédé) — sinon un joueur qui a déjà tous les badges d'arène avant d'atteindre
-    l'étape de quête correspondante reste bloqué indéfiniment, l'événement "badge_arene"
-    ne se déclenchant plus jamais pour lui."""
-    deja_possede = possede_badge_arene(user_id, type_pokemon)
-    if not deja_possede:
-        conn = get_connexion()
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT OR IGNORE INTO arene_badges (user_id, type_pokemon, date_obtenu) VALUES (?, ?, ?)",
-            (user_id, type_pokemon, int(time.time())),
-        )
-        conn.commit()
-        conn.close()
-    avancer_quete_principale(user_id, "badge_arene")
-    return not deja_possede
-
-
-def obtenir_badges_arene(user_id: int) -> set:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT type_pokemon FROM arene_badges WHERE user_id = ?", (user_id,))
-    resultats = {row["type_pokemon"] for row in cur.fetchall()}
-    conn.close()
-    return resultats
-
-
-# ----------------------------------------------------------------------------
-# Repaires de méchants — mêmes mécaniques que l'arène ci-dessus, mais indexées par
-# équipe_mechante (ex: "Team Rocket") au lieu du type Pokémon, et le badge donne un
-# bonus permanent à une CATÉGORIE (capture/shiny/argent/xp, voir
-# config.EQUIPES_MECHANTES["categorie_bonus"]) plutôt qu'un bonus de dégâts par type —
-# se greffe sur le même multiplicateur_boost() que les Races. Voir repaires.py.
-# ----------------------------------------------------------------------------
-
-def creer_repaire_spawn(equipe_mechante: str, channel_id: int, date_expiration: int) -> int:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO repaire_spawn (equipe_mechante, channel_id, date_expiration) VALUES (?, ?, ?)",
-        (equipe_mechante, str(channel_id), date_expiration),
-    )
-    repaire_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return repaire_id
-
-
-def obtenir_repaire_spawn(repaire_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM repaire_spawn WHERE id = ?", (repaire_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def creer_run_repaire(repaire_id: int, user_id: int) -> bool:
-    """Crée le run d'un joueur pour ce repaire — retourne False s'il en a déjà un
-    (une seule tentative par joueur et par spawn, gagnée ou perdue)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT 1 FROM repaire_runs WHERE repaire_spawn_id = ? AND user_id = ?", (repaire_id, user_id))
-    if cur.fetchone() is not None:
-        conn.close()
-        return False
-    cur.execute(
-        "INSERT INTO repaire_runs (repaire_spawn_id, user_id, etape, statut) VALUES (?, ?, 0, 'en_cours')",
-        (repaire_id, user_id),
-    )
-    conn.commit()
-    conn.close()
-    return True
-
-
-def avancer_run_repaire(repaire_id: int, user_id: int, nouvelle_etape: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE repaire_runs SET etape = ? WHERE repaire_spawn_id = ? AND user_id = ?",
-        (nouvelle_etape, repaire_id, user_id),
-    )
-    conn.commit()
-    conn.close()
-
-
-def terminer_run_repaire(repaire_id: int, user_id: int, statut: str):
-    """statut : 'victoire' (Boss battu) ou 'defaite'."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE repaire_runs SET statut = ? WHERE repaire_spawn_id = ? AND user_id = ?",
-        (statut, repaire_id, user_id),
-    )
-    conn.commit()
-    conn.close()
-
-
-def possede_badge_repaire(user_id: int, equipe_mechante: str) -> bool:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT 1 FROM repaire_badges WHERE user_id = ? AND equipe_mechante = ?", (user_id, equipe_mechante))
-    trouve = cur.fetchone() is not None
-    conn.close()
-    return trouve
-
-
-def accorder_badge_repaire(user_id: int, equipe_mechante: str) -> bool:
-    """Retourne True si c'est un NOUVEAU badge (première fois), False s'il l'avait déjà.
-    avancer_quete_principale est appelée dans TOUS les cas — même raison que
-    accorder_badge_arene ci-dessus."""
-    deja_possede = possede_badge_repaire(user_id, equipe_mechante)
-    if not deja_possede:
-        conn = get_connexion()
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT OR IGNORE INTO repaire_badges (user_id, equipe_mechante, date_obtenu) VALUES (?, ?, ?)",
-            (user_id, equipe_mechante, int(time.time())),
-        )
-        conn.commit()
-        conn.close()
-    avancer_quete_principale(user_id, "badge_repaire")
-    return not deja_possede
-
-
-def obtenir_badges_repaire(user_id: int) -> set:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT equipe_mechante FROM repaire_badges WHERE user_id = ?", (user_id,))
-    resultats = {row["equipe_mechante"] for row in cur.fetchall()}
-    conn.close()
-    return resultats
-
-
-def multiplicateur_repaire_du_jour(user_id: int) -> float:
-    """Équivalent de multiplicateur_arene_du_jour, pour les repaires."""
-    import config
-
-    jour_id = int(time.time()) // 86400
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT compteur FROM repaire_victoires_jour WHERE user_id = ? AND jour_id = ?",
-        (user_id, jour_id),
-    )
-    row = cur.fetchone()
-    conn.close()
-    compteur = row["compteur"] if row else 0
-    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
-    return paliers[min(compteur, len(paliers) - 1)]
-
-
-def enregistrer_victoire_repaire_repetition(user_id: int) -> float:
-    """Équivalent de enregistrer_victoire_arene_repetition, pour les repaires."""
-    import config
-
-    jour_id = int(time.time()) // 86400
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT compteur FROM repaire_victoires_jour WHERE user_id = ? AND jour_id = ?",
-        (user_id, jour_id),
-    )
-    row = cur.fetchone()
-    compteur_avant = row["compteur"] if row else 0
-
-    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
-    multiplicateur = paliers[min(compteur_avant, len(paliers) - 1)]
-
-    cur.execute(
-        """
-        INSERT INTO repaire_victoires_jour (user_id, jour_id, compteur)
-        VALUES (?, ?, 1)
-        ON CONFLICT(user_id, jour_id) DO UPDATE SET compteur = compteur + 1
-        """,
-        (user_id, jour_id),
-    )
-    conn.commit()
-    conn.close()
-    return multiplicateur
+# Domaine arène + repaires (spawn, runs, badges, multiplicateur de dégression) déplacé
+# dans database/arene_repaires.py — voir le `from .arene_repaires import *` en fin de
+# fichier. (marquer_runs_arene_en_cours_defaite, multiplicateur_arene_du_jour,
+# enregistrer_victoire_arene/dresseur_repetition, tout le domaine dresseurs/Gladio
+# restent ici pour l'instant, prochain lot.)
 
 
 def obtenir_meilleures_ivs(user_id: int, pokemon_nom: str) -> dict:
@@ -3494,314 +2876,8 @@ def reinitialiser_pokestop(user_id: int):
 
 # --- Raids ---
 
-def obtenir_raid_actif_pour_channel(channel_id: int):
-    """Retourne le raid actif dans CE channel précis, ou None. Permet plusieurs raids
-    simultanés (un par channel de spawn).
-
-    Auto-guérison : si un raid est resté marqué "actif" bien après sa date de fin
-    théorique (ex: suite à une erreur qui a interrompu sa boucle de combat avant
-    qu'elle n'ait pu le terminer proprement), il est automatiquement désactivé ici
-    plutôt que de bloquer indéfiniment tout nouveau raid dans ce channel."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT * FROM raid_actuel WHERE actif = 1 AND channel_id = ? ORDER BY id DESC LIMIT 1",
-        (str(channel_id),),
-    )
-    row = cur.fetchone()
-
-    if row is not None:
-        marge_securite = 600  # 10 minutes de marge après la date de fin théorique
-        if int(time.time()) > row["date_fin"] + marge_securite:
-            cur.execute("UPDATE raid_actuel SET actif = 0 WHERE id = ?", (row["id"],))
-            conn.commit()
-            conn.close()
-            return None
-
-    conn.close()
-    return row
-
-
-def obtenir_raid_par_id(raid_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM raid_actuel WHERE id = ?", (raid_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def demarrer_raid(boss_nom: str, etoiles: int, pv_max: int, date_fin: int, channel_id: int) -> int:
-    """Crée un nouveau raid actif et retourne son id."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO raid_actuel (boss_nom, etoiles, channel_id, pv_max, pv_actuel, date_fin, actif)
-        VALUES (?, ?, ?, ?, ?, ?, 1)
-        """,
-        (boss_nom, etoiles, str(channel_id), pv_max, pv_max, date_fin),
-    )
-    raid_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return raid_id
-
-
-def definir_message_raid(raid_id: int, message_id: str):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE raid_actuel SET message_id = ? WHERE id = ?", (message_id, raid_id))
-    conn.commit()
-    conn.close()
-
-
-def definir_date_fin_raid(raid_id: int, date_fin: int):
-    """Repousse la date de fin du combat (utilisé quand la salle d'attente se termine
-    et que le vrai chrono de combat démarre)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE raid_actuel SET date_fin = ? WHERE id = ?", (date_fin, raid_id))
-    conn.commit()
-    conn.close()
-
-
-def redefinir_pv_max_raid(raid_id: int, nouveau_pv_max: int):
-    """Fixe les PV réels du boss une fois qu'on connaît le nombre de joueurs dans le lobby
-    (appelé au moment où le combat démarre, après la salle d'attente). Remet aussi les PV
-    actuels au max puisque le combat n'a pas encore commencé."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE raid_actuel SET pv_max = ?, pv_actuel = ? WHERE id = ?",
-        (nouveau_pv_max, nouveau_pv_max, raid_id),
-    )
-    conn.commit()
-    conn.close()
-
-
-def terminer_raid(raid_id: int):
-    """Termine le raid (victoire, timeout, ou annulation) ET resynchronise les dégâts pris
-    par chaque participant pendant CE raid vers son pool de PV normal (persistant, partagé
-    avec les combats dresseur/Arène/PvP) — sinon les dégâts de riposte s'évaporaient à la
-    fin du raid : l'équipe réapparaissait full vie ailleurs, sans avoir rien soigné. Seul
-    point d'appel pour toute fin de raid (victoire/timeout/annulation), donc un seul
-    endroit à maintenir."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT DISTINCT user_id FROM raid_participants WHERE raid_id = ?", (raid_id,))
-    participants = [row["user_id"] for row in cur.fetchall()]
-    for user_id in participants:
-        cur.execute(
-            """
-            INSERT INTO etat_combat_pokemon (user_id, pokemon_nom, pv_actuels)
-            SELECT user_id, pokemon_nom, pv_actuels FROM etat_combat_pokemon_raid WHERE user_id = ?
-            ON CONFLICT(user_id, pokemon_nom) DO UPDATE SET pv_actuels = excluded.pv_actuels
-            """,
-            (user_id,),
-        )
-    cur.execute("UPDATE raid_actuel SET actif = 0 WHERE id = ?", (raid_id,))
-    conn.commit()
-    conn.close()
-
-
-def obtenir_raids_actifs() -> list:
-    """Retourne tous les raids marqués actifs, tous channels confondus — utilisé
-    uniquement par le nettoyage des messages orphelins au démarrage du bot."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM raid_actuel WHERE actif = 1")
-    resultats = cur.fetchall()
-    conn.close()
-    return resultats
-
-
-def enregistrer_spawn_actif(channel_id: int, message_id: int) -> int:
-    """Note un spawn Pokémon (classique/VIP) en base le temps qu'il est affiché, pour
-    pouvoir supprimer son message s'il traîne encore après un redémarrage du bot (sa vue
-    n'est pas persistante d'un process à l'autre, donc son bouton Capturer ne fonctionne
-    de toute façon plus). Retourne l'id de l'entrée créée."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO spawns_actifs (channel_id, message_id) VALUES (?, ?)",
-        (str(channel_id), str(message_id)),
-    )
-    spawn_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return spawn_id
-
-
-def retirer_spawn_actif(spawn_id: int):
-    """À appeler une fois le message de spawn supprimé normalement (fin du timer), pour
-    ne pas le considérer comme orphelin au prochain démarrage."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM spawns_actifs WHERE id = ?", (spawn_id,))
-    conn.commit()
-    conn.close()
-
-
-def obtenir_spawns_actifs() -> list:
-    """Retourne tous les spawns actuellement suivis — utilisé uniquement par le
-    nettoyage des messages orphelins au démarrage du bot."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM spawns_actifs")
-    resultats = cur.fetchall()
-    conn.close()
-    return resultats
-
-
-def inscrire_participant_raid(raid_id: int, user_id: int):
-    """Enregistre un joueur comme participant au combat (dégâts à 0 s'il n'existe pas déjà).
-    Une fois inscrit, il est automatiquement inclus dans chaque tick de combat."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO raid_participants (raid_id, user_id, degats_total, dernier_attaque)
-        VALUES (?, ?, 0, ?)
-        ON CONFLICT(raid_id, user_id) DO NOTHING
-        """,
-        (raid_id, user_id, int(time.time())),
-    )
-    conn.commit()
-    conn.close()
-
-
-def quitter_raid(raid_id: int, user_id: int) -> bool:
-    """Retire un joueur de la liste des participants (il arrête d'être inclus dans les
-    ticks de combat et ne recevra pas les récompenses si le raid est vaincu ensuite).
-    Retourne True s'il a bien été retiré, False s'il n'était pas inscrit."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "DELETE FROM raid_participants WHERE raid_id = ? AND user_id = ?",
-        (raid_id, user_id),
-    )
-    supprime = cur.rowcount > 0
-    conn.commit()
-    conn.close()
-    return supprime
-
-
-def est_participant_raid(raid_id: int, user_id: int) -> bool:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT 1 FROM raid_participants WHERE raid_id = ? AND user_id = ?",
-        (raid_id, user_id),
-    )
-    existe = cur.fetchone() is not None
-    conn.close()
-    return existe
-
-
-def appliquer_degats_multiples(raid_id: int, degats_par_joueur: dict) -> int:
-    """Applique en une fois les dégâts d'un tick de combat pour tous les participants
-    inscrits (degats_par_joueur = {user_id: degats}). Retourne les PV restants (min 0)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-
-    total_degats = sum(degats_par_joueur.values())
-    cur.execute(
-        "UPDATE raid_actuel SET pv_actuel = MAX(0, pv_actuel - ?) WHERE id = ?",
-        (total_degats, raid_id),
-    )
-    for user_id, degats in degats_par_joueur.items():
-        cur.execute(
-            """
-            INSERT INTO raid_participants (raid_id, user_id, degats_total, dernier_attaque)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(raid_id, user_id) DO UPDATE SET
-                degats_total = degats_total + excluded.degats_total,
-                dernier_attaque = excluded.dernier_attaque
-            """,
-            (raid_id, user_id, degats, int(time.time())),
-        )
-    conn.commit()
-
-    cur.execute("SELECT pv_actuel FROM raid_actuel WHERE id = ?", (raid_id,))
-    pv_restants = cur.fetchone()["pv_actuel"]
-    conn.close()
-    return pv_restants
-
-
-def obtenir_participants_raid(raid_id: int):
-    """Retourne la liste des participants (user_id, degats_total), triée par dégâts décroissants."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT user_id, degats_total FROM raid_participants WHERE raid_id = ? ORDER BY degats_total DESC",
-        (raid_id,),
-    )
-    resultats = cur.fetchall()
-    conn.close()
-    return resultats
-
-
-def initialiser_tentatives_capture_raid(raid_id: int, nb_tentatives: int):
-    """Donne à TOUS les participants d'un raid leurs tentatives de capture (Honor Ball
-    spécifiques à ce raid — pas un objet stocké dans l'inventaire général)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE raid_participants SET tentatives_capture_restantes = ? WHERE raid_id = ?",
-        (nb_tentatives, raid_id),
-    )
-    conn.commit()
-    conn.close()
-
-
-def tenter_capture_raid(raid_id: int, user_id: int):
-    """Consomme atomiquement une tentative de capture si disponible et si le joueur n'a
-    pas déjà capturé ce boss. Retourne (peut_tenter: bool, tentatives_restantes_apres: int)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        UPDATE raid_participants
-        SET tentatives_capture_restantes = tentatives_capture_restantes - 1
-        WHERE raid_id = ? AND user_id = ? AND tentatives_capture_restantes > 0 AND capture_reussie = 0
-        """,
-        (raid_id, user_id),
-    )
-    peut_tenter = cur.rowcount > 0
-    conn.commit()
-
-    cur.execute(
-        "SELECT tentatives_capture_restantes FROM raid_participants WHERE raid_id = ? AND user_id = ?",
-        (raid_id, user_id),
-    )
-    row = cur.fetchone()
-    conn.close()
-    return peut_tenter, (row["tentatives_capture_restantes"] if row else 0)
-
-
-def marquer_capture_reussie_raid(raid_id: int, user_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE raid_participants SET capture_reussie = 1 WHERE raid_id = ? AND user_id = ?",
-        (raid_id, user_id),
-    )
-    conn.commit()
-    conn.close()
-
-
-def a_deja_capture_raid(raid_id: int, user_id: int) -> bool:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT capture_reussie FROM raid_participants WHERE raid_id = ? AND user_id = ?",
-        (raid_id, user_id),
-    )
-    row = cur.fetchone()
-    conn.close()
-    return bool(row and row["capture_reussie"])
-
+# Domaine raids (obtenir_raid_actif_pour_channel, demarrer_raid, etc.) déplacé dans
+# database/raids.py — voir le `from .raids import *` en fin de fichier.
 
 # --- Combats PvP ---
 
@@ -4218,18 +3294,8 @@ def obtenir_combats_pvp_actifs():
     return rows
 
 
-def marquer_runs_arene_en_cours_defaite() -> int:
-    """Marque perdus tous les runs d'arène encore 'en_cours' (nettoyage au démarrage :
-    leur combat a été clôturé en forfait, le run ne peut plus continuer). Retourne le
-    nombre de runs concernés."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE arene_runs SET statut = 'defaite' WHERE statut = 'en_cours'")
-    nb = cur.rowcount
-    conn.commit()
-    conn.close()
-    return nb
-
+# marquer_runs_arene_en_cours_defaite : déplacée dans database/dresseurs_gladio.py
+# (avec le reste du domaine dresseurs/Gladio, voir plus bas dans ce fichier).
 
 def terminer_combat_pvp(combat_id: int):
     conn = get_connexion()
@@ -5264,428 +4330,16 @@ def definir_message_boost_global(type_boost: str, message_id: int):
 
 # --- Events serveur : défi collectif (/event) ---
 
-def demarrer_defi_collectif(type_evenement: str, cible: int, channel_annonce_id: int | None = None) -> int:
-    """Démarre un nouveau défi collectif, désactivant silencieusement tout défi encore actif
-    (un seul à la fois). Retourne l'id du nouveau défi."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE defi_collectif_serveur SET actif = 0 WHERE actif = 1")
-    cur.execute(
-        """
-        INSERT INTO defi_collectif_serveur (type_evenement, cible, progres, actif, date_debut, channel_annonce_id)
-        VALUES (?, ?, 0, 1, ?, ?)
-        """,
-        (type_evenement, cible, int(time.time()), channel_annonce_id),
-    )
-    defi_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return defi_id
+# Événements serveur (défi collectif, chasse aux shiny, capture rareté) déplacés
+# dans database/quetes_evenements.py — voir le `from .quetes_evenements import *`
+# en fin de fichier.
 
-
-def obtenir_defi_collectif_actif() -> dict | None:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM defi_collectif_serveur WHERE actif = 1 LIMIT 1")
-    row = cur.fetchone()
-    conn.close()
-    return dict(row) if row else None
-
-
-def definir_message_defi_collectif(defi_id: int, message_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE defi_collectif_serveur SET message_id = ? WHERE id = ?", (message_id, defi_id))
-    conn.commit()
-    conn.close()
-
-
-def progresser_defi_collectif(user_id: int, type_evenement: str, montant: int = 1) -> dict | None:
-    """Fait progresser le défi collectif actif s'il correspond à `type_evenement`.
-    Retourne un dict avec l'état à jour (et 'vient_de_finir': bool) si un défi actif
-    correspondait, sinon None (aucun défi actif de ce type, rien à faire)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM defi_collectif_serveur WHERE actif = 1 AND type_evenement = ? LIMIT 1", (type_evenement,))
-    defi = cur.fetchone()
-    if defi is None:
-        conn.close()
-        return None
-
-    nouveau_progres = min(defi["cible"], defi["progres"] + montant)
-    vient_de_finir = nouveau_progres >= defi["cible"] and defi["progres"] < defi["cible"]
-    cur.execute("UPDATE defi_collectif_serveur SET progres = ? WHERE id = ?", (nouveau_progres, defi["id"]))
-    cur.execute(
-        """
-        INSERT INTO defi_collectif_participants (defi_id, user_id, contribution) VALUES (?, ?, ?)
-        ON CONFLICT(defi_id, user_id) DO UPDATE SET contribution = contribution + excluded.contribution
-        """,
-        (defi["id"], user_id, montant),
-    )
-    if vient_de_finir:
-        cur.execute("UPDATE defi_collectif_serveur SET actif = 0 WHERE id = ?", (defi["id"],))
-    conn.commit()
-    conn.close()
-    return {
-        "id": defi["id"], "type_evenement": type_evenement, "cible": defi["cible"],
-        "progres": nouveau_progres, "vient_de_finir": vient_de_finir,
-        "channel_annonce_id": defi["channel_annonce_id"],
-    }
-
-
-def arreter_defi_collectif():
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE defi_collectif_serveur SET actif = 0 WHERE actif = 1")
-    conn.commit()
-    conn.close()
-
-
-def obtenir_participants_defi_collectif(defi_id: int) -> list:
-    """Retourne [(user_id, contribution)] triés par contribution décroissante — pour la
-    distribution de récompense et l'annonce des meilleurs contributeurs."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT user_id, contribution FROM defi_collectif_participants WHERE defi_id = ? ORDER BY contribution DESC",
-        (defi_id,),
-    )
-    rows = cur.fetchall()
-    conn.close()
-    return [(r["user_id"], r["contribution"]) for r in rows]
-
-
-def obtenir_defis_collectifs_a_recompenser() -> list:
-    """Défis désactivés (actif=0) dont la cible a bien été ATTEINTE (pas juste annulés
-    par un admin) et pas encore récompensés — pour la boucle de vérification."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT * FROM defi_collectif_serveur WHERE actif = 0 AND recompense_donnee = 0 AND progres >= cible"
-    )
-    rows = cur.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
-
-def marquer_defi_collectif_recompense(defi_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE defi_collectif_serveur SET recompense_donnee = 1 WHERE id = ?", (defi_id,))
-    conn.commit()
-    conn.close()
-
-
-# --- Events serveur : chasse aux shiny (/event) ---
-
-def demarrer_chasse_shiny(duree_secondes: int, channel_annonce_id: int | None = None) -> int:
-    """Démarre une nouvelle chasse aux shiny, désactivant silencieusement toute chasse
-    encore active (une seule à la fois). Retourne l'id de la nouvelle chasse."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE chasse_shiny_evenement SET actif = 0 WHERE actif = 1")
-    maintenant = int(time.time())
-    cur.execute(
-        """
-        INSERT INTO chasse_shiny_evenement (date_debut, date_fin, actif, channel_annonce_id, annoncee)
-        VALUES (?, ?, 1, ?, 0)
-        """,
-        (maintenant, maintenant + duree_secondes, channel_annonce_id),
-    )
-    chasse_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return chasse_id
-
-
-def obtenir_chasse_shiny_active() -> dict | None:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM chasse_shiny_evenement WHERE actif = 1 LIMIT 1")
-    row = cur.fetchone()
-    conn.close()
-    return dict(row) if row else None
-
-
-def definir_message_chasse_shiny(chasse_id: int, message_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE chasse_shiny_evenement SET message_id = ? WHERE id = ?", (message_id, chasse_id))
-    conn.commit()
-    conn.close()
-
-
-def obtenir_chasses_shiny_a_terminer() -> list:
-    """Chasses actives dont la date de fin est dépassée — pour la boucle de vérification."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM chasse_shiny_evenement WHERE actif = 1 AND date_fin <= ?", (int(time.time()),))
-    rows = cur.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
-
-def terminer_chasse_shiny(chasse_id: int) -> list:
-    """Clôture la chasse et retourne le classement final [(user_id, nb_shiny)] trié
-    décroissant, en comptant les captures shiny du joueur sur la fenêtre de la chasse."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT date_debut, date_fin FROM chasse_shiny_evenement WHERE id = ?", (chasse_id,))
-    chasse = cur.fetchone()
-    if chasse is None:
-        conn.close()
-        return []
-    cur.execute(
-        """
-        SELECT user_id, COUNT(*) AS nb_shiny FROM captures
-        WHERE shiny = 1 AND date_capture BETWEEN ? AND ?
-        GROUP BY user_id ORDER BY nb_shiny DESC
-        """,
-        (chasse["date_debut"], chasse["date_fin"]),
-    )
-    classement = [(r["user_id"], r["nb_shiny"]) for r in cur.fetchall()]
-    cur.execute("UPDATE chasse_shiny_evenement SET actif = 0, annoncee = 1 WHERE id = ?", (chasse_id,))
-    conn.commit()
-    conn.close()
-    return classement
-
-
-def arreter_chasse_shiny():
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE chasse_shiny_evenement SET actif = 0 WHERE actif = 1")
-    conn.commit()
-    conn.close()
-
-
-# --- Events serveur : Capture Classée (/event) — points selon la rareté, spawn
-# classique uniquement (VIP exclu), doublons comptés comme les nouvelles captures ---
-
-BAREME_POINTS_CAPTURE_RARETE = {
-    "commun": 1,
-    "peu_commun": 3,
-    "rare": 6,
-    "hyper_rare": 10,
-    "legendaire": 15,
-}
-BONUS_POINTS_SHINY_CAPTURE_RARETE = 25
-
-
-def demarrer_event_capture_rarete(duree_secondes: int, channel_annonce_id: int | None = None) -> int:
-    """Démarre un nouvel event Capture Classée, désactivant silencieusement tout event du
-    même type encore actif (un seul à la fois). Retourne l'id du nouvel event."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE event_capture_rarete SET actif = 0 WHERE actif = 1")
-    maintenant = int(time.time())
-    cur.execute(
-        """
-        INSERT INTO event_capture_rarete (date_debut, date_fin, actif, channel_annonce_id, annoncee)
-        VALUES (?, ?, 1, ?, 0)
-        """,
-        (maintenant, maintenant + duree_secondes, channel_annonce_id),
-    )
-    event_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return event_id
-
-
-def obtenir_event_capture_rarete_actif() -> dict | None:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM event_capture_rarete WHERE actif = 1 LIMIT 1")
-    row = cur.fetchone()
-    conn.close()
-    return dict(row) if row else None
-
-
-def definir_message_event_capture_rarete(event_id: int, message_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE event_capture_rarete SET message_id = ? WHERE id = ?", (message_id, event_id))
-    conn.commit()
-    conn.close()
-
-
-def obtenir_events_capture_rarete_a_terminer() -> list:
-    """Events actifs dont la date de fin est dépassée — pour la boucle de vérification."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM event_capture_rarete WHERE actif = 1 AND date_fin <= ?", (int(time.time()),))
-    rows = cur.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
-
-def _classement_capture_rarete(date_debut: int, date_fin: int) -> list:
-    """Calcule le classement par points pour la fenêtre donnée — SEULES les captures de
-    source='classique' comptent (VIP exclu), CHAQUE capture compte (doublons inclus,
-    pas de déduplication par espèce). Un import de pokemon_data ICI (pas en tête de
-    fichier) pour éviter tout souci d'ordre d'import au chargement du module."""
-    from pokemon_data import obtenir_pokemon_par_nom
-
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT user_id, pokemon_nom, shiny FROM captures WHERE source = 'classique' AND date_capture BETWEEN ? AND ?",
-        (date_debut, date_fin),
-    )
-    rows = cur.fetchall()
-    conn.close()
-
-    points_par_joueur = {}
-    for row in rows:
-        pokemon = obtenir_pokemon_par_nom(row["pokemon_nom"])
-        points = BAREME_POINTS_CAPTURE_RARETE.get(pokemon["rarete"], 0) if pokemon else 0
-        if row["shiny"]:
-            points += BONUS_POINTS_SHINY_CAPTURE_RARETE
-        points_par_joueur[row["user_id"]] = points_par_joueur.get(row["user_id"], 0) + points
-
-    return sorted(points_par_joueur.items(), key=lambda kv: -kv[1])
-
-
-def classement_event_capture_rarete_en_cours(event_id: int) -> list:
-    """Classement LIVE d'un event encore actif — pour les mises à jour périodiques
-    (toutes les 30 min) affichées dans le channel d'annonce, sans clôturer l'event."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT date_debut, date_fin FROM event_capture_rarete WHERE id = ?", (event_id,))
-    event = cur.fetchone()
-    conn.close()
-    if event is None:
-        return []
-    # borne haute = maintenant (l'event est encore en cours, date_fin n'est pas encore atteinte)
-    return _classement_capture_rarete(event["date_debut"], min(event["date_fin"], int(time.time())))
-
-
-def terminer_event_capture_rarete(event_id: int) -> list:
-    """Clôture l'event et retourne le classement final [(user_id, points)] trié
-    décroissant."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT date_debut, date_fin FROM event_capture_rarete WHERE id = ?", (event_id,))
-    event = cur.fetchone()
-    if event is None:
-        conn.close()
-        return []
-    classement = _classement_capture_rarete(event["date_debut"], event["date_fin"])
-    cur.execute("UPDATE event_capture_rarete SET actif = 0, annoncee = 1 WHERE id = ?", (event_id,))
-    conn.commit()
-    conn.close()
-    return classement
-
-
-def arreter_event_capture_rarete():
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE event_capture_rarete SET actif = 0 WHERE actif = 1")
-    conn.commit()
-    conn.close()
 
 
 # --- Codes promo ---
 
-def creer_code_promo(
-    code: str, dollars: int, xp: int, objet: str | None, quantite_objet: int,
-    max_utilisations: int | None, date_expiration: int | None, cree_par: int,
-) -> bool:
-    """Crée un nouveau code promo. Retourne False si ce code existe déjà (peu importe
-    qu'il soit encore actif ou non — les codes ne se réutilisent pas)."""
-    code = code.strip().upper()
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT 1 FROM codes_promo WHERE code = ?", (code,))
-    if cur.fetchone() is not None:
-        conn.close()
-        return False
-    cur.execute(
-        """
-        INSERT INTO codes_promo
-            (code, dollars, xp, objet, quantite_objet, max_utilisations, date_expiration, cree_par, date_creation)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (code, dollars, xp, objet, quantite_objet, max_utilisations, date_expiration, cree_par, int(time.time())),
-    )
-    conn.commit()
-    conn.close()
-    return True
-
-
-def obtenir_code_promo(code: str):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM codes_promo WHERE code = ?", (code.strip().upper(),))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def lister_codes_promo() -> list:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM codes_promo ORDER BY date_creation DESC")
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
-def desactiver_code_promo(code: str) -> bool:
-    conn = get_connexion()
-    cur = conn.cursor()
-    code = code.strip().upper()
-    cur.execute("SELECT 1 FROM codes_promo WHERE code = ?", (code,))
-    if cur.fetchone() is None:
-        conn.close()
-        return False
-    cur.execute("UPDATE codes_promo SET actif = 0 WHERE code = ?", (code,))
-    conn.commit()
-    conn.close()
-    return True
-
-
-def utiliser_code_promo(code: str, user_id: int) -> tuple:
-    """Tente d'utiliser un code pour ce joueur. Retourne (True, ligne_code) si réussi —
-    à charge de l'appelant de distribuer les récompenses décrites dans la ligne. Retourne
-    (False, raison_texte) sinon. N'accorde jamais deux fois le même code au même joueur
-    (contrainte PRIMARY KEY sur codes_promo_utilises)."""
-    code = code.strip().upper()
-    conn = get_connexion()
-    cur = conn.cursor()
-
-    cur.execute("SELECT * FROM codes_promo WHERE code = ?", (code,))
-    ligne = cur.fetchone()
-    if ligne is None:
-        conn.close()
-        return False, "Ce code n'existe pas."
-    if not ligne["actif"]:
-        conn.close()
-        return False, "Ce code n'est plus actif."
-    if ligne["date_expiration"] and ligne["date_expiration"] < int(time.time()):
-        conn.close()
-        return False, "Ce code a expiré."
-    if ligne["max_utilisations"] is not None and ligne["utilisations_actuelles"] >= ligne["max_utilisations"]:
-        conn.close()
-        return False, "Ce code a atteint son nombre maximum d'utilisations."
-
-    cur.execute("SELECT 1 FROM codes_promo_utilises WHERE code = ? AND user_id = ?", (code, user_id))
-    if cur.fetchone() is not None:
-        conn.close()
-        return False, "Tu as déjà utilisé ce code."
-
-    try:
-        cur.execute(
-            "INSERT INTO codes_promo_utilises (code, user_id, date_utilisation) VALUES (?, ?, ?)",
-            (code, user_id, int(time.time())),
-        )
-    except sqlite3.IntegrityError:
-        conn.close()
-        return False, "Tu as déjà utilisé ce code."  # garde-fou en cas de double-clic simultané
-
-    cur.execute("UPDATE codes_promo SET utilisations_actuelles = utilisations_actuelles + 1 WHERE code = ?", (code,))
-    conn.commit()
-    conn.close()
-    return True, ligne
+# Domaine codes promo (creer_code_promo, utiliser_code_promo, etc.) déplacé dans
+# database/codes_promo.py — voir le `from .codes_promo import *` en fin de fichier.
 
 
 # --- Réinitialisation complète d'un joueur (admin) ---
@@ -5742,109 +4396,8 @@ def definir_race(user_id: int, race_nom: str, pity_compteur: int):
 
 # --- Centre des Explorations ---
 
-def nb_slots_exploration(user_id: int) -> int:
-    conn = get_connexion()
-    cur = conn.cursor()
-    _assurer_joueur_existe(cur, user_id)
-    conn.commit()
-    cur.execute("SELECT slot_exploration_achete FROM users WHERE user_id = ?", (user_id,))
-    row = cur.fetchone()
-    conn.close()
-    return 1 + (row["slot_exploration_achete"] if row else 0)
-
-
-def acheter_slot_exploration(user_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    _assurer_joueur_existe(cur, user_id)
-    cur.execute("UPDATE users SET slot_exploration_achete = 1 WHERE user_id = ?", (user_id,))
-    conn.commit()
-    conn.close()
-
-
-def obtenir_explorations_actives(user_id: int) -> list:
-    """Retourne la liste des explorations en cours (actives OU terminées mais pas encore
-    récupérées) pour ce joueur, une ligne par slot occupé."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT * FROM exploration_slots WHERE user_id = ? AND date_fin IS NOT NULL ORDER BY slot",
-        (user_id,),
-    )
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
-def demarrer_exploration(user_id: int, slot: int, pokemons: list, duree_secondes: int, duree_label: str):
-    conn = get_connexion()
-    cur = conn.cursor()
-    maintenant = int(time.time())
-    cur.execute(
-        """
-        INSERT INTO exploration_slots (user_id, slot, pokemon1, pokemon2, pokemon3, date_debut, date_fin, duree_label, notifie)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-        ON CONFLICT(user_id, slot) DO UPDATE SET
-            pokemon1 = excluded.pokemon1, pokemon2 = excluded.pokemon2, pokemon3 = excluded.pokemon3,
-            date_debut = excluded.date_debut, date_fin = excluded.date_fin, duree_label = excluded.duree_label,
-            notifie = 0
-        """,
-        (user_id, slot, pokemons[0], pokemons[1], pokemons[2], maintenant, maintenant + duree_secondes, duree_label),
-    )
-    conn.commit()
-    conn.close()
-
-
-def forcer_fin_exploration(user_id: int, slot: int) -> bool:
-    """[Admin] Rend une exploration immédiatement récupérable, sans attendre le timer
-    (la récompense reste calculée sur la durée D'ORIGINE choisie par le joueur, stockée
-    à part — forcer la fin ne réduit donc pas la récompense). Retourne False si aucune
-    exploration n'est en cours sur cet emplacement."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT 1 FROM exploration_slots WHERE user_id = ? AND slot = ?",
-        (user_id, slot),
-    )
-    if cur.fetchone() is None:
-        conn.close()
-        return False
-    cur.execute(
-        "UPDATE exploration_slots SET date_fin = ? WHERE user_id = ? AND slot = ?",
-        (int(time.time()), user_id, slot),
-    )
-    conn.commit()
-    conn.close()
-    return True
-
-
-def terminer_exploration(user_id: int, slot: int):
-    """Libère un emplacement d'exploration (après récupération de la récompense)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM exploration_slots WHERE user_id = ? AND slot = ?", (user_id, slot))
-    conn.commit()
-    conn.close()
-
-
-def especes_en_exploration(user_id: int) -> set:
-    """Retourne l'ensemble des NOMS d'espèces actuellement parties en exploration pour ce
-    joueur (peu importe si l'exploration est terminée mais pas encore récupérée — les
-    Pokémon ne reviennent qu'au moment où le joueur récupère sa récompense)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT pokemon1, pokemon2, pokemon3 FROM exploration_slots WHERE user_id = ?",
-        (user_id,),
-    )
-    especes = set()
-    for row in cur.fetchall():
-        for p in (row["pokemon1"], row["pokemon2"], row["pokemon3"]):
-            if p:
-                especes.add(p)
-    conn.close()
-    return especes
-
+# nb_slots_exploration ... especes_en_exploration : déplacées dans database/exploration.py
+# (obtenir_equipe_combat_disponible juste après reste ici, domaine combat).
 
 def obtenir_equipe_combat_disponible(user_id: int) -> list:
     """Équipe de combat, en excluant les espèces actuellement parties en exploration."""
@@ -5856,122 +4409,8 @@ def obtenir_equipe_combat_disponible(user_id: int) -> list:
 # 1 seul emplacement en V1, volontairement simple — pas d'extension achetable pour l'instant
 # (contrairement à l'Exploration), à ajouter plus tard si le système plaît.
 
-def obtenir_incubation_active(user_id: int, slot: int = 1):
-    """Retourne la ligne d'incubation en cours sur cet emplacement, ou None."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT * FROM incubateur_slots WHERE user_id = ? AND slot = ? AND date_fin IS NOT NULL",
-        (user_id, slot),
-    )
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def demarrer_incubation(user_id: int, slot: int, palier: str, duree_secondes: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    maintenant = int(time.time())
-    cur.execute(
-        """
-        INSERT INTO incubateur_slots (user_id, slot, palier, date_debut, date_fin, notifie)
-        VALUES (?, ?, ?, ?, ?, 0)
-        ON CONFLICT(user_id, slot) DO UPDATE SET
-            palier = excluded.palier, date_debut = excluded.date_debut, date_fin = excluded.date_fin, notifie = 0
-        """,
-        (user_id, slot, palier, maintenant, maintenant + duree_secondes),
-    )
-    conn.commit()
-    conn.close()
-
-
-def terminer_incubation(user_id: int, slot: int):
-    """Libère l'emplacement une fois l'œuf récupéré (éclos ou annulé)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE incubateur_slots SET palier = NULL, date_debut = NULL, date_fin = NULL, notifie = 0 "
-        "WHERE user_id = ? AND slot = ?",
-        (user_id, slot),
-    )
-    conn.commit()
-    conn.close()
-
-
-# --- Notifications MP de fin (Exploration + Incubateur) ---
-
-def obtenir_explorations_a_notifier() -> list:
-    """Explorations terminées (date_fin passée) pas encore notifiées par MP, tous joueurs
-    confondus — utilisé par la boucle de fond qui envoie les MP."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT * FROM exploration_slots WHERE date_fin IS NOT NULL AND date_fin <= ? AND notifie = 0",
-        (int(time.time()),),
-    )
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
-def marquer_exploration_notifiee(user_id: int, slot: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE exploration_slots SET notifie = 1 WHERE user_id = ? AND slot = ?",
-        (user_id, slot),
-    )
-    conn.commit()
-    conn.close()
-
-
-def obtenir_incubations_a_notifier() -> list:
-    """Œufs prêts à éclore (date_fin passée) pas encore notifiés par MP, tous joueurs
-    confondus — utilisé par la boucle de fond qui envoie les MP."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT * FROM incubateur_slots WHERE palier IS NOT NULL AND date_fin IS NOT NULL "
-        "AND date_fin <= ? AND notifie = 0",
-        (int(time.time()),),
-    )
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
-def marquer_incubation_notifiee(user_id: int, slot: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE incubateur_slots SET notifie = 1 WHERE user_id = ? AND slot = ?",
-        (user_id, slot),
-    )
-    conn.commit()
-    conn.close()
-
-
-def forcer_fin_incubation(user_id: int, slot: int = 1) -> bool:
-    """[Admin] Rend un œuf immédiatement prêt à éclore, sans attendre le timer. Retourne
-    False si aucun œuf n'est en incubation sur cet emplacement."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT 1 FROM incubateur_slots WHERE user_id = ? AND slot = ? AND palier IS NOT NULL",
-        (user_id, slot),
-    )
-    if cur.fetchone() is None:
-        conn.close()
-        return False
-    cur.execute(
-        "UPDATE incubateur_slots SET date_fin = ? WHERE user_id = ? AND slot = ?",
-        (int(time.time()), user_id, slot),
-    )
-    conn.commit()
-    conn.close()
-    return True
-
+# obtenir_incubation_active ... forcer_fin_incubation : déplacées dans
+# database/exploration.py — voir le `from .exploration import *` en fin de fichier.
 
 # --- PP (Points de Pouvoir) des attaques en combat PvP ---
 
@@ -6017,134 +4456,11 @@ def consommer_pp(combat_id: int, user_id: int, pokemon_nom: str, attaque_nom: st
 
 
 # --- Quêtes journalières / hebdomadaires ---
+# Quêtes journalières/hebdomadaires (_periode_id, incrementer_progression_quete,
+# reclamer_quete) déplacées dans database/quetes_evenements.py.
+# (obtenir_progression_quete_principale/avancer_quete_principale, tout en haut de ce
+# fichier, restent ici — dépendance déjà établie par arene_repaires.py.)
 
-def _periode_id(type_quete: str) -> int:
-    """Identifiant de période courante : change à date fixe pour tout le monde
-    (00h UTC pour les journalières, tous les 7 jours pour les hebdomadaires).
-    Deux appels dans la même fenêtre de temps retournent le même id."""
-    maintenant = int(time.time())
-    if type_quete == "jour":
-        return maintenant // 86400
-    return maintenant // (7 * 86400)
-
-
-def _obtenir_ou_reinitialiser_progression(cur, user_id: int, quete_id: str, type_quete: str):
-    """Retourne (compteur, reclamee) pour cette quête, en réinitialisant si la période
-    a changé depuis le dernier suivi."""
-    periode_actuelle = _periode_id(type_quete)
-    cur.execute(
-        "SELECT periode_id, compteur, reclamee FROM quete_progression WHERE user_id = ? AND quete_id = ?",
-        (user_id, quete_id),
-    )
-    row = cur.fetchone()
-    if row is None or row["periode_id"] != periode_actuelle:
-        cur.execute(
-            """
-            INSERT INTO quete_progression (user_id, quete_id, periode_id, compteur, reclamee)
-            VALUES (?, ?, ?, 0, 0)
-            ON CONFLICT(user_id, quete_id) DO UPDATE SET periode_id = excluded.periode_id, compteur = 0, reclamee = 0
-            """,
-            (user_id, quete_id, periode_actuelle),
-        )
-        return 0, 0
-    return row["compteur"], row["reclamee"]
-
-
-def obtenir_progression_quete(user_id: int, quete_id: str, type_quete: str) -> tuple:
-    """Retourne (compteur, reclamee) pour cette quête, à jour de la période actuelle."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    compteur, reclamee = _obtenir_ou_reinitialiser_progression(cur, user_id, quete_id, type_quete)
-    conn.commit()
-    conn.close()
-    return compteur, reclamee
-
-
-def incrementer_progression_quete(user_id: int, evenement: str, contexte: dict = None, montant: int = 1) -> list:
-    """Fait progresser toutes les quêtes actives (jour + semaine) correspondant à cet
-    événement, en respectant leur filtre éventuel (ex: rareté). Plafonne au max requis,
-    ne dépasse jamais et ne touche pas les quêtes déjà réclamées. Retourne la liste des
-    quêtes qui viennent tout juste d'être complétées par CET appel (pour notifier le
-    joueur immédiatement, sans attendre qu'il aille checker /quetes)."""
-    import quetes as quetes_module
-
-    _CATEGORIE_CONTRIBUTION_CLAN = {
-        "capture": ("capture", 1),
-        "pvp_victoire": ("combat", 2),
-        "pve_victoire": ("combat", 2),
-        "raid_victoire": ("combat", 2),
-    }
-    if evenement in _CATEGORIE_CONTRIBUTION_CLAN:
-        categorie, points = _CATEGORIE_CONTRIBUTION_CLAN[evenement]
-        ajouter_contribution_clan(user_id, categorie, points * montant)
-
-    # Défi collectif du serveur (/event) : capture / combat dresseur / tour de PokéStop —
-    # no-op silencieux si aucun défi actif ou si son type ne correspond pas (voir
-    # progresser_defi_collectif). La détection de complétion + l'annonce + la récompense
-    # se font dans la boucle périodique (main.py), pas ici, car database.py n'a pas accès
-    # au bot Discord pour poster un message.
-    if evenement in ("capture", "pve_victoire", "pokestop"):
-        progresser_defi_collectif(user_id, evenement, montant)
-
-    # Quête principale (narration) : suit les mêmes événements que les quêtes jour/semaine
-    # (capture/pve_victoire/pvp_victoire/raid_victoire/exploration_collectee/pokestop) —
-    # avancer_quete_principale ignore silencieusement tout événement qui ne correspond pas
-    # au chapitre EN COURS du joueur, donc aucun risque de double-avancement. Le résultat
-    # n'est pas propagé aux appelants ici (le joueur découvre la progression via
-    # /quete-principale) pour éviter de devoir modifier tous les points d'appel existants.
-    avancer_quete_principale(user_id, evenement, montant)
-
-    contexte = contexte or {}
-    conn = get_connexion()
-    cur = conn.cursor()
-    tout_juste_completees = []
-
-    for type_quete, catalogue in (("jour", quetes_module.QUETES_JOUR), ("semaine", quetes_module.QUETES_SEMAINE)):
-        for quete in catalogue:
-            if quete["evenement"] != evenement:
-                continue
-            filtre = quete.get("filtre")
-            if filtre and any(contexte.get(cle) != valeur for cle, valeur in filtre.items()):
-                continue
-
-            compteur, reclamee = _obtenir_ou_reinitialiser_progression(cur, user_id, quete["id"], type_quete)
-            if reclamee:
-                continue
-            nouveau_compteur = min(quete["cible"], compteur + montant)
-            cur.execute(
-                "UPDATE quete_progression SET compteur = ? WHERE user_id = ? AND quete_id = ?",
-                (nouveau_compteur, user_id, quete["id"]),
-            )
-            if compteur < quete["cible"] <= nouveau_compteur:
-                tout_juste_completees.append({"id": quete["id"], "nom": quete["nom"], "emoji": quete["emoji"], "type": type_quete})
-
-    conn.commit()
-    conn.close()
-    return tout_juste_completees
-
-
-def reclamer_quete(user_id: int, quete_id: str, type_quete: str) -> bool:
-    """Marque une quête comme réclamée si elle est complète. Retourne True si réclamée
-    à l'instant (False si déjà réclamée ou pas encore complète)."""
-    import quetes as quetes_module
-
-    quete = quetes_module.QUETES_PAR_ID[quete_id]
-    conn = get_connexion()
-    cur = conn.cursor()
-    compteur, reclamee = _obtenir_ou_reinitialiser_progression(cur, user_id, quete_id, type_quete)
-
-    if reclamee or compteur < quete["cible"]:
-        conn.commit()
-        conn.close()
-        return False
-
-    cur.execute(
-        "UPDATE quete_progression SET reclamee = 1 WHERE user_id = ? AND quete_id = ?",
-        (user_id, quete_id),
-    )
-    conn.commit()
-    conn.close()
-    return True
 
 
 # --- Statistiques à vie (pour les accomplissements) ---
@@ -6332,670 +4648,8 @@ def enregistrer_completion_exploration_repetition(user_id: int) -> float:
     return multiplicateur
 
 
-def multiplicateur_arene_du_jour(user_id: int) -> float:
-    """Multiplicateur de dégression économique d'arène applicable MAINTENANT, sans rien
-    incrémenter — utilisé pour les récompenses d'Apprentis en cours de run (le compteur
-    ne monte qu'au run complété, voir enregistrer_victoire_arene_repetition)."""
-    import config
-
-    jour_id = int(time.time()) // 86400
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT compteur FROM arene_victoires_jour WHERE user_id = ? AND jour_id = ?",
-        (user_id, jour_id),
-    )
-    row = cur.fetchone()
-    conn.close()
-    compteur = row["compteur"] if row else 0
-    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
-    return paliers[min(compteur, len(paliers) - 1)]
-
-
-def enregistrer_victoire_arene_repetition(user_id: int) -> float:
-    """Enregistre un run d'arène COMPLÉTÉ (champion battu) pour la journée en cours, et
-    retourne le multiplicateur à appliquer sur la récompense économique de CE run —
-    dégression progressive au fil des runs du jour (config.MULTIPLICATEURS_REPETITION_JOUR_ECO).
-    Un run perdu avant le champion n'incrémente rien : on peut retenter au plein tarif."""
-    import config
-
-    jour_id = int(time.time()) // 86400
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT compteur FROM arene_victoires_jour WHERE user_id = ? AND jour_id = ?",
-        (user_id, jour_id),
-    )
-    row = cur.fetchone()
-    compteur_avant = row["compteur"] if row else 0
-
-    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
-    multiplicateur = paliers[min(compteur_avant, len(paliers) - 1)]
-
-    cur.execute(
-        """
-        INSERT INTO arene_victoires_jour (user_id, jour_id, compteur)
-        VALUES (?, ?, 1)
-        ON CONFLICT(user_id, jour_id) DO UPDATE SET compteur = compteur + 1
-        """,
-        (user_id, jour_id),
-    )
-    conn.commit()
-    conn.close()
-    return multiplicateur
-
-
-def enregistrer_victoire_dresseur_repetition(user_id: int) -> float:
-    """Enregistre une victoire PvE contre dresseur pour la journée en cours (TOUS
-    archétypes confondus), et retourne le multiplicateur à appliquer sur la récompense
-    ÉCONOMIQUE (PD + XP) de CETTE victoire — dégression progressive au fil des victoires
-    du jour, voir config.MULTIPLICATEURS_REPETITION_JOUR_ECO."""
-    import config
-
-    jour_id = int(time.time()) // 86400
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT compteur FROM pve_victoires_jour WHERE user_id = ? AND jour_id = ?",
-        (user_id, jour_id),
-    )
-    row = cur.fetchone()
-    compteur_avant = row["compteur"] if row else 0
-
-    paliers = config.MULTIPLICATEURS_REPETITION_JOUR_ECO
-    multiplicateur = paliers[min(compteur_avant, len(paliers) - 1)]
-
-    cur.execute(
-        """
-        INSERT INTO pve_victoires_jour (user_id, jour_id, compteur)
-        VALUES (?, ?, 1)
-        ON CONFLICT(user_id, jour_id) DO UPDATE SET compteur = compteur + 1
-        """,
-        (user_id, jour_id),
-    )
-    conn.commit()
-    conn.close()
-    return multiplicateur
-
-
-# --- Échanges entre joueurs ---
-
-def creer_echange(joueur1_id: int, joueur2_id: int) -> int:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO echanges (joueur1_id, joueur2_id, date_creation) VALUES (?, ?, ?)",
-        (joueur1_id, joueur2_id, int(time.time())),
-    )
-    echange_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return echange_id
-
-
-def obtenir_echange(echange_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM echanges WHERE id = ?", (echange_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def echange_en_cours_pour_joueur(user_id: int):
-    """Retourne l'échange actif d'un joueur, ou None (un seul échange à la fois)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT * FROM echanges WHERE actif = 1 AND (joueur1_id = ? OR joueur2_id = ?) LIMIT 1",
-        (user_id, user_id),
-    )
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def definir_offre_echange(echange_id: int, proposant_id: int, capture_ids: list, pd: int):
-    """Remplace entièrement l'offre d'un joueur (Pokémon + PD) et RÉINITIALISE les deux
-    validations — toute modification de l'offre annule les validations précédentes,
-    évite qu'un joueur ne modifie discrètement son offre après que l'autre a validé."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "DELETE FROM echange_pokemon WHERE echange_id = ? AND proposant_id = ?",
-        (echange_id, proposant_id),
-    )
-    for capture_id in capture_ids:
-        cur.execute(
-            "INSERT INTO echange_pokemon (echange_id, capture_id, proposant_id) VALUES (?, ?, ?)",
-            (echange_id, capture_id, proposant_id),
-        )
-
-    echange = obtenir_echange(echange_id)
-    if echange["joueur1_id"] == proposant_id:
-        cur.execute(
-            "UPDATE echanges SET joueur1_pd = ?, joueur1_valide = 0, joueur2_valide = 0 WHERE id = ?",
-            (pd, echange_id),
-        )
-    else:
-        cur.execute(
-            "UPDATE echanges SET joueur2_pd = ?, joueur1_valide = 0, joueur2_valide = 0 WHERE id = ?",
-            (pd, echange_id),
-        )
-    conn.commit()
-    conn.close()
-
-
-def obtenir_offre_echange(echange_id: int, proposant_id: int) -> list:
-    """Retourne les captures proposées par ce joueur, avec leurs détails (nom, pc, shiny)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT c.id, c.pokemon_nom, c.pc, c.shiny
-        FROM echange_pokemon e
-        JOIN captures c ON c.id = e.capture_id
-        WHERE e.echange_id = ? AND e.proposant_id = ?
-        """,
-        (echange_id, proposant_id),
-    )
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
-def valider_offre_echange(echange_id: int, proposant_id: int) -> bool:
-    """Marque ce joueur comme ayant validé l'offre actuelle. Retourne True si les DEUX
-    joueurs ont maintenant validé (échange prêt à être exécuté)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    echange = obtenir_echange(echange_id)
-    colonne = "joueur1_valide" if echange["joueur1_id"] == proposant_id else "joueur2_valide"
-    cur.execute(f"UPDATE echanges SET {colonne} = 1 WHERE id = ?", (echange_id,))
-    conn.commit()
-
-    cur.execute("SELECT joueur1_valide, joueur2_valide FROM echanges WHERE id = ?", (echange_id,))
-    row = cur.fetchone()
-    conn.close()
-    return bool(row["joueur1_valide"] and row["joueur2_valide"])
-
-
-def annuler_echange(echange_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE echanges SET actif = 0 WHERE id = ?", (echange_id,))
-    conn.commit()
-    conn.close()
-
-
-def executer_echange(echange_id: int) -> tuple:
-    """Exécute l'échange de façon atomique : re-vérifie que chaque joueur possède
-    toujours ce qu'il a proposé (au cas où sa collection aurait changé entre-temps),
-    puis transfère les Pokémon et les PD des deux côtés. Retourne (succes, message_erreur)."""
-    echange = obtenir_echange(echange_id)
-    if echange is None or not echange["actif"]:
-        return False, "Cet échange n'est plus actif."
-
-    j1, j2 = echange["joueur1_id"], echange["joueur2_id"]
-    offre_j1 = obtenir_offre_echange(echange_id, j1)
-    offre_j2 = obtenir_offre_echange(echange_id, j2)
-
-    conn = get_connexion()
-    cur = conn.cursor()
-
-    # Re-vérification : chaque Pokémon proposé appartient toujours bien à son proposant
-    for offre, proposant in ((offre_j1, j1), (offre_j2, j2)):
-        for row in offre:
-            cur.execute("SELECT user_id FROM captures WHERE id = ?", (row["id"],))
-            capture = cur.fetchone()
-            if capture is None or capture["user_id"] != proposant:
-                conn.close()
-                return False, f"Un Pokémon proposé par <@{proposant}> n'est plus disponible (déjà échangé, relâché...)."
-
-    # Re-vérification des soldes
-    solde_j1 = obtenir_poke_dollars(j1)
-    solde_j2 = obtenir_poke_dollars(j2)
-
-    if solde_j1 < echange["joueur1_pd"]:
-        conn.close()
-        return False, f"<@{j1}> n'a plus assez de Poké Dollars pour honorer son offre."
-    if solde_j2 < echange["joueur2_pd"]:
-        conn.close()
-        return False, f"<@{j2}> n'a plus assez de Poké Dollars pour honorer son offre."
-
-    # Transfert des Pokémon (changement de propriétaire, id/historique conservés)
-    for row in offre_j1:
-        cur.execute("UPDATE captures SET user_id = ? WHERE id = ?", (j2, row["id"]))
-    for row in offre_j2:
-        cur.execute("UPDATE captures SET user_id = ? WHERE id = ?", (j1, row["id"]))
-
-    # Transfert des Poké Dollars
-    cur.execute("UPDATE users SET poke_dollars = poke_dollars - ? WHERE user_id = ?", (echange["joueur1_pd"], j1))
-    cur.execute("UPDATE users SET poke_dollars = poke_dollars + ? WHERE user_id = ?", (echange["joueur1_pd"], j2))
-    cur.execute("UPDATE users SET poke_dollars = poke_dollars - ? WHERE user_id = ?", (echange["joueur2_pd"], j2))
-    cur.execute("UPDATE users SET poke_dollars = poke_dollars + ? WHERE user_id = ?", (echange["joueur2_pd"], j1))
-
-    cur.execute("UPDATE echanges SET actif = 0 WHERE id = ?", (echange_id,))
-    conn.commit()
-    conn.close()
-    return True, None
-
-
-def creer_run_roguelike(joueur_id: int, chemin: list) -> int:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO roguelike_runs (joueur_id, chemin, date_creation) VALUES (?, ?, ?)",
-        (joueur_id, json.dumps(chemin), int(time.time())),
-    )
-    run_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return run_id
-
-
-def obtenir_run_roguelike_actif(joueur_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM roguelike_runs WHERE joueur_id = ? AND actif = 1", (joueur_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def obtenir_run_roguelike_par_thread(thread_id: int):
-    """Chaque run vit dans son propre fil dédié — c'est la clé la plus fiable pour
-    retrouver la bonne run après un redémarrage du bot (une seule instance de vue
-    générique est ré-enregistrée pour TOUS les fils actifs, self.run_id serait donc faux
-    pour n'importe quelle run sauf celle qui a créé cette instance dans la session en cours)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM roguelike_runs WHERE thread_id = ? AND actif = 1", (str(thread_id),))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def obtenir_run_roguelike(run_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM roguelike_runs WHERE id = ?", (run_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def definir_message_run_roguelike(run_id: int, thread_id: int, message_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE roguelike_runs SET thread_id = ?, message_id = ? WHERE id = ?",
-        (str(thread_id), str(message_id), run_id),
-    )
-    conn.commit()
-    conn.close()
-
-
-def avancer_salle_roguelike(run_id: int) -> int:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE roguelike_runs SET salle_index = salle_index + 1 WHERE id = ?", (run_id,))
-    conn.commit()
-    cur.execute("SELECT salle_index FROM roguelike_runs WHERE id = ?", (run_id,))
-    nouvel_index = cur.fetchone()["salle_index"]
-    conn.close()
-    return nouvel_index
-
-
-def ajouter_relique_roguelike(run_id: int, relique_id: str):
-    run = obtenir_run_roguelike(run_id)
-    reliques = json.loads(run["reliques"])
-    reliques.append(relique_id)
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE roguelike_runs SET reliques = ? WHERE id = ?", (json.dumps(reliques), run_id))
-    conn.commit()
-    conn.close()
-
-
-def terminer_run_roguelike(run_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE roguelike_runs SET actif = 0 WHERE id = ?", (run_id,))
-    cur.execute("DELETE FROM roguelike_combat WHERE run_id = ?", (run_id,))
-    conn.commit()
-    conn.close()
-
-
-def creer_equipe_roguelike(run_id: int, equipe: list):
-    """equipe = [{'pokemon_nom':.., 'niveau':.., 'pv_max':..}, ...] — insère à pleine vie."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    for position, mon in enumerate(equipe):
-        cur.execute(
-            """
-            INSERT INTO roguelike_equipe (run_id, position, pokemon_nom, niveau, pv_max, pv_actuels)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (run_id, position, mon["pokemon_nom"], mon["niveau"], mon["pv_max"], mon["pv_max"]),
-        )
-    conn.commit()
-    conn.close()
-
-
-def ajouter_membre_equipe_roguelike(run_id: int, pokemon_nom: str, niveau: int, pv_max: int) -> int:
-    """Recrute UN nouveau membre en cours de run (salle recrutement) — prend la 1ère
-    position libre. Retourne la position attribuée."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT COALESCE(MAX(position), -1) + 1 AS prochaine_position FROM roguelike_equipe WHERE run_id = ?", (run_id,))
-    position = cur.fetchone()["prochaine_position"]
-    cur.execute(
-        """
-        INSERT INTO roguelike_equipe (run_id, position, pokemon_nom, niveau, pv_max, pv_actuels)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (run_id, position, pokemon_nom, niveau, pv_max, pv_max),
-    )
-    conn.commit()
-    conn.close()
-    return position
-
-
-def obtenir_equipe_roguelike(run_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM roguelike_equipe WHERE run_id = ? ORDER BY position", (run_id,))
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
-def definir_pv_roguelike(run_id: int, position: int, pv_actuels: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE roguelike_equipe SET pv_actuels = ? WHERE run_id = ? AND position = ?",
-        (max(0, pv_actuels), run_id, position),
-    )
-    conn.commit()
-    conn.close()
-
-
-def soigner_equipe_roguelike(run_id: int, pourcentage: float):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT position, pv_max, pv_actuels FROM roguelike_equipe WHERE run_id = ?", (run_id,))
-    for row in cur.fetchall():
-        if row["pv_actuels"] <= 0:
-            continue  # un Pokémon K.O. ne se réveille pas tout seul au repos, il faut le relique/l'objet adapté
-        nouveau_pv = min(row["pv_max"], row["pv_actuels"] + round(row["pv_max"] * pourcentage))
-        cur.execute(
-            "UPDATE roguelike_equipe SET pv_actuels = ? WHERE run_id = ? AND position = ?",
-            (nouveau_pv, run_id, row["position"]),
-        )
-    conn.commit()
-    conn.close()
-
-
-def creer_combat_roguelike(run_id: int, ennemi_nom: str, ennemi_niveau: int, ennemi_pv_max: int, actif_position: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO roguelike_combat (run_id, ennemi_nom, ennemi_niveau, ennemi_pv_max, ennemi_pv_actuels, actif_position)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(run_id) DO UPDATE SET
-            ennemi_nom = excluded.ennemi_nom, ennemi_niveau = excluded.ennemi_niveau,
-            ennemi_pv_max = excluded.ennemi_pv_max, ennemi_pv_actuels = excluded.ennemi_pv_max,
-            actif_position = excluded.actif_position
-        """,
-        (run_id, ennemi_nom, ennemi_niveau, ennemi_pv_max, ennemi_pv_max, actif_position),
-    )
-    conn.commit()
-    conn.close()
-
-
-def obtenir_combat_roguelike(run_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM roguelike_combat WHERE run_id = ?", (run_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def definir_pv_ennemi_roguelike(run_id: int, pv_actuels: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE roguelike_combat SET ennemi_pv_actuels = ? WHERE run_id = ?", (max(0, pv_actuels), run_id))
-    conn.commit()
-    conn.close()
-
-
-def definir_actif_position_roguelike(run_id: int, position: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE roguelike_combat SET actif_position = ? WHERE run_id = ?", (position, run_id))
-    conn.commit()
-    conn.close()
-
-
-def terminer_combat_roguelike(run_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM roguelike_combat WHERE run_id = ?", (run_id,))
-    conn.commit()
-    conn.close()
-
-
-def enregistrer_record_roguelike(joueur_id: int, etage_atteint: int) -> bool:
-    """Met à jour le record du joueur SI cet étage dépasse son ancien record. Retourne
-    True si c'est un nouveau record."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT meilleur_etage FROM roguelike_records WHERE joueur_id = ?", (joueur_id,))
-    row = cur.fetchone()
-    if row is None or etage_atteint > row["meilleur_etage"]:
-        cur.execute(
-            """
-            INSERT INTO roguelike_records (joueur_id, meilleur_etage, date_record) VALUES (?, ?, ?)
-            ON CONFLICT(joueur_id) DO UPDATE SET meilleur_etage = excluded.meilleur_etage, date_record = excluded.date_record
-            """,
-            (joueur_id, etage_atteint, int(time.time())),
-        )
-        conn.commit()
-        conn.close()
-        return True
-    conn.close()
-    return False
-
-
-def classement_roguelike(limite: int = 10):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT joueur_id, meilleur_etage FROM roguelike_records ORDER BY meilleur_etage DESC LIMIT ?", (limite,))
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
-def creer_annonce_marketplace(vendeur_id: int, capture_id: int, prix: int, duree_secondes: int) -> int:
-    conn = get_connexion()
-    cur = conn.cursor()
-    maintenant = int(time.time())
-    cur.execute(
-        """
-        INSERT INTO marketplace_annonces (vendeur_id, capture_id, prix, date_creation, date_expiration, statut)
-        VALUES (?, ?, ?, ?, ?, 'active')
-        """,
-        (vendeur_id, capture_id, prix, maintenant, maintenant + duree_secondes),
-    )
-    annonce_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return annonce_id
-
-
-def definir_message_annonce_marketplace(annonce_id: int, message_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE marketplace_annonces SET message_id = ? WHERE id = ?", (str(message_id), annonce_id))
-    conn.commit()
-    conn.close()
-
-
-def obtenir_annonce_marketplace(annonce_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM marketplace_annonces WHERE id = ?", (annonce_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def capture_deja_en_vente(capture_id: int) -> bool:
-    """Empêche de mettre en vente un Pokémon déjà listé activement ailleurs."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT 1 FROM marketplace_annonces WHERE capture_id = ? AND statut = 'active' LIMIT 1",
-        (capture_id,),
-    )
-    trouve = cur.fetchone() is not None
-    conn.close()
-    return trouve
-
-
-def obtenir_annonces_marketplace_joueur(vendeur_id: int, actives_seulement: bool = True):
-    conn = get_connexion()
-    cur = conn.cursor()
-    if actives_seulement:
-        cur.execute(
-            "SELECT * FROM marketplace_annonces WHERE vendeur_id = ? AND statut = 'active' ORDER BY date_creation DESC",
-            (vendeur_id,),
-        )
-    else:
-        cur.execute(
-            "SELECT * FROM marketplace_annonces WHERE vendeur_id = ? ORDER BY date_creation DESC",
-            (vendeur_id,),
-        )
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
-def obtenir_annonces_marketplace_expirees(maintenant: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT * FROM marketplace_annonces WHERE statut = 'active' AND date_expiration <= ?",
-        (maintenant,),
-    )
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
-
-def marquer_annonce_marketplace(annonce_id: int, statut: str):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE marketplace_annonces SET statut = ? WHERE id = ?", (statut, annonce_id))
-    conn.commit()
-    conn.close()
-
-
-def executer_achat_marketplace(annonce_id: int, acheteur_id: int) -> tuple:
-    """Exécute l'achat de façon atomique : re-vérifie que l'annonce est toujours active,
-    que le vendeur possède toujours le Pokémon, et que l'acheteur a les fonds — puis
-    transfère le Pokémon et les Poké Dollars. Retourne (succes, message_erreur)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM marketplace_annonces WHERE id = ?", (annonce_id,))
-    annonce = cur.fetchone()
-    if annonce is None or annonce["statut"] != "active":
-        conn.close()
-        return False, "Cette annonce n'est plus disponible (déjà vendue, retirée ou expirée)."
-    if annonce["vendeur_id"] == acheteur_id:
-        conn.close()
-        return False, "Tu ne peux pas acheter ton propre Pokémon !"
-
-    cur.execute("SELECT user_id FROM captures WHERE id = ?", (annonce["capture_id"],))
-    capture = cur.fetchone()
-    if capture is None or capture["user_id"] != annonce["vendeur_id"]:
-        cur.execute("UPDATE marketplace_annonces SET statut = 'annulee' WHERE id = ?", (annonce_id,))
-        conn.commit()
-        conn.close()
-        return False, "Le vendeur ne possède plus ce Pokémon (déjà échangé, relâché...) — annonce annulée."
-    conn.close()
-
-    # Solde vérifié via une connexion séparée (même convention que executer_echange).
-    solde_acheteur = obtenir_poke_dollars(acheteur_id)
-    if solde_acheteur < annonce["prix"]:
-        return False, f"Il te manque des Poké Dollars pour cet achat ({solde_acheteur}/{annonce['prix']})."
-
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE captures SET user_id = ? WHERE id = ?", (acheteur_id, annonce["capture_id"]))
-    cur.execute(
-        "UPDATE marketplace_annonces SET statut = 'vendue', acheteur_id = ? WHERE id = ?",
-        (acheteur_id, annonce_id),
-    )
-    conn.commit()
-    conn.close()
-
-    ajouter_poke_dollars(acheteur_id, -annonce["prix"])
-    ajouter_poke_dollars(annonce["vendeur_id"], annonce["prix"])
-    return True, None
-
-
-def rechercher_annonces_marketplace_actives(terme: str, limite: int = 15):
-    """Recherche par nom d'espèce parmi les annonces ACTIVES uniquement — insensible à la
-    casse ET aux accents (filtrage en Python : peu d'annonces actives à la fois, pas
-    besoin d'une recherche SQL, et ça évite les faux "aucun résultat" quand l'accent
-    n'est pas tapé — ex: chercher "ecremeuh" doit trouver "Écrémeuh")."""
-    import pokemon_data
-
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT m.*, c.pokemon_nom, c.pc, c.shiny
-        FROM marketplace_annonces m
-        JOIN captures c ON c.id = m.capture_id
-        WHERE m.statut = 'active'
-        ORDER BY m.date_creation DESC
-        """,
-    )
-    toutes = cur.fetchall()
-    conn.close()
-
-    terme_normalise = pokemon_data.cle_tri_alphabetique_fr(terme)
-    resultats = [row for row in toutes if terme_normalise in pokemon_data.cle_tri_alphabetique_fr(row["pokemon_nom"])]
-    return resultats[:limite]
-
-
-def obtenir_historique_marketplace_joueur(user_id: int, limite: int = 15):
-    """Toutes les annonces où le joueur est vendeur OU acheteur (tous statuts confondus),
-    les plus récentes d'abord. LEFT JOIN : reste correct même si la capture a depuis été
-    relâchée/re-échangée (pokemon_nom devient None dans ce cas plutôt qu'une ligne perdue)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT m.*, c.pokemon_nom
-        FROM marketplace_annonces m
-        LEFT JOIN captures c ON c.id = m.capture_id
-        WHERE m.vendeur_id = ? OR m.acheteur_id = ?
-        ORDER BY m.date_creation DESC
-        LIMIT ?
-        """,
-        (user_id, user_id, limite),
-    )
-    rows = cur.fetchall()
-    conn.close()
-    return rows
-
+# Famille dégression quotidienne arène/dresseur (multiplicateur_arene_du_jour,
+# enregistrer_victoire_arene/dresseur_repetition) déplacée dans database/dresseurs_gladio.py.
 
 def incrementer_explorations_terminees(user_id: int):
     conn = get_connexion()
@@ -7009,6 +4663,15 @@ def incrementer_explorations_terminees(user_id: int):
     )
     conn.commit()
     conn.close()
+
+
+def obtenir_explorations_terminees(user_id: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT explorations_terminees FROM stats_lifetime WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row["explorations_terminees"] if row else 0
 
 
 # --- Classements enrichis ---
@@ -7048,77 +4711,7 @@ def obtenir_captures_totales(user_id: int) -> int:
     return row["captures_totales"] if row else 0
 
 
-def obtenir_relation_gladio(user_id: int) -> int:
-    """Compteur de familiarité effectif — décroît lentement si le joueur n'a pas
-    interagi avec Gladio depuis longtemps (config.GLADIO_JOURS_PAR_PALIER_DECAY)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT compteur, derniere_interaction FROM gladio_relation WHERE user_id = ?", (user_id,))
-    row = cur.fetchone()
-    conn.close()
-    if not row:
-        return 0
-
-    compteur = row["compteur"]
-    derniere = row["derniere_interaction"] or 0
-    if derniere:
-        jours_inactif = (time.time() - derniere) / 86400
-        paliers_perdus = int(jours_inactif // config.GLADIO_JOURS_PAR_PALIER_DECAY)
-        compteur = max(0, compteur - paliers_perdus)
-    return compteur
-
-
-def incrementer_relation_gladio(user_id: int):
-    effectif = obtenir_relation_gladio(user_id)  # applique la décroissance avant d'incrémenter
-    maintenant = int(time.time())
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO gladio_relation (user_id, compteur, derniere_interaction) VALUES (?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET compteur = ?, derniere_interaction = ?
-        """,
-        (user_id, effectif + 1, maintenant, effectif + 1, maintenant),
-    )
-    conn.commit()
-    conn.close()
-
-
-def temps_restant_defi_gladio(user_id: int) -> int:
-    """Secondes restantes avant de pouvoir redéfier Gladio (0 = disponible tout de suite)."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT dernier_defi FROM gladio_defis WHERE user_id = ?", (user_id,))
-    row = cur.fetchone()
-    conn.close()
-    if not row:
-        return 0
-    ecoule = time.time() - row["dernier_defi"]
-    restant = config.GLADIO_COOLDOWN_DEFI - ecoule
-    return max(0, round(restant))
-
-
-def marquer_defi_gladio(user_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO gladio_defis (user_id, dernier_defi) VALUES (?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET dernier_defi = excluded.dernier_defi
-        """,
-        (user_id, int(time.time())),
-    )
-    conn.commit()
-    conn.close()
-
-
-def reinitialiser_defi_gladio(user_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM gladio_defis WHERE user_id = ?", (user_id,))
-    conn.commit()
-    conn.close()
-
+# Domaine Gladio (relation, cooldown de défi) déplacé dans database/dresseurs_gladio.py.
 
 def obtenir_serie_victoires_pvp(user_id: int) -> int:
     conn = get_connexion()
@@ -7157,6 +4750,15 @@ def reinitialiser_serie_victoires_pvp(user_id: int):
     )
     conn.commit()
     conn.close()
+
+
+def obtenir_shiny_totaux(user_id: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT shiny_totaux FROM stats_lifetime WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row["shiny_totaux"] if row else 0
 
 
 def classement_shiny(limite: int = 10):
@@ -7225,102 +4827,8 @@ def obtenir_stats_economie_actuelles():
 
 # --- Dresseurs PvE ---
 
-def creer_dresseur_actif(archetype_nom: str, channel_id: int, date_expiration: int) -> int:
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO dresseurs_actifs (archetype_nom, channel_id, date_expiration) VALUES (?, ?, ?)",
-        (archetype_nom, str(channel_id), date_expiration),
-    )
-    dresseur_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return dresseur_id
-
-
-def obtenir_dresseur_actif(dresseur_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM dresseurs_actifs WHERE id = ?", (dresseur_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def dresseur_actif_dans_channel(channel_id: int):
-    """Vrai s'il y a un dresseur actif ET non expiré dans ce channel. Nettoie au passage
-    tout dresseur resté actif=1 en base alors que sa fenêtre est dépassée (arrive si le
-    bot a redémarré entre-temps et a perdu la tâche asyncio qui gère l'expiration) —
-    sans ce nettoyage, un dresseur fantôme bloquerait indéfiniment le channel."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE dresseurs_actifs SET actif = 0 WHERE channel_id = ? AND actif = 1 AND date_expiration < ?",
-        (str(channel_id), int(time.time())),
-    )
-    conn.commit()
-    cur.execute(
-        "SELECT * FROM dresseurs_actifs WHERE channel_id = ? AND actif = 1 LIMIT 1",
-        (str(channel_id),),
-    )
-    row = cur.fetchone()
-    conn.close()
-    return row
-
-
-def marquer_dresseur_message(dresseur_id: int, message_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE dresseurs_actifs SET message_id = ? WHERE id = ?", (str(message_id), dresseur_id))
-    conn.commit()
-    conn.close()
-
-
-def a_deja_defie_dresseur(dresseur_id: int, user_id: int) -> bool:
-    """Indique si ce joueur a déjà affronté ce spawn de dresseur précis (peu importe
-    l'issue), pour éviter qu'il le re-défie en boucle tant qu'il est actif."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT 1 FROM dresseur_defis WHERE dresseur_id = ? AND user_id = ?",
-        (dresseur_id, user_id),
-    )
-    row = cur.fetchone()
-    conn.close()
-    return row is not None
-
-
-def enregistrer_defi_dresseur(dresseur_id: int, user_id: int):
-    """Marque ce joueur comme ayant défié ce spawn — n'empêche PAS les autres joueurs
-    de le défier aussi, contrairement à l'ancien verrou premier-arrivé."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT OR IGNORE INTO dresseur_defis (dresseur_id, user_id) VALUES (?, ?)",
-        (dresseur_id, user_id),
-    )
-    conn.commit()
-    conn.close()
-
-
-def terminer_dresseur(dresseur_id: int):
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("UPDATE dresseurs_actifs SET actif = 0 WHERE id = ?", (dresseur_id,))
-    conn.commit()
-    conn.close()
-
-
-def obtenir_dresseurs_actifs_toutes() -> list:
-    """Retourne tous les dresseurs marqués actifs, tous channels confondus — utilisé
-    uniquement par le nettoyage des messages orphelins au démarrage du bot."""
-    conn = get_connexion()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM dresseurs_actifs WHERE actif = 1")
-    resultats = cur.fetchall()
-    conn.close()
-    return resultats
-
+# Domaine dresseurs PvE (spawn, défis, nettoyage) déplacé dans
+# database/dresseurs_gladio.py — voir le `from .dresseurs_gladio import *` en fin de fichier.
 
 def incrementer_victoires_pve(user_id: int):
     conn = get_connexion()
@@ -7334,6 +4842,15 @@ def incrementer_victoires_pve(user_id: int):
     )
     conn.commit()
     conn.close()
+
+
+def obtenir_victoires_pve(user_id: int) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT victoires_pve FROM stats_lifetime WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row["victoires_pve"] if row else 0
 
 
 def synchroniser_pv_persistant_depuis_combat(combat_id: int, user_id: int):
@@ -7383,3 +4900,24 @@ def obtenir_compteurs_activite() -> dict:
         "dresseurs_actifs": dresseurs_actifs,
         "raids_actifs": raids_actifs,
     }
+
+
+# Domaines extraits en sous-modules (package database/) — voir chaque fichier pour le
+# détail. Import fait ICI, tout en bas, après que get_connexion (et tout le reste du
+# noyau) soit défini : nécessaire pour que `from . import get_connexion` fonctionne
+# depuis roguelike.py sans import circulaire réel.
+from .roguelike import *  # noqa: F401,F403
+from .plus_ou_moins import *  # noqa: F401,F403
+from .raids import *  # noqa: F401,F403
+from .codes_promo import *  # noqa: F401,F403
+from .parrainage import *  # noqa: F401,F403
+from .echanges_marketplace import *  # noqa: F401,F403
+from .exploration import *  # noqa: F401,F403
+from .clan import *  # noqa: F401,F403
+from .arene_repaires import *  # noqa: F401,F403
+from .dresseurs_gladio import *  # noqa: F401,F403
+from .quetes_evenements import *  # noqa: F401,F403
+from .connexion_quotidienne import *  # noqa: F401,F403
+from .recap_hebdomadaire import *  # noqa: F401,F403
+from .caisson_croissance import *  # noqa: F401,F403
+from .contrats import *  # noqa: F401,F403

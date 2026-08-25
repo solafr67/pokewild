@@ -343,6 +343,106 @@ async def demarrer_combat(bot, joueur1: discord.Member, joueur2: discord.Member,
     await lancer_combat_avec_equipes(bot, joueur1, joueur2, channel, equipe1, equipe2)
 
 
+class VueRegarderCombat(discord.ui.View):
+    """Bouton public permettant à n'importe qui (pas seulement les 2 combattants) de
+    rejoindre le fil de combat en spectateur. Le fil est déjà un thread PUBLIC (donc
+    techniquement déjà visible/rejoignable manuellement par n'importe qui) — ce bouton
+    résout le vrai problème pratique : le retrouver facilement parmi tous les autres
+    fils du channel, sans avoir à fouiller la liste des fils actifs. Pas de custom_id
+    (pas persistant après un redémarrage) : le combat est de toute façon éphémère, une
+    annonce de spectateur qui redevient un bouton mort après un redémarrage n'est pas
+    un problème pratique (le fil reste consultable manuellement)."""
+
+    def __init__(self, thread: discord.Thread):
+        super().__init__(timeout=None)  # le combat peut durer un moment, pas de timeout
+        self.thread = thread
+
+    @discord.ui.button(label="Regarder", emoji="👁️", style=discord.ButtonStyle.secondary)
+    async def regarder(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await self.thread.add_user(interaction.user)
+            await interaction.response.send_message(
+                f"👁️ Tu as rejoint {self.thread.mention} en spectateur !", ephemeral=True
+            )
+        except discord.HTTPException as e:
+            await interaction.response.send_message(f"❌ Impossible de te rejoindre au fil : {e}", ephemeral=True)
+
+
+class VueRevancheCombat(discord.ui.View):
+    """Bouton affiché sur l'annonce de victoire — relance un défi identique entre les
+    2 mêmes joueurs. Réutilise demarrer_combat() (pas les anciennes équipes en mémoire)
+    pour repartir sur les équipes ACTUELLES des joueurs, au cas où l'un des deux l'aurait
+    changée entre-temps. Les 2 joueurs doivent valider avant que le combat ne reparte
+    réellement — un seul clic ne suffit pas."""
+
+    def __init__(self, joueur1_id: int, joueur2_id: int):
+        super().__init__(timeout=300)  # 5 min pour se décider, le fil du combat précédent va bientôt disparaître
+        self.joueur1_id = joueur1_id
+        self.joueur2_id = joueur2_id
+        self.confirmations = set()
+        self.deja_lancee = False
+
+    @discord.ui.button(label="Revanche", emoji="🔄", style=discord.ButtonStyle.primary)
+    async def revanche(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id not in (self.joueur1_id, self.joueur2_id):
+            await interaction.response.send_message("Cette revanche ne te concerne pas !", ephemeral=True)
+            return
+        if self.deja_lancee:
+            await interaction.response.send_message("La revanche a déjà été lancée !", ephemeral=True)
+            return
+        if interaction.user.id in self.confirmations:
+            await interaction.response.send_message(
+                "Tu as déjà validé — en attente de l'autre joueur.", ephemeral=True
+            )
+            return
+
+        self.confirmations.add(interaction.user.id)
+
+        if len(self.confirmations) < 2:
+            autre_id = self.joueur2_id if interaction.user.id == self.joueur1_id else self.joueur1_id
+            await interaction.response.edit_message(
+                content=f"✅ {interaction.user.mention} valide la revanche ! En attente de <@{autre_id}>..."
+            )
+            return
+
+        # Les 2 joueurs ont validé — re-vérifie qu'aucun des deux n'a lancé un autre
+        # combat entre-temps (le temps que le 2e valide) avant de réellement relancer.
+        if database.combat_en_cours_pour_joueur(self.joueur1_id) or database.combat_en_cours_pour_joueur(self.joueur2_id):
+            self.confirmations.discard(interaction.user.id)
+            await interaction.response.send_message(
+                "❌ L'un des deux joueurs a déjà un combat en cours.", ephemeral=True
+            )
+            return
+
+        joueur1 = interaction.guild.get_member(self.joueur1_id)
+        joueur2 = interaction.guild.get_member(self.joueur2_id)
+        if joueur1 is None or joueur2 is None:
+            self.confirmations.discard(interaction.user.id)
+            await interaction.response.send_message("❌ Un des deux joueurs est introuvable sur le serveur.", ephemeral=True)
+            return
+
+        self.deja_lancee = True
+        for item in self.children:
+            item.disabled = True
+        await interaction.response.edit_message(
+            content="⚔️ Les deux joueurs ont validé — la revanche commence !", view=self
+        )
+
+        # Le fil du combat précédent va être supprimé sous peu — le nouveau combat part
+        # du channel PARENT (celui où /defier avait été utilisé à l'origine), pas du fil.
+        channel_parent = interaction.channel.parent if isinstance(interaction.channel, discord.Thread) else interaction.channel
+        await demarrer_combat(interaction.client, joueur1, joueur2, channel_parent)
+
+    async def on_timeout(self):
+        if self.deja_lancee:
+            return
+        for item in self.children:
+            item.disabled = True
+        # Pas de message.edit ici : cette vue n'a pas de référence directe au message
+        # (elle est reconstruite/attachée par le code appelant), les boutons désactivés
+        # localement suffisent à empêcher tout clic après expiration côté Discord.
+
+
 async def lancer_combat_avec_equipes(
     bot,
     joueur1: discord.Member,
@@ -387,6 +487,15 @@ async def lancer_combat_avec_equipes(
     cur.execute("UPDATE combat_pvp SET thread_id = ? WHERE id = ?", (str(thread.id), combat_id))
     conn.commit()
     conn.close()
+
+    try:
+        await channel.send(
+            f"⚔️ Un combat vient de commencer entre **{joueur1.display_name}** et "
+            f"**{joueur2.display_name}** dans {thread.mention} !",
+            view=VueRegarderCombat(thread),
+        )
+    except discord.HTTPException:
+        pass  # purement informatif, ne doit jamais faire échouer le lancement du combat
 
     noms = {joueur1.id: joueur1.display_name, joueur2.id: joueur2.display_name}
     vue = VueActionCombat(combat_id, 1)
@@ -574,6 +683,8 @@ def _generer_fichier_scene_combat(combat_id: int, noms: dict, log_tour: list = N
             terrain_type=terrain_actif["type"] if terrain_actif else None,
             log_precedent=log_precedent, tour_precedent=combat["tour"] - 1 if log_precedent else None,
             type_combat=type_combat,
+            nom_dresseur_joueur=noms.get(j1) if noms else None,
+            nom_dresseur_adversaire=noms.get(j2) if noms else None,
         )
         if log_tour:
             database.definir_log_precedent(combat_id, log_tour)
@@ -747,7 +858,7 @@ async def resoudre_tour(combat_id: int) -> list:
     attaquants.sort(reverse=True)  # le plus rapide agit en premier
     switches_volontaires = {}  # user_id -> True si Relais (transfère les boosts), False sinon (Change Éclair/Demi-Tour)
     degats_subis_ce_tour = set()  # user_id ayant subi des dégâts d'une attaque adverse ce tour-ci
-    flinch_ce_tour = set()  # user_id ayant flanché ce tour-ci — ne peut pas agir si son tour n'est pas encore passé
+    flinch_ce_tour = set()  # user_id ayant eu peur (flinch) ce tour-ci — ne peut pas agir si son tour n'est pas encore passé
 
     for _, user_id, adversaire_id, nom_attaque in attaquants:
         nom_atk, row_atk = infos_actif(user_id)
@@ -761,7 +872,7 @@ async def resoudre_tour(combat_id: int) -> list:
         # Flinch : empêche d'agir CE tour-ci si déclenché par l'adversaire avant que ce
         # Pokémon n'ait eu la chance de jouer (immunisé par Détermination).
         if user_id in flinch_ce_tour:
-            log.append(f"😨 **{nom_atk}** a flanché et ne peut pas attaquer !")
+            log.append(f"😨 **{nom_atk}** a eu peur et n'a pas pu attaquer !")
             continue
 
         # --- Le statut de l'attaquant peut l'empêcher d'agir ---
@@ -1926,7 +2037,7 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
             thread = bot.get_channel(int(combat["thread_id"])) or await bot.fetch_channel(int(combat["thread_id"]))
             if thread:
                 embeds_a_envoyer = [embed, embed_rival] if embed_rival else [embed]
-                await thread.send(embeds=embeds_a_envoyer)
+                await thread.send(embeds=embeds_a_envoyer, view=VueRevancheCombat(vainqueur_id, perdant_id))
                 await thread.send(f"🗑️ Ce fil sera supprimé automatiquement dans {DELAI_SUPPRESSION_FIL // 60} minutes.")
                 bot.loop.create_task(supprimer_fil_apres_delai(thread, DELAI_SUPPRESSION_FIL))
         except Exception:
@@ -2077,9 +2188,9 @@ async def _tick_resolution_pvp(bot, combat_id: int, thread_id: int, message_id: 
                 try:
                     msg = await thread.fetch_message(message_id)
                     embeds_a_envoyer = [embed, embed_rival] if embed_rival else [embed]
-                    await msg.edit(embeds=embeds_a_envoyer, view=None)
+                    await msg.edit(embeds=embeds_a_envoyer, view=VueRevancheCombat(vainqueur_id, perdant_id))
                 except discord.NotFound:
-                    await thread.send(embed=embed)
+                    await thread.send(embed=embed, view=VueRevancheCombat(vainqueur_id, perdant_id))
                 annonce_envoyee = True
             except Exception:
                 # Le combat est déjà marqué terminé en base à ce stade (ligne ci-dessus) —
@@ -2131,8 +2242,9 @@ async def _tick_resolution_pvp(bot, combat_id: int, thread_id: int, message_id: 
                 await msg.edit(embeds=[], view=vue, attachments=[fichier_scene])
             else:
                 await msg.edit(embeds=[], view=vue)
-        except discord.HTTPException:
-            pass  # message disparu ou édition refusée : le prochain tick retentera
+        except discord.HTTPException as e:
+            # ⚠️ Même piste que dresseurs.py : erreur avant totalement silencieuse.
+            print(f"⚠️ Échec de la mise à jour de l'image de combat PvP {combat_id} (tour suivant, le prochain tick retentera) : {e}")
         return False
 
 

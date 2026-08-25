@@ -28,7 +28,7 @@ def construire_embed_centre() -> discord.Embed:
         description=(
             "Envoie une équipe de 3 Pokémon explorer pendant 1h, 6h ou 24h. Plus ton "
             "équipe est puissante, meilleure sera la récompense — Poké Dollars, XP, une "
-            f"chance d'obtenir un {EMOJI_CRISTAL} **{NOM_CRISTAL}** (pour retenter ta Race), "
+            f"chance d'obtenir un {EMOJI_CRISTAL} **{NOM_CRISTAL}** (pour retenter ta Mutation), "
             "une chance de trouver un 🥚 **Œuf** à faire éclore au Laboratoire, et (uniquement "
             "sur les explorations 6h/24h) une petite chance de trouver un 💎 **objet de "
             "transformation** rarissime (Orbe Adamant, Fleur Gracidea...).\n\n"

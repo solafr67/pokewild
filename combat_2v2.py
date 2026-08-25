@@ -350,6 +350,7 @@ def _generer_fichier_scene_combat_2v2(combat_id: int, noms: dict, log_tour: list
                 "pv": row["pv_actuels"], "pv_max": row["pv_max"], "shiny": False,
                 "code_statut": code_statut, "boosts": boosts, "equipe_vivante": equipe_vivante,
                 "cle_controleur": id_reel,
+                "nom_dresseur": noms.get(id_reel) if noms else None,
             }
 
         equipe_joueur = [_infos_combattant(j) for j in joueurs if j["equipe"] == 1][:2]
@@ -2294,6 +2295,26 @@ class VueLobby2v2(discord.ui.View):
                 pass
 
 
+class VueRegarderCombat2v2(discord.ui.View):
+    """Équivalent 2v2 de combat.VueRegarderCombat — voir sa docstring pour le contexte
+    complet. Classe séparée (plutôt que réutiliser celle de combat.py) pour éviter un
+    import circulaire entre les deux modules de combat."""
+
+    def __init__(self, thread: discord.Thread):
+        super().__init__(timeout=None)
+        self.thread = thread
+
+    @discord.ui.button(label="Regarder", emoji="👁️", style=discord.ButtonStyle.secondary)
+    async def regarder(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await self.thread.add_user(interaction.user)
+            await interaction.response.send_message(
+                f"👁️ Tu as rejoint {self.thread.mention} en spectateur !", ephemeral=True
+            )
+        except discord.HTTPException as e:
+            await interaction.response.send_message(f"❌ Impossible de te rejoindre au fil : {e}", ephemeral=True)
+
+
 async def demarrer_combat_2v2(bot, channel, inscrits: dict, noms: dict, message_lobby):
     """Crée le fil, initialise le combat (ancrage combat_pvp + 4 joueurs + équipes de 3),
     et lance la boucle de résolution."""
@@ -2355,6 +2376,14 @@ async def demarrer_combat_2v2(bot, channel, inscrits: dict, noms: dict, message_
     cur.execute("UPDATE combat_pvp SET thread_id = ? WHERE id = ?", (str(thread.id), combat_id))
     conn.commit()
     conn.close()
+
+    try:
+        await channel.send(
+            f"⚔️ Un combat 2v2 vient de commencer dans {thread.mention} !",
+            view=VueRegarderCombat2v2(thread),
+        )
+    except discord.HTTPException:
+        pass  # purement informatif, ne doit jamais faire échouer le lancement du combat
 
     mentions = " ".join(f"<@{u}>" for u in inscrits)
     fichier_scene = _generer_fichier_scene_combat_2v2(combat_id, noms)

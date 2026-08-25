@@ -279,6 +279,9 @@ def _dessiner_pokeball(draw: ImageDraw.ImageDraw, cx: int, cy: int, rayon: int, 
     draw.ellipse([cx - rayon_centre, cy - rayon_centre, cx + rayon_centre, cy + rayon_centre], fill=(240, 240, 240), outline=(20, 20, 20))
 
 
+HAUTEUR_LIGNE_POKEBALLS = 14  # offset vertical réservé au-dessus du HUD pour la ligne de Poké Balls (voir _dessiner_ligne_pokeballs, appelée avec y - HAUTEUR_LIGNE_POKEBALLS) — toute chose dessinée AU-DESSUS du HUD (ex: le label dresseur) doit prévoir ce dégagement en plus pour ne pas chevaucher les balls.
+
+
 def _dessiner_ligne_pokeballs(scene: Image.Image, x: int, y: int, equipe_vivante: list, ancre_droite: bool = False):
     rayon = 4
     espacement = 11
@@ -288,6 +291,30 @@ def _dessiner_ligne_pokeballs(scene: Image.Image, x: int, y: int, equipe_vivante
     draw = ImageDraw.Draw(scene)
     for i, vivant in enumerate(equipe_vivante):
         _dessiner_pokeball(draw, x + i * espacement + rayon, y + rayon, rayon, vivant)
+
+
+def _dessiner_label_dresseur(scene: Image.Image, x: int, y: int, nom: str, ancre_droite: bool = False) -> int:
+    """Petit badge affichant le pseudo du DRESSEUR (le joueur Discord, ou le nom de
+    l'archétype pour un adversaire IA) juste au-dessus de son bloc HUD — sans ça, seul le
+    nom du POKÉMON apparaît dans le HUD, ce qui peut prêter à confusion sur quel côté de
+    l'écran appartient à qui (signalé par un joueur : facile de confondre son propre camp
+    en un coup d'œil). `y` désigne le bord BAS du badge (juste au-dessus du HUD, qui lui
+    est positionné en dessous) — cohérent avec la logique d'empilement déjà utilisée pour
+    les HUD eux-mêmes. Retourne la hauteur dessinée, pour empiler proprement d'autres
+    éléments par-dessus si besoin (voir generer_image_combat_2v2, plusieurs HUD empilés
+    par camp)."""
+    draw = ImageDraw.Draw(scene)
+    police = _police(8)
+    largeur_texte = draw.textlength(nom, font=police)
+    padding_h, padding_v = 6, 3
+    largeur = round(largeur_texte) + padding_h * 2
+    hauteur = 14 + padding_v
+    y = y - hauteur
+    if ancre_droite:
+        x = x - largeur
+    draw.rounded_rectangle([x, y, x + largeur, y + hauteur], radius=4, fill=(20, 20, 20, 190))
+    draw.text((x + padding_h, y + padding_v - 1), nom, font=police, fill=(255, 255, 255))
+    return hauteur
 
 
 def _dessiner_bloc_hud(
@@ -379,7 +406,7 @@ def _dessiner_bloc_hud(
     draw.text((x + largeur - 5 - draw.textlength(texte_pv, font=police_detail), y + rel_pv), texte_pv, font=police_detail, fill=(40, 40, 40))
 
     if afficher_pokeballs:
-        _dessiner_ligne_pokeballs(scene, x + largeur if ancre_droite else x, y - 14, equipe_vivante, ancre_droite=ancre_droite)
+        _dessiner_ligne_pokeballs(scene, x + largeur if ancre_droite else x, y - HAUTEUR_LIGNE_POKEBALLS, equipe_vivante, ancre_droite=ancre_droite)
     return hauteur_bloc
 
 def _nettoyer_texte_log(ligne: str, noms: dict = None) -> str:
@@ -532,12 +559,15 @@ def generer_image_combat(
     code_statut_adversaire: str, boosts_adversaire: dict, equipe_adversaire_vivante: list,
     log_tour: list = None, noms: dict = None, tour: int = None, meteo_type: str = None, terrain_type: str = None,
     log_precedent: list = None, tour_precedent: int = None, type_combat: str = "dresseur",
+    nom_dresseur_joueur: str = None, nom_dresseur_adversaire: str = None,
 ) -> bytes | None:
     """Retourne les bytes PNG de la scène composée, ou None si le fond ou l'un des deux
     sprites n'a pas pu être chargé (appelant doit alors se contenter du texte, pas
     d'échec bruyant pour un souci purement visuel). type_combat sélectionne le fond et
     son calibrage propre (voir CONFIGS_FOND) — "dresseur" par défaut (dresseurs sauvages,
-    PvP), "arene" ou "repaire" pour ces contextes précis."""
+    PvP), "arene" ou "repaire" pour ces contextes précis. nom_dresseur_joueur/adversaire
+    (optionnels) affichent le pseudo du DRESSEUR (pas du Pokémon) juste au-dessus de son
+    HUD — voir _dessiner_label_dresseur."""
     config_fond = CONFIGS_FOND.get(type_combat, CONFIGS_FOND["dresseur"])
     try:
         scene = Image.open(config_fond["chemin"]).convert("RGBA")
@@ -571,14 +601,30 @@ def generer_image_combat(
     ratio_sortie = LARGEUR_SORTIE_FINALE / scene.width
     scene = scene.resize((LARGEUR_SORTIE_FINALE, round(scene.height * ratio_sortie)), Image.LANCZOS)
 
-    _dessiner_bloc_hud(
+    hauteur_hud_joueur = _dessiner_bloc_hud(
         scene, 10, scene.height - 10, nom_joueur_affiche, niveau_joueur, pv_joueur, pv_max_joueur,
         code_statut_joueur, boosts_joueur, equipe_joueur_vivante, ancre_bas=True,
     )
+    if nom_dresseur_joueur:
+        _dessiner_label_dresseur(scene, 10, scene.height - 10 - hauteur_hud_joueur - HAUTEUR_LIGNE_POKEBALLS - 2, nom_dresseur_joueur)
+
+    # Marge du haut de l'ancre adversaire : normalement 10+16, mais si un label dresseur
+    # doit être affiché, il faut aussi réserver la place pour lui + la ligne de Poké
+    # Balls AU-DESSUS du HUD (voir _dessiner_label_dresseur) — sans cette marge
+    # supplémentaire, le label sortirait du cadre par le haut de l'image (peu d'espace
+    # disponible dans ce coin, contrairement au coin joueur qui a toute la hauteur de
+    # l'image disponible en dessous). Calcul exact (pas une estimation) : le label
+    # occupe HAUTEUR_LIGNE_POKEBALLS + 2(gap) + 17(hauteur fixe du label, voir
+    # _dessiner_label_dresseur) au-dessus du HUD, + 6px de tampon pour ne pas coller
+    # pile au bord de l'image.
+    DISTANCE_MIN_HUD_ADVERSAIRE = HAUTEUR_LIGNE_POKEBALLS + 2 + 17 + 6
+    y_haut_adversaire = max(10 + 16, DISTANCE_MIN_HUD_ADVERSAIRE) if nom_dresseur_adversaire else 10 + 16
     _dessiner_bloc_hud(
-        scene, scene.width - 10, 10 + 16, nom_adversaire_affiche, niveau_adversaire, pv_adversaire, pv_max_adversaire,
+        scene, scene.width - 10, y_haut_adversaire, nom_adversaire_affiche, niveau_adversaire, pv_adversaire, pv_max_adversaire,
         code_statut_adversaire, boosts_adversaire, equipe_adversaire_vivante, ancre_droite=True,
     )
+    if nom_dresseur_adversaire:
+        _dessiner_label_dresseur(scene, scene.width - 10, y_haut_adversaire - HAUTEUR_LIGNE_POKEBALLS - 2, nom_dresseur_adversaire, ancre_droite=True)
 
     largeur_log = 0
     if log_tour or tour:
@@ -613,8 +659,12 @@ def generer_image_combat_2v2(
     `equipe_adversaire` sont chacune une liste de 2 dicts avec les clés :
     pokemon, nom_affiche, niveau, pv, pv_max, shiny, code_statut, boosts, equipe_vivante
     (une équipe déjà K.O. peut passer un dict à None pour ce membre — rien n'est dessiné
-    pour lui, l'autre combattant du camp continue de s'afficher normalement). type_combat
-    sélectionne le fond, voir generer_image_combat."""
+    pour lui, l'autre combattant du camp continue de s'afficher normalement). Clé
+    optionnelle nom_dresseur : pseudo du dresseur affiché au-dessus du HUD de CE
+    combattant précis — par combattant et non par camp, car en 2v2 "en équipe" les 2
+    combattants d'un même camp peuvent appartenir à 2 joueurs RÉELS différents (contrairement
+    au 2v2 "solo double" où c'est le même joueur des deux côtés). type_combat sélectionne
+    le fond, voir generer_image_combat."""
     config_fond = CONFIGS_FOND.get(type_combat, CONFIGS_FOND["dresseur"])
     try:
         scene = Image.open(config_fond["chemin"]).convert("RGBA")
@@ -671,10 +721,19 @@ def generer_image_combat_2v2(
             combattant.get("code_statut"), combattant.get("boosts", {}), combattant.get("equipe_vivante", []), ancre_bas=True,
             afficher_pokeballs=afficher_balls,
         )
-        y_bloc_joueur -= (hauteur_bloc if hauteur_bloc else 0) + 32
+        hauteur_label = 0
+        if combattant.get("nom_dresseur"):
+            degagement_balls = HAUTEUR_LIGNE_POKEBALLS if afficher_balls else 0
+            hauteur_label = _dessiner_label_dresseur(scene, 10, y_bloc_joueur - hauteur_bloc - degagement_balls - 2, combattant["nom_dresseur"]) + 2 + degagement_balls
+        y_bloc_joueur -= (hauteur_bloc if hauteur_bloc else 0) + hauteur_label + 32
 
     equipe_partagee_adversaire = _meme_equipe(equipe_adversaire[0] if equipe_adversaire else None, equipe_adversaire[1] if len(equipe_adversaire) > 1 else None)
-    y_bloc_adversaire = 10 + 16
+    # Même calcul exact que generer_image_combat (voir ses commentaires) — seul le
+    # PREMIER combattant adversaire (le plus proche du haut de l'image) est à risque de
+    # sortir du cadre ; les suivants sont déjà repoussés plus bas par l'empilement normal.
+    DISTANCE_MIN_HUD_ADVERSAIRE = HAUTEUR_LIGNE_POKEBALLS + 2 + 17 + 6
+    premier_a_un_label = equipe_adversaire and equipe_adversaire[0] and equipe_adversaire[0].get("nom_dresseur")
+    y_bloc_adversaire = max(10 + 16, DISTANCE_MIN_HUD_ADVERSAIRE) if premier_a_un_label else 10 + 16
     for i, combattant in enumerate(equipe_adversaire[:2]):
         if not combattant:
             continue
@@ -684,7 +743,11 @@ def generer_image_combat_2v2(
             combattant.get("code_statut"), combattant.get("boosts", {}), combattant.get("equipe_vivante", []), ancre_droite=True,
             afficher_pokeballs=afficher_balls,
         )
-        y_bloc_adversaire += (hauteur_bloc if hauteur_bloc else 0) + 32
+        hauteur_label = 0
+        if combattant.get("nom_dresseur"):
+            degagement_balls = HAUTEUR_LIGNE_POKEBALLS if afficher_balls else 0
+            hauteur_label = _dessiner_label_dresseur(scene, scene.width - 10, y_bloc_adversaire - degagement_balls - 2, combattant["nom_dresseur"], ancre_droite=True) + 2 + degagement_balls
+        y_bloc_adversaire += (hauteur_bloc if hauteur_bloc else 0) + hauteur_label + 32
 
     largeur_log = 0
     if log_tour or tour:
