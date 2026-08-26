@@ -162,7 +162,7 @@ class SelectionBallView(discord.ui.View):
             database.ajouter_poke_dollars(user_id, dollars_gagnes)
             quetes_completees = database.incrementer_progression_quete(
                 user_id, "capture",
-                {"rarete": self.pokemon["rarete"], "shiny": est_shiny, "type": self.pokemon.get("types", [None])[0]},
+                {"rarete": self.pokemon["rarete"], "shiny": est_shiny, "type": self.pokemon.get("types", [])},
             )
 
             shiny_txt = " ✨SHINY✨" if est_shiny else ""

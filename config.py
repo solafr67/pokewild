@@ -40,7 +40,7 @@ ROGUELIKE_NB_SALLES_MIN = 8
 ROGUELIKE_NB_SALLES_MAX = 12
 ROGUELIKE_TAILLE_EQUIPE_DEPART = 1  # 1 seul starter choisi au lancement (parmi 6 candidats)
 ROGUELIKE_TAILLE_EQUIPE_MAX = 3  # nombre max de coéquipiers recrutables en cours de run
-ROGUELIKE_NIVEAU_DEPART = 15
+ROGUELIKE_NIVEAU_DEPART = 5
 ROGUELIKE_NIVEAU_PAR_ETAGE = 2  # le niveau des ennemis (et donc la difficulté) monte avec l'étage
 ROGUELIKE_SOIN_REPOS_POURCENT = 0.45
 

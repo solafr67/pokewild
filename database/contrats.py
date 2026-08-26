@@ -115,6 +115,14 @@ def incrementer_progression_contrats(user_id: int, evenement: str, contexte: dic
                     if valeur_reelle not in attendu:
                         correspond = False
                         break
+                elif isinstance(valeur_reelle, list):
+                    # ex: filtre {"type": "feu"} contre un Pokémon bi-type — le contexte
+                    # transmet TOUS ses types (liste), pas seulement le premier, sinon un
+                    # Pokémon dont le Feu est le 2e type ne comptait jamais pour un contrat
+                    # "capturer du Feu".
+                    if attendu not in valeur_reelle:
+                        correspond = False
+                        break
                 elif valeur_reelle != attendu:
                     correspond = False
                     break

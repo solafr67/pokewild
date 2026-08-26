@@ -390,6 +390,19 @@ def obtenir_progression_quete(user_id: int, quete_id: str, type_quete: str) -> t
     return compteur, reclamee
 
 
+def _valeur_correspond_filtre(valeur_reelle, valeur_attendue) -> bool:
+    """Compare une valeur de contexte à ce qu'exige un filtre — gère les deux sens :
+    valeur_attendue peut être une liste de valeurs ACCEPTABLES (ex: rareté "rare ou
+    mieux"), ou valeur_reelle peut elle-même être une liste (ex: "type" transmet TOUS
+    les types d'un Pokémon bi-type, pas seulement le premier — sans ce 2e cas, un
+    Pokémon dont le Feu est le 2e type ne comptait jamais pour un filtre {"type": "feu"})."""
+    if isinstance(valeur_attendue, list):
+        return valeur_reelle in valeur_attendue
+    if isinstance(valeur_reelle, list):
+        return valeur_attendue in valeur_reelle
+    return valeur_reelle == valeur_attendue
+
+
 def incrementer_progression_quete(user_id: int, evenement: str, contexte: dict = None, montant: int = 1) -> list:
     """Fait progresser toutes les quêtes actives (jour + semaine) correspondant à cet
     événement, en respectant leur filtre éventuel (ex: rareté). Plafonne au max requis,
@@ -442,7 +455,7 @@ def incrementer_progression_quete(user_id: int, evenement: str, contexte: dict =
             if quete["evenement"] != evenement:
                 continue
             filtre = quete.get("filtre")
-            if filtre and any(contexte.get(cle) != valeur for cle, valeur in filtre.items()):
+            if filtre and any(not _valeur_correspond_filtre(contexte.get(cle), valeur) for cle, valeur in filtre.items()):
                 continue
 
             compteur, reclamee = _obtenir_ou_reinitialiser_progression(cur, user_id, quete["id"], type_quete)

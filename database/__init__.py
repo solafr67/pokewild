@@ -849,10 +849,17 @@ def init_db():
             niveau INTEGER NOT NULL,
             pv_max INTEGER NOT NULL,
             pv_actuels INTEGER NOT NULL,
+            bonus_mutation REAL NOT NULL DEFAULT 1.0,
             PRIMARY KEY (run_id, position)
         )
         """
     )
+
+    # Migration pour les bases créées avant l'Autel de Mutation (roguelike)
+    try:
+        cur.execute("ALTER TABLE roguelike_equipe ADD COLUMN bonus_mutation REAL NOT NULL DEFAULT 1.0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
 
     cur.execute(
         """
@@ -862,10 +869,29 @@ def init_db():
             ennemi_niveau INTEGER NOT NULL,
             ennemi_pv_max INTEGER NOT NULL,
             ennemi_pv_actuels INTEGER NOT NULL,
-            actif_position INTEGER NOT NULL DEFAULT 0
+            actif_position INTEGER NOT NULL DEFAULT 0,
+            est_rencontre_speciale INTEGER NOT NULL DEFAULT 0,
+            equipe_restante TEXT NOT NULL DEFAULT '[]',
+            est_dresseur INTEGER NOT NULL DEFAULT 0
         )
         """
     )
+
+    # Migration pour les bases créées avant les combats de Dresseur (roguelike)
+    try:
+        cur.execute("ALTER TABLE roguelike_combat ADD COLUMN equipe_restante TEXT NOT NULL DEFAULT '[]'")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+    try:
+        cur.execute("ALTER TABLE roguelike_combat ADD COLUMN est_dresseur INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration pour les bases créées avant la Rencontre scintillante (roguelike)
+    try:
+        cur.execute("ALTER TABLE roguelike_combat ADD COLUMN est_rencontre_speciale INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
 
     cur.execute(
         """
@@ -1436,6 +1462,24 @@ def init_db():
         """
     )
 
+    # Réparation ponctuelle : des joueurs ayant fini la Partie 1 (7 chapitres, à l'époque
+    # le seul contenu existant) se sont retrouvés avec termine=1 stocké en base — un flag
+    # qui n'est JAMAIS réévalué dynamiquement contre la vraie longueur de
+    # QUETE_PRINCIPALE_CHAPITRES, seulement positionné une fois au moment de la
+    # complétion (voir avancer_quete_principale). Depuis l'ajout de la Partie 2 (10
+    # chapitres de plus), ces joueurs restaient bloqués pour toujours, incapables de
+    # progresser même si le nouveau contenu existe. On les débloque ici (idempotent, sans
+    # danger de le relancer à chaque démarrage) : un joueur réellement bloqué a
+    # chapitre < longueur actuelle (ex: 7 < 17, jamais incrémenté puisqu'il avait été
+    # marqué "terminé" avant l'extension) ; un joueur ayant VRAIMENT fini tout le contenu
+    # actuel a chapitre == longueur actuelle (ex: 17 == 17) — condition stricte "<" pour
+    # ne débloquer QUE les premiers, jamais les seconds.
+    import config as config_module
+    cur.execute(
+        "UPDATE quete_principale_progression SET termine = 0 WHERE termine = 1 AND chapitre < ?",
+        (len(config_module.QUETE_PRINCIPALE_CHAPITRES),),
+    )
+
     conn.commit()
     conn.close()
 
@@ -1517,6 +1561,11 @@ def avancer_quete_principale(user_id: int, evenement: str, contexte: dict = None
             valeur_reelle = contexte.get(cle)
             if isinstance(attendu, list):
                 if valeur_reelle not in attendu:
+                    return None
+            elif isinstance(valeur_reelle, list):
+                # ex: futur filtre {"type": "feu"} contre un Pokémon bi-type — voir la
+                # même correction dans database/contrats.py pour le contexte complet.
+                if attendu not in valeur_reelle:
                     return None
             elif valeur_reelle != attendu:
                 return None

@@ -33,10 +33,20 @@ DELAI_SUPPRESSION_FIL = 300  # 5 min après la fin d'une run (victoire ou mort),
 # Pool des Pokémon "génériques" pouvant être tirés comme starter — volontairement varié en
 # types et modeste en puissance (pas de légendaires) pour que chaque run parte sur un pied
 # d'égalité, peu importe le vrai Pokédex du joueur.
-STARTER_POOL = [
-    "Salamèche", "Carapuce", "Bulbizarre", "Racaillou", "Nosferapti", "Ponyta",
-    "Machoc", "Magicarpe", "Abo", "Chenipan", "Rondoudou", "Goupix", "Psykokwak",
-    "Tadmorv", "Griknot", "Mimigal", "Coxy", "Motisma",
+# Les 27 vrais starters de départ des jeux principaux, 3 par génération (gens 1 à 9) —
+# remplace l'ancien pool générique STARTER_POOL, qui servait AUSSI (par erreur de
+# conception, corrigée ici) de vivier pour les ennemis faibles de début de run — voir
+# ENNEMIS_FAIBLE ci-dessous, maintenant sa propre liste indépendante et inchangée.
+STARTERS_9_GENERATIONS = [
+    "Bulbizarre", "Salamèche", "Carapuce",  # Gen 1
+    "Germignon", "Héricendre", "Kaiminus",  # Gen 2
+    "Arcko", "Poussifeu", "Gobou",  # Gen 3
+    "Tortipouss", "Ouisticram", "Tiplouf",  # Gen 4
+    "Vipélierre", "Gruikui", "Moustillon",  # Gen 5
+    "Marisson", "Feunnec", "Grenousse",  # Gen 6
+    "Brindibou", "Flamiaou", "Otaquin",  # Gen 7
+    "Ouistempo", "Flambino", "Larméléon",  # Gen 8
+    "Poussacha", "Chochodile", "Coiffeton",  # Gen 9
 ]
 
 # --- Pools d'ennemis ÉCHELONNÉS par palier de progression ---
@@ -46,14 +56,18 @@ STARTER_POOL = [
 # combat élevées malgré une rareté "commune"), écrasant une équipe encore faible sans
 # que ce soit un choix injuste du joueur. On utilise donc des pools CURATÉS, dont la
 # force monte avec la progression, plutôt que la rareté brute.
-ENNEMIS_FAIBLE = STARTER_POOL  # même vivier que les starters : les 4-5 premiers étages
+ENNEMIS_FAIBLE = [
+    "Salamèche", "Carapuce", "Bulbizarre", "Racaillou", "Nosferapti", "Ponyta",
+    "Machoc", "Magicarpe", "Abo", "Chenipan", "Rondoudou", "Goupix", "Psykokwak",
+    "Tadmorv", "Griknot", "Mimigal", "Coxy", "Motisma",
+]
 ENNEMIS_MOYEN = [
     "Roucoups", "Arbok", "Dardargnan", "Nosferalto", "Feunard",
     "Simiabraz", "Colhomard", "Galopa", "Akwakwak", "Papilusion", "Fouinar", "Pharamp",
 ]
 ENNEMIS_FORT = [
     "Ronflex", "Léviator", "Dracaufeu", "Tortank", "Florizarre", "Alakazam",
-    "Machamp", "Ptéra", "Scarabrute", "Tyranocif",
+    "Mackogneur", "Ptéra", "Scarabrute", "Tyranocif",
 ]
 
 
@@ -75,10 +89,10 @@ MOUVEPOOL_PAR_TYPE = {
     "glace":    [{"nom": "Éclat Glace", "type": "glace", "puissance": 55, "precision": 100}, {"nom": "Blizzard éclair", "type": "glace", "puissance": 80, "precision": 90}],
     "combat":   [{"nom": "Poing-Karaté", "type": "combat", "puissance": 55, "precision": 100}, {"nom": "Close Combat", "type": "combat", "puissance": 80, "precision": 95}],
     "poison":   [{"nom": "Poisdart", "type": "poison", "puissance": 55, "precision": 100}, {"nom": "Bombe Toxik", "type": "poison", "puissance": 80, "precision": 90}],
-    "sol":      [{"nom": "Jet de Sable", "type": "sol", "puissance": 55, "precision": 100}, {"nom": "Séisme éclair", "type": "sol", "puissance": 80, "precision": 95}],
+    "sol":      [{"nom": "Jet de Roc", "type": "sol", "puissance": 55, "precision": 100}, {"nom": "Séisme éclair", "type": "sol", "puissance": 80, "precision": 95}],
     "vol":      [{"nom": "Tornade", "type": "vol", "puissance": 55, "precision": 100}, {"nom": "Ouragan éclair", "type": "vol", "puissance": 80, "precision": 90}],
     "psy":      [{"nom": "Choc Mental", "type": "psy", "puissance": 55, "precision": 100}, {"nom": "Psyko", "type": "psy", "puissance": 80, "precision": 95}],
-    "insecte":  [{"nom": "Dard-Venin", "type": "insecte", "puissance": 55, "precision": 100}, {"nom": "Lame-Cutter", "type": "insecte", "puissance": 80, "precision": 95}],
+    "insecte":  [{"nom": "Dard-Choc", "type": "insecte", "puissance": 55, "precision": 100}, {"nom": "Lame-Cutter", "type": "insecte", "puissance": 80, "precision": 95}],
     "roche":    [{"nom": "Jet de Pierres", "type": "roche", "puissance": 55, "precision": 100}, {"nom": "Éboulement", "type": "roche", "puissance": 80, "precision": 90}],
     "spectre":  [{"nom": "Griffe Ombre", "type": "spectre", "puissance": 55, "precision": 100}, {"nom": "Bal Masqué", "type": "spectre", "puissance": 80, "precision": 95}],
     "dragon":   [{"nom": "Draco-Griffe", "type": "dragon", "puissance": 55, "precision": 100}, {"nom": "Draco-Souffle éclair", "type": "dragon", "puissance": 80, "precision": 90}],
@@ -98,8 +112,24 @@ RELIQUES = {
     "sauvegarde_ultime": {"nom": "Sauvegarde Ultime", "emoji": "✨", "description": "La 1ère fois où toute l'équipe tomberait K.O., un Pokémon survit avec 1 PV"},
 }
 
-TYPES_ROOM = ["combat", "elite", "tresor", "repos", "evenement", "recrutement"]
-POIDS_ROOM = [0.40, 0.15, 0.15, 0.12, 0.08, 0.10]
+TYPES_ROOM = [
+    "combat", "elite", "tresor", "repos", "evenement", "recrutement",
+    "marchand", "mutation", "rencontre_scintillante", "carrefour", "arene_clandestine", "chambre_evolution",
+    "centre_pokemon", "dresseur",
+]
+POIDS_ROOM = [0.20, 0.10, 0.10, 0.06, 0.06, 0.07, 0.08, 0.05, 0.05, 0.06, 0.04, 0.03, 0.05, 0.05]
+
+NOMS_DRESSEURS = [
+    "Dresseur Hugo", "Dresseuse Lina", "Randonneur Max", "Camping-Pro Éva",
+    "Skateur Théo", "Cadette Mila", "Ouvrier Sam", "Nageuse Zoé",
+    "Pêcheur Léo", "Botaniste Anna", "Cadet Noé", "Skieuse Iris",
+]
+
+# --- Types de salle utilisables comme options d'un Carrefour (exclut "carrefour"
+# lui-même pour éviter une chaîne de carrefours en rafale, et "elite"/"boss" pour ne
+# jamais laisser le joueur choisir sciemment un combat difficile sans le savoir à
+# l'avance de la même façon qu'un tirage aléatoire classique) ---
+TYPES_CARREFOUR = ["combat", "tresor", "repos", "evenement", "recrutement", "marchand", "mutation", "centre_pokemon"]
 
 EVENEMENTS = [
     {
@@ -126,10 +156,17 @@ def _emoji_types_pokemon(pokemon: dict) -> str:
 
 def _attaques_disponibles(pokemon_nom: str) -> list:
     """Retourne au maximum 4 attaques (comme dans les vrais jeux) — ATTAQUE_NEUTRE
-    systématiquement en premier, puis un tirage parmi celles des 1-2 types du Pokémon.
-    Bug corrigé : avant, un Pokémon bi-type cumulait TOUTES les attaques des deux
-    pools de type sans aucun plafond (un Pokémon Plante/Poison pouvait se retrouver
-    avec 5 attaques ou plus au lieu de 4 maximum)."""
+    systématiquement en premier, puis une sélection parmi celles des 1-2 types du
+    Pokémon. Bug corrigé : avant, un Pokémon bi-type cumulait TOUTES les attaques des
+    deux pools de type sans aucun plafond (un Pokémon Plante/Poison pouvait se retrouver
+    avec 5 attaques ou plus au lieu de 4 maximum).
+
+    Sélection STABLE par espèce (graine = nom du Pokémon, pas le générateur aléatoire
+    global) — sinon, comme cette fonction est rappelée à chaque nouveau combat (chaque
+    salle), un même Pokémon se retrouvait avec des attaques DIFFÉRENTES d'un combat à
+    l'autre, rendant toute planification stratégique impossible pour le joueur. Reste
+    varié ENTRE espèces différentes (chaque nom donne une graine différente), juste
+    fixe pour UNE espèce donnée."""
     pokemon = obtenir_pokemon_par_nom(pokemon_nom)
     if not pokemon:
         return [ATTAQUE_NEUTRE]
@@ -137,16 +174,28 @@ def _attaques_disponibles(pokemon_nom: str) -> list:
     for t in pokemon.get("types", [])[:2]:
         pool_types.extend(MOUVEPOOL_PAR_TYPE.get(t, []))
     nb_a_tirer = min(3, len(pool_types))
-    return [ATTAQUE_NEUTRE] + random.sample(pool_types, nb_a_tirer)
+    return [ATTAQUE_NEUTRE] + random.Random(pokemon_nom).sample(pool_types, nb_a_tirer)
 
 
 def _niveau_pour_etage(salle_index: int) -> int:
-    return config.ROGUELIKE_NIVEAU_DEPART + salle_index * config.ROGUELIKE_NIVEAU_PAR_ETAGE
+    """Plafonné à 100 (comme les vrais jeux) — important depuis que le roguelike ne
+    s'arrête plus après un boss (voir avancer_salle) : sans plafond, cette formule
+    grandirait indéfiniment sur une run assez longue."""
+    return min(100, config.ROGUELIKE_NIVEAU_DEPART + salle_index * config.ROGUELIKE_NIVEAU_PAR_ETAGE)
 
 
 def _generer_stats(pokemon_nom: str, niveau: int) -> dict:
     pokemon = obtenir_pokemon_par_nom(pokemon_nom)
     return calculer_toutes_stats(pokemon, IV_DEFAUT, niveau)
+
+
+def _appliquer_bonus_mutation(stats: dict, bonus_mutation: float) -> dict:
+    """Multiplie toutes les stats (PV inclus) par le bonus de mutation d'un membre —
+    voir database.definir_mutation_membre_roguelike (salle Autel de Mutation). bonus=1.0
+    (valeur par défaut, aucune mutation) laisse les stats parfaitement inchangées."""
+    if bonus_mutation == 1.0:
+        return stats
+    return {cle: max(1, round(valeur * bonus_mutation)) for cle, valeur in stats.items()}
 
 
 def _generer_chemin() -> list:
@@ -246,7 +295,8 @@ class VueEvenement(discord.ui.View):
 
 class VueRecrutement(discord.ui.View):
     """Salle de recrutement : 3 candidats aléatoires, le joueur en choisit UN pour
-    rejoindre son équipe (jusqu'à config.ROGUELIKE_TAILLE_EQUIPE_MAX)."""
+    rejoindre son équipe (jusqu'à config.ROGUELIKE_TAILLE_EQUIPE_MAX) — ou passe son
+    tour s'il préfère garder son équipe actuelle telle quelle."""
 
     def __init__(self, run_id: int, candidats: list, salle_index: int):
         super().__init__(timeout=None)
@@ -256,6 +306,22 @@ class VueRecrutement(discord.ui.View):
             bouton = discord.ui.Button(label=nom, emoji="🔹", style=discord.ButtonStyle.success)
             bouton.callback = self._creer_callback(nom)
             self.add_item(bouton)
+        bouton_passer = discord.ui.Button(label="Passer", emoji="➡️", style=discord.ButtonStyle.secondary)
+        bouton_passer.callback = self._passer
+        self.add_item(bouton_passer)
+
+    async def _passer(self, interaction: discord.Interaction):
+        run = database.obtenir_run_roguelike(self.run_id)
+        if run is None or not run["actif"] or run["joueur_id"] != interaction.user.id:
+            await interaction.response.send_message("Cette run n'est plus active.", ephemeral=True)
+            return
+        await interaction.response.defer()
+        embed = discord.Embed(
+            title="🧭 Recrutement décliné",
+            description="Tu gardes ton équipe actuelle telle quelle.",
+            color=discord.Color.teal(),
+        )
+        await interaction.message.edit(embed=embed, view=VueRoom(self.run_id))
 
     def _creer_callback(self, nom: str):
         async def callback(interaction: discord.Interaction):
@@ -276,6 +342,30 @@ class VueRecrutement(discord.ui.View):
         return callback
 
 
+def _accorder_relique(run_id: int, relique_id: str) -> discord.Embed:
+    """Octroie une relique (effet immédiat pour carapace_solide inclus) et retourne
+    l'embed de confirmation — factorisé pour être réutilisé par VueChoixRelique (Trésor)
+    ET VueMarchand (relique aléatoire)."""
+    database.ajouter_relique_roguelike(run_id, relique_id)
+    if relique_id == "carapace_solide":
+        for mon in database.obtenir_equipe_roguelike(run_id):
+            nouveau_max = round(mon["pv_max"] * 1.2)
+            conn = database.get_connexion()
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE roguelike_equipe SET pv_max = ?, pv_actuels = pv_actuels + ? WHERE run_id = ? AND position = ?",
+                (nouveau_max, nouveau_max - mon["pv_max"], run_id, mon["position"]),
+            )
+            conn.commit()
+            conn.close()
+    info = RELIQUES[relique_id]
+    return discord.Embed(
+        title=f"{info['emoji']} Relique obtenue : {info['nom']}",
+        description=info["description"],
+        color=discord.Color.gold(),
+    )
+
+
 class VueChoixRelique(discord.ui.View):
     def __init__(self, run_id: int, options: list):
         super().__init__(timeout=None)
@@ -293,26 +383,187 @@ class VueChoixRelique(discord.ui.View):
                 await interaction.response.send_message("Cette run n'est plus active.", ephemeral=True)
                 return
             await interaction.response.defer()
-            database.ajouter_relique_roguelike(self.run_id, relique_id)
-            if relique_id == "carapace_solide":
-                for mon in database.obtenir_equipe_roguelike(self.run_id):
-                    nouveau_max = round(mon["pv_max"] * 1.2)
-                    conn = database.get_connexion()
-                    cur = conn.cursor()
-                    cur.execute(
-                        "UPDATE roguelike_equipe SET pv_max = ?, pv_actuels = pv_actuels + ? WHERE run_id = ? AND position = ?",
-                        (nouveau_max, nouveau_max - mon["pv_max"], self.run_id, mon["position"]),
-                    )
-                    conn.commit()
-                    conn.close()
-            info = RELIQUES[relique_id]
-            embed = discord.Embed(
-                title=f"{info['emoji']} Relique obtenue : {info['nom']}",
-                description=info["description"],
-                color=discord.Color.gold(),
-            )
+            embed = _accorder_relique(self.run_id, relique_id)
             vue = VueRoom(self.run_id)
             await interaction.message.edit(embed=embed, view=vue)
+        return callback
+
+
+class VueMarchand(discord.ui.View):
+    """Salle marchand : le roguelike ne génère aucun vrai Poké Dollar (mode autonome),
+    donc pas de vraie boutique — un choix entre un soin généreux ou une relique tirée au
+    sort (même mécanique que le Trésor, juste sans laisser le joueur choisir LAQUELLE)."""
+
+    def __init__(self, run_id: int):
+        super().__init__(timeout=None)
+        self.run_id = run_id
+
+    async def _verifier(self, interaction: discord.Interaction) -> bool:
+        run = database.obtenir_run_roguelike(self.run_id)
+        if run is None or not run["actif"] or run["joueur_id"] != interaction.user.id:
+            await interaction.response.send_message("Cette run n'est plus active.", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="Soin (+40% PV)", emoji="💊", style=discord.ButtonStyle.success)
+    async def soin(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
+            return
+        await interaction.response.defer()
+        database.soigner_equipe_roguelike(self.run_id, 0.40)
+        embed = discord.Embed(
+            title="🛍️ Marchand", description="Ton équipe récupère 40% de ses PV.", color=discord.Color.dark_gold()
+        )
+        await interaction.message.edit(embed=embed, view=VueRoom(self.run_id))
+
+    @discord.ui.button(label="Relique aléatoire", emoji="💎", style=discord.ButtonStyle.primary)
+    async def relique(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
+            return
+        await interaction.response.defer()
+        run = database.obtenir_run_roguelike(self.run_id)
+        import json as json_module
+        deja = json_module.loads(run["reliques"])
+        disponibles = [r for r in RELIQUES if r not in deja]
+        if not disponibles:
+            embed = discord.Embed(
+                title="🛍️ Marchand", description="Tu as déjà toutes les reliques disponibles ! Rien à t'offrir ici.",
+                color=discord.Color.dark_gold(),
+            )
+        else:
+            embed = _accorder_relique(self.run_id, random.choice(disponibles))
+        await interaction.message.edit(embed=embed, view=VueRoom(self.run_id))
+
+
+class VueMutation(discord.ui.View):
+    """Autel de Mutation : choisis UN membre d'équipe (parmi ceux vivants et pas déjà
+    mutés) pour +20% à toutes ses stats, PV inclus, pour le reste de la run."""
+
+    def __init__(self, run_id: int, candidats: list):
+        super().__init__(timeout=None)
+        self.run_id = run_id
+        for membre in candidats:
+            bouton = discord.ui.Button(
+                label=f"{membre['pokemon_nom']} (Niv. {membre['niveau']})", emoji="🔮", style=discord.ButtonStyle.success
+            )
+            bouton.callback = self._creer_callback(membre["position"], membre["pokemon_nom"])
+            self.add_item(bouton)
+
+    def _creer_callback(self, position: int, nom: str):
+        async def callback(interaction: discord.Interaction):
+            run = database.obtenir_run_roguelike(self.run_id)
+            if run is None or not run["actif"] or run["joueur_id"] != interaction.user.id:
+                await interaction.response.send_message("Cette run n'est plus active.", ephemeral=True)
+                return
+            await interaction.response.defer()
+
+            database.definir_mutation_membre_roguelike(self.run_id, position, 1.20)
+            membre = next(m for m in database.obtenir_equipe_roguelike(self.run_id) if m["position"] == position)
+            nouvelles_stats = _appliquer_bonus_mutation(_generer_stats(nom, membre["niveau"]), 1.20)
+            ratio_pv = membre["pv_actuels"] / membre["pv_max"] if membre["pv_max"] > 0 else 0
+            nouveaux_pv_actuels = max(1, round(nouvelles_stats["pv"] * ratio_pv))
+            database.mettre_a_jour_niveau_membre_roguelike(
+                self.run_id, position, membre["niveau"], nouvelles_stats["pv"], nouveaux_pv_actuels
+            )
+
+            embed = discord.Embed(
+                title="🔮 Mutation accomplie !",
+                description=f"**{nom}** reçoit +20% à toutes ses statistiques pour le reste de la run !",
+                color=discord.Color.dark_purple(),
+            )
+            await interaction.message.edit(embed=embed, view=VueRoom(self.run_id))
+        return callback
+
+
+class VueCarrefour(discord.ui.View):
+    """Carrefour : le joueur choisit lui-même le TYPE de la salle suivante (parmi 3
+    options tirées de TYPES_CARREFOUR), plutôt que de le subir par tirage aléatoire —
+    remplace directement la case correspondante du chemin stocké en base."""
+
+    NOMS_LISIBLES = {
+        "combat": "⚔️ Combat", "tresor": "💰 Trésor", "repos": "🏕️ Repos",
+        "evenement": "❓ Événement", "recrutement": "🧭 Recrutement",
+        "marchand": "🛍️ Marchand", "mutation": "🔮 Autel de Mutation",
+    }
+
+    def __init__(self, run_id: int, options: list, salle_index: int):
+        super().__init__(timeout=None)
+        self.run_id = run_id
+        self.salle_index = salle_index
+        for type_salle in options:
+            bouton = discord.ui.Button(label=self.NOMS_LISIBLES.get(type_salle, type_salle), style=discord.ButtonStyle.primary)
+            bouton.callback = self._creer_callback(type_salle)
+            self.add_item(bouton)
+
+    def _creer_callback(self, type_choisi: str):
+        async def callback(interaction: discord.Interaction):
+            run = database.obtenir_run_roguelike(self.run_id)
+            if run is None or not run["actif"] or run["joueur_id"] != interaction.user.id:
+                await interaction.response.send_message("Cette run n'est plus active.", ephemeral=True)
+                return
+            await interaction.response.defer()
+
+            import json as json_module
+            chemin = json_module.loads(run["chemin"])
+            index_suivant = self.salle_index + 1
+            if index_suivant < len(chemin):
+                chemin[index_suivant] = type_choisi
+            else:
+                # Le carrefour était la toute dernière salle générée avant un boss déjà
+                # placé plus loin (rare mais possible selon la génération aléatoire) —
+                # insère la salle choisie juste avant plutôt que de dépasser le chemin.
+                chemin.insert(index_suivant, type_choisi)
+            database.mettre_a_jour_chemin_roguelike(self.run_id, chemin)
+
+            embed = discord.Embed(
+                title="🧭 Chemin choisi !",
+                description=f"Tu t'engages vers : **{self.NOMS_LISIBLES.get(type_choisi, type_choisi)}**",
+                color=discord.Color.blurple(),
+            )
+            await interaction.message.edit(embed=embed, view=VueRoom(self.run_id))
+        return callback
+
+
+class VueChambreEvolution(discord.ui.View):
+    """Chambre d'Évolution : +5 niveaux immédiats à UN membre choisi, évolution
+    déclenchée sur le champ si le seuil est atteint (réutilise evoluer_si_possible,
+    même logique que la montée de niveau normale entre 2 salles)."""
+
+    def __init__(self, run_id: int, candidats: list, salle_index: int):
+        super().__init__(timeout=None)
+        self.run_id = run_id
+        self.salle_index = salle_index
+        for membre in candidats:
+            bouton = discord.ui.Button(
+                label=f"{membre['pokemon_nom']} (Niv. {membre['niveau']})", emoji="🧬", style=discord.ButtonStyle.success
+            )
+            bouton.callback = self._creer_callback(membre["position"])
+            self.add_item(bouton)
+
+    def _creer_callback(self, position: int):
+        async def callback(interaction: discord.Interaction):
+            run = database.obtenir_run_roguelike(self.run_id)
+            if run is None or not run["actif"] or run["joueur_id"] != interaction.user.id:
+                await interaction.response.send_message("Cette run n'est plus active.", ephemeral=True)
+                return
+            await interaction.response.defer()
+
+            membre = next(m for m in database.obtenir_equipe_roguelike(self.run_id) if m["position"] == position)
+            nouveau_niveau = min(100, membre["niveau"] + 5)
+            nom_final, chaine = evoluer_si_possible(membre["pokemon_nom"], nouveau_niveau)
+            nouvelles_stats = _appliquer_bonus_mutation(_generer_stats(nom_final, nouveau_niveau), membre["bonus_mutation"])
+            ratio_pv = membre["pv_actuels"] / membre["pv_max"] if membre["pv_max"] > 0 else 0
+            nouveaux_pv_actuels = max(1, round(nouvelles_stats["pv"] * ratio_pv))
+            database.mettre_a_jour_niveau_membre_roguelike(
+                self.run_id, position, nouveau_niveau, nouvelles_stats["pv"], nouveaux_pv_actuels,
+                pokemon_nom=nom_final if chaine else None,
+            )
+
+            texte = f"**{membre['pokemon_nom']}** grimpe à Niv. {nouveau_niveau} !"
+            if chaine:
+                texte += f"\n✨ Il évolue en **{nom_final}** !"
+            embed = discord.Embed(title="🧬 Chambre d'Évolution", description=texte, color=discord.Color.teal())
+            await interaction.message.edit(embed=embed, view=VueRoom(self.run_id))
         return callback
 
 
@@ -441,9 +692,10 @@ class VueChoixStarter(discord.ui.View):
 
         await interaction.response.defer()
         embed = construire_embed_run(self.run_id)
-        chemin = __import__("json").loads(run["chemin"])
         embed.description = (
-            f"**{nom}** rejoint l'aventure ! **{len(chemin)} salles** t'attendent, dont un boss final.\n"
+            f"**{nom}** rejoint l'aventure ! Le chemin s'étend indéfiniment, salle après "
+            f"salle, avec un boss à intervalles réguliers — jusqu'à ce que ton équipe "
+            f"tombe. Combien d'étages peux-tu atteindre ?\n"
             f"Tu pourras recruter jusqu'à {config.ROGUELIKE_TAILLE_EQUIPE_MAX} Pokémon en cours de route "
             f"(salles 🧭 Recrutement).\n"
             f"⚠️ Mini-jeu indépendant : aucune récompense liée à ton profil PokéWild — juste le plaisir "
@@ -482,7 +734,7 @@ async def lancer_run(bot, interaction: discord.Interaction):
         )
         await thread.add_user(interaction.user)
 
-        candidats = random.sample(STARTER_POOL, 6)
+        candidats = random.sample(STARTERS_9_GENERATIONS, 6)
         embed = discord.Embed(
             title="🗺️ Roguelike — Choisis ton starter !",
             description="Sélectionne le Pokémon avec lequel tu vas commencer l'aventure :\n\n" + "\n".join(f"🔹 {n}" for n in candidats),
@@ -523,6 +775,23 @@ async def avancer_salle(bot, run_id: int):
     chemin = json_module.loads(run["chemin"])
     nouvel_index = database.avancer_salle_roguelike(run_id)
 
+    # La run ne s'arrête plus après le boss — dès qu'on dépasse la fin du chemin ET que
+    # la dernière salle passée était bien un boss (toujours vrai, boss est systématiquement
+    # ajouté en dernière position d'un segment, voir _generer_chemin), on ÉTEND le chemin
+    # avec un nouveau segment plutôt que de conclure. Le roguelike est donc maintenant
+    # "sans fin" — seule une défaite en combat termine la run (voir plus bas dans le
+    # fichier, résolution de combat perdu).
+    if nouvel_index >= len(chemin):
+        if chemin and chemin[-1] == "boss":
+            chemin = chemin + _generer_chemin()
+            database.mettre_a_jour_chemin_roguelike(run_id, chemin)
+        else:
+            # Filet de sécurité : ne devrait plus jamais arriver (boss toujours en fin de
+            # segment), mais on garde ce cas pour ne jamais planter si la génération du
+            # chemin change un jour.
+            await _conclure_run(bot, run_id, victoire=True)
+            return
+
     # Fait monter l'équipe du joueur au niveau attendu de CETTE salle — sans ça, l'équipe
     # restait figée au niveau où elle a rejoint (souvent le niveau de départ) alors que
     # les ennemis montent en niveau à chaque salle via _niveau_pour_etage, créant un
@@ -530,7 +799,16 @@ async def avancer_salle(bot, run_id: int):
     # un niveau (un membre recruté en avance sur la courbe reste tel quel tant que la
     # formule ne l'a pas rattrapé), et on préserve le POURCENTAGE de vie actuel plutôt que
     # de soigner gratuitement à chaque montée.
-    niveau_attendu = _niveau_pour_etage(nouvel_index)
+    #
+    # bonus_boss : +1 niveau PERMANENT par boss déjà vaincu (compte tous les "boss" déjà
+    # traversés dans le chemin, y compris celui qui vient d'être battu si c'est lui qui a
+    # déclenché l'extension ci-dessus) — combiné aux +2 normaux de la progression par
+    # salle, ça donne bien le ressenti "+3 au lieu de +2" pour la transition qui suit
+    # immédiatement un boss, et ce bonus reste acquis pour toujours sur les salles
+    # suivantes (jamais retiré), contrairement au niveau brut qui, lui, ne redescend
+    # jamais non plus grâce au garde-fou existant plus bas dans la boucle.
+    bonus_boss = chemin[:nouvel_index].count("boss")
+    niveau_attendu = min(100, _niveau_pour_etage(nouvel_index) + bonus_boss)
     annonces_evolution = []
     for membre in database.obtenir_equipe_roguelike(run_id):
         if membre["niveau"] >= niveau_attendu:
@@ -543,7 +821,7 @@ async def avancer_salle(bot, run_id: int):
         if chaine:
             annonces_evolution.append(f"✨ **{membre['pokemon_nom']}** a évolué en **{nom_final}** !")
 
-        nouvelles_stats = _generer_stats(nom_final, niveau_attendu)
+        nouvelles_stats = _appliquer_bonus_mutation(_generer_stats(nom_final, niveau_attendu), membre["bonus_mutation"])
         ratio_pv = membre["pv_actuels"] / membre["pv_max"] if membre["pv_max"] > 0 else 0
         nouveaux_pv_actuels = max(1, round(nouvelles_stats["pv"] * ratio_pv)) if membre["pv_actuels"] > 0 else 0
         database.mettre_a_jour_niveau_membre_roguelike(
@@ -557,10 +835,6 @@ async def avancer_salle(bot, run_id: int):
             await thread_pour_annonce.send("\n".join(annonces_evolution))
         except discord.HTTPException:
             pass  # purement informatif, ne doit jamais bloquer la suite de la run
-
-    if nouvel_index >= len(chemin):
-        await _conclure_run(bot, run_id, victoire=True)
-        return
 
     type_salle = chemin[nouvel_index]
     thread = bot.get_channel(int(run["thread_id"])) or await bot.fetch_channel(int(run["thread_id"]))
@@ -624,6 +898,78 @@ async def avancer_salle(bot, run_id: int):
                     color=discord.Color.teal(),
                 )
                 await thread.send(embed=embed, view=VueRecrutement(run_id, options, nouvel_index))
+        elif type_salle == "marchand":
+            embed = discord.Embed(
+                title=f"🛍️ Salle {nouvel_index + 1} — Marchand",
+                description="Un marchand itinérant te propose un choix :",
+                color=discord.Color.dark_gold(),
+            )
+            await thread.send(embed=embed, view=VueMarchand(run_id))
+        elif type_salle == "mutation":
+            equipe_actuelle = database.obtenir_equipe_roguelike(run_id)
+            candidats = [m for m in equipe_actuelle if m["bonus_mutation"] == 1.0 and m["pv_actuels"] > 0]
+            if not candidats:
+                database.soigner_equipe_roguelike(run_id, 0.20)
+                embed = discord.Embed(
+                    title=f"🔮 Salle {nouvel_index + 1} — Autel de Mutation",
+                    description="Tous tes Pokémon vivants ont déjà été mutés ! Un peu de soin à la place (+20% PV).",
+                    color=discord.Color.dark_purple(),
+                )
+                await thread.send(embed=embed, view=VueRoom(run_id))
+            else:
+                embed = discord.Embed(
+                    title=f"🔮 Salle {nouvel_index + 1} — Autel de Mutation",
+                    description=(
+                        "Un Cristal de Mutation instable flotte au-dessus d'un autel. Choisis "
+                        "UN Pokémon de ton équipe pour recevoir **+20% à toutes ses "
+                        "statistiques, PV inclus, pour le reste de la run** (irréversible, "
+                        "et ne peut être appliqué qu'une seule fois par Pokémon) :"
+                    ),
+                    color=discord.Color.dark_purple(),
+                )
+                await thread.send(embed=embed, view=VueMutation(run_id, candidats))
+        elif type_salle == "rencontre_scintillante":
+            await _demarrer_rencontre_scintillante(bot, thread, run_id, nouvel_index)
+        elif type_salle == "carrefour":
+            options = random.sample(TYPES_CARREFOUR, 3)
+            noms_lisibles = {
+                "combat": "⚔️ Combat", "tresor": "💰 Trésor", "repos": "🏕️ Repos",
+                "evenement": "❓ Événement", "recrutement": "🧭 Recrutement",
+                "marchand": "🛍️ Marchand", "mutation": "🔮 Autel de Mutation",
+            }
+            embed = discord.Embed(
+                title=f"🧭 Salle {nouvel_index + 1} — Carrefour",
+                description="Trois chemins s'offrent à toi. Lequel empruntes-tu ?\n\n"
+                + "\n".join(f"🔹 {noms_lisibles.get(t, t)}" for t in options),
+                color=discord.Color.blurple(),
+            )
+            await thread.send(embed=embed, view=VueCarrefour(run_id, options, nouvel_index))
+        elif type_salle == "arene_clandestine":
+            await _demarrer_arene_clandestine(bot, thread, run_id, nouvel_index)
+        elif type_salle == "chambre_evolution":
+            equipe_actuelle = database.obtenir_equipe_roguelike(run_id)
+            candidats = [m for m in equipe_actuelle if m["pv_actuels"] > 0]
+            embed = discord.Embed(
+                title=f"🧬 Salle {nouvel_index + 1} — Chambre d'Évolution",
+                description=(
+                    "Une pierre d'évolution unique repose ici. Choisis UN Pokémon pour lui "
+                    "accorder immédiatement **+5 niveaux** (évolue sur le champ si le seuil "
+                    "est atteint) :"
+                ),
+                color=discord.Color.teal(),
+            )
+            await thread.send(embed=embed, view=VueChambreEvolution(run_id, candidats, nouvel_index))
+        elif type_salle == "centre_pokemon":
+            database.soigner_equipe_roguelike(run_id, 1.0)
+            embed = discord.Embed(
+                title=f"🏥 Salle {nouvel_index + 1} — Centre Pokémon",
+                description="Ton équipe est soignée **intégralement** — tous tes Pokémon retrouvent 100% de leurs PV, **K.O. inclus** : ils sont ranimés comme neufs.",
+                color=discord.Color.green(),
+            )
+            embed2 = construire_embed_run(run_id)
+            await thread.send(embeds=[embed, embed2], view=VueRoom(run_id))
+        elif type_salle == "dresseur":
+            await _demarrer_combat_dresseur(bot, thread, run_id, nouvel_index)
     except Exception as e:
         # Même filet de sécurité que lancer_run : une erreur ici (fil supprimé, sprite
         # indisponible, etc.) ne doit jamais laisser la run silencieusement bloquée — le
@@ -641,7 +987,154 @@ async def avancer_salle(bot, run_id: int):
             pass
 
 
-async def _demarrer_combat(bot, thread, run_id: int, salle_index: int, elite: bool = False, boss: bool = False):
+async def _demarrer_rencontre_scintillante(bot, thread, run_id: int, salle_index: int):
+    embed = discord.Embed(
+        title=f"✨ Salle {salle_index + 1} — Rencontre scintillante",
+        description=(
+            "Un Pokémon aux couleurs éclatantes te fixe, nettement plus fort que la "
+            "normale de cet étage. L'affronter est risqué, mais une victoire garantit "
+            "une relique bonus. Tu peux aussi repartir sans prendre aucun risque."
+        ),
+        color=discord.Color.gold(),
+    )
+    await thread.send(embed=embed, view=VueChoixRencontreScintillante(run_id, salle_index))
+
+
+class VueChoixRencontreScintillante(discord.ui.View):
+    def __init__(self, run_id: int, salle_index: int):
+        super().__init__(timeout=None)
+        self.run_id = run_id
+        self.salle_index = salle_index
+
+    async def _verifier(self, interaction: discord.Interaction) -> bool:
+        run = database.obtenir_run_roguelike(self.run_id)
+        if run is None or not run["actif"] or run["joueur_id"] != interaction.user.id:
+            await interaction.response.send_message("Cette run n'est plus active.", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="Combattre", emoji="⚔️", style=discord.ButtonStyle.danger)
+    async def combattre(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
+            return
+        await interaction.response.defer()
+        embed = discord.Embed(title="✨ Tu choisis de combattre !", color=discord.Color.gold())
+        await interaction.message.edit(embed=embed, view=None)
+        await _demarrer_combat(
+            interaction.client, interaction.channel, self.run_id, self.salle_index,
+            elite=True, rencontre_speciale=True,
+        )
+
+    @discord.ui.button(label="Fuir", emoji="🏃", style=discord.ButtonStyle.secondary)
+    async def fuir(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
+            return
+        await interaction.response.defer()
+        embed = discord.Embed(
+            title="🏃 Tu t'éloignes prudemment...",
+            description="Aucun risque, aucune récompense — le Pokémon scintillant disparaît dans les fourrés.",
+            color=discord.Color.light_grey(),
+        )
+        await interaction.message.edit(embed=embed, view=VueRoom(self.run_id))
+
+
+async def _demarrer_combat_dresseur(bot, thread, run_id: int, salle_index: int):
+    """Combat de Dresseur : 2 Pokémon (3 passé la salle 7) enchaînés SANS interruption
+    ni soin entre chacun — une vraie difficulté distincte d'un combat sauvage classique,
+    où l'adversaire n'a qu'un seul Pokémon à gérer."""
+    nom_dresseur = random.choice(NOMS_DRESSEURS)
+    taille_equipe = 2 if salle_index <= 7 else 3
+    pool = _pool_ennemis_pour_etage(salle_index)
+    noms_equipe = random.sample(pool, min(taille_equipe, len(pool)))
+    niveau = _niveau_pour_etage(salle_index)
+
+    equipe = database.obtenir_equipe_roguelike(run_id)
+    premier_vivant = next((m for m in equipe if m["pv_actuels"] > 0), None)
+    if premier_vivant is None:
+        await _conclure_run(bot, run_id, victoire=False)
+        return
+
+    premieres_stats = _generer_stats(noms_equipe[0], niveau)
+    reste = [{"nom": nom, "niveau": niveau, "pv_max": _generer_stats(nom, niveau)["pv"]} for nom in noms_equipe[1:]]
+
+    database.creer_combat_roguelike(
+        run_id, noms_equipe[0], niveau, premieres_stats["pv"], premier_vivant["position"],
+        equipe_restante=reste, est_dresseur=True,
+    )
+
+    pokemon = obtenir_pokemon_par_nom(noms_equipe[0])
+    embed = discord.Embed(
+        title=f"🥊 {nom_dresseur} veut se battre ! ({len(noms_equipe)} Pokémon)",
+        description=(
+            f"Envoie **{noms_equipe[0]}** ! (Niv. {niveau})\n{_emoji_types_pokemon(pokemon)}\n"
+            f"❤️ {premieres_stats['pv']}/{premieres_stats['pv']} PV"
+        ),
+        color=discord.Color.orange(),
+    )
+    url_sprite = sprite_pokemon(pokemon)
+    if url_sprite:
+        embed.set_thumbnail(url=url_sprite)
+    embed2 = construire_embed_run(run_id)
+    await thread.send(embeds=[embed, embed2], view=VueCombatRoguelike(run_id))
+
+
+async def _demarrer_arene_clandestine(bot, thread, run_id: int, salle_index: int):
+    pool = _pool_ennemis_pour_etage(salle_index)
+    nom_a, nom_b = random.sample(pool, 2) if len(pool) >= 2 else (pool[0], pool[0])
+    embed = discord.Embed(
+        title=f"🎤 Salle {salle_index + 1} — Arène clandestine",
+        description=(
+            f"**{nom_a}** affronte **{nom_b}** dans un combat organisé, sans risque pour "
+            f"toi. Parie sur le vainqueur — s'il te reste une place, il rejoindra ton "
+            f"équipe."
+        ),
+        color=discord.Color.dark_teal(),
+    )
+    await thread.send(embed=embed, view=VueAreneClandestine(run_id, nom_a, nom_b, salle_index))
+
+
+class VueAreneClandestine(discord.ui.View):
+    def __init__(self, run_id: int, nom_a: str, nom_b: str, salle_index: int):
+        super().__init__(timeout=None)
+        self.run_id = run_id
+        self.nom_a = nom_a
+        self.nom_b = nom_b
+        self.salle_index = salle_index
+        for nom in (nom_a, nom_b):
+            bouton = discord.ui.Button(label=f"Parier sur {nom}", emoji="🎲", style=discord.ButtonStyle.primary)
+            bouton.callback = self._creer_callback(nom)
+            self.add_item(bouton)
+
+    def _creer_callback(self, pari: str):
+        async def callback(interaction: discord.Interaction):
+            run = database.obtenir_run_roguelike(self.run_id)
+            if run is None or not run["actif"] or run["joueur_id"] != interaction.user.id:
+                await interaction.response.send_message("Cette run n'est plus active.", ephemeral=True)
+                return
+            await interaction.response.defer()
+
+            vainqueur = random.choice([self.nom_a, self.nom_b])
+            equipe_actuelle = database.obtenir_equipe_roguelike(self.run_id)
+
+            if pari == vainqueur and len(equipe_actuelle) < config.ROGUELIKE_TAILLE_EQUIPE_MAX:
+                niveau = _niveau_pour_etage(self.salle_index)
+                stats = _generer_stats(vainqueur, niveau)
+                database.ajouter_membre_equipe_roguelike(self.run_id, vainqueur, niveau, stats["pv"])
+                texte = f"🎉 **{vainqueur}** l'emporte, exactement comme tu l'avais parié ! Il rejoint ton équipe."
+            elif pari == vainqueur:
+                texte = f"🎉 **{vainqueur}** l'emporte comme prévu, mais ton équipe est déjà complète — il s'éloigne."
+            else:
+                texte = f"😬 **{vainqueur}** l'emporte finalement, pas **{pari}**. Ton pari ne paie pas cette fois."
+
+            embed = discord.Embed(title="🎤 Arène clandestine — Résultat", description=texte, color=discord.Color.dark_teal())
+            await interaction.message.edit(embed=embed, view=VueRoom(self.run_id))
+        return callback
+
+
+async def _demarrer_combat(
+    bot, thread, run_id: int, salle_index: int, elite: bool = False, boss: bool = False,
+    rencontre_speciale: bool = False,
+):
     ennemi = _tirer_ennemi(salle_index, elite=elite, boss=boss)
     equipe = database.obtenir_equipe_roguelike(run_id)
     premier_vivant = next((m for m in equipe if m["pv_actuels"] > 0), None)
@@ -649,14 +1142,17 @@ async def _demarrer_combat(bot, thread, run_id: int, salle_index: int, elite: bo
         await _conclure_run(bot, run_id, victoire=False)
         return
 
-    database.creer_combat_roguelike(run_id, ennemi["nom"], ennemi["niveau"], ennemi["pv_max"], premier_vivant["position"])
+    database.creer_combat_roguelike(
+        run_id, ennemi["nom"], ennemi["niveau"], ennemi["pv_max"], premier_vivant["position"],
+        est_rencontre_speciale=rencontre_speciale,
+    )
 
     pokemon = obtenir_pokemon_par_nom(ennemi["nom"])
-    prefixe = "👑 BOSS" if boss else ("⭐ Élite" if elite else "⚔️")
+    prefixe = "👑 BOSS" if boss else ("✨ Scintillant" if rencontre_speciale else ("⭐ Élite" if elite else "⚔️"))
     embed = discord.Embed(
         title=f"{prefixe} — {ennemi['nom']} sauvage ! (Niv. {ennemi['niveau']})",
         description=f"{_emoji_types_pokemon(pokemon)}\n❤️ {ennemi['pv_max']}/{ennemi['pv_max']} PV",
-        color=discord.Color.red() if not boss else discord.Color.dark_gold(),
+        color=discord.Color.gold() if rencontre_speciale else (discord.Color.red() if not boss else discord.Color.dark_gold()),
     )
     url_sprite = sprite_pokemon(pokemon)
     if url_sprite:
@@ -685,7 +1181,7 @@ async def resoudre_tour_roguelike(bot, run_id: int, attaque: dict):
     malus_precision_ennemi = 10 if "amulette_trouble" in reliques else 0
     joueur_premier = "instinct_predateur" in reliques
 
-    stats_joueur = _generer_stats(actif["pokemon_nom"], actif["niveau"])
+    stats_joueur = _appliquer_bonus_mutation(_generer_stats(actif["pokemon_nom"], actif["niveau"]), actif["bonus_mutation"])
     stats_ennemi = _generer_stats(combat["ennemi_nom"], combat["ennemi_niveau"])
     pokemon_joueur = obtenir_pokemon_par_nom(actif["pokemon_nom"])
     pokemon_ennemi = obtenir_pokemon_par_nom(combat["ennemi_nom"])
@@ -749,11 +1245,46 @@ async def resoudre_tour_roguelike(bot, run_id: int, attaque: dict):
 
     # --- Victoire sur ce combat ---
     if pv_ennemi <= 0:
+        equipe_restante = json_module.loads(combat["equipe_restante"]) if combat["equipe_restante"] else []
+        if equipe_restante:
+            # Combat de Dresseur : enchaîne le Pokémon suivant SANS terminer le combat ni
+            # laisser le joueur se soigner entre deux — précisément ce qui rend un
+            # dresseur plus difficile qu'un combat sauvage classique (un seul adversaire).
+            prochain = equipe_restante.pop(0)
+            database.avancer_ennemi_suivant_roguelike(
+                run_id, prochain["nom"], prochain["niveau"], prochain["pv_max"], equipe_restante
+            )
+            pokemon_suivant = obtenir_pokemon_par_nom(prochain["nom"])
+            embed_victoire_partielle = discord.Embed(
+                title="🥊 Pokémon vaincu !", description="\n".join(log), color=discord.Color.orange()
+            )
+            embed_suivant = discord.Embed(
+                title=f"Le dresseur envoie **{prochain['nom']}** ! (Niv. {prochain['niveau']})",
+                description=f"{_emoji_types_pokemon(pokemon_suivant)}\n❤️ {prochain['pv_max']}/{prochain['pv_max']} PV",
+                color=discord.Color.orange(),
+            )
+            url_sprite_suivant = sprite_pokemon(pokemon_suivant)
+            if url_sprite_suivant:
+                embed_suivant.set_thumbnail(url=url_sprite_suivant)
+            await thread.send(embed=embed_victoire_partielle)
+            await thread.send(embed=embed_suivant, view=VueCombatRoguelike(run_id))
+            return
+
         database.terminer_combat_roguelike(run_id)
         if "regeneration" in reliques:
             database.soigner_equipe_roguelike(run_id, 0.08)
+        if combat["est_dresseur"]:
+            database.soigner_equipe_roguelike(run_id, 0.15)  # petite récompense d'avoir vaincu toute l'équipe
         embed = discord.Embed(title="🏆 Victoire !", description="\n".join(log), color=discord.Color.green())
-        await thread.send(embed=embed, view=VueRoom(run_id))
+        vue_suivante = VueRoom(run_id)
+        if combat["est_rencontre_speciale"]:
+            disponibles = [r for r in RELIQUES if r not in reliques]
+            if disponibles:
+                embed_relique = _accorder_relique(run_id, random.choice(disponibles))
+                await thread.send(embed=embed)
+                await thread.send(embed=embed_relique, view=vue_suivante)
+                return
+        await thread.send(embed=embed, view=vue_suivante)
         return
 
     # --- Le Pokémon actif est tombé : passer au suivant, ou fin de run ---

@@ -26,6 +26,16 @@ def creer_run_roguelike(joueur_id: int, chemin: list) -> int:
     return run_id
 
 
+def mettre_a_jour_chemin_roguelike(run_id: int, chemin: list):
+    """Étend (ou remplace) le chemin d'une run — utilisé quand un boss est vaincu et que
+    la run continue au lieu de se terminer (voir roguelike.py::avancer_salle)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE roguelike_runs SET chemin = ? WHERE id = ?", (json.dumps(chemin), run_id))
+    conn.commit()
+    conn.close()
+
+
 def obtenir_run_roguelike_actif(joueur_id: int):
     conn = get_connexion()
     cur = conn.cursor()
@@ -154,6 +164,21 @@ def definir_pv_roguelike(run_id: int, position: int, pv_actuels: int):
     conn.close()
 
 
+def definir_mutation_membre_roguelike(run_id: int, position: int, bonus_mutation: float):
+    """Applique un multiplicateur de stats permanent (pour la run) à UN membre précis —
+    voir roguelike.py::VueMutation (salle Autel de Mutation). Multiplicatif avec les
+    stats de base, jamais cumulé plusieurs fois sur le même membre (la salle ne
+    propose la mutation qu'aux membres n'en ayant pas déjà une, voir la vue)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE roguelike_equipe SET bonus_mutation = ? WHERE run_id = ? AND position = ?",
+        (bonus_mutation, run_id, position),
+    )
+    conn.commit()
+    conn.close()
+
+
 def mettre_a_jour_niveau_membre_roguelike(
     run_id: int, position: int, niveau: int, pv_max: int, pv_actuels: int, pokemon_nom: str = None
 ):
@@ -182,12 +207,15 @@ def mettre_a_jour_niveau_membre_roguelike(
 
 
 def soigner_equipe_roguelike(run_id: int, pourcentage: float):
+    """Soigne toute l'équipe d'un pourcentage de ses PV max — ressuscite aussi un
+    Pokémon K.O. (pv_actuels=0), qui remonte alors exactement à ce même pourcentage de
+    vie (0 + pv_max×pourcentage = pv_max×pourcentage), cohérent avec ce qu'un Pokémon
+    déjà vivant gagnerait de la même source. Utilisé par Repos, Marchand, les
+    consolations de Trésor/Recrutement, et la relique Régénération."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute("SELECT position, pv_max, pv_actuels FROM roguelike_equipe WHERE run_id = ?", (run_id,))
     for row in cur.fetchall():
-        if row["pv_actuels"] <= 0:
-            continue  # un Pokémon K.O. ne se réveille pas tout seul au repos, il faut le relique/l'objet adapté
         nouveau_pv = min(row["pv_max"], row["pv_actuels"] + round(row["pv_max"] * pourcentage))
         cur.execute(
             "UPDATE roguelike_equipe SET pv_actuels = ? WHERE run_id = ? AND position = ?",
@@ -197,19 +225,47 @@ def soigner_equipe_roguelike(run_id: int, pourcentage: float):
     conn.close()
 
 
-def creer_combat_roguelike(run_id: int, ennemi_nom: str, ennemi_niveau: int, ennemi_pv_max: int, actif_position: int):
+def creer_combat_roguelike(
+    run_id: int, ennemi_nom: str, ennemi_niveau: int, ennemi_pv_max: int, actif_position: int,
+    est_rencontre_speciale: bool = False, equipe_restante: list = None, est_dresseur: bool = False,
+):
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute(
         """
-        INSERT INTO roguelike_combat (run_id, ennemi_nom, ennemi_niveau, ennemi_pv_max, ennemi_pv_actuels, actif_position)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO roguelike_combat
+            (run_id, ennemi_nom, ennemi_niveau, ennemi_pv_max, ennemi_pv_actuels, actif_position,
+             est_rencontre_speciale, equipe_restante, est_dresseur)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(run_id) DO UPDATE SET
             ennemi_nom = excluded.ennemi_nom, ennemi_niveau = excluded.ennemi_niveau,
             ennemi_pv_max = excluded.ennemi_pv_max, ennemi_pv_actuels = excluded.ennemi_pv_max,
-            actif_position = excluded.actif_position
+            actif_position = excluded.actif_position, est_rencontre_speciale = excluded.est_rencontre_speciale,
+            equipe_restante = excluded.equipe_restante, est_dresseur = excluded.est_dresseur
         """,
-        (run_id, ennemi_nom, ennemi_niveau, ennemi_pv_max, ennemi_pv_max, actif_position),
+        (
+            run_id, ennemi_nom, ennemi_niveau, ennemi_pv_max, ennemi_pv_max, actif_position,
+            int(est_rencontre_speciale), json.dumps(equipe_restante or []), int(est_dresseur),
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def avancer_ennemi_suivant_roguelike(run_id: int, ennemi_nom: str, ennemi_niveau: int, ennemi_pv_max: int, equipe_restante: list):
+    """Fait passer un combat de Dresseur au Pokémon suivant de son équipe — SANS créer
+    une nouvelle ligne (même combat, juste l'ennemi qui change), et sans toucher aux PV
+    du joueur (contrairement à un nouveau combat classique, un dresseur enchaîne ses
+    Pokémon sans laisser l'adversaire se soigner entre deux)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        UPDATE roguelike_combat
+        SET ennemi_nom = ?, ennemi_niveau = ?, ennemi_pv_max = ?, ennemi_pv_actuels = ?, equipe_restante = ?
+        WHERE run_id = ?
+        """,
+        (ennemi_nom, ennemi_niveau, ennemi_pv_max, ennemi_pv_max, json.dumps(equipe_restante), run_id),
     )
     conn.commit()
     conn.close()
