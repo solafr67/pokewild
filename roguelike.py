@@ -506,12 +506,19 @@ class VueCarrefour(discord.ui.View):
             import json as json_module
             chemin = json_module.loads(run["chemin"])
             index_suivant = self.salle_index + 1
-            if index_suivant < len(chemin):
+            # IMPORTANT : la DERNIÈRE case du chemin est TOUJOURS le boss du segment
+            # (voir _generer_chemin) — si le carrefour tombe juste avant, index_suivant
+            # POINTE sur cette case boss. L'écraser silencieusement retirerait le boss
+            # du chemin, et avancer_salle ne reconnaîtrait alors plus jamais la fin du
+            # segment ("if chemin[-1] == 'boss'"), concluant la run à tort en pensant
+            # qu'un boss vient d'être vaincu alors qu'aucun boss n'a jamais eu lieu — le
+            # bug exact observé (run "terminée avec succès" à une salle qui n'était pas
+            # un vrai boss). Solution : si index_suivant vise la dernière case (ou au-delà),
+            # on INSÈRE la salle choisie devant plutôt que de remplacer, ce qui repousse
+            # le boss d'un cran au lieu de le faire disparaître.
+            if index_suivant < len(chemin) - 1:
                 chemin[index_suivant] = type_choisi
             else:
-                # Le carrefour était la toute dernière salle générée avant un boss déjà
-                # placé plus loin (rare mais possible selon la génération aléatoire) —
-                # insère la salle choisie juste avant plutôt que de dépasser le chemin.
                 chemin.insert(index_suivant, type_choisi)
             database.mettre_a_jour_chemin_roguelike(self.run_id, chemin)
 
