@@ -13,6 +13,7 @@ import config
 import database
 import defi_stats as defi_stats_module
 import formes_objets as formes_objets_module
+import mega_evolutions as mega_evolutions_module
 import plus_ou_moins as plus_ou_moins_module
 import pokedex as pokedex_module
 from pokemon_data import obtenir_pokemon_par_nom
@@ -38,14 +39,19 @@ _OBJETS_TOUTES_FAMILLES = {
         cle: f"{info['objet_nom']} — Transforme {info['espece']} en {info['forme_nom']}"
         for cle, info in formes_objets_module.FORMES_OBJETS.items()
     },
+    **{
+        cle: f"{info['objet_nom']} — Méga-Évolue {info['espece']} en {info['forme_nom']} (combat uniquement)"
+        for cle, info in mega_evolutions_module.MEGA_EVOLUTIONS.items()
+    },
 }
 
 
 def _infos_objet_tenu_ou_forme(cle: str) -> dict | None:
-    """Cherche une clé d'objet dans les 2 familles équipables : objets de combat
-    classiques (capacites.OBJETS_TENUS) et objets de transformation (formes_objets.py) —
-    ce sont deux dicts séparés avec des noms de champs légèrement différents, uniformisés
-    ici en {emoji, nom, description}."""
+    """Cherche une clé d'objet dans les 3 familles équipables : objets de combat
+    classiques (capacites.OBJETS_TENUS), objets de transformation PERMANENTE
+    (formes_objets.py), et Pierres Méga TEMPORAIRES limitées au combat
+    (mega_evolutions.py) — trois dicts séparés avec des noms de champs légèrement
+    différents, uniformisés ici en {emoji, nom, description}."""
     info_combat = capacites_module.infos_objet(cle)
     if info_combat:
         return info_combat
@@ -55,6 +61,16 @@ def _infos_objet_tenu_ou_forme(cle: str) -> dict | None:
             "emoji": info_forme["objet_emoji"],
             "nom": info_forme["objet_nom"],
             "description": f"Transforme {info_forme['espece']} en {info_forme['forme_nom']} tant qu'il le tient.",
+        }
+    info_mega = mega_evolutions_module.MEGA_EVOLUTIONS.get(cle)
+    if info_mega:
+        return {
+            "emoji": info_mega["objet_emoji"],
+            "nom": info_mega["objet_nom"],
+            "description": (
+                f"Permet à {info_mega['espece']} de Méga-Évoluer en {info_mega['forme_nom']} — "
+                f"active-le avec le bouton dédié en combat (une fois par combat, dure jusqu'à la fin)."
+            ),
         }
     return None
 

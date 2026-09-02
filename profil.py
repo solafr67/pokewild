@@ -12,6 +12,7 @@ import journal
 import leveling
 import pokedex as pokedex_module
 import quetes as quetes_module
+import connexion_quotidienne as cq
 import quetes_ui
 import races
 import saison as saison_module
@@ -169,10 +170,17 @@ async def construire_embed_profil(user: discord.abc.User, autoriser_piece_jointe
 
 
 def construire_embed_fixe() -> discord.Embed:
-    """Embed du message fixe posté dans le channel #profil."""
+    """Embed du message fixe posté dans le channel #profil — regroupe aussi les Quêtes
+    (auparavant dans leur propre channel, voir quetes_ui.py::construire_embed_centre
+    pour le détail des 3 boutons repris ci-dessous)."""
     embed = discord.Embed(
         title="📋 Ton profil de Dresseur",
-        description="Clique sur le bouton ci-dessous pour voir ta carte de profil complète.",
+        description=(
+            "Clique sur **Voir mon profil** pour ta carte complète.\n\n"
+            "📜 **Quêtes** — objectifs journaliers/hebdomadaires, quête principale, et "
+            "3 Contrats tirés au sort chaque jour (missions ponctuelles payées sur le "
+            "champ, mais qui disparaissent si non terminées avant le reset)."
+        ),
         color=discord.Color.blue(),
     )
     embed.set_footer(text="Visible seulement par toi une fois affichée.")
@@ -1315,7 +1323,10 @@ class VueOuvrirPokedex(discord.ui.View):
 
 
 class VueProfil(discord.ui.View):
-    """Vue persistante attachée au message fixe du channel #profil."""
+    """Vue persistante attachée au message fixe du channel #profil — inclut aussi
+    l'accès aux Quêtes (auparavant dans leur propre channel) via un seul bouton qui
+    ouvre le centre de quêtes tel quel (voir quetes_ui.py::construire_embed_centre /
+    VueCentreQuetes, inchangés, avec leurs propres 3 boutons)."""
 
     def __init__(self):
         super().__init__(timeout=None)
@@ -1333,3 +1344,57 @@ class VueProfil(discord.ui.View):
         # (URL directe), avec le comportement d'avant pour les pp animées.
         embed, _ = await construire_embed_profil(interaction.user, autoriser_piece_jointe=False)
         await interaction.response.send_message(embed=embed, view=VueOuvrirPokedex(), ephemeral=True)
+
+    @discord.ui.button(label="Quêtes/Contrats", style=discord.ButtonStyle.secondary, emoji="📜", custom_id="profil_quetes_centre")
+    async def voir_centre_quetes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = quetes_ui.construire_embed_centre()
+        await interaction.response.send_message(embed=embed, view=quetes_ui.VueCentreQuetes(), ephemeral=True)
+
+    @discord.ui.button(label="Récompense quotidienne", style=discord.ButtonStyle.success, emoji="🎁", custom_id="profil_recompense_quotidienne")
+    async def voir_recompense_quotidienne(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Reprend exactement la logique de /recompense-quotidienne (voir
+        # cogs/connexion_quotidienne.py) — toujours éphémère ici, contrairement à la
+        # commande d'origine qui postait son message de succès publiquement.
+        resultat = cq.reclamer(interaction.user.id)
+
+        if resultat["deja_reclame"]:
+            heures = resultat["temps_avant_prochain"] // 3600
+            minutes = (resultat["temps_avant_prochain"] % 3600) // 60
+            embed = discord.Embed(
+                title="✅ Déjà réclamée aujourd'hui",
+                description=(
+                    f"Tu as déjà récupéré ta récompense du jour.\n\n"
+                    f"Série actuelle : **{resultat['streak']} jour(s)**\n"
+                    f"Prochaine récompense dans **{heures}h{minutes:02d}**."
+                ),
+                color=discord.Color.blurple(),
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        recompense = resultat["recompense"]
+        streak = resultat["streak"]
+        serie_cassee = resultat["streak_precedente"] > 0 and resultat["streak_precedente"] != streak - 1
+
+        embed = discord.Embed(
+            title=f"🎁 Récompense du jour {streak} !",
+            description=cq.texte_recompense(recompense),
+            color=discord.Color.gold(),
+        )
+        if serie_cassee:
+            embed.add_field(
+                name="⚠️ Série recommencée",
+                value=f"Ta série précédente ({resultat['streak_precedente']} jour(s)) a été interrompue — repartie à 1.",
+                inline=False,
+            )
+        if streak < cq.PLAFOND_SERIE:
+            recompense_demain = cq.calculer_recompense(streak + 1)
+            embed.add_field(
+                name=f"Demain (jour {streak + 1})",
+                value=cq.texte_recompense(recompense_demain),
+                inline=False,
+            )
+        else:
+            embed.set_footer(text="Palier maximum atteint — récompense fixe désormais, plus un bonus d'objet tous les 7 jours.")
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)

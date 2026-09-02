@@ -1,10 +1,18 @@
+import random
+import time
+
 import discord
 
 import capacites as capacites_module
 import config
 import database
+import formes_objets as formes_objets_module
 import journal
-from pokemon_data import EMOJI_BALLS, EMOJI_POKEDOLLAR, EMOJI_SOINS, NOM_BALL_AFFICHAGE, NOM_SOIN_AFFICHAGE, emoji_pour_objet
+import mega_evolutions as mega_evolutions_module
+from pokemon_data import (
+    EMOJI_BALLS, EMOJI_OBJETS_DIVERS, EMOJI_POKEDOLLAR, EMOJI_SOINS, NOM_BALL_AFFICHAGE,
+    NOM_OBJETS_DIVERS, NOM_SOIN_AFFICHAGE, emoji_pour_objet, prix_ct, toutes_attaques_utilisables,
+)
 
 
 # ----------------------------------------------------------------------------
@@ -22,8 +30,206 @@ def construire_embed_boutique() -> discord.Embed:
     embed.add_field(name="📈 Améliorations", value="Extensions de stockage", inline=True)
     embed.add_field(name="🎒 Objets", value="Objets tenus de combat (talents, Objets Choix, baies...)", inline=True)
     embed.add_field(name="🎖️ Rôle VIP", value="Accès permanent au channel spawn-vip", inline=True)
+    embed.add_field(name="💠 Gemmes Méga", value="Méga-Évolutions activables en combat", inline=True)
     embed.set_footer(text="Ton solde s'affiche au moment de l'achat, visible seulement par toi.")
     return embed
+
+
+# ----------------------------------------------------------------------------
+# Marché Noir — SPAWN TEMPORAIRE public dans le Village Pokémon (posté et retiré par
+# boucle_evenement_marche_noir dans main.py, PAS un bouton permanent de la boutique).
+# Objets normalement UNIQUEMENT gagnés par le hasard (exploration, quêtes, roguelike) à
+# prix fort, + CT à prix réduit. Rotation quotidienne : 2 objets rares + 2 CT, tirés au
+# hasard mais de façon DÉTERMINISTE à partir de la date du jour (même sélection pour
+# tout le monde, stable toute la journée).
+#
+# ⚠️ Message PARTAGÉ par tous les joueurs qui le voient — impossible de désactiver un
+# bouton "déjà acheté" pour un seul joueur sans que ça s'applique à tout le monde. Les
+# boutons restent donc TOUJOURS actifs ; chaque plafond (voir config.CAP_MARCHE_NOIR_*)
+# est vérifié individuellement au moment du clic, pas via l'état visuel du bouton.
+# ----------------------------------------------------------------------------
+
+def _rotation_marche_noir_du_jour() -> tuple:
+    date_du_jour = time.strftime("%Y-%m-%d")
+    rng = random.Random(date_du_jour)
+    pool_objets = list(config.PRIX_MARCHE_NOIR_COMMUN.keys()) + list(config.PRIX_MARCHE_NOIR_LEGENDAIRE.keys())
+    objets_rares = rng.sample(pool_objets, config.NB_OBJETS_RARES_MARCHE_NOIR)
+    cts = rng.sample(toutes_attaques_utilisables(), config.NB_CT_MARCHE_NOIR)
+    return objets_rares, cts
+
+
+def _nom_emoji_prix_objet_rare(cle: str) -> tuple:
+    if cle in config.PRIX_MARCHE_NOIR_COMMUN:
+        return NOM_OBJETS_DIVERS[cle], EMOJI_OBJETS_DIVERS[cle], config.PRIX_MARCHE_NOIR_COMMUN[cle], config.CAP_MARCHE_NOIR_COMMUN
+    info = formes_objets_module.FORMES_OBJETS[cle]
+    return info["objet_nom"], info["objet_emoji"], config.PRIX_MARCHE_NOIR_LEGENDAIRE[cle], config.CAP_MARCHE_NOIR_LEGENDAIRE
+
+
+def construire_embed_marche_noir() -> discord.Embed:
+    """Embed PUBLIC, sans état par-joueur (voir avertissement ci-dessus) — les plafonds
+    individuels sont mentionnés en toutes lettres plutôt qu'affichés dynamiquement."""
+    objets_rares, cts = _rotation_marche_noir_du_jour()
+    minutes = config.DUREE_MARCHE_NOIR // 60
+    embed = discord.Embed(
+        title="🏴‍☠️ Marché Noir",
+        description=(
+            "*Des objets qu'on ne trouve nulle part ailleurs... contre le bon prix.*\n"
+            f"*Ouvert pour **{minutes} minutes** seulement — ne repassera pas avant demain !*"
+        ),
+        color=discord.Color.dark_red(),
+    )
+
+    lignes_rares = []
+    for cle in objets_rares:
+        nom, emoji, prix, plafond = _nom_emoji_prix_objet_rare(cle)
+        lignes_rares.append(f"{emoji} **{nom}** — {prix} {EMOJI_POKEDOLLAR} *(max {plafond}/joueur)*")
+    embed.add_field(name="💎 Objets rares du jour", value="\n".join(lignes_rares), inline=False)
+
+    lignes_ct = []
+    for nom_attaque in cts:
+        prix_normal = prix_ct(nom_attaque)
+        prix_reduit = round(prix_normal * (1 - config.REMISE_MARCHE_NOIR_CT))
+        lignes_ct.append(f"📘 **CT {nom_attaque}** — ~~{prix_normal}~~ **{prix_reduit}** {EMOJI_POKEDOLLAR} *(max {config.CAP_MARCHE_NOIR_CT}/joueur)*")
+    embed.add_field(name=f"📘 CT à prix réduit (-{int(config.REMISE_MARCHE_NOIR_CT * 100)}%)", value="\n".join(lignes_ct), inline=False)
+
+    embed.set_footer(text="Chaque joueur a son propre plafond d'achat — clique pour voir si tu l'as déjà atteint.")
+    return embed
+
+
+class ModalQuantiteMarcheNoir(discord.ui.Modal):
+    """Quantité choisie directement plutôt que de devoir recliquer le bouton plusieurs
+    fois — surtout utile pour les objets communs (plafond 3), les légendaires/CT ayant
+    de toute façon un plafond de 1 (pas de quantité à choisir dans leur cas, voir
+    _creer_callback_ct qui reste un achat direct)."""
+
+    def __init__(self, cle: str, nom: str, emoji: str, prix: int, plafond: int, deja_achete: int):
+        super().__init__(title=f"Acheter {nom}"[:45])
+        self.cle = cle
+        self.nom = nom
+        self.emoji = emoji
+        self.prix = prix
+        self.plafond = plafond
+        self.deja_achete = deja_achete
+        restant = plafond - deja_achete
+
+        self.quantite_input = discord.ui.TextInput(
+            label=f"Quantité (max {restant}, {prix} PD/u)"[:45],
+            placeholder="1",
+            max_length=2,
+        )
+        self.add_item(self.quantite_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        user_id = interaction.user.id
+        texte = self.quantite_input.value.strip()
+        if not texte.isdigit() or int(texte) <= 0:
+            await interaction.response.send_message("❌ Merci d'entrer un nombre entier positif.", ephemeral=True)
+            return
+        quantite = int(texte)
+
+        # Revérifié au moment de la confirmation (pas seulement à l'ouverture de la
+        # modale) — évite un dépassement si le joueur a traîné avant de valider.
+        deja_actuel = database.compter_achats_marche_noir(user_id, self.cle)
+        restant = self.plafond - deja_actuel
+        if restant <= 0:
+            await interaction.response.send_message(
+                f"❌ Tu as déjà atteint ta limite de {self.plafond} pour **{self.nom}** aujourd'hui !", ephemeral=True
+            )
+            return
+        if quantite > restant:
+            await interaction.response.send_message(
+                f"❌ Il ne te reste que {restant} exemplaire(s) possible(s) pour **{self.nom}** aujourd'hui (limite {self.plafond}).",
+                ephemeral=True,
+            )
+            return
+
+        cout_total = self.prix * quantite
+        solde = database.obtenir_poke_dollars(user_id)
+        if solde < cout_total:
+            await interaction.response.send_message(
+                f"❌ Solde insuffisant : il te faut {cout_total} {EMOJI_POKEDOLLAR}, tu en as {solde}.", ephemeral=True
+            )
+            return
+
+        database.ajouter_poke_dollars(user_id, -cout_total)
+        database.ajouter_balls(user_id, self.cle, quantite)
+        database.incrementer_achat_marche_noir(user_id, self.cle, quantite)
+        journal.logger(
+            f"🏴‍☠️ <@{user_id}> a acheté {quantite}× {self.nom} au Marché Noir pour {cout_total} PD "
+            f"({deja_actuel + quantite}/{self.plafond})."
+        )
+        await interaction.response.send_message(
+            f"✅ Acheté : {self.emoji} **{quantite}× {self.nom}** pour {cout_total} {EMOJI_POKEDOLLAR} "
+            f"({deja_actuel + quantite}/{self.plafond} aujourd'hui).",
+            ephemeral=True,
+        )
+
+
+class VueMarcheNoir(discord.ui.View):
+    """Vue PARTAGÉE (pas de user_id constructeur) — un seul message pour tout le monde
+    pendant tout le créneau. timeout=None : doit tenir jusqu'à 1h, largement au-delà du
+    timeout par défaut d'une vue Discord classique."""
+
+    def __init__(self):
+        super().__init__(timeout=None)
+        objets_rares, cts = _rotation_marche_noir_du_jour()
+
+        for cle in objets_rares:
+            nom, _emoji, _prix, _plafond = _nom_emoji_prix_objet_rare(cle)
+            bouton = discord.ui.Button(
+                label=nom[:80], emoji="💎", style=discord.ButtonStyle.danger, custom_id=f"marche_noir_rare_{cle}"
+            )
+            bouton.callback = self._creer_callback_rare(cle)
+            self.add_item(bouton)
+
+        for nom_attaque in cts:
+            bouton = discord.ui.Button(
+                label=f"CT {nom_attaque}"[:80], emoji="📘", style=discord.ButtonStyle.primary,
+                custom_id=f"marche_noir_ct_{nom_attaque}",
+            )
+            bouton.callback = self._creer_callback_ct(nom_attaque)
+            self.add_item(bouton)
+
+    def _creer_callback_rare(self, cle: str):
+        async def callback(interaction: discord.Interaction):
+            user_id = interaction.user.id
+            nom, emoji, prix, plafond = _nom_emoji_prix_objet_rare(cle)
+            deja = database.compter_achats_marche_noir(user_id, cle)
+            if deja >= plafond:
+                await interaction.response.send_message(
+                    f"❌ Tu as déjà atteint ta limite de {plafond} pour **{nom}** aujourd'hui !", ephemeral=True
+                )
+                return
+            await interaction.response.send_modal(ModalQuantiteMarcheNoir(cle, nom, emoji, prix, plafond, deja))
+        return callback
+
+    def _creer_callback_ct(self, nom_attaque: str):
+        async def callback(interaction: discord.Interaction):
+            user_id = interaction.user.id
+            cle_suivi = f"ct_{nom_attaque}"
+            if database.compter_achats_marche_noir(user_id, cle_suivi) >= config.CAP_MARCHE_NOIR_CT:
+                await interaction.response.send_message(f"❌ Tu as déjà acheté la CT **{nom_attaque}** aujourd'hui !", ephemeral=True)
+                return
+            if nom_attaque in database.obtenir_ct_possedees(user_id):
+                await interaction.response.send_message("❌ Tu possèdes déjà cette CT !", ephemeral=True)
+                return
+            prix_normal = prix_ct(nom_attaque)
+            prix_reduit = round(prix_normal * (1 - config.REMISE_MARCHE_NOIR_CT))
+            solde = database.obtenir_poke_dollars(user_id)
+            if solde < prix_reduit:
+                await interaction.response.send_message(
+                    f"❌ Solde insuffisant : il te faut {prix_reduit} {EMOJI_POKEDOLLAR}, tu en as {solde}.", ephemeral=True
+                )
+                return
+            database.ajouter_poke_dollars(user_id, -prix_reduit)
+            database.acheter_ct(user_id, nom_attaque)
+            database.incrementer_achat_marche_noir(user_id, cle_suivi)
+            journal.logger(f"🏴‍☠️ <@{user_id}> a acheté la CT {nom_attaque} au Marché Noir pour {prix_reduit} PD.")
+            await interaction.response.send_message(
+                f"✅ CT achetée : **{nom_attaque}** pour {prix_reduit} {EMOJI_POKEDOLLAR} (au lieu de {prix_normal}).",
+                ephemeral=True,
+            )
+        return callback
 
 
 class VueBoutique(discord.ui.View):
@@ -61,6 +267,12 @@ class VueBoutique(discord.ui.View):
     async def role_vip(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(
             embed=construire_embed_role_vip(interaction.user), view=VueAchatRoleVip(), ephemeral=True
+        )
+
+    @discord.ui.button(label="Gemmes Méga", emoji="💠", style=discord.ButtonStyle.secondary, custom_id="boutique_categorie_gemmes_mega")
+    async def categorie_gemmes_mega(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(
+            embed=construire_embed_categorie_gemmes_mega(interaction.user.id), view=VueCategorieGemmesMega(), ephemeral=True
         )
 
 
@@ -527,13 +739,13 @@ class VueCategorieAmeliorations(discord.ui.View):
 # ----------------------------------------------------------------------------
 
 def construire_embed_categorie_objets(user_id: int) -> discord.Embed:
-    objets_actuels = database.compter_objets_totaux(user_id)
+    objets_actuels = database.compter_objets_equipables(user_id)
     limite_objets = database.limite_stockage_objets(user_id)
     embed = discord.Embed(title="🎒 Boutique — Objets tenus de combat", color=discord.Color.blurple())
     embed.description = (
         f"🎒 Sac : **{objets_actuels}/{limite_objets}** places utilisées\n\n"
-        "Ces objets s'équipent ensuite sur un de tes Pokémon avec `/equiper-objet` ou "
-        "au Maître des Capacités.\n\n"
+        "Ces objets s'équipent ensuite sur un de tes Pokémon au Maître des Capacités "
+        "(bouton **Objets tenus**).\n\n"
         "Choisis un objet dans le menu ci-dessous pour l'acheter."
     )
     embed.set_footer(text="Prix indicatifs — un objet équipé reste actif tant que tu ne le changes pas.")
@@ -570,7 +782,7 @@ class ModalQuantiteAchatObjet(discord.ui.Modal):
         cout_total = prix_unitaire * quantite
 
         limite_objets = database.limite_stockage_objets(user_id)
-        objets_actuels = database.compter_objets_totaux(user_id)
+        objets_actuels = database.compter_objets_equipables(user_id)
         if objets_actuels + quantite > limite_objets:
             place_restante = max(0, limite_objets - objets_actuels)
             await interaction.response.send_message(
@@ -596,7 +808,7 @@ class ModalQuantiteAchatObjet(discord.ui.Modal):
         embed_achat = discord.Embed(
             description=(
                 f"✅ Achat réussi : **{quantite}× {info['emoji']} {info['nom']}** pour {cout_total} Poké Dollars.\n"
-                f"Nouveau solde : {EMOJI_POKEDOLLAR} {nouveau_solde}\nÉquipe-le avec `/equiper-objet`."
+                f"Nouveau solde : {EMOJI_POKEDOLLAR} {nouveau_solde}\nÉquipe-le au Maître des Capacités (bouton **Objets tenus**)."
             ),
             color=discord.Color.green(),
         )
@@ -628,4 +840,201 @@ class VueCategorieObjets(discord.ui.View):
         type_objet = interaction.data["values"][0]
         solde_actuel = database.obtenir_poke_dollars(interaction.user.id)
         await interaction.response.send_modal(ModalQuantiteAchatObjet(type_objet, solde_actuel))
+
+
+# ----------------------------------------------------------------------------
+# Catégorie Gemmes Méga — mega_evolutions.py — prix unique pour les 21, contrairement
+# aux objets tenus classiques (prix variable par objet). Même principe d'achat sinon
+# (menu déroulant -> fenêtre de saisie de quantité -> déduction PD + ajout au sac).
+# ----------------------------------------------------------------------------
+
+def construire_embed_categorie_gemmes_mega(user_id: int) -> discord.Embed:
+    objets_actuels = database.compter_objets_equipables(user_id)
+    limite_objets = database.limite_stockage_objets(user_id)
+    embed = discord.Embed(title="💠 Boutique — Gemmes Méga", color=discord.Color.purple())
+    embed.description = (
+        f"🎒 Sac : **{objets_actuels}/{limite_objets}** places utilisées\n\n"
+        f"Permettent à un Pokémon compatible de **Méga-Évoluer en combat** (PvP, Draft, "
+        f"Dresseurs, Arène, Repaires) — statistiques boostées pour le reste du "
+        f"combat, une seule fois par combat, jamais les PV.\n\n"
+        f"**Prix unique : {config.PRIX_GEMME_MEGA} {EMOJI_POKEDOLLAR}/gemme**\n\n"
+        "S'équipent au Maître des Capacités (bouton **Objets tenus**), s'activent avec le bouton dédié en combat.\n\n"
+        "Choisis une gemme dans le menu ci-dessous pour l'acheter."
+    )
+    embed.set_footer(text="Une gemme donnée ne fonctionne que sur son espèce précise.")
+    return embed
+
+
+class ModalQuantiteAchatGemmeMega(discord.ui.Modal):
+    """Fenêtre de saisie de quantité — même principe que ModalQuantiteAchatObjet, mais
+    prix unique (PRIX_GEMME_MEGA) au lieu d'un prix par objet."""
+
+    def __init__(self, cle_gemme: str, solde_actuel: int):
+        info = mega_evolutions_module.MEGA_EVOLUTIONS[cle_gemme]
+        super().__init__(title=f"Acheter {info['objet_nom']}"[:45])
+        self.cle_gemme = cle_gemme
+
+        self.quantite_input = discord.ui.TextInput(
+            label=f"Quantité — {config.PRIX_GEMME_MEGA} PD/u — Solde : {solde_actuel} PD"[:45],
+            placeholder="Ex : 1",
+            required=True,
+            max_length=3,
+        )
+        self.add_item(self.quantite_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        texte = self.quantite_input.value.strip()
+        if not texte.isdigit() or int(texte) <= 0:
+            await interaction.response.send_message("❌ Merci d'entrer un nombre entier positif.", ephemeral=True)
+            return
+
+        quantite = int(texte)
+        user_id = interaction.user.id
+        info = mega_evolutions_module.MEGA_EVOLUTIONS[self.cle_gemme]
+        cout_total = config.PRIX_GEMME_MEGA * quantite
+
+        limite_objets = database.limite_stockage_objets(user_id)
+        objets_actuels = database.compter_objets_equipables(user_id)
+        if objets_actuels + quantite > limite_objets:
+            place_restante = max(0, limite_objets - objets_actuels)
+            await interaction.response.send_message(
+                f"🎒 Pas assez de place dans ton sac ({objets_actuels}/{limite_objets}) ! "
+                f"Il te reste {place_restante} place(s).",
+                ephemeral=True,
+            )
+            return
+
+        solde = database.obtenir_poke_dollars(user_id)
+        if solde < cout_total:
+            await interaction.response.send_message(
+                f"❌ Solde insuffisant : il te faut {cout_total} Poké Dollars, tu en as {solde}.",
+                ephemeral=True,
+            )
+            return
+
+        database.ajouter_poke_dollars(user_id, -cout_total)
+        database.ajouter_balls(user_id, self.cle_gemme, quantite)
+        nouveau_solde = database.obtenir_poke_dollars(user_id)
+        journal.logger(f"💠 <@{user_id}> a acheté {quantite}× {info['objet_nom']} pour {cout_total} PD.")
+
+        embed_achat = discord.Embed(
+            description=(
+                f"✅ Achat réussi : **{quantite}× {info['objet_emoji']} {info['objet_nom']}** pour {cout_total} Poké Dollars.\n"
+                f"Nouveau solde : {EMOJI_POKEDOLLAR} {nouveau_solde}\n"
+                f"Équipe-la sur **{info['espece']}** au Maître des Capacités (bouton **Objets tenus**) pour pouvoir Méga-Évoluer en combat."
+            ),
+            color=discord.Color.green(),
+        )
+        await interaction.response.send_message(embed=embed_achat, ephemeral=True)
+
+
+GEMMES_PAR_PAGE = 24  # marge de sécurité sous la vraie limite Discord de 25 options/select
+
+
+class VueCategorieGemmesMega(discord.ui.View):
+    """Sous-menu éphémère : menu déroulant paginé + recherche sur les 50 Gemmes Méga
+    (espèce + prix unique), la sélection ouvre une fenêtre de saisie de quantité.
+
+    Paginé car Discord plafonne un menu déroulant à 25 options MAXIMUM — avec 50
+    gemmes, un seul select géant plantait l'ouverture entière de la boutique
+    (discord.errors.HTTPException: 400, 'Must be between 1 and 25 in length')."""
+
+    def __init__(self, page: int = 0, recherche: str = None):
+        super().__init__(timeout=120)
+        self.page = page
+        self.recherche = recherche
+        self._construire_composants()
+
+    def _gemmes_filtrees(self) -> list:
+        items = list(mega_evolutions_module.MEGA_EVOLUTIONS.items())
+        if self.recherche:
+            terme = self.recherche.lower()
+            items = [
+                (cle, info) for cle, info in items
+                if terme in info["objet_nom"].lower() or terme in info["espece"].lower()
+            ]
+        return items
+
+    def _construire_composants(self):
+        self.clear_items()
+        gemmes = self._gemmes_filtrees()
+
+        if gemmes:
+            debut = self.page * GEMMES_PAR_PAGE
+            page_gemmes = gemmes[debut : debut + GEMMES_PAR_PAGE]
+            options = [
+                discord.SelectOption(
+                    label=f"{info['objet_nom']} — {info['espece']} — {config.PRIX_GEMME_MEGA} PD"[:100],
+                    value=cle,
+                    description=f"Devient {info['forme_nom']} en combat"[:100],
+                    emoji=info["objet_emoji"],
+                )
+                for cle, info in page_gemmes
+            ]
+            select = discord.ui.Select(placeholder="Choisis une gemme à acheter…", options=options, row=0)
+            select.callback = self._on_select
+            self.add_item(select)
+        # Aucun résultat pour la recherche en cours : pas de select vide, les boutons de
+        # recherche/pagination restent quand même disponibles plus bas.
+
+        nb_pages = max(1, (len(gemmes) + GEMMES_PAR_PAGE - 1) // GEMMES_PAR_PAGE)
+        if nb_pages > 1:
+            bouton_prec = discord.ui.Button(label="◀", style=discord.ButtonStyle.secondary, row=1, disabled=self.page == 0)
+            bouton_prec.callback = self._page_prec
+            self.add_item(bouton_prec)
+            bouton_suiv = discord.ui.Button(label="▶", style=discord.ButtonStyle.secondary, row=1, disabled=self.page >= nb_pages - 1)
+            bouton_suiv.callback = self._page_suiv
+            self.add_item(bouton_suiv)
+
+        bouton_recherche = discord.ui.Button(
+            label=f"Recherche : {self.recherche}" if self.recherche else "Rechercher",
+            emoji="🔍",
+            style=discord.ButtonStyle.primary if self.recherche else discord.ButtonStyle.secondary,
+            row=1,
+        )
+        bouton_recherche.callback = self._on_rechercher
+        self.add_item(bouton_recherche)
+        if self.recherche:
+            bouton_effacer = discord.ui.Button(label="Effacer", emoji="❌", style=discord.ButtonStyle.secondary, row=1)
+            bouton_effacer.callback = self._on_effacer_recherche
+            self.add_item(bouton_effacer)
+
+    async def _on_select(self, interaction: discord.Interaction):
+        cle_gemme = interaction.data["values"][0]
+        solde_actuel = database.obtenir_poke_dollars(interaction.user.id)
+        await interaction.response.send_modal(ModalQuantiteAchatGemmeMega(cle_gemme, solde_actuel))
+
+    async def _page_prec(self, interaction: discord.Interaction):
+        self.page = max(0, self.page - 1)
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+    async def _page_suiv(self, interaction: discord.Interaction):
+        self.page += 1
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+    async def _on_rechercher(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(ModalRechercheGemmeMega(self))
+
+    async def _on_effacer_recherche(self, interaction: discord.Interaction):
+        self.recherche = None
+        self.page = 0
+        self._construire_composants()
+        await interaction.response.edit_message(view=self)
+
+
+class ModalRechercheGemmeMega(discord.ui.Modal, title="Rechercher une Gemme Méga"):
+    recherche_input = discord.ui.TextInput(label="Nom de la pierre ou de l'espèce", placeholder="Ex : Lucario", required=False)
+
+    def __init__(self, vue_parente: VueCategorieGemmesMega):
+        super().__init__()
+        self.vue_parente = vue_parente
+        self.recherche_input.default = vue_parente.recherche or ""
+
+    async def on_submit(self, interaction: discord.Interaction):
+        self.vue_parente.recherche = self.recherche_input.value.strip() or None
+        self.vue_parente.page = 0
+        self.vue_parente._construire_composants()
+        await interaction.response.edit_message(view=self.vue_parente)
 

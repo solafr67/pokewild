@@ -29,6 +29,7 @@ import combat_visuel
 import config
 import capacites as capacites_module
 import formes_objets as formes_objets_module
+import mega_evolutions as mega_evolutions_module
 import database
 import journal
 import leveling
@@ -81,8 +82,10 @@ from pokemon_data import (
     ATTAQUES_TERRAIN,
     EMOJI_SOINS,
     EMOJI_TYPES,
+    IV_DEFAUT,
     NOM_SOIN_AFFICHAGE,
     calculer_multiplicateur_type,
+    calculer_toutes_stats,
     obtenir_attaque,
     obtenir_pokemon_par_nom,
     pp_max_attaque,
@@ -333,6 +336,7 @@ def _generer_fichier_scene_combat_2v2(combat_id: int, noms: dict, log_tour: list
                 return None
             objet = database.obtenir_objet_combat(combat_id, j["user_id"], j["actif_nom"])
             pokemon = formes_objets_module.pokemon_effectif(obtenir_pokemon_par_nom(j["actif_nom"]), objet)
+            pokemon = mega_evolutions_module.pokemon_effectif_mega(pokemon, database.obtenir_mega_actif(combat_id, j["user_id"]))
             nom_affiche = formes_objets_module.nom_affichage(j["actif_nom"], objet)
             statut = database.obtenir_statut(combat_id, j["user_id"], j["actif_nom"])
             code_statut = statut[0] if statut else None
@@ -1825,6 +1829,66 @@ class VueAction2v2(discord.ui.View):
         vue = _VueChoixSiege2v2(eligibles, flux)
         await interaction.response.send_message("⚔️ Tu contrôles 2 Pokémon — lequel fait agir ?", view=vue, ephemeral=True)
 
+    @discord.ui.button(label="Méga-Évoluer", style=discord.ButtonStyle.primary, emoji="🔷", row=1)
+    async def mega_evoluer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._demarrer_action(interaction, self._flux_mega_evoluer)
+
+    async def _flux_mega_evoluer(self, interaction: discord.Interaction, j):
+        if database.a_deja_mega_evolue(self.combat_id, j["user_id"]):
+            await interaction.response.send_message("Tu as déjà utilisé ta Méga-Évolution pour ce combat !", ephemeral=True)
+            return
+
+        equipe = database.obtenir_equipe_pvp(self.combat_id, j["user_id"])
+        row = next((r for r in equipe if r["pokemon_nom"] == j["actif_nom"]), None)
+        if row is None or row["pv_actuels"] <= 0:
+            await interaction.response.send_message("Ton Pokémon actif est K.O. !", ephemeral=True)
+            return
+
+        # Cas spécial : Rayquaza n'a besoin d'AUCUNE Pierre Méga — juste de connaître
+        # Draco-Ascension (voir combat.py::VueActionCombat.mega_evoluer, même logique).
+        if j["actif_nom"] == "Rayquaza":
+            attaques_equipees = database.obtenir_attaques_equipees(
+                controleur_reel(j["user_id"]), "Rayquaza", combat_id=self.combat_id
+            )
+            if mega_evolutions_module.MEGA_RAYQUAZA["attaque_requise"] not in attaques_equipees.values():
+                await interaction.response.send_message(
+                    "❌ **Rayquaza** doit connaître **Draco-Ascension** pour Méga-Évoluer — "
+                    "aucune Pierre Méga n'est nécessaire pour lui, juste cette attaque équipée.",
+                    ephemeral=True,
+                )
+                return
+            stone_info = mega_evolutions_module.MEGA_RAYQUAZA
+            cle_stone = None  # pas de pierre, aucune ambiguïté de variante
+        else:
+            objet_tenu = row["objet_tenu"]
+            stone_info = mega_evolutions_module.MEGA_EVOLUTIONS.get(objet_tenu) if objet_tenu else None
+            if not stone_info or stone_info["espece"] != j["actif_nom"]:
+                await interaction.response.send_message(
+                    f"❌ **{j['actif_nom']}** ne tient pas de Pierre Méga compatible — équipe-la d'abord avec `/equiper-objet`.",
+                    ephemeral=True,
+                )
+                return
+            cle_stone = objet_tenu  # distingue les variantes X/Y (Dracaufeu, Mewtwo) pour le bon sprite
+
+        ivs = database.obtenir_meilleures_ivs(controleur_reel(j["user_id"]), j["actif_nom"]) or IV_DEFAUT
+        pokemon_mega = {
+            "nom": stone_info["forme_nom"], "types": stone_info["types"],
+            "stats_detaillees": stone_info["stats_detaillees"],
+        }
+        nouvelles_stats = calculer_toutes_stats(pokemon_mega, ivs, row["niveau"])
+        database.activer_mega_evolution_combat(
+            self.combat_id, j["user_id"], row["position"], j["actif_nom"], nouvelles_stats, cle_stone=cle_stone
+        )
+
+        contenu = (
+            f"🔷 **{j['actif_nom']}** Méga-Évolue en **{stone_info['forme_nom']}** ! Ses statistiques de combat "
+            f"sont boostées pour le reste du combat (les PV ne changent jamais). N'oublie pas de choisir ton attaque !"
+        )
+        autre = _reste_a_jouer(self.combat_id, j["user_id"])
+        if autre:
+            contenu += f"\n🔁 Il te reste **{autre}** à faire agir ce tour — reclique sur un bouton d'action !"
+        await interaction.response.send_message(contenu, ephemeral=False)
+
     @discord.ui.button(label="Attaquer", style=discord.ButtonStyle.danger, emoji="⚔️", row=0)
     async def attaquer(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._demarrer_action(interaction, self._flux_attaquer)
@@ -1956,16 +2020,47 @@ class VueAction2v2(discord.ui.View):
         if all(j["abandonne"] for j in sieges):
             await interaction.response.send_message("Tu as déjà abandonné.", ephemeral=True)
             return
+        await interaction.response.send_message(
+            "🏳️ Es-tu sûr de vouloir abandonner ? Ça concerne ton équipe entière, immédiatement.",
+            view=VueConfirmationAbandon2v2(self.combat_id, interaction.user.id),
+            ephemeral=True,
+        )
+
+
+class VueConfirmationAbandon2v2(discord.ui.View):
+    """Confirmation avant un abandon — irréversible dès validé, donc un simple clic
+    accidentel sur le bouton principal ne doit jamais suffire à perdre le combat.
+
+    IMPORTANT : "Annuler" est déclaré EN PREMIER — voir combat.py::VueConfirmationAbandon
+    pour le raisonnement complet (position à l'écran proche du bouton "Abandonner"
+    initial, un double-tap accidentel au même endroit doit tomber sur l'option sûre)."""
+
+    def __init__(self, combat_id: int, user_id: int):
+        super().__init__(timeout=60)
+        self.combat_id = combat_id
+        self.user_id = user_id
+
+    @discord.ui.button(label="Annuler", style=discord.ButtonStyle.secondary)
+    async def annuler(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content="Abandon annulé — le combat continue.", view=None)
+
+    @discord.ui.button(label="Oui, abandonner", style=discord.ButtonStyle.danger, emoji="🏳️")
+    async def confirmer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        combat = database.obtenir_combat(self.combat_id)
+        if not combat or not combat["actif"]:
+            await interaction.response.edit_message(content="Ce combat est déjà terminé.", view=None)
+            return
+        sieges = [j for j in _joueurs(self.combat_id) if controleur_reel(j["user_id"]) == self.user_id]
+        if not sieges or all(j["abandonne"] for j in sieges):
+            await interaction.response.edit_message(content="Tu as déjà abandonné.", view=None)
+            return
         for j in sieges:
             database.marquer_abandon_2v2(self.combat_id, j["user_id"])
             database.supprimer_choix_ko(self.combat_id, j["user_id"])
-        await interaction.response.send_message("🏳️ Tu as abandonné.", ephemeral=True)
+        await interaction.response.edit_message(content="🏳️ Tu as abandonné.", view=None)
         try:
-            texte = (
-                "— ton coéquipier continue seul !" if len(sieges) == 1
-                else "— le combat se termine."
-            )
-            await interaction.channel.send(f"🏳️ <@{interaction.user.id}> abandonne le combat {texte}")
+            texte = "— ton coéquipier continue seul !" if len(sieges) == 1 else "— le combat se termine."
+            await interaction.channel.send(f"🏳️ <@{self.user_id}> abandonne le combat {texte}")
         except discord.HTTPException:
             pass
         # La fin de combat éventuelle (équipe entière hors jeu) est constatée au prochain tick.

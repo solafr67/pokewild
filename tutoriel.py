@@ -34,14 +34,10 @@ _ETAPES = [
         ),
     ),
     (
-        "Le PokéStop",
-        f"Passe régulièrement par {{pokestop}} — objets gratuits toutes les quelques heures, "
-        f"aucune raison de s'en priver.",
-    ),
-    (
-        "La Boutique",
-        "Une fois que t'as des Poké Dollars, {boutique} te permet d'acheter balls, potions "
-        "et autres objets utiles.",
+        "Le Village Pokémon",
+        "Un seul channel, {village}, regroupe la Boutique, le PokéStop, le Maître des "
+        "Capacités, le Centre Pokémon (soin gratuit) et même un Casino — clique sur le "
+        "bouton correspondant à ce que tu veux faire.",
     ),
     (
         "Le Laboratoire",
@@ -57,13 +53,15 @@ _ETAPES = [
     ),
     (
         "Quêtes",
-        "Des objectifs journaliers et hebdomadaires t'attendent dans {quetes} — bonnes "
-        "récompenses pour peu d'effort, à checker régulièrement.",
+        "Des objectifs journaliers et hebdomadaires t'attendent via le bouton "
+        "\"Quêtes/Contrats\" de {profil} — bonnes récompenses pour peu d'effort, à "
+        "checker régulièrement.",
     ),
     (
         "Ta fiche",
         "Toute ta progression (Pokédex, équipe, statistiques) est consultable dans {profil} "
-        "à tout moment.",
+        "à tout moment — et n'oublie pas d'y récupérer ta récompense quotidienne, un "
+        "bouton dédié t'y attend chaque jour.",
     ),
     (
         "À toi de jouer",
@@ -81,11 +79,9 @@ def _texte_etape(index: int, member: discord.Member) -> str:
     return texte.format(
         prenom=member.display_name,
         spawn=f"<#{config.CHANNEL_SPAWN_CLASSIQUE_ID}>",
-        pokestop=f"<#{config.CHANNEL_POKESTOP_ID}>",
-        boutique=f"<#{config.CHANNEL_BOUTIQUE_ID}>",
+        village=f"<#{config.CHANNEL_VILLAGE_ID}>",
         laboratoire=f"<#{config.CHANNEL_LABORATOIRE_ID}>",
         exploration=f"<#{config.CHANNEL_EXPLORATION_ID}>",
-        quetes=f"<#{config.CHANNEL_QUETES_ID}>",
         profil=f"<#{config.CHANNEL_PROFIL_ID}>",
         wiki=f"<#{config.CHANNEL_WIKI_ID}>",
     )

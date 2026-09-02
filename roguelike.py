@@ -205,6 +205,17 @@ def _generer_chemin() -> list:
     return chemin
 
 
+def _multiplicateur_total_ennemi(salle_index: int, est_dresseur: bool = False) -> float:
+    """Combine le multiplicateur post-plafond de niveau (toutes les rencontres, dès que
+    le niveau ne peut plus monter) et le renfort de stats spécifique aux Dresseurs à
+    partir de config.ROGUELIKE_SALLE_DRESSEUR_BOOST_STATS."""
+    salles_au_dela = max(0, salle_index - config.ROGUELIKE_SALLE_PLAFOND_NIVEAU)
+    mult = 1.0 + salles_au_dela * config.ROGUELIKE_BONUS_STATS_PAR_SALLE_POST_PLAFOND
+    if est_dresseur and salle_index >= config.ROGUELIKE_SALLE_DRESSEUR_BOOST_STATS:
+        mult *= config.ROGUELIKE_BOOST_STATS_DRESSEUR
+    return mult
+
+
 def _tirer_ennemi(salle_index: int, elite: bool = False, boss: bool = False) -> dict:
     pool = ENNEMIS_FORT if boss else _pool_ennemis_pour_etage(salle_index)
     nom = random.choice(pool)
@@ -214,7 +225,8 @@ def _tirer_ennemi(salle_index: int, elite: bool = False, boss: bool = False) -> 
     if boss:
         niveau += 6
     stats = _generer_stats(nom, niveau)
-    pv_max = round(stats["pv"] * (1.3 if boss else 1.15 if elite else 1.0))
+    mult_difficulte = _multiplicateur_total_ennemi(salle_index)
+    pv_max = round(stats["pv"] * (1.3 if boss else 1.15 if elite else 1.0) * mult_difficulte)
     return {"nom": nom, "niveau": niveau, "pv_max": pv_max, "stats": stats}
 
 
@@ -1046,14 +1058,22 @@ class VueChoixRencontreScintillante(discord.ui.View):
 
 
 async def _demarrer_combat_dresseur(bot, thread, run_id: int, salle_index: int):
-    """Combat de Dresseur : 2 Pokémon (3 passé la salle 7) enchaînés SANS interruption
-    ni soin entre chacun — une vraie difficulté distincte d'un combat sauvage classique,
-    où l'adversaire n'a qu'un seul Pokémon à gérer."""
+    """Combat de Dresseur : 2 Pokémon (3 passé la salle 7, 4 passé
+    config.ROGUELIKE_SALLE_DRESSEUR_4EME_POKEMON) enchaînés SANS interruption ni soin
+    entre chacun — une vraie difficulté distincte d'un combat sauvage classique, où
+    l'adversaire n'a qu'un seul Pokémon à gérer. Renfort supplémentaire de stats à
+    partir de config.ROGUELIKE_SALLE_DRESSEUR_BOOST_STATS (voir _multiplicateur_total_ennemi)."""
     nom_dresseur = random.choice(NOMS_DRESSEURS)
-    taille_equipe = 2 if salle_index <= 7 else 3
+    if salle_index <= 7:
+        taille_equipe = 2
+    elif salle_index <= config.ROGUELIKE_SALLE_DRESSEUR_4EME_POKEMON:
+        taille_equipe = 3
+    else:
+        taille_equipe = 4
     pool = _pool_ennemis_pour_etage(salle_index)
     noms_equipe = random.sample(pool, min(taille_equipe, len(pool)))
     niveau = _niveau_pour_etage(salle_index)
+    mult_difficulte = _multiplicateur_total_ennemi(salle_index, est_dresseur=True)
 
     equipe = database.obtenir_equipe_roguelike(run_id)
     premier_vivant = next((m for m in equipe if m["pv_actuels"] > 0), None)
@@ -1062,10 +1082,14 @@ async def _demarrer_combat_dresseur(bot, thread, run_id: int, salle_index: int):
         return
 
     premieres_stats = _generer_stats(noms_equipe[0], niveau)
-    reste = [{"nom": nom, "niveau": niveau, "pv_max": _generer_stats(nom, niveau)["pv"]} for nom in noms_equipe[1:]]
+    pv_max_premier = round(premieres_stats["pv"] * mult_difficulte)
+    reste = [
+        {"nom": nom, "niveau": niveau, "pv_max": round(_generer_stats(nom, niveau)["pv"] * mult_difficulte)}
+        for nom in noms_equipe[1:]
+    ]
 
     database.creer_combat_roguelike(
-        run_id, noms_equipe[0], niveau, premieres_stats["pv"], premier_vivant["position"],
+        run_id, noms_equipe[0], niveau, pv_max_premier, premier_vivant["position"],
         equipe_restante=reste, est_dresseur=True,
     )
 
@@ -1074,7 +1098,7 @@ async def _demarrer_combat_dresseur(bot, thread, run_id: int, salle_index: int):
         title=f"🥊 {nom_dresseur} veut se battre ! ({len(noms_equipe)} Pokémon)",
         description=(
             f"Envoie **{noms_equipe[0]}** ! (Niv. {niveau})\n{_emoji_types_pokemon(pokemon)}\n"
-            f"❤️ {premieres_stats['pv']}/{premieres_stats['pv']} PV"
+            f"❤️ {pv_max_premier}/{pv_max_premier} PV"
         ),
         color=discord.Color.orange(),
     )
@@ -1189,7 +1213,8 @@ async def resoudre_tour_roguelike(bot, run_id: int, attaque: dict):
     joueur_premier = "instinct_predateur" in reliques
 
     stats_joueur = _appliquer_bonus_mutation(_generer_stats(actif["pokemon_nom"], actif["niveau"]), actif["bonus_mutation"])
-    stats_ennemi = _generer_stats(combat["ennemi_nom"], combat["ennemi_niveau"])
+    mult_difficulte = _multiplicateur_total_ennemi(run["salle_index"], est_dresseur=bool(combat["est_dresseur"]))
+    stats_ennemi = _appliquer_bonus_mutation(_generer_stats(combat["ennemi_nom"], combat["ennemi_niveau"]), mult_difficulte)
     pokemon_joueur = obtenir_pokemon_par_nom(actif["pokemon_nom"])
     pokemon_ennemi = obtenir_pokemon_par_nom(combat["ennemi_nom"])
     types_joueur = pokemon_joueur["types"] if pokemon_joueur else ["normal"]
@@ -1364,8 +1389,49 @@ async def abandonner_run(interaction: discord.Interaction):
     if run is None:
         await interaction.response.send_message("Tu n'as aucune run en cours.", ephemeral=True)
         return
-    database.terminer_run_roguelike(run["id"])
-    await interaction.response.send_message("✅ Run abandonnée — tu peux en relancer une nouvelle avec `/roguelike`.", ephemeral=True)
+    await interaction.response.send_message(
+        f"⚠️ Es-tu sûr de vouloir abandonner ta run actuelle (salle {run['salle_index'] + 1}) ? "
+        f"C'est irréversible — tu perdras toute la progression de cette run.",
+        view=VueConfirmationAbandonRun(run["id"], interaction.user.id),
+        ephemeral=True,
+    )
+
+
+class VueConfirmationAbandonRun(discord.ui.View):
+    """Confirmation avant d'abandonner une run roguelike via /roguelike-abandonner —
+    contrairement aux abandons en plein combat (déjà tous confirmés ailleurs dans le
+    jeu), cette commande slash agissait jusqu'ici immédiatement, sans aucune
+    confirmation ni le moindre garde-fou contre un mauvais choix dans l'autocomplétion."""
+
+    def __init__(self, run_id: int, user_id: int):
+        super().__init__(timeout=30)
+        self.run_id = run_id
+        self.user_id = user_id
+
+    async def _verifier(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ta confirmation !", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="Annuler", emoji="❌", style=discord.ButtonStyle.secondary)
+    async def annuler(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
+            return
+        await interaction.response.edit_message(content="Abandon annulé — ta run continue normalement.", view=None)
+
+    @discord.ui.button(label="Oui, abandonner", emoji="✅", style=discord.ButtonStyle.danger)
+    async def confirmer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
+            return
+        run = database.obtenir_run_roguelike_actif(self.user_id)
+        if run is None or run["id"] != self.run_id:
+            await interaction.response.edit_message(content="Cette run n'est déjà plus active.", view=None)
+            return
+        database.terminer_run_roguelike(self.run_id)
+        await interaction.response.edit_message(
+            content="✅ Run abandonnée — tu peux en relancer une nouvelle avec `/roguelike`.", view=None
+        )
 
 
 async def afficher_classement(interaction: discord.Interaction):

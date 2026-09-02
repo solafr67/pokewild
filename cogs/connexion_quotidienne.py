@@ -60,7 +60,7 @@ class ConnexionQuotidienneCog(commands.Cog):
         else:
             embed.set_footer(text="Palier maximum atteint — récompense fixe désormais, plus un bonus d'objet tous les 7 jours.")
 
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):

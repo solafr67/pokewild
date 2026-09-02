@@ -54,20 +54,31 @@ def obtenir_explorations_actives(user_id: int) -> list:
     return rows
 
 
-def demarrer_exploration(user_id: int, slot: int, pokemons: list, duree_secondes: int, duree_label: str):
+def demarrer_exploration(
+    user_id: int, slot: int, pokemons: list, duree_secondes: int, duree_label: str,
+    destination: str = None, evenement_planifie_a: int = None, evenement_texte: str = None,
+    evenement_bonus_dollars: int = 0,
+):
     conn = get_connexion()
     cur = conn.cursor()
     maintenant = int(time.time())
     cur.execute(
         """
-        INSERT INTO exploration_slots (user_id, slot, pokemon1, pokemon2, pokemon3, date_debut, date_fin, duree_label, notifie)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+        INSERT INTO exploration_slots
+            (user_id, slot, pokemon1, pokemon2, pokemon3, date_debut, date_fin, duree_label, notifie,
+             destination, evenement_planifie_a, evenement_texte, evenement_bonus_dollars, evenement_notifie)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, 0)
         ON CONFLICT(user_id, slot) DO UPDATE SET
             pokemon1 = excluded.pokemon1, pokemon2 = excluded.pokemon2, pokemon3 = excluded.pokemon3,
             date_debut = excluded.date_debut, date_fin = excluded.date_fin, duree_label = excluded.duree_label,
-            notifie = 0
+            notifie = 0, destination = excluded.destination, evenement_planifie_a = excluded.evenement_planifie_a,
+            evenement_texte = excluded.evenement_texte, evenement_bonus_dollars = excluded.evenement_bonus_dollars,
+            evenement_notifie = 0
         """,
-        (user_id, slot, pokemons[0], pokemons[1], pokemons[2], maintenant, maintenant + duree_secondes, duree_label),
+        (
+            user_id, slot, pokemons[0], pokemons[1], pokemons[2], maintenant, maintenant + duree_secondes, duree_label,
+            destination, evenement_planifie_a, evenement_texte, evenement_bonus_dollars,
+        ),
     )
     conn.commit()
     conn.close()
@@ -188,6 +199,35 @@ def marquer_exploration_notifiee(user_id: int, slot: int):
     cur = conn.cursor()
     cur.execute(
         "UPDATE exploration_slots SET notifie = 1 WHERE user_id = ? AND slot = ?",
+        (user_id, slot),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_evenements_exploration_a_notifier() -> list:
+    """Explorations dont l'heure de l'événement aléatoire en cours de route est passée,
+    mais pas encore notifiées — l'exploration elle-même doit encore être EN COURS
+    (date_fin pas encore passée), sinon ça n'a plus de sens d'annoncer un événement
+    "en chemin" une fois l'équipe déjà revenue."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    maintenant = int(time.time())
+    cur.execute(
+        "SELECT * FROM exploration_slots WHERE evenement_planifie_a IS NOT NULL "
+        "AND evenement_planifie_a <= ? AND evenement_notifie = 0 AND date_fin > ?",
+        (maintenant, maintenant),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def marquer_evenement_exploration_notifie(user_id: int, slot: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE exploration_slots SET evenement_notifie = 1 WHERE user_id = ? AND slot = ?",
         (user_id, slot),
     )
     conn.commit()

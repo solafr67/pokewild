@@ -65,7 +65,14 @@ CONFIGS_FOND = {
 # Pokémon minuscule deviendrait illisible.
 HAUTEUR_REFERENCE_DM = 10  # ~1m, hauteur "moyenne" servant de repère neutre (facteur=1)
 FACTEUR_TAILLE_MIN = 0.55
-FACTEUR_TAILLE_MAX = 1.4
+# 1.4 écrasait Rayquaza (7.0m, formule voudrait x2.18), sa Méga (10.8m, x2.59) et même
+# Wailord (14.5m, x2.91) bien en dessous de leur vraie taille relative. Les VRAIS géants
+# (formes spéciales 25m+, jusqu'à 100m, formule voudrait x6+) restent tout aussi écrasés
+# avec ce nouveau plafond, juste un peu plus haut — le but n'est pas de leur donner leur
+# vraie taille (impossible sans déborder de la scène), juste de rendre justice aux
+# Pokémon "seulement" très grands comme Rayquaza. Scène de fond vérifiée à 1613×975px :
+# encore largement de marge à ce niveau, aucun risque de déborder de la plateforme.
+FACTEUR_TAILLE_MAX = 1.7
 try:
     import json as _json
     with open(CHEMIN_HAUTEURS, encoding="utf-8") as _f:
@@ -75,8 +82,14 @@ except (FileNotFoundError, OSError):
 
 
 def _facteur_taille_reelle(pokemon: dict) -> float:
-    numero = pokemon.get("numero_sprite") or pokemon.get("numero")
-    hauteur_dm = _HAUTEURS_POKEMON.get(numero)
+    """Priorité à une hauteur EXPLICITE si le dict Pokémon en porte une (Méga-Évolutions,
+    voir mega_evolutions.py — leur taille réelle diffère souvent beaucoup de l'espèce de
+    base, ex: Méga-Rayquaza fait 10.8m contre 7.0m normalement, et se retrouvait affiché
+    à la mauvaise échelle sans ce repli). Sinon, calcul habituel par numéro de base."""
+    hauteur_dm = pokemon.get("hauteur_dm")
+    if not hauteur_dm:
+        numero = pokemon.get("numero_sprite") or pokemon.get("numero")
+        hauteur_dm = _HAUTEURS_POKEMON.get(numero)
     if not hauteur_dm:
         return 1.0
     facteur = (hauteur_dm / HAUTEUR_REFERENCE_DM) ** 0.4
@@ -113,7 +126,19 @@ def _url_sprite_dos(numero: int, shiny: bool = False) -> str:
 
 def _sprite_joueur(pokemon: dict, shiny: bool = False) -> Image.Image | None:
     """Sprite vu de dos si disponible (pack Showdown), sinon repli sur le sprite de face
-    habituel (~1.3% des espèces n'ont pas de version dos)."""
+    habituel (~1.3% des espèces n'ont pas de version dos). Si le Pokémon porte un repli
+    d'URL direct (sprite_gif_url_showdown — formes par objet, Méga-Évolutions...), on
+    dérive l'URL de DOS à partir de celle de face stockée (dossier Showdown ani/ ->
+    ani-back/, même nom de fichier) plutôt que de réutiliser telle quelle l'URL de face
+    — sinon le joueur voyait son propre Pokémon de FACE au lieu de dos une fois
+    transformé (vécu en test avec Méga-Rayquaza, affiché de face à gauche)."""
+    url_face = pokemon.get("sprite_gif_url_showdown")
+    if url_face:
+        url_dos = url_face.replace("/sprites/ani/", "/sprites/ani-back/")
+        img = _telecharger_sprite(url_dos, silencieux=True)
+        if img is not None:
+            return img
+        return _telecharger_sprite(url_face)  # repli sur la face si ce dos précis n'existe pas
     numero = pokemon.get("numero_sprite") or pokemon.get("numero")
     if not numero:
         return None
@@ -146,7 +171,19 @@ def _redimensionner_propre(img: Image.Image, taille_max: int) -> Image.Image:
     """Redimensionne en lissé (LANCZOS, net à cette échelle plus grande — le mode "brut"
     NEAREST utilisé pour l'ancien petit fond deviendrait très blocky ici) tout en évitant
     le liseré coloré causé par les pixels transparents d'un GIF qui contiennent souvent
-    une couleur RVB parasite — neutralisée via un alpha prémultiplié avant lissage."""
+    une couleur RVB parasite — neutralisée via un alpha prémultiplié avant lissage.
+
+    Recadre D'ABORD au contenu réellement visible (boîte englobante non-transparente) —
+    sinon, un fichier avec beaucoup de marge transparente autour du sprite (courant sur
+    les GIFs Showdown bruts utilisés en repli pour les formes spéciales et Méga-Évolutions,
+    par opposition aux sprites du projet déjà retravaillés dans sprites_corriges/) se
+    retrouve mis à l'échelle par rapport à CETTE marge, faisant paraître le Pokémon
+    nettement plus petit que prévu (vécu avec Méga-Rayquaza, affiché trop petit malgré
+    sa vraie taille correctement transmise à _facteur_taille_reelle)."""
+    boite = _boite_contenu_visible(img)
+    if boite != (0, 0, img.width, img.height):
+        img = img.crop(boite)
+
     ratio = min(taille_max / img.width, taille_max / img.height)
     nouvelle_taille = (max(1, round(img.width * ratio)), max(1, round(img.height * ratio)))
 

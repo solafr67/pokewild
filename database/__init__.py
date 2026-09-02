@@ -381,6 +381,11 @@ def init_db():
             date_fin INTEGER,
             duree_label TEXT,
             notifie INTEGER NOT NULL DEFAULT 0,
+            destination TEXT,
+            evenement_planifie_a INTEGER,
+            evenement_texte TEXT,
+            evenement_bonus_dollars INTEGER NOT NULL DEFAULT 0,
+            evenement_notifie INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (user_id, slot)
         )
         """
@@ -391,6 +396,20 @@ def init_db():
         cur.execute("ALTER TABLE exploration_slots ADD COLUMN notifie INTEGER NOT NULL DEFAULT 0")
     except sqlite3.OperationalError:
         pass  # la colonne existe déjà
+
+    # Migration pour les emplacements déjà en base avant les destinations thématiques et
+    # les événements aléatoires en cours de route
+    for colonne, definition in (
+        ("destination", "TEXT"),
+        ("evenement_planifie_a", "INTEGER"),
+        ("evenement_texte", "TEXT"),
+        ("evenement_bonus_dollars", "INTEGER NOT NULL DEFAULT 0"),
+        ("evenement_notifie", "INTEGER NOT NULL DEFAULT 0"),
+    ):
+        try:
+            cur.execute(f"ALTER TABLE exploration_slots ADD COLUMN {colonne} {definition}")
+        except sqlite3.OperationalError:
+            pass  # la colonne existe déjà
 
     # 1 seul emplacement pour l'instant (pas d'extension achetable comme l'Exploration,
     # volontairement laissé simple en V1).
@@ -423,10 +442,26 @@ def init_db():
             xp_dresseur INTEGER NOT NULL DEFAULT 0,
             team_last_change INTEGER NOT NULL DEFAULT 0,
             extensions_stockage_pokemon INTEGER NOT NULL DEFAULT 0,
-            extensions_stockage_objets INTEGER NOT NULL DEFAULT 0
+            extensions_stockage_objets INTEGER NOT NULL DEFAULT 0,
+            centre_pokemon_last_used INTEGER NOT NULL DEFAULT 0,
+            quiz_bonnes_reponses INTEGER NOT NULL DEFAULT 0
         )
         """
     )
+
+    # Migration pour les bases créées avant le suivi des bonnes réponses au quiz
+    # (récompense toutes les 5, voir quiz.py et config.RECOMPENSE_QUIZ_PALIER)
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN quiz_bonnes_reponses INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration pour les bases créées avant l'ajout du Centre Pokémon (soin complet
+    # gratuit sur cooldown, voir config.COOLDOWN_CENTRE_POKEMON)
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN centre_pokemon_last_used INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
 
     # Migration pour les bases créées avant l'ajout des extensions de stockage
     for colonne in ("extensions_stockage_pokemon", "extensions_stockage_objets"):
@@ -654,6 +689,26 @@ def init_db():
         )
         """
     )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS marche_noir_achats (
+            user_id INTEGER NOT NULL,
+            date TEXT NOT NULL,
+            item_cle TEXT NOT NULL,
+            quantite INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, date, item_cle)
+        )
+        """
+    )
+
+    # Migration pour les bases où cette table existait déjà AVANT l'ajout des plafonds
+    # différenciés (1 pour CT/légendaires, 3 pour cristal/œufs) — la table existant déjà,
+    # le CREATE TABLE IF NOT EXISTS ci-dessus ne suffit pas à lui ajouter la colonne.
+    try:
+        cur.execute("ALTER TABLE marche_noir_achats ADD COLUMN quantite INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
 
     cur.execute(
         """
@@ -1024,6 +1079,28 @@ def init_db():
             cur.execute(f"ALTER TABLE combat_equipe ADD COLUMN {colonne} TEXT")
         except sqlite3.OperationalError:
             pass  # la colonne existe déjà
+
+    # Méga-Évolution : suivi PAR COMBAT (jamais persisté au-delà) de qui a déjà activé sa
+    # transformation, sur quel Pokémon précisément — un seul par joueur par combat, comme
+    # dans les vrais jeux. Voir mega_evolutions.py pour le catalogue des Pierres Méga.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_mega_actif (
+            combat_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            pokemon_nom TEXT NOT NULL,
+            cle_stone TEXT,
+            PRIMARY KEY (combat_id, user_id)
+        )
+        """
+    )
+
+    # Migration : Dracaufeu et Mewtwo ont chacun 2 variantes de Méga (X/Y) — sans cette
+    # colonne, impossible de savoir laquelle a été activée pour choisir le bon sprite.
+    try:
+        cur.execute("ALTER TABLE combat_mega_actif ADD COLUMN cle_stone TEXT")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
 
     cur.execute(
         """
@@ -1844,6 +1921,39 @@ def acheter_ct(user_id: int, nom_attaque: str):
     cur.execute(
         "INSERT OR IGNORE INTO ct_possedees (user_id, nom_attaque) VALUES (?, ?)",
         (user_id, nom_attaque),
+    )
+    conn.commit()
+    conn.close()
+
+
+def compter_achats_marche_noir(user_id: int, item_cle: str) -> int:
+    """Nombre d'exemplaires de CET objet déjà achetés AUJOURD'HUI par ce joueur — les
+    plafonds diffèrent selon la catégorie (3 pour cristal/œufs, 1 pour formes
+    légendaires et CT, voir config.CAP_MARCHE_NOIR_*), d'où un compteur plutôt qu'un
+    simple booléen "déjà acheté". item_cle est soit la clé brute de l'objet rare
+    (ex: 'cristal_mutation'), soit 'ct_<nom_attaque>' pour une CT."""
+    date_du_jour = time.strftime("%Y-%m-%d")
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT quantite FROM marche_noir_achats WHERE user_id = ? AND date = ? AND item_cle = ?",
+        (user_id, date_du_jour, item_cle),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["quantite"] if row else 0
+
+
+def incrementer_achat_marche_noir(user_id: int, item_cle: str, quantite: int = 1):
+    date_du_jour = time.strftime("%Y-%m-%d")
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO marche_noir_achats (user_id, date, item_cle, quantite) VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id, date, item_cle) DO UPDATE SET quantite = quantite + excluded.quantite
+        """,
+        (user_id, date_du_jour, item_cle, quantite),
     )
     conn.commit()
     conn.close()
@@ -2882,6 +2992,34 @@ def compter_objets_totaux(user_id: int) -> int:
     return total
 
 
+def compter_objets_equipables(user_id: int) -> int:
+    """Nombre d'objets ÉQUIPABLES possédés (objets tenus classiques + formes spéciales
+    par objet + gemmes méga) — EXCLUT balls/potions/œufs/divers, qui utilisent
+    compter_objets_totaux ailleurs (vérification de sac plein à la capture, dans
+    main.py). Distinction nécessaire : sans elle, un joueur ayant accumulé des
+    centaines de Poké Balls se retrouvait bloqué pour acheter le moindre objet tenu ou
+    la moindre gemme méga en boutique, la limite de 50 étant comparée à SON TOTAL DE
+    BALLS EN PLUS de ses vrais objets équipables — un compteur partagé par erreur entre
+    deux usages qui n'ont rien à voir."""
+    import capacites as capacites_module
+    import formes_objets as formes_objets_module
+    import mega_evolutions as mega_evolutions_module
+
+    cles_equipables = (
+        set(capacites_module.OBJETS_TENUS.keys())
+        | set(formes_objets_module.FORMES_OBJETS.keys())
+        | set(mega_evolutions_module.MEGA_EVOLUTIONS.keys())
+    )
+    conn = get_connexion()
+    cur = conn.cursor()
+    _assurer_joueur_existe(cur, user_id)
+    conn.commit()
+    cur.execute("SELECT ball_type, quantite FROM inventaire_balls WHERE user_id = ?", (user_id,))
+    total = sum(row["quantite"] for row in cur.fetchall() if row["ball_type"] in cles_equipables)
+    conn.close()
+    return total
+
+
 # --- PokéStop ---
 
 def peut_utiliser_pokestop(user_id: int, cooldown_secondes: int):
@@ -2908,6 +3046,51 @@ def marquer_pokestop_utilise(user_id: int):
     )
     conn.commit()
     conn.close()
+
+
+def peut_utiliser_centre_pokemon(user_id: int, cooldown_secondes: int):
+    """Même mécanique que peut_utiliser_pokestop, pour le Centre Pokémon (soin complet
+    gratuit de toute l'équipe de combat sur cooldown, voir soigner_completement_equipe)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    _assurer_joueur_existe(cur, user_id)
+    conn.commit()
+    cur.execute("SELECT centre_pokemon_last_used FROM users WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    dernier_usage = row["centre_pokemon_last_used"] if row else 0
+    temps_ecoule = time.time() - dernier_usage
+    if temps_ecoule >= cooldown_secondes:
+        return True, 0
+    return False, int(cooldown_secondes - temps_ecoule)
+
+
+def marquer_centre_pokemon_utilise(user_id: int):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE users SET centre_pokemon_last_used = ? WHERE user_id = ?",
+        (int(time.time()), user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def incrementer_quiz_bonnes_reponses(user_id: int) -> int:
+    """Incrémente le compteur CUMULATIF (jamais remis à zéro) de bonnes réponses au quiz
+    de ce joueur, et retourne le nouveau total — utilisé pour la récompense tous les 5
+    (voir config.RECOMPENSE_QUIZ_PALIER), le joueur qui répond juste en premier gagne le
+    point, peu importe le thème de la question (qui-est-ce, anagramme, QCM...)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    _assurer_joueur_existe(cur, user_id)
+    conn.commit()
+    cur.execute("UPDATE users SET quiz_bonnes_reponses = quiz_bonnes_reponses + 1 WHERE user_id = ?", (user_id,))
+    conn.commit()
+    cur.execute("SELECT quiz_bonnes_reponses FROM users WHERE user_id = ?", (user_id,))
+    total = cur.fetchone()["quiz_bonnes_reponses"]
+    conn.close()
+    return total
 
 
 def reinitialiser_pokestop(user_id: int):
@@ -3103,6 +3286,57 @@ def obtenir_equipe_pvp(combat_id: int, user_id: int):
     rows = cur.fetchall()
     conn.close()
     return rows
+
+
+def obtenir_mega_actif(combat_id: int, user_id: int):
+    """Retourne (pokemon_nom, cle_stone) du Pokémon actuellement Méga-Évolué par ce
+    joueur dans ce combat, ou None si aucun. cle_stone distingue les variantes X/Y
+    (Dracaufeu, Mewtwo) pour choisir le bon sprite — voir combat_visuel.py."""
+    user_id = _id_equipe(user_id)
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT pokemon_nom, cle_stone FROM combat_mega_actif WHERE combat_id = ? AND user_id = ?", (combat_id, user_id))
+    row = cur.fetchone()
+    conn.close()
+    return (row["pokemon_nom"], row["cle_stone"]) if row else None
+
+
+def a_deja_mega_evolue(combat_id: int, user_id: int) -> bool:
+    """Un seul Pokémon peut être Méga-Évolué par joueur et par combat, comme dans les
+    vrais jeux — vérifié avant de proposer le bouton d'activation."""
+    user_id = _id_equipe(user_id)
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM combat_mega_actif WHERE combat_id = ? AND user_id = ?", (combat_id, user_id))
+    resultat = cur.fetchone() is not None
+    conn.close()
+    return resultat
+
+
+def activer_mega_evolution_combat(combat_id: int, user_id: int, position: int, pokemon_nom: str, nouvelles_stats: dict, cle_stone: str = None):
+    """Enregistre l'activation (pour empêcher une 2e Méga-Évolution ce combat) ET
+    applique immédiatement les nouvelles stats de combat au Pokémon concerné — PV
+    jamais modifiés (aucune Méga-Évolution ne change les PV dans les vrais jeux),
+    seulement attaque/défense/attaque spé/défense spé/vitesse. cle_stone (ex:
+    'dracaufeuite_x') distingue les variantes X/Y pour le bon sprite en combat — voir
+    mega_evolutions.py pour la limite connue sur les changements de type."""
+    user_id_norm = _id_equipe(user_id)
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO combat_mega_actif (combat_id, user_id, pokemon_nom, cle_stone) VALUES (?, ?, ?, ?)",
+        (combat_id, user_id_norm, pokemon_nom, cle_stone),
+    )
+    cur.execute(
+        "UPDATE combat_equipe SET atq = ?, defe = ?, atq_spe = ?, def_spe = ?, vit = ? "
+        "WHERE combat_id = ? AND user_id = ? AND position = ?",
+        (
+            nouvelles_stats["attaque"], nouvelles_stats["defense"], nouvelles_stats["attaque_spe"],
+            nouvelles_stats["defense_spe"], nouvelles_stats["vitesse"], combat_id, user_id_norm, position,
+        ),
+    )
+    conn.commit()
+    conn.close()
 
 
 def enregistrer_action_pvp(combat_id: int, user_id: int, action: str):

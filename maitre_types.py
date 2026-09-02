@@ -2,6 +2,7 @@ import discord
 
 import capacites as capacites_module
 import formes_objets as formes_objets_module
+import mega_evolutions as mega_evolutions_module
 import database
 from pokemon_data import (
     ATTAQUES,
@@ -172,10 +173,13 @@ class VueChoixPokemonObjet(discord.ui.View):
             objet_actuel = database.obtenir_objet_tenu_reel(user_id, nom)
             info_objet = capacites_module.infos_objet(objet_actuel) if objet_actuel else None
             info_forme = formes_objets_module.FORMES_OBJETS.get(objet_actuel) if objet_actuel else None
+            info_mega = mega_evolutions_module.MEGA_EVOLUTIONS.get(objet_actuel) if objet_actuel else None
             if info_objet:
                 description = f"Tient : {info_objet['nom']}"
             elif info_forme:
                 description = f"Tient : {info_forme['objet_nom']}"
+            elif info_mega:
+                description = f"Tient : {info_mega['objet_nom']}"
             else:
                 description = "Ne tient rien"
             options.append(discord.SelectOption(label=nom, value=nom, description=description))
@@ -206,12 +210,18 @@ class VueGestionObjet(discord.ui.View):
         objet_actuel = database.obtenir_objet_tenu_reel(self.user_id, self.pokemon_nom)
         info_objet = capacites_module.infos_objet(objet_actuel) if objet_actuel else None
         info_forme = formes_objets_module.FORMES_OBJETS.get(objet_actuel) if objet_actuel else None
+        info_mega = mega_evolutions_module.MEGA_EVOLUTIONS.get(objet_actuel) if objet_actuel else None
         if info_objet:
             texte_tenu = f"Tient actuellement : {info_objet['emoji']} **{info_objet['nom']}** — {info_objet['description']}"
         elif info_forme:
             texte_tenu = (
                 f"Tient actuellement : {info_forme['objet_emoji']} **{info_forme['objet_nom']}** — "
                 f"*{info_forme['forme_nom']}* active tant qu'il le tient !"
+            )
+        elif info_mega:
+            texte_tenu = (
+                f"Tient actuellement : {info_mega['objet_emoji']} **{info_mega['objet_nom']}** — permet de "
+                f"Méga-Évoluer en **{info_mega['forme_nom']}** en combat (bouton dédié, une fois par combat)."
             )
         else:
             texte_tenu = "Ne tient actuellement aucun objet."
@@ -229,15 +239,17 @@ class VueGestionObjet(discord.ui.View):
     def _construire_composants(self):
         self.clear_items()
         inventaire = database.obtenir_inventaire_balls(self.user_id)
-        # Deux familles d'objets équipables : les objets de combat classiques
-        # (capacites.OBJETS_TENUS) et les objets de transformation (Fleur Gracidea...,
-        # voir formes_objets.py) — les seconds n'étaient pas proposés ici avant, alors
-        # qu'ils sont bien équipables comme n'importe quel autre objet tenu.
+        # Trois familles d'objets équipables : les objets de combat classiques
+        # (capacites.OBJETS_TENUS), les objets de transformation permanente
+        # (formes_objets.py), et les Gemmes Méga temporaires (mega_evolutions.py).
         toutes_les_infos = {
             **capacites_module.OBJETS_TENUS,
             **{cle: {"nom": info["objet_nom"], "emoji": info["objet_emoji"],
                      "description": f"Transforme {info['espece']} en {info['forme_nom']} tant qu'il le tient."}
                for cle, info in formes_objets_module.FORMES_OBJETS.items()},
+            **{cle: {"nom": info["objet_nom"], "emoji": info["objet_emoji"],
+                     "description": f"Permet de Méga-Évoluer {info['espece']} en combat (une fois par combat)."}
+               for cle, info in mega_evolutions_module.MEGA_EVOLUTIONS.items()},
         }
         options = []
         for cle, info in toutes_les_infos.items():
@@ -252,6 +264,12 @@ class VueGestionObjet(discord.ui.View):
                     emoji=emoji_pour_objet(cle, info["emoji"]),
                 )
             )
+        # Filet de sécurité : Discord plafonne un menu déroulant à 25 options MAXIMUM —
+        # avec maintenant ~79 types d'objets équipables possibles (dont 50 Gemmes Méga),
+        # un joueur qui en posséderait plus de 25 différents ferait planter l'ouverture
+        # entière de ce menu sans cette troncature (vécu une première fois en boutique
+        # avec le même genre de dépassement, voir boutique.py::VueCategorieGemmesMega).
+        options = options[:25]
         if options:
             select = discord.ui.Select(placeholder="Choisis un objet de ton sac…", options=options)
             select.callback = self._on_select

@@ -18,6 +18,7 @@ import database
 import formes_objets as formes_objets_module
 import journal
 import leveling
+import mega_evolutions as mega_evolutions_module
 import niveaux_pokemon
 from pokemon_data import (
     ATTAQUES,
@@ -32,55 +33,86 @@ from pokemon_data import (
     tirer_niveau_spawn,
 )
 
+# ⚠️ Autocomplete plutôt que @app_commands.choices (limité à 25 valeurs FIXES max —
+# dépassement = bot.tree.sync() plante intégralement au démarrage, voir la même mise en
+# garde dans cogs/gestion_pokemon.py::_OBJETS_TOUTES_FAMILLES). Catalogue volontairement
+# plus large que celui-là : give-objet couvre AUSSI balls/potions/œufs/divers (que les
+# admins doivent pouvoir donner), pas seulement les objets équipables sur un Pokémon.
+_CATEGORIES_GIVE_OBJET = {
+    "balls": NOM_BALL_AFFICHAGE,
+    "potions": NOM_SOIN_AFFICHAGE,
+    "divers": NOM_OBJETS_DIVERS,
+    "objets_tenus": {cle: info["nom"] for cle, info in capacites_module.OBJETS_TENUS.items()},
+    "formes": {cle: info["objet_nom"] for cle, info in formes_objets_module.FORMES_OBJETS.items()},
+    "gemmes_mega": {
+        cle: f"{info['objet_nom']} (Méga-Évolution {info['espece']})"
+        for cle, info in mega_evolutions_module.MEGA_EVOLUTIONS.items()
+    },
+}
+_CATALOGUE_GIVE_OBJET = {cle: label for categorie in _CATEGORIES_GIVE_OBJET.values() for cle, label in categorie.items()}
+
 
 class AdminEconomieCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="give-objet", description="[Admin] Donne un objet (ball ou potion) à un joueur")
+    @app_commands.command(name="give-objet", description="[Admin] Donne un objet (ball, potion, objet tenu, gemme méga...) à un joueur")
     @app_commands.checks.has_permissions(administrator=True)
-    @app_commands.choices(
-        objet=[
-            app_commands.Choice(name="Poké Ball", value="pokeball"),
-            app_commands.Choice(name="Super Ball", value="superball"),
-            app_commands.Choice(name="Hyper Ball", value="hyperball"),
-            app_commands.Choice(name="Master Ball", value="masterball"),
-            app_commands.Choice(name="Potion", value="potion"),
-            app_commands.Choice(name="Super Potion", value="superpotion"),
-            app_commands.Choice(name="Hyper Potion", value="hyperpotion"),
-            app_commands.Choice(name="Total Soin", value="totalsoin"),
-            app_commands.Choice(name="Cristal de Mutation", value="cristal_mutation"),
-            app_commands.Choice(name="Œuf Commun", value="oeuf_commun"),
-            app_commands.Choice(name="Œuf Peu Commun", value="oeuf_peu_commun"),
-            app_commands.Choice(name="Œuf Rare", value="oeuf_rare"),
-            app_commands.Choice(name="Œuf Hyper Rare", value="oeuf_hyper_rare"),
-            app_commands.Choice(name="Œuf Légendaire", value="oeuf_legendaire"),
-            app_commands.Choice(name="🌸 Fleur Gracidea (Shaymin)", value="fleur_gracidea"),
-            app_commands.Choice(name="🔮 Orbe Griséous (Giratina)", value="orbe_griseous"),
-            app_commands.Choice(name="💎 Orbe Adamant (Dialga)", value="orbe_adamant"),
-            app_commands.Choice(name="💠 Perle Lustrée (Palkia)", value="perle_lustree"),
-        ]
-    )
+    @app_commands.describe(objet="Tape pour chercher — balls, potions, objets tenus, formes spéciales, gemmes méga, œufs...")
     async def give_objet(
         self,
         interaction: discord.Interaction,
         membre: discord.Member,
-        objet: app_commands.Choice[str],
+        objet: str,
         quantite: int,
     ):
+        if objet not in _CATALOGUE_GIVE_OBJET:
+            await interaction.response.send_message(
+                "❌ Objet inconnu — choisis-en un dans la liste proposée par l'autocomplétion.", ephemeral=True
+            )
+            return
+
         noms_objets = {
             **NOM_BALL_AFFICHAGE, **NOM_SOIN_AFFICHAGE, **NOM_OBJETS_DIVERS,
             **{cle: info["objet_nom"] for cle, info in formes_objets_module.FORMES_OBJETS.items()},
+            **{cle: info["objet_nom"] for cle, info in mega_evolutions_module.MEGA_EVOLUTIONS.items()},
+            **{cle: info["nom"] for cle, info in capacites_module.OBJETS_TENUS.items()},
         }
         emojis_objets = {
             **EMOJI_BALLS, **EMOJI_SOINS, **EMOJI_OBJETS_DIVERS,
             **{cle: info["objet_emoji"] for cle, info in formes_objets_module.FORMES_OBJETS.items()},
+            **{cle: info["objet_emoji"] for cle, info in mega_evolutions_module.MEGA_EVOLUTIONS.items()},
+            **{cle: info["emoji"] for cle, info in capacites_module.OBJETS_TENUS.items()},
         }
-        database.ajouter_balls(membre.id, objet.value, quantite)
-        journal.logger(f"🛠️ <@{interaction.user.id}> a donné {quantite}× {objet.value} à <@{membre.id}> (/give-objet).")
+        database.ajouter_balls(membre.id, objet, quantite)
+        journal.logger(f"🛠️ <@{interaction.user.id}> a donné {quantite}× {objet} à <@{membre.id}> (/give-objet).")
         await interaction.response.send_message(
-            f"✅ **{quantite}× {emojis_objets.get(objet.value, '')} {noms_objets.get(objet.value, objet.value)}** donné(es) à {membre.mention}."
+            f"✅ **{quantite}× {emojis_objets.get(objet, '')} {noms_objets.get(objet, objet)}** donné(es) à {membre.mention}."
         )
+
+    @give_objet.autocomplete("objet")
+    async def _give_objet_autocomplete(self, interaction: discord.Interaction, current: str):
+        current_lower = current.lower().strip()
+
+        if not current_lower:
+            # Rien de tapé : un select de 25 options tronqué au hasard cachait
+            # entièrement les gemmes méga (50 sur 94 objets au total, ajoutées en
+            # dernier dans le catalogue) — l'admin n'avait aucun moyen de savoir
+            # qu'elles existaient sans déjà connaître leur nom exact à taper. On montre
+            # à la place un échantillon de CHAQUE catégorie, gemmes méga incluses.
+            apercu = []
+            nb_categories = len(_CATEGORIES_GIVE_OBJET)
+            part_par_categorie = max(1, 25 // nb_categories)
+            for categorie in _CATEGORIES_GIVE_OBJET.values():
+                apercu.extend(list(categorie.items())[:part_par_categorie])
+            return [app_commands.Choice(name=label[:100], value=cle) for cle, label in apercu[:25]]
+
+        resultats = [
+            app_commands.Choice(name=label[:100], value=cle)
+            for cle, label in _CATALOGUE_GIVE_OBJET.items()
+            if current_lower in label.lower() or current_lower in cle.lower()
+        ]
+        return resultats[:25]
 
     @app_commands.command(name="give-dollars", description="[Admin] Donne des Poké Dollars à un joueur")
     @app_commands.checks.has_permissions(administrator=True)

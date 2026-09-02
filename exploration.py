@@ -16,6 +16,85 @@ from pokemon_data import EMOJI_OBJETS_DIVERS, EMOJI_POKEDOLLAR, NOM_OBJETS_DIVER
 EMOJI_CRISTAL = "🔮"
 NOM_CRISTAL = "Cristal de Mutation"
 
+# --- Destinations thématiques ---
+# Chaque destination biaise les 3 chances de récompense (multiplicateurs, appliqués
+# APRÈS le calcul habituel par PC/durée, toujours plafonnés ensuite comme avant) — un
+# vrai choix stratégique plutôt que "j'envoie qui a le plus de PC, peu importe où".
+# BONUS_AFFINITE_TYPE s'ajoute EN PLUS si au moins 2 des 3 Pokémon envoyés ont un type
+# qui correspond au thème de la destination — encourage à composer une équipe variée
+# plutôt que toujours les 3 mêmes gros PC.
+BONUS_AFFINITE_TYPE = 1.3
+NB_AFFINITE_REQUIS = 2  # sur 3 Pokémon envoyés
+
+DESTINATIONS_EXPLORATION = {
+    "foret": {
+        "nom": "Forêt Verdoyante", "emoji": "🌲",
+        "types_affinite": ["plante", "insecte"],
+        "mult_cristal": 1.0, "mult_oeuf": 1.4, "mult_objet_forme": 0.8,
+        "description": "Grouille de vie sauvage — nettement plus de chances d'œufs.",
+    },
+    "volcan": {
+        "nom": "Volcan Ardent", "emoji": "🌋",
+        "types_affinite": ["feu", "roche"],
+        "mult_cristal": 1.6, "mult_oeuf": 0.8, "mult_objet_forme": 0.9,
+        "description": "Terrain hostile chargé d'énergie brute — nettement plus de Cristaux de Mutation.",
+    },
+    "grotte": {
+        "nom": "Grotte Sous-Marine", "emoji": "🌊",
+        "types_affinite": ["eau", "glace"],
+        "mult_cristal": 0.9, "mult_oeuf": 1.2, "mult_objet_forme": 1.1,
+        "description": "Passages engloutis et courants profonds — équilibré, un peu de tout.",
+    },
+    "ruines": {
+        "nom": "Ruines Antiques", "emoji": "🏛️",
+        "types_affinite": ["psy", "spectre", "dragon"],
+        "mult_cristal": 1.0, "mult_oeuf": 0.7, "mult_objet_forme": 1.8,
+        "description": "Vestiges d'une civilisation oubliée — de loin le meilleur endroit pour les objets de forme légendaire.",
+    },
+}
+
+# --- Événements aléatoires en cours de route ---
+# Réservé aux explorations 6h/24h (une 1h est trop courte pour un "entre-temps"
+# crédible) — une chance de déclenchement est tirée UNE FOIS au départ, avec le texte
+# ET le bonus déjà décidés à ce moment (voir _tirer_evenement) ; seule la NOTIFICATION
+# est différée dans le temps (voir boucle_notifications_completion dans main.py).
+CHANCE_EVENEMENT_EXPLORATION = {"1h": 0.0, "6h": 0.35, "24h": 0.6}
+
+EVENEMENTS_EXPLORATION = [
+    {"texte": "a croisé un dresseur amical qui leur a indiqué un raccourci !", "bonus_dollars": 60},
+    {"texte": "a dû contourner un éboulement, mais s'en est sortie sans encombre.", "bonus_dollars": 0},
+    {"texte": "a trouvé un vieux sac abandonné contenant quelques Poké Dollars.", "bonus_dollars": 90},
+    {"texte": "s'est arrêtée admirer un coucher de soleil magnifique.", "bonus_dollars": 0},
+    {"texte": "a aidé un PNJ local, qui les a remerciés généreusement.", "bonus_dollars": 120},
+    {"texte": "a dû rebrousser chemin face à une tempête soudaine, sans dommage.", "bonus_dollars": 0},
+]
+
+
+def _tirer_evenement(duree_label: str, date_debut: int, date_fin: int):
+    """Décide, au moment où l'exploration DÉMARRE, si un événement aléatoire aura lieu
+    en cours de route — et si oui, lequel et à quel moment. Retourne (planifie_a, texte,
+    bonus_dollars) ou (None, None, 0) si aucun événement n'est tiré."""
+    if random.random() >= CHANCE_EVENEMENT_EXPLORATION.get(duree_label, 0):
+        return None, None, 0
+    evenement = random.choice(EVENEMENTS_EXPLORATION)
+    # Entre 20% et 80% de la durée totale — jamais pile au début ni juste avant la fin,
+    # ça ferait doublon avec le message de départ ou celui de retour.
+    fraction = random.uniform(0.2, 0.8)
+    planifie_a = round(date_debut + (date_fin - date_debut) * fraction)
+    return planifie_a, evenement["texte"], evenement["bonus_dollars"]
+
+
+def _a_affinite_type(pokemons: list, destination: str) -> bool:
+    """Au moins NB_AFFINITE_REQUIS des Pokémon envoyés ont un type correspondant au
+    thème de la destination."""
+    types_theme = DESTINATIONS_EXPLORATION[destination]["types_affinite"]
+    nb_correspondants = 0
+    for nom in pokemons:
+        pokemon = obtenir_pokemon_par_nom(nom)
+        if pokemon and any(t in types_theme for t in pokemon.get("types", [])):
+            nb_correspondants += 1
+    return nb_correspondants >= NB_AFFINITE_REQUIS
+
 
 def _tirer_objet_forme_aleatoire() -> str:
     """Un objet de transformation au hasard parmi ceux existants (voir formes_objets.py)."""
@@ -282,19 +361,66 @@ class VueChoixEquipeExploration(discord.ui.View):
             return
         if len(self.selection) != config.EXPLORATION_TAILLE_EQUIPE:
             return
-        vue = VueChoixDureeExploration(self.user_id, self.slot, self.selection)
+        vue = VueChoixDestinationExploration(self.user_id, self.slot, self.selection)
+        lignes_destinations = []
+        for cle, info in DESTINATIONS_EXPLORATION.items():
+            marque = " ✨" if _a_affinite_type(self.selection, cle) else ""
+            lignes_destinations.append(f"{info['emoji']} **{info['nom']}**{marque} — {info['description']}")
         await interaction.response.edit_message(
-            content=f"Équipe choisie : **{', '.join(self.selection)}**. Pour combien de temps ?",
+            content=(
+                f"Équipe choisie : **{', '.join(self.selection)}**.\n"
+                f"Choisis une destination (✨ = ton équipe a une affinité de type avec ce thème, bonus supplémentaire) :\n\n"
+                + "\n".join(lignes_destinations)
+            ),
             view=vue,
         )
 
 
-class VueChoixDureeExploration(discord.ui.View):
+class VueChoixDestinationExploration(discord.ui.View):
+    """Choix de la destination thématique — influence le TYPE de récompense (voir
+    DESTINATIONS_EXPLORATION), avec un bonus supplémentaire (BONUS_AFFINITE_TYPE) si
+    l'équipe envoyée a une affinité de type avec le thème choisi."""
+
     def __init__(self, user_id: int, slot: int, pokemons: list):
         super().__init__(timeout=60)
         self.user_id = user_id
         self.slot = slot
         self.pokemons = pokemons
+
+        for cle, info in DESTINATIONS_EXPLORATION.items():
+            bouton = discord.ui.Button(label=info["nom"], emoji=info["emoji"], style=discord.ButtonStyle.primary)
+            bouton.callback = self._creer_callback(cle)
+            self.add_item(bouton)
+
+    def _creer_callback(self, destination: str):
+        async def callback(interaction: discord.Interaction):
+            if interaction.user.id != self.user_id:
+                await interaction.response.send_message("Ce n'est pas ta sélection !", ephemeral=True)
+                return
+            info = DESTINATIONS_EXPLORATION[destination]
+            texte_affinite = (
+                "\n✨ Affinité de type détectée — bonus supplémentaire sur les chances de récompense !"
+                if _a_affinite_type(self.pokemons, destination) else ""
+            )
+            vue = VueChoixDureeExploration(self.user_id, self.slot, self.pokemons, destination)
+            await interaction.response.edit_message(
+                content=(
+                    f"Équipe : **{', '.join(self.pokemons)}**\n"
+                    f"Destination : {info['emoji']} **{info['nom']}**{texte_affinite}\n\n"
+                    f"Pour combien de temps ?"
+                ),
+                view=vue,
+            )
+        return callback
+
+
+class VueChoixDureeExploration(discord.ui.View):
+    def __init__(self, user_id: int, slot: int, pokemons: list, destination: str = None):
+        super().__init__(timeout=60)
+        self.user_id = user_id
+        self.slot = slot
+        self.pokemons = pokemons
+        self.destination = destination
 
         for duree_label in ("1h", "6h", "24h"):
             bouton = discord.ui.Button(label=duree_label, style=discord.ButtonStyle.primary, emoji="⏱️")
@@ -318,12 +444,23 @@ class VueChoixDureeExploration(discord.ui.View):
                 return
 
             duree_secondes = config.EXPLORATION_DUREES[duree_label]
-            database.demarrer_exploration(self.user_id, self.slot, self.pokemons, duree_secondes, duree_label)
-            date_fin = int(time.time()) + duree_secondes
+            date_debut = int(time.time())
+            date_fin = date_debut + duree_secondes
+            planifie_a, texte_evenement, bonus_dollars = _tirer_evenement(duree_label, date_debut, date_fin)
+            database.demarrer_exploration(
+                self.user_id, self.slot, self.pokemons, duree_secondes, duree_label,
+                destination=self.destination, evenement_planifie_a=planifie_a,
+                evenement_texte=texte_evenement, evenement_bonus_dollars=bonus_dollars,
+            )
+
+            texte_destination = ""
+            if self.destination:
+                info = DESTINATIONS_EXPLORATION[self.destination]
+                texte_destination = f" vers {info['emoji']} **{info['nom']}**"
 
             await interaction.response.edit_message(
                 content=(
-                    f"🚀 **{', '.join(self.pokemons)}** partent explorer pour **{duree_label}** !\n"
+                    f"🚀 **{', '.join(self.pokemons)}** partent explorer{texte_destination} pour **{duree_label}** !\n"
                     f"Retour <t:{date_fin}:R>."
                 ),
                 view=None,
@@ -331,26 +468,40 @@ class VueChoixDureeExploration(discord.ui.View):
         return callback
 
 
-def _calculer_recompense(pc_total: int, duree_label: str) -> dict:
+def _calculer_recompense(pc_total: int, duree_label: str, destination: str = None, pokemons: list = None) -> dict:
+    """destination/pokemons optionnels — None pour une exploration démarrée AVANT
+    l'ajout des destinations thématiques, comportement inchangé dans ce cas (aucun
+    biais, comme avant)."""
     pc_plafonne = min(pc_total, config.EXPLORATION_PLAFOND_PC)
     dollars = round(pc_plafonne * config.EXPLORATION_FACTEUR_DOLLARS[duree_label])
     xp = round(pc_plafonne * config.EXPLORATION_FACTEUR_XP[duree_label])
     ratio_puissance = pc_plafonne / config.EXPLORATION_PLAFOND_PC
 
+    dest_info = DESTINATIONS_EXPLORATION.get(destination) if destination else None
+    a_affinite = bool(dest_info and pokemons and _a_affinite_type(pokemons, destination))
+    mult_affinite = BONUS_AFFINITE_TYPE if a_affinite else 1.0
+
     conf_cristal = config.EXPLORATION_CHANCE_CRISTAL[duree_label]
-    chance_cristal = min(conf_cristal["max"], conf_cristal["base"] + conf_cristal["bonus_max"] * ratio_puissance)
+    chance_cristal = conf_cristal["base"] + conf_cristal["bonus_max"] * ratio_puissance
+    if dest_info:
+        chance_cristal *= dest_info["mult_cristal"] * mult_affinite
+    chance_cristal = min(conf_cristal["max"], chance_cristal)
 
     conf_oeuf = config.EXPLORATION_CHANCE_OEUF[duree_label]
-    chance_oeuf = min(conf_oeuf["max"], conf_oeuf["base"] + conf_oeuf["bonus_max"] * ratio_puissance)
+    chance_oeuf = conf_oeuf["base"] + conf_oeuf["bonus_max"] * ratio_puissance
+    if dest_info:
+        chance_oeuf *= dest_info["mult_oeuf"] * mult_affinite
+    chance_oeuf = min(conf_oeuf["max"], chance_oeuf)
 
     conf_objet_forme = config.EXPLORATION_CHANCE_OBJET_FORME[duree_label]
-    chance_objet_forme = min(
-        conf_objet_forme["max"], conf_objet_forme["base"] + conf_objet_forme["bonus_max"] * ratio_puissance
-    )
+    chance_objet_forme = conf_objet_forme["base"] + conf_objet_forme["bonus_max"] * ratio_puissance
+    if dest_info:
+        chance_objet_forme *= dest_info["mult_objet_forme"] * mult_affinite
+    chance_objet_forme = min(conf_objet_forme["max"], chance_objet_forme)
 
     return {
         "dollars": dollars, "xp": xp, "chance_cristal": chance_cristal, "chance_oeuf": chance_oeuf,
-        "chance_objet_forme": chance_objet_forme,
+        "chance_objet_forme": chance_objet_forme, "a_affinite": a_affinite,
     }
 
 
@@ -389,13 +540,18 @@ def recuperer_toutes_recompenses_pretes(user_id: int) -> discord.Embed:
     for row in explorations:
         pokemons = [row["pokemon1"], row["pokemon2"], row["pokemon3"]]
         duree_label = row["duree_label"] or _retrouver_duree_label(row["date_fin"] - row["date_debut"])
+        destination = row["destination"]
 
         stats = _stats_par_espece(user_id)
         pc_total = sum(stats.get(nom, {}).get("pc", 0) for nom in pokemons)
-        recompense = _calculer_recompense(pc_total, duree_label)
+        recompense = _calculer_recompense(pc_total, duree_label, destination, pokemons)
 
         mult_repetition = database.enregistrer_completion_exploration_repetition(user_id)
-        dollars = round(recompense["dollars"] * mult_repetition * database.multiplicateur_boost(user_id, "argent"))
+        bonus_evenement = row["evenement_bonus_dollars"] or 0
+        dollars = (
+            round(recompense["dollars"] * mult_repetition * database.multiplicateur_boost(user_id, "argent"))
+            + bonus_evenement
+        )
         database.ajouter_poke_dollars(user_id, dollars)
         leveling.gagner_xp(user_id, recompense["xp"])
         # Affichage = XP réellement créditée (boost de Race/temporaire inclus) — gagner_xp()
@@ -430,7 +586,10 @@ def recuperer_toutes_recompenses_pretes(user_id: int) -> discord.Embed:
         total_dollars += dollars
         total_xp += xp_affichee
         cristal_txt = f" + {EMOJI_CRISTAL}" if obtenu_cristal else ""
-        lignes_details.append(f"• Emplacement {row['slot']} ({', '.join(pokemons)}){cristal_txt}")
+        emoji_dest = DESTINATIONS_EXPLORATION[destination]["emoji"] + " " if destination in DESTINATIONS_EXPLORATION else ""
+        lignes_details.append(f"• {emoji_dest}Emplacement {row['slot']} ({', '.join(pokemons)}){cristal_txt}")
+        if row["evenement_texte"]:
+            lignes_details.append(f"  💬 En chemin, ton équipe {row['evenement_texte']}")
 
     description = (
         "\n".join(lignes_details)
@@ -472,14 +631,16 @@ def recuperer_recompense(user_id: int, slot: int) -> discord.Embed:
 
     pokemons = [row["pokemon1"], row["pokemon2"], row["pokemon3"]]
     duree_label = row["duree_label"] or _retrouver_duree_label(row["date_fin"] - row["date_debut"])
+    destination = row["destination"]  # None pour une exploration démarrée avant cet ajout
 
     stats = _stats_par_espece(user_id)
     pc_total = sum(stats.get(nom, {}).get("pc", 0) for nom in pokemons)
 
-    recompense = _calculer_recompense(pc_total, duree_label)
+    recompense = _calculer_recompense(pc_total, duree_label, destination, pokemons)
 
     mult_repetition = database.enregistrer_completion_exploration_repetition(user_id)
-    dollars = round(recompense["dollars"] * mult_repetition * database.multiplicateur_boost(user_id, "argent"))
+    bonus_evenement = row["evenement_bonus_dollars"] or 0
+    dollars = round(recompense["dollars"] * mult_repetition * database.multiplicateur_boost(user_id, "argent")) + bonus_evenement
     database.ajouter_poke_dollars(user_id, dollars)
     leveling.gagner_xp(user_id, recompense["xp"])
     # Affichage = XP réellement créditée (boost de Race/temporaire inclus) — gagner_xp()
@@ -507,9 +668,17 @@ def recuperer_recompense(user_id: int, slot: int) -> discord.Embed:
     database.incrementer_explorations_terminees(user_id)
     quetes_completees = database.incrementer_progression_quete(user_id, "exploration_collectee")
 
-    description = (
-        f"**{', '.join(pokemons)}** reviennent d'exploration !\n\n"
-        f"{EMOJI_POKEDOLLAR} +{dollars} Poké Dollars\n"
+    description = f"**{', '.join(pokemons)}** reviennent d'exploration"
+    if destination and destination in DESTINATIONS_EXPLORATION:
+        info_dest = DESTINATIONS_EXPLORATION[destination]
+        description += f" de {info_dest['emoji']} **{info_dest['nom']}**"
+    description += " !\n"
+    if row["evenement_texte"]:
+        description += f"\n💬 En chemin, ton équipe {row['evenement_texte']}\n"
+    if recompense.get("a_affinite"):
+        description += "\n✨ Affinité de type avec la destination — récompenses boostées !\n"
+    description += (
+        f"\n{EMOJI_POKEDOLLAR} +{dollars} Poké Dollars\n"
         f"✨ +{xp_affichee} XP"
     )
     if obtenu_cristal:

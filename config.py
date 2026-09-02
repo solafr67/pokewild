@@ -26,6 +26,11 @@ CHANNEL_SPAWN_VIP_ID = _id_env("CHANNEL_SPAWN_VIP_ID", 1524433167874920509)
 CHANNEL_POKESTOP_ID = _id_env("CHANNEL_POKESTOP_ID", 1524432806912983241)
 CHANNEL_BOUTIQUE_ID = _id_env("CHANNEL_BOUTIQUE_ID", 1524503716982689827)
 CHANNEL_MAITRE_TYPES_ID = _id_env("CHANNEL_MAITRE_TYPES_ID", 1525581819901251726)  # channel #maitre-des-capacités
+# Valeur par défaut = le vrai channel Village Pokémon du serveur PRINCIPAL (pas de .env
+# chez lui, donc c'est cette valeur codée en dur qui s'applique directement). Le bot de
+# TEST doit surcharger avec son propre ID via son .env, sinon il utiliserait par erreur
+# celui du serveur principal (même logique que ROLE_VERIFICATION_ID plus bas).
+CHANNEL_VILLAGE_ID = _id_env("CHANNEL_VILLAGE_ID", 1544833582143643668)
 CHANNEL_EXPLORATION_ID = _id_env("CHANNEL_EXPLORATION_ID", 1525908138203807926)
 CHANNEL_QUETES_ID = _id_env("CHANNEL_QUETES_ID", 1525970082264514730)
 CHANNEL_AVENTURE_ID = _id_env("CHANNEL_AVENTURE_ID", 1526201523867226192)
@@ -42,6 +47,20 @@ ROGUELIKE_TAILLE_EQUIPE_DEPART = 1  # 1 seul starter choisi au lancement (parmi 
 ROGUELIKE_TAILLE_EQUIPE_MAX = 3  # nombre max de coéquipiers recrutables en cours de run
 ROGUELIKE_NIVEAU_DEPART = 5
 ROGUELIKE_NIVEAU_PAR_ETAGE = 2  # le niveau des ennemis (et donc la difficulté) monte avec l'étage
+
+# Le niveau plafonne à 100 (comme les vrais jeux) — avec la formule ci-dessus, ça arrive
+# vers la salle 48. Sans rien d'autre, TOUT restait identique indéfiniment au-delà (même
+# pool d'ennemis, même niveau, aucune difficulté supplémentaire) pendant que les reliques
+# et mutations du joueur continuaient de s'accumuler — c'est ce qui permettait d'atteindre
+# la salle 1000 sans réel obstacle. Ce multiplicateur de stats prend le relais une fois le
+# plafond de niveau atteint, et continue de croître indéfiniment.
+ROGUELIKE_SALLE_PLAFOND_NIVEAU = 48
+ROGUELIKE_BONUS_STATS_PAR_SALLE_POST_PLAFOND = 0.015  # +1.5% par salle au-delà du plafond
+
+# Combats de Dresseur : renfort progressif distinct des combats sauvages classiques.
+ROGUELIKE_SALLE_DRESSEUR_4EME_POKEMON = 50  # passe de 3 à 4 Pokémon dans l'équipe adverse
+ROGUELIKE_SALLE_DRESSEUR_BOOST_STATS = 100  # +20% à toutes ses stats en plus (voir ci-dessous)
+ROGUELIKE_BOOST_STATS_DRESSEUR = 1.2
 ROGUELIKE_SOIN_REPOS_POURCENT = 0.45
 
 # --- Marketplace (vente à prix fixe entre joueurs, pas d'enchères pour l'instant) ---
@@ -60,6 +79,15 @@ DRESSEUR_FACTEUR_XP = 0.01  # baissés (avant 0.05 / 0.03) : à l'ancien taux, u
 # de PC, multipliée par le fait que chaque spawn est désormais accessible à tout le monde, dépassait le
 # seuil de 600-900 PD/h déjà jugé abusif pour le PvP avant son propre nerf anti-collusion.
 CHANNEL_PROFIL_ID = _id_env("CHANNEL_PROFIL_ID", 1524512674942156851)
+# Rôle attribué automatiquement après la vérification anti-raid (captcha) — si défini,
+# le fil d'accueil du tuto attend que CE rôle soit attribué avant de se créer, plutôt que
+# de tenter à l'arrivée brute (voir on_member_update dans main.py) : sur un serveur avec
+# vérification, le membre n'a pas encore accès à la catégorie du channel #profil au
+# moment de on_member_join, ce qui empêchait le fil privé de se synchroniser
+# correctement côté client. Valeur par défaut = le vrai rôle du serveur PRINCIPAL (pas
+# de .env chez lui) — le bot de TEST doit surcharger avec son propre ID de rôle de test
+# via son .env, sinon il utiliserait par erreur celui du serveur principal.
+ROLE_VERIFICATION_ID = _id_env("ROLE_VERIFICATION_ID", 1496856268273352766)
 CHANNEL_CLASSEMENT_ID = _id_env("CHANNEL_CLASSEMENT_ID", 1524802617455284404)
 
 # --- Rythme des spawns (en secondes) ---
@@ -71,6 +99,7 @@ DUREE_AVANT_DISPARITION = 180  # 3 minutes (relevé de 45s)
 
 # --- PokéStop ---
 COOLDOWN_POKESTOP = 300  # 5 minutes, en secondes
+COOLDOWN_CENTRE_POKEMON = 1800  # 30 minutes, en secondes
 
 # --- Rôle VIP (pour vérifier l'accès si besoin dans le code) ---
 ROLE_VIP_ID = _id_env("ROLE_VIP_ID", 1524443826956271838)
@@ -87,6 +116,11 @@ GUILD_ID = _id_env("GUILD_ID", 1496856137583296562)
 
 # --- Shiny ---
 CHANCE_SHINY_BASE = 1 / 200  # ~0.5% de base, indépendant pour chaque joueur à chaque tentative
+
+# Zorua/Zoroark/Métamorph restent capturables sous leur vraie forme avec la même
+# fréquence que n'importe quel autre Pokémon de leur rareté — ce déguisement n'est
+# qu'un petit bonus occasionnel (façon Illusion/tanière Max Raid), pas systématique.
+CHANCE_DEGUISEMENT_ZORUA_METAMORPH = 0.15  # 15% de chance d'apparaître déguisé
 
 # --- Boutique (Poké Dollars) ---
 # Prix relevés légèrement (2e passe d'équilibrage éco, en miroir du nerf d'exploration) —
@@ -158,6 +192,8 @@ DEFI_STATS_NB_ROUNDS = 5
 CHANNEL_QUIZ_ID = _id_env("CHANNEL_QUIZ_ID", 1528155287213572306)
 CHANNEL_WIKI_ID = _id_env("CHANNEL_WIKI_ID", 1528849699812151447)
 QUIZ_TIMEOUT_QUESTION = 60  # secondes avant de révéler la réponse si personne ne trouve
+QUIZ_PALIER_RECOMPENSE = 5  # une bonne réponse sur cinq déclenche la récompense ci-dessous
+RECOMPENSE_QUIZ_PALIER = {"dollars": 100, "xp": 30}
 QUIZ_DELAI_PROCHAINE_QUESTION = 5  # pause entre deux questions
 
 # --- Passe saisonnier ---
@@ -512,6 +548,45 @@ PRIX_OBJETS_TENUS = {
     # Orbes (+30% dégâts, mais recul à chaque attaque) — le haut de gamme
     "orbe_vie": 550, "orbe_feu": 550,
 }
+
+# Prix unique pour les 21 Gemmes Méga (mega_evolutions.py) — nettement au-dessus du
+# plafond des objets tenus classiques (550 PD pour les orbes) car une Méga-Évolution
+# boost 5 stats à la fois, active dans presque tous les modes de combat (PvP, Draft,
+# Dresseurs, Arène, Repaires, Raids), contre un seul effet ciblé pour un objet classique.
+PRIX_GEMME_MEGA = 1200
+
+# --- Marché Noir : SPAWN TEMPORAIRE dans le Village Pokémon (pas un bouton permanent
+# de la boutique) — un créneau d'1h tiré aléatoirement chaque jour (9h-23h, heure de
+# Paris), INDÉPENDANT de l'Heure de pointe PokéStop (horaire séparé, voir
+# boucle_evenement_marche_noir dans main.py). Objets normalement UNIQUEMENT gagnés par
+# le hasard (exploration, quêtes, roguelike) — jamais achetables ailleurs. Prix
+# volontairement élevé, une vraie prime : le but est "je paie cher pour éviter
+# d'attendre le hasard", pas de dévaluer le fait de les gagner en jouant normalement.
+DUREE_MARCHE_NOIR = 60 * 60  # 1h, indépendante de DUREE_HEURE_DE_POINTE_POKESTOP (30 min)
+
+# Deux catégories avec des plafonds d'achat différents (voir CAP_MARCHE_NOIR_* plus bas) :
+# les communs (cristal + œufs) sont de simples accélérateurs de RNG, les légendaires
+# sont des objets de collection bien plus rares — d'où un plafond plus strict pour eux.
+PRIX_MARCHE_NOIR_COMMUN = {
+    "cristal_mutation": 900,
+    "oeuf_commun": 300, "oeuf_peu_commun": 600, "oeuf_rare": 1200,
+    "oeuf_hyper_rare": 2500, "oeuf_legendaire": 5000,
+}
+# Les 9 formes légendaires par objet (Fleur Gracidea, Orbe Griséous...) — toutes au même
+# prix, indépendamment de la puissance en combat, car leur valeur ici est avant tout
+# narrative/collection (transformation permanente d'un légendaire précis).
+PRIX_MARCHE_NOIR_LEGENDAIRE = {
+    "fleur_gracidea": 2500, "orbe_griseous": 2500, "orbe_adamant": 2500,
+    "perle_lustree": 2500, "orbe_bleue": 2500, "orbe_rouge": 2500,
+    "vase_entrave": 2500, "epee_rouillee": 2500, "bouclier_rouille": 2500,
+}
+CAP_MARCHE_NOIR_COMMUN = 3      # cristal + œufs : jusqu'à 3 exemplaires du même objet
+CAP_MARCHE_NOIR_LEGENDAIRE = 1  # formes légendaires : 1 seul exemplaire
+CAP_MARCHE_NOIR_CT = 1          # CT à prix réduit : 1 seule
+
+REMISE_MARCHE_NOIR_CT = 0.25  # -25% sur le prix normal de la Boutique CT
+NB_OBJETS_RARES_MARCHE_NOIR = 2  # sur 4 emplacements au total, le reste = CT
+NB_CT_MARCHE_NOIR = 2
 
 SOIN_POURCENT = {
     "potion": 0.20,       # soigne 20% des PV max

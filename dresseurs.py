@@ -459,16 +459,29 @@ async def demarrer_combat_dresseur(
     for i, (stats, pv_actuels) in enumerate(equipe_joueur):
         if pv_actuels <= 0:
             continue
+        # ⚠️ Bug corrigé : capacite/objet_tenu n'étaient PAS repris ici (colonnes absentes
+        # de l'INSERT), contrairement à database.initialiser_equipe_combat_pvp qui les
+        # récupère correctement — un joueur pouvait équiper une vraie Pierre Méga (ou
+        # n'importe quel autre objet tenu) et se la voir refusée en plein combat de
+        # Dresseur, alors que ça fonctionnait normalement en PvP classique. Même requête
+        # que initialiser_equipe_combat_pvp, pour rester cohérent.
+        cur.execute(
+            "SELECT capacite, objet_tenu FROM captures WHERE user_id = ? AND pokemon_nom = ? ORDER BY pc DESC LIMIT 1",
+            (joueur.id, stats["nom"]),
+        )
+        row_source = cur.fetchone()
+        capacite = row_source["capacite"] if row_source else None
+        objet_tenu = row_source["objet_tenu"] if row_source else None
         cur.execute(
             """
             INSERT INTO combat_equipe
-                (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau, capacite, objet_tenu)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 combat_id, joueur.id, stats["nom"], stats["pv"], pv_actuels, i,
                 stats["attaque"], stats["defense"], stats["attaque_spe"], stats["defense_spe"], stats["vitesse"],
-                stats["niveau"],
+                stats["niveau"], capacite, objet_tenu,
             ),
         )
     conn.commit()
@@ -812,8 +825,12 @@ async def _tick_resolution_dresseur(bot, combat_id, thread_id, message_id, dress
                 await msg.edit(view=vue, attachments=[fichier_scene])
             else:
                 await msg.edit(view=vue)
-        except discord.HTTPException:
-            pass  # message disparu ou édition refusée : le prochain tick retentera
+        except discord.HTTPException as e:
+            # ⚠️ Piste du bug "image de combat qui disparaît après inactivité" : cette
+            # erreur était avant totalement silencieuse (juste `pass`), donc si elle se
+            # reproduisait à CHAQUE tick, rien ne le signalait jamais nulle part — le
+            # combat restait figé sur la dernière image sans aucune trace pour diagnostiquer.
+            print(f"⚠️ Échec de la mise à jour de l'image de combat dresseur {combat_id} (tour suivant, le prochain tick retentera) : {e}")
 
 
 async def _supprimer_fil_apres_delai(thread, delai):

@@ -1,3 +1,4 @@
+import asyncio
 import random
 import time
 
@@ -18,6 +19,7 @@ from pokemon_data import (
     COULEUR_RARETE,
     EMOJI_BALLS,
     EMOJI_POKEDOLLAR,
+    NOM_SOIN_AFFICHAGE,
     TAUX_CAPTURE,
     affichage_types,
     calculer_pc_derive,
@@ -142,6 +144,12 @@ class VueConfirmerQuitterRaid(discord.ui.View):
             return False
         return True
 
+    @discord.ui.button(label="Annuler", style=discord.ButtonStyle.secondary, emoji="↩️")
+    async def annuler(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
+            return
+        await interaction.response.edit_message(content="Tu restes dans le raid !", view=None)
+
     @discord.ui.button(label="Oui, quitter", style=discord.ButtonStyle.danger, emoji="🚪")
     async def confirmer(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not await self._verifier(interaction):
@@ -165,12 +173,6 @@ class VueConfirmerQuitterRaid(discord.ui.View):
             pass
 
         await interaction.response.edit_message(content="🚪 Tu as quitté le raid.", view=None)
-
-    @discord.ui.button(label="Annuler", style=discord.ButtonStyle.secondary, emoji="↩️")
-    async def annuler(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not await self._verifier(interaction):
-            return
-        await interaction.response.edit_message(content="Tu restes dans le raid !", view=None)
 
 
 # ----------------------------------------------------------------------------
@@ -214,6 +216,72 @@ def construire_embed_raid(raid_row, boss: dict, nb_participants: int) -> discord
     return embed
 
 
+ORDRE_POTIONS_SOIN = ["hyperpotion", "superpotion", "potion"]  # meilleure d'abord (totalsoin exclu, ne rend pas de PV)
+
+
+def soigner_auto_equipe_raid(user_id: int) -> dict:
+    """Utilise automatiquement les meilleures potions disponibles (Hyper > Super >
+    Potion) pour soigner l'équipe de combat du joueur dans le contexte RAID
+    spécifiquement, un Pokémon à la fois, jusqu'à épuisement des dégâts à soigner ou du
+    stock de potions — pour éviter d'avoir à naviguer manuellement pendant un raid où
+    chaque tick compte. Retourne le détail de ce qui a été utilisé/soigné."""
+    noms_equipe = database.obtenir_equipe_combat_disponible(user_id)
+    inventaire = database.obtenir_inventaire_balls(user_id)
+
+    potions_utilisees = {}
+    pv_rendus_total = 0
+    pokemon_soignes = []
+
+    for nom in noms_equipe:
+        pv_max = combat_module.stats_combattant_reel(user_id, nom)["pv"]
+        pv_actuels = database.obtenir_pv_actuels(user_id, nom, pv_max, contexte="raid")
+        if pv_actuels >= pv_max:
+            continue
+
+        pv_avant = pv_actuels
+        for type_potion in ORDRE_POTIONS_SOIN:
+            while pv_actuels < pv_max and inventaire.get(type_potion, 0) > potions_utilisees.get(type_potion, 0):
+                pv_actuels = database.modifier_pv_pokemon(
+                    user_id, nom, round(pv_max * config.SOIN_POURCENT[type_potion]), pv_max, contexte="raid"
+                )
+                potions_utilisees[type_potion] = potions_utilisees.get(type_potion, 0) + 1
+            if pv_actuels >= pv_max:
+                break
+
+        if pv_actuels > pv_avant:
+            pv_rendus_total += pv_actuels - pv_avant
+            pokemon_soignes.append(nom)
+
+    for type_potion, quantite in potions_utilisees.items():
+        database.ajouter_balls(user_id, type_potion, -quantite)
+
+    return {"pokemon_soignes": pokemon_soignes, "potions_utilisees": potions_utilisees, "pv_rendus_total": pv_rendus_total}
+
+
+def construire_embed_suivi_equipe(user_id: int) -> discord.Embed:
+    """État actuel (PV) de l'équipe de combat du joueur dans CE raid — voir
+    VueRaidEnCombat.suivre_equipe pour la boucle qui édite cet embed toutes les 5
+    secondes tant que le raid est en cours."""
+    noms_equipe = database.obtenir_equipe_combat_disponible(user_id)
+    embed = discord.Embed(title="📊 Ton équipe pendant ce raid", color=discord.Color.blue())
+    if not noms_equipe:
+        embed.description = "Aucune équipe de combat configurée."
+        return embed
+
+    lignes = []
+    for nom in noms_equipe:
+        pv_max = combat_module.stats_combattant_reel(user_id, nom)["pv"]
+        pv_actuels = database.obtenir_pv_actuels(user_id, nom, pv_max, contexte="raid")
+        barre_len = 10
+        remplie = round((pv_actuels / pv_max) * barre_len) if pv_max > 0 else 0
+        barre = "🟩" * remplie + "⬜" * (barre_len - remplie)
+        statut = " ☠️ K.O." if pv_actuels <= 0 else ""
+        lignes.append(f"**{nom}** — {pv_actuels}/{pv_max} PV{statut}\n{barre}")
+    embed.description = "\n\n".join(lignes)
+    embed.set_footer(text="Se met à jour automatiquement toutes les 5 secondes.")
+    return embed
+
+
 class VueRaidEnCombat(discord.ui.View):
     """Vue affichée pendant le combat automatique. On ne peut plus rejoindre une fois le
     combat lancé (seule la salle d'attente le permet) — on peut juste configurer son
@@ -246,6 +314,51 @@ class VueRaidEnCombat(discord.ui.View):
             ephemeral=True,
         )
 
+    @discord.ui.button(label="Soin auto", style=discord.ButtonStyle.success, emoji="🩹")
+    async def soin_auto(self, interaction: discord.Interaction, button: discord.ui.Button):
+        resultat = soigner_auto_equipe_raid(interaction.user.id)
+        if not resultat["pokemon_soignes"]:
+            await interaction.response.send_message(
+                "Ton équipe est déjà à pleine vie, ou tu n'as plus aucune potion de soin !", ephemeral=True
+            )
+            return
+        lignes_potions = [
+            f"{NOM_SOIN_AFFICHAGE[type_potion]} ×{qty}" for type_potion, qty in resultat["potions_utilisees"].items()
+        ]
+        await interaction.response.send_message(
+            f"🩹 Soigné : **{', '.join(resultat['pokemon_soignes'])}** (+{resultat['pv_rendus_total']} PV au total)\n"
+            f"Potions utilisées : {', '.join(lignes_potions)}",
+            ephemeral=True,
+        )
+
+    @discord.ui.button(label="Suivre mon équipe", style=discord.ButtonStyle.primary, emoji="📊")
+    async def suivre_equipe(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(embed=construire_embed_suivi_equipe(interaction.user.id), ephemeral=True)
+        interaction.client.loop.create_task(_boucle_suivi_equipe(interaction, self.raid_id, interaction.user.id))
+
+
+async def _boucle_suivi_equipe(interaction: discord.Interaction, raid_id: int, user_id: int):
+    """Édite le message éphémère de suivi d'équipe (voir VueRaidEnCombat.suivre_equipe)
+    toutes les 5 secondes — même rythme que le tick de combat — tant que le raid est
+    encore en cours. Le jeton d'une interaction éphémère reste valide ~15 minutes après
+    l'envoi, ce qui couvre exactement la durée maximale d'un raid
+    (config.DUREE_RAID_MINUTES) : pas besoin de gérer une expiration plus tôt que ça."""
+    debut = time.time()
+    duree_max = config.DUREE_RAID_MINUTES * 60
+    while time.time() - debut < duree_max:
+        await asyncio.sleep(config.INTERVALLE_TICK_COMBAT_RAID)
+        raid_row = database.obtenir_raid_par_id(raid_id)
+        if raid_row is None or not raid_row["actif"]:
+            try:
+                await interaction.edit_original_response(content="🏁 Le raid est terminé.", embed=None)
+            except discord.HTTPException:
+                pass
+            return
+        try:
+            await interaction.edit_original_response(embed=construire_embed_suivi_equipe(user_id))
+        except discord.HTTPException:
+            return  # jeton expiré ou message supprimé/rejeté par le joueur — on arrête proprement
+
 
 class VueConfirmerQuitterRaidEnCombat(discord.ui.View):
     """Confirmation avant de quitter un raid dont le combat est déjà lancé — départ
@@ -263,6 +376,12 @@ class VueConfirmerQuitterRaidEnCombat(discord.ui.View):
             return False
         return True
 
+    @discord.ui.button(label="Annuler", style=discord.ButtonStyle.secondary, emoji="↩️")
+    async def annuler(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._verifier(interaction):
+            return
+        await interaction.response.edit_message(content="Tu restes dans le raid !", view=None)
+
     @discord.ui.button(label="Oui, quitter", style=discord.ButtonStyle.danger, emoji="🚪")
     async def confirmer(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not await self._verifier(interaction):
@@ -274,12 +393,6 @@ class VueConfirmerQuitterRaidEnCombat(discord.ui.View):
             else "Tu n'avais pas rejoint ce raid."
         )
         await interaction.response.edit_message(content=texte, view=None)
-
-    @discord.ui.button(label="Annuler", style=discord.ButtonStyle.secondary, emoji="↩️")
-    async def annuler(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not await self._verifier(interaction):
-            return
-        await interaction.response.edit_message(content="Tu restes dans le raid !", view=None)
 
 
 # Joueurs pour lesquels un diagnostic "0 dégât" a déjà été remonté dans le channel de

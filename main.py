@@ -75,9 +75,11 @@ from pokemon_data import (
     tirer_ivs,
     tirer_niveau_spawn,
     tirer_pokemon_aleatoire,
+    appliquer_deguisement_si_applicable,
     calculer_pc_derive,
 )
-from boutique import construire_embed_boutique, VueBoutique
+from boutique import construire_embed_boutique, construire_embed_marche_noir, VueBoutique, VueMarcheNoir
+from cogs.messages_fixes import construire_embed_village, VueVillage
 from profil import (
     construire_embed_fixe as construire_embed_profil_fixe,
     construire_embed_profil,
@@ -410,6 +412,11 @@ async def envoyer_spawn(
     else:
         multiplicateurs_types = etat_jeu.obtenir_multiplicateurs_types()
         pokemon = tirer_pokemon_aleatoire(poids_rarete, multiplicateurs_types)
+        # Zorua/Zoroark/Métamorph apparaissent toujours déguisés — voir
+        # pokemon_data.py::appliquer_deguisement_si_applicable pour le détail. Ne
+        # s'applique qu'au tirage aléatoire normal, jamais à un spawn forcé par un admin
+        # (qui veut explicitement CE Pokémon-là affiché, pas un autre).
+        pokemon = appliquer_deguisement_si_applicable(pokemon)
 
     niveau = tirer_niveau_spawn(pokemon["rarete"])
     ivs = tirer_ivs()
@@ -777,15 +784,24 @@ async def boucle_evenement_pokestop():
                 channel = bot.get_channel(config.CHANNEL_POKESTOP_ID) if getattr(config, "CHANNEL_POKESTOP_ID", None) else None
                 if channel:
                     try:
-                        await channel.send(
+                        message_annonce = await channel.send(
                             "🔥 **Heure de pointe au PokéStop !** Récompenses doublées pendant 30 minutes !"
                         )
+                        database.definir_parametre("pokestop_annonce_message_id", str(message_annonce.id))
                     except (discord.Forbidden, discord.HTTPException):
                         pass
                 journal.logger("🔥 Heure de pointe PokéStop activée pour 30 minutes.")
             elif not en_cours and etat_jeu.heure_de_pointe_pokestop_active:
                 etat_jeu.heure_de_pointe_pokestop_active = False
                 await poster_message_pokestop_si_absent()
+                channel = bot.get_channel(config.CHANNEL_POKESTOP_ID) if getattr(config, "CHANNEL_POKESTOP_ID", None) else None
+                message_annonce_id = database.obtenir_parametre("pokestop_annonce_message_id")
+                if channel and message_annonce_id:
+                    try:
+                        message_annonce = await channel.fetch_message(int(message_annonce_id))
+                        await message_annonce.delete()
+                    except (discord.NotFound, discord.HTTPException):
+                        pass
                 journal.logger("🔥 Heure de pointe PokéStop terminée.")
         except Exception:
             import traceback
@@ -793,6 +809,84 @@ async def boucle_evenement_pokestop():
             print("⚠️ Erreur dans boucle_evenement_pokestop (le cycle suivant sera quand même tenté) :")
             traceback.print_exc()
             journal.logger("🔴 Erreur dans `boucle_evenement_pokestop` — voir les logs serveur pour le détail complet.")
+
+
+async def boucle_evenement_marche_noir():
+    """Tire un créneau aléatoire de 1h par jour (9h-23h, heure de Paris), INDÉPENDANT
+    de l'Heure de pointe PokéStop (horaire séparé, voir config.DUREE_MARCHE_NOIR),
+    pendant lequel un message dédié apparaît dans le Village Pokémon avec les objets du
+    jour (voir boutique.py::VueMarcheNoir) — un vrai spawn temporaire, retiré à la fin
+    du créneau plutôt qu'un bouton toujours accessible. Le créneau et l'ID du message
+    posté sont stockés en base (table parametres) pour survivre à un redémarrage du bot
+    en plein milieu."""
+    await bot.wait_until_ready()
+    tz = ZoneInfo("Europe/Paris")
+
+    while not bot.is_closed():
+        await asyncio.sleep(60)
+        DERNIERE_ACTIVITE_BOUCLES["evenement_marche_noir"] = time.time()
+
+        try:
+            maintenant_dt = datetime.now(tz)
+            aujourdhui = maintenant_dt.date().isoformat()
+
+            date_programmee = database.obtenir_parametre("marche_noir_event_date")
+            debut_str = database.obtenir_parametre("marche_noir_event_debut")
+
+            if date_programmee != aujourdhui:
+                # Nouveau jour : tirer un nouvel horaire aléatoire, indépendant de celui
+                # du PokéStop (clé de paramètre différente = tirage différent).
+                fin_fenetre_dt = maintenant_dt.replace(
+                    hour=config.HEURE_FIN_FENETRE_POINTE, minute=0, second=0, microsecond=0
+                )
+                dernier_depart_possible = fin_fenetre_dt - timedelta(seconds=config.DUREE_MARCHE_NOIR)
+                minutes_fenetre = int((dernier_depart_possible.hour * 60 + dernier_depart_possible.minute) - config.HEURE_DEBUT_FENETRE_POINTE * 60)
+                offset_minutes = random.randint(0, max(0, minutes_fenetre))
+                debut_dt = maintenant_dt.replace(
+                    hour=config.HEURE_DEBUT_FENETRE_POINTE, minute=0, second=0, microsecond=0
+                ) + timedelta(minutes=offset_minutes)
+
+                database.definir_parametre("marche_noir_event_date", aujourdhui)
+                database.definir_parametre("marche_noir_event_debut", str(int(debut_dt.timestamp())))
+                debut_str = str(int(debut_dt.timestamp()))
+                print(f"🏴‍☠️ Marché Noir programmé aujourd'hui à {debut_dt.strftime('%H:%M')} (heure de Paris).")
+
+            debut_epoch = int(debut_str)
+            fin_epoch = debut_epoch + config.DUREE_MARCHE_NOIR
+            maintenant_epoch = time.time()
+            en_cours = debut_epoch <= maintenant_epoch < fin_epoch
+
+            if en_cours and not etat_jeu.marche_noir_actif:
+                etat_jeu.marche_noir_actif = True
+                channel_id = getattr(config, "CHANNEL_VILLAGE_ID", None)
+                channel = bot.get_channel(channel_id) if channel_id else None
+                if channel:
+                    try:
+                        message = await channel.send(embed=construire_embed_marche_noir(), view=VueMarcheNoir())
+                        database.definir_parametre("marche_noir_message_id", str(message.id))
+                        journal.logger("🏴‍☠️ Marché Noir ouvert pour 1h dans le Village Pokémon.")
+                    except (discord.Forbidden, discord.HTTPException):
+                        pass
+                else:
+                    print("⚠️ CHANNEL_VILLAGE_ID introuvable — le Marché Noir n'a pas pu s'ouvrir aujourd'hui.")
+            elif not en_cours and etat_jeu.marche_noir_actif:
+                etat_jeu.marche_noir_actif = False
+                channel_id = getattr(config, "CHANNEL_VILLAGE_ID", None)
+                channel = bot.get_channel(channel_id) if channel_id else None
+                message_id = database.obtenir_parametre("marche_noir_message_id")
+                if channel and message_id:
+                    try:
+                        message = await channel.fetch_message(int(message_id))
+                        await message.delete()
+                    except (discord.NotFound, discord.HTTPException):
+                        pass
+                journal.logger("🏴‍☠️ Marché Noir fermé pour aujourd'hui.")
+        except Exception:
+            import traceback
+
+            print("⚠️ Erreur dans boucle_evenement_marche_noir (le cycle suivant sera quand même tenté) :")
+            traceback.print_exc()
+            journal.logger("🔴 Erreur dans `boucle_evenement_marche_noir` — voir les logs serveur pour le détail complet.")
 
 
 async def boucle_gladio_spontane():
@@ -841,6 +935,19 @@ async def boucle_notifications_completion():
                 except (discord.Forbidden, discord.HTTPException):
                     pass  # MP fermés ou joueur injoignable — on marque quand même comme notifié
                 database.marquer_exploration_notifiee(row["user_id"], row["slot"])
+
+            # Événements aléatoires "en cours de route" (destinations thématiques,
+            # voir exploration.py::_tirer_evenement) — purement narratif, aucun effet
+            # mécanique immédiat (le bonus éventuel est déjà appliqué à la récupération
+            # finale de la récompense, pas ici).
+            for row in database.obtenir_evenements_exploration_a_notifier():
+                utilisateur = bot.get_user(row["user_id"]) or await bot.fetch_user(row["user_id"])
+                pokemons = ", ".join(p for p in (row["pokemon1"], row["pokemon2"], row["pokemon3"]) if p)
+                try:
+                    await utilisateur.send(f"💬 En chemin, ton équipe ({pokemons}) {row['evenement_texte']}")
+                except (discord.Forbidden, discord.HTTPException):
+                    pass
+                database.marquer_evenement_exploration_notifie(row["user_id"], row["slot"])
 
             for row in database.obtenir_incubations_a_notifier():
                 utilisateur = bot.get_user(row["user_id"]) or await bot.fetch_user(row["user_id"])
@@ -1347,6 +1454,7 @@ async def on_ready():
     await nettoyer_etats_orphelins_au_demarrage()
     bot.add_view(VuePokestop())  # réenregistre la vue persistante après un redémarrage
     bot.add_view(VueBoutique())  # idem pour la boutique
+    bot.add_view(VueVillage())  # idem pour le Village Pokémon (Boutique/PokéStop/Maître des Capacités regroupés)
     bot.add_view(VueProfil())  # idem pour le profil
     bot.add_view(VueOuvrirPokedex())  # idem pour le bouton pokédex affiché sur le profil
     bot.add_view(maitre_types_module.VueMaitreTypes())  # idem pour le Maître des Types
@@ -1406,6 +1514,10 @@ async def on_ready():
         bot.loop.create_task(boucle_evenement_pokestop())
         bot.boucle_evenement_pokestop_lancee = True
 
+    if not getattr(bot, "boucle_evenement_marche_noir_lancee", False):
+        bot.loop.create_task(boucle_evenement_marche_noir())
+        bot.boucle_evenement_marche_noir_lancee = True
+
     if not getattr(bot, "boucle_quiz_lancee", False):
         bot.loop.create_task(quiz_module.boucle_quiz(bot))
         bot.boucle_quiz_lancee = True
@@ -1457,16 +1569,22 @@ async def on_ready():
     if not boucle_classement_capture_rarete.is_running():
         boucle_classement_capture_rarete.start()
 
-    await poster_message_pokestop_si_absent()
-    await poster_message_boutique_si_absent()
-    await poster_message_maitre_types_si_absent()
+    # Les 3 auto-publications individuelles (PokéStop/Boutique/Maître des Capacités)
+    # ont été remplacées par un seul message fixe regroupé — voir
+    # poster_message_village_si_absent() et cogs/messages_fixes.py::VueVillage.
+    # Chaque fonction/commande /setup-X individuelle reste utilisable telle quelle si
+    # besoin (rien de supprimé, juste plus appelé automatiquement ici).
+    await poster_message_village_si_absent()
     await poster_message_wiki_si_absent()
 
     for guild in bot.guilds:
         await parrainage_module.rafraichir_cache(guild)
         parrainage_module.synchroniser_boosters(guild)
     await poster_message_centre_exploration_si_absent()
-    await poster_message_quetes_si_absent()
+    # poster_message_quetes_si_absent() n'est plus appelée automatiquement — les Quêtes
+    # sont maintenant intégrées au message fixe du profil (voir profil.py::VueProfil,
+    # 3 boutons repris de VueCentreQuetes). La fonction reste définie plus bas, utilisable
+    # telle quelle si besoin un jour de la reposter séparément.
     await poster_message_profil_si_absent()
     await poster_message_laboratoire_si_absent()
     await poster_message_ping_raid_si_absent()
@@ -1500,7 +1618,13 @@ async def on_message(message: discord.Message):
 @bot.event
 async def on_member_join(member: discord.Member):
     await parrainage_module.traiter_arrivee(member)
-    await tutoriel_module.poster_accueil(member)
+    # Si un rôle de vérification est configuré, on attend qu'il soit attribué (voir
+    # on_member_update, fusionné avec le suivi du statut booster serveur plus bas) plutôt
+    # que de tenter ici — sur un serveur avec vérification anti-raid, le membre n'a pas
+    # encore accès à la catégorie du channel #profil à ce stade, ce qui empêchait le fil
+    # privé de se synchroniser correctement côté client.
+    if not config.ROLE_VERIFICATION_ID:
+        await tutoriel_module.poster_accueil(member)
 
 
 @bot.event
@@ -1521,9 +1645,18 @@ async def on_invite_delete(invite: discord.Invite):
 @bot.event
 async def on_member_update(before: discord.Member, after: discord.Member):
     """Suit en direct le statut de booster serveur (before.premium_since vs
-    after.premium_since) pour alimenter le bonus argent/xp/shiny correspondant."""
+    after.premium_since) pour alimenter le bonus argent/xp/shiny correspondant.
+    Sert aussi à déclencher le fil d'accueil du tuto sur les serveurs avec vérification
+    anti-raid, une fois que le rôle de vérification vient tout juste d'être attribué —
+    voir on_member_join, qui ne tente rien dans ce cas précisément pour cette raison."""
     if before.premium_since != after.premium_since:
         database.definir_booster_serveur(after.id, after.premium_since is not None)
+
+    if config.ROLE_VERIFICATION_ID:
+        roles_avant = {r.id for r in before.roles}
+        roles_apres = {r.id for r in after.roles}
+        if config.ROLE_VERIFICATION_ID in roles_apres and config.ROLE_VERIFICATION_ID not in roles_avant:
+            await tutoriel_module.poster_accueil(after)
 
 
 async def poster_message_pokestop_si_absent():
@@ -1603,6 +1736,34 @@ async def poster_message_maitre_types_si_absent():
 
     message = await channel.send(embed=embed, view=maitre_types_module.VueMaitreTypes())
     database.definir_parametre("maitre_types_message_id", str(message.id))
+
+
+async def poster_message_village_si_absent():
+    """Poste le message fixe UNIQUE du Village Pokémon (Boutique/PokéStop/Maître des
+    Capacités regroupés, voir cogs/messages_fixes.py::VueVillage), ou le met à jour
+    s'il existe déjà — remplace les 3 anciennes auto-publications séparées."""
+    channel_id = getattr(config, "CHANNEL_VILLAGE_ID", None)
+    if not channel_id:
+        return  # channel non configuré : chaque système reste accessible via /setup-X individuellement
+
+    channel = bot.get_channel(channel_id)
+    if channel is None:
+        print("⚠️ CHANNEL_VILLAGE_ID introuvable — vérifie l'ID dans config.py ou le .env.")
+        return
+
+    embed = construire_embed_village()
+    message_id = database.obtenir_parametre("village_message_id")
+
+    if message_id:
+        try:
+            message_existant = await channel.fetch_message(int(message_id))
+            await message_existant.edit(embed=embed, view=VueVillage())
+            return
+        except discord.NotFound:
+            pass
+
+    message = await channel.send(embed=embed, view=VueVillage())
+    database.definir_parametre("village_message_id", str(message.id))
 
 
 async def poster_message_wiki_si_absent():

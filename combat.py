@@ -7,6 +7,7 @@ import discord
 import capacites as capacites_module
 import combat_visuel
 import formes_objets as formes_objets_module
+import mega_evolutions as mega_evolutions_module
 import config
 import database
 import journal
@@ -659,6 +660,7 @@ def _generer_fichier_scene_combat(combat_id: int, noms: dict, log_tour: list = N
                 return None
             objet = database.obtenir_objet_combat(combat_id, user_id, nom_actif)
             pokemon = formes_objets_module.pokemon_effectif(obtenir_pokemon_par_nom(nom_actif), objet)
+            pokemon = mega_evolutions_module.pokemon_effectif_mega(pokemon, database.obtenir_mega_actif(combat_id, user_id))
             nom_affiche = formes_objets_module.nom_affichage(nom_actif, objet)
             statut = database.obtenir_statut(combat_id, user_id, nom_actif)
             code_statut = statut[0] if statut else None
@@ -2314,6 +2316,66 @@ class VueActionCombat(discord.ui.View):
             return False
         return True
 
+    @discord.ui.button(label="Méga-Évoluer", style=discord.ButtonStyle.primary, emoji="🔷", row=1)
+    async def mega_evoluer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        combat = database.obtenir_combat(self.combat_id)
+        if not combat or not combat["actif"]:
+            await interaction.response.send_message("Ce combat est terminé.", ephemeral=True)
+            return
+        if interaction.user.id not in (combat["joueur1_id"], combat["joueur2_id"]):
+            await interaction.response.send_message("Tu n'es pas un des combattants !", ephemeral=True)
+            return
+        if database.a_deja_mega_evolue(self.combat_id, interaction.user.id):
+            await interaction.response.send_message("Tu as déjà utilisé ta Méga-Évolution pour ce combat !", ephemeral=True)
+            return
+
+        actif_nom = combat["actif1_nom"] if combat["joueur1_id"] == interaction.user.id else combat["actif2_nom"]
+        equipe = database.obtenir_equipe_pvp(self.combat_id, interaction.user.id)
+        row = next((r for r in equipe if r["pokemon_nom"] == actif_nom), None)
+        if row is None or row["pv_actuels"] <= 0:
+            await interaction.response.send_message("Ton Pokémon actif est K.O. !", ephemeral=True)
+            return
+
+        # Cas spécial : Rayquaza n'a besoin d'AUCUNE Pierre Méga — juste de connaître
+        # Draco-Ascension, contrairement à toutes les autres Méga-Évolutions.
+        if actif_nom == "Rayquaza":
+            attaques_equipees = database.obtenir_attaques_equipees(interaction.user.id, "Rayquaza", combat_id=self.combat_id)
+            if mega_evolutions_module.MEGA_RAYQUAZA["attaque_requise"] not in attaques_equipees.values():
+                await interaction.response.send_message(
+                    "❌ **Rayquaza** doit connaître **Draco-Ascension** pour Méga-Évoluer — "
+                    "aucune Pierre Méga n'est nécessaire pour lui, juste cette attaque équipée.",
+                    ephemeral=True,
+                )
+                return
+            stone_info = mega_evolutions_module.MEGA_RAYQUAZA
+            cle_stone = None  # pas de pierre, aucune ambiguïté de variante (une seule Méga-Rayquaza)
+        else:
+            objet_tenu = row["objet_tenu"]
+            stone_info = mega_evolutions_module.MEGA_EVOLUTIONS.get(objet_tenu) if objet_tenu else None
+            if not stone_info or stone_info["espece"] != actif_nom:
+                await interaction.response.send_message(
+                    f"❌ **{actif_nom}** ne tient pas de Pierre Méga compatible — équipe-la d'abord avec `/equiper-objet`.",
+                    ephemeral=True,
+                )
+                return
+            cle_stone = objet_tenu  # distingue les variantes X/Y (Dracaufeu, Mewtwo) pour le bon sprite
+
+        ivs = database.obtenir_meilleures_ivs(interaction.user.id, actif_nom) or IV_DEFAUT
+        pokemon_mega = {
+            "nom": stone_info["forme_nom"], "types": stone_info["types"],
+            "stats_detaillees": stone_info["stats_detaillees"],
+        }
+        nouvelles_stats = calculer_toutes_stats(pokemon_mega, ivs, row["niveau"])
+        database.activer_mega_evolution_combat(
+            self.combat_id, interaction.user.id, row["position"], actif_nom, nouvelles_stats, cle_stone=cle_stone
+        )
+
+        await interaction.response.send_message(
+            f"🔷 **{actif_nom}** Méga-Évolue en **{stone_info['forme_nom']}** ! Ses statistiques de combat sont "
+            f"boostées pour le reste du combat (les PV ne changent jamais). N'oublie pas de choisir ton attaque !",
+            ephemeral=False,
+        )
+
     @discord.ui.button(label="Attaquer", style=discord.ButtonStyle.danger, emoji="⚔️", row=0)
     async def attaquer(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not await self._verifier(interaction):
@@ -2402,8 +2464,42 @@ class VueActionCombat(discord.ui.View):
         if interaction.user.id not in (combat["joueur1_id"], combat["joueur2_id"]):
             await interaction.response.send_message("Tu n'es pas un des combattants !", ephemeral=True)
             return
-        await interaction.response.send_message("🏳️ Tu as abandonné. Défaite enregistrée.", ephemeral=True)
-        await resoudre_abandon(interaction.client, self.combat_id, interaction.user.id)
+        await interaction.response.send_message(
+            "🏳️ Es-tu sûr de vouloir abandonner ? La défaite sera enregistrée immédiatement.",
+            view=VueConfirmationAbandon(self.combat_id, interaction.user.id),
+            ephemeral=True,
+        )
+
+
+class VueConfirmationAbandon(discord.ui.View):
+    """Confirmation avant un abandon — irréversible dès validé, donc un simple clic
+    accidentel sur le bouton principal ne doit jamais suffire à perdre le combat.
+
+    IMPORTANT : "Annuler" est déclaré EN PREMIER (donc affiché en premier/à gauche) —
+    un joueur ayant rapporté un abandon "sans confirmation" malgré un seul clic, le
+    bouton "Oui, abandonner" occupait vraisemblablement à peu près la même position à
+    l'écran que le bouton "Abandonner" initial, rendant un double-tap accidentel au
+    même endroit (fréquent sur mobile) indiscernable d'un vrai clic volontaire sur la
+    confirmation. Mettre l'option sûre en premier réduit ce risque, sans certitude
+    absolue que c'était la cause exacte (aucun bug de code trouvé par ailleurs)."""
+
+    def __init__(self, combat_id: int, user_id: int):
+        super().__init__(timeout=60)
+        self.combat_id = combat_id
+        self.user_id = user_id
+
+    @discord.ui.button(label="Annuler", style=discord.ButtonStyle.secondary)
+    async def annuler(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content="Abandon annulé — le combat continue.", view=None)
+
+    @discord.ui.button(label="Oui, abandonner", style=discord.ButtonStyle.danger, emoji="🏳️")
+    async def confirmer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        combat = database.obtenir_combat(self.combat_id)
+        if not combat or not combat["actif"]:
+            await interaction.response.edit_message(content="Ce combat est déjà terminé.", view=None)
+            return
+        await interaction.response.edit_message(content="🏳️ Tu as abandonné. Défaite enregistrée.", view=None)
+        await resoudre_abandon(interaction.client, self.combat_id, self.user_id)
 
 
 class VueChoixRemplacantKO(discord.ui.View):

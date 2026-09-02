@@ -10,6 +10,25 @@ from pokemon_data import EMOJI_POKEDOLLAR, EMOJI_SOINS, NOM_OBJETS_DIVERS, NOM_S
 OBJETS_BONUS_JOUR = ["hyperball", "totalsoin"]
 
 
+def _guide_pour_evenement(evenement: str) -> str:
+    """Petit texte pratique pointant vers où aller / quelle commande utiliser pour cet
+    objectif — un nouveau joueur ne sait pas forcément où trouver "l'Arène" ou comment
+    défier Gladio juste en lisant le nom de l'objectif. Mentions de channel dynamiques
+    (pas de texte codé en dur avec le nom du channel, qui pourrait changer)."""
+    spawn = f"<#{config.CHANNEL_SPAWN_CLASSIQUE_ID}> ou <#{config.CHANNEL_SPAWN_VIP_ID}>"
+    aventure = f"<#{config.CHANNEL_AVENTURE_ID}>"
+    guides = {
+        "capture": f"💡 Capture des Pokémon sauvages dans {spawn}.",
+        "pve_victoire": f"💡 Défie un Dresseur, dans {aventure}.",
+        "badge_arene": f"💡 Affronte l'Arène (Apprenti puis Champion) dans {aventure}.",
+        "badge_repaire": f"💡 Infiltre un Repaire de méchants dans {aventure}.",
+        "pvp_victoire": "💡 Défie un autre joueur avec `/defier`, dans n'importe quel channel.",
+        "raid_victoire": f"💡 Rejoins un Raid — ils apparaissent périodiquement dans {spawn}.",
+        "gladio_victoire": "💡 Utilise `/gladio` pour voir où en est ton rival et le défier.",
+    }
+    return guides.get(evenement, "")
+
+
 def construire_embed_quete_principale(user_id: int) -> discord.Embed:
     """Fiche de la quête principale (narration) — chapitre en cours avec son texte
     d'intro et la progression, ou l'écran de fin si tous les chapitres sont complétés."""
@@ -32,9 +51,14 @@ def construire_embed_quete_principale(user_id: int) -> discord.Embed:
     chapitre = chapitres[index]
     barre = "🟩" * progression["compteur"] + "⬜" * (chapitre["cible"] - progression["compteur"])
 
+    description = chapitre["intro"]
+    guide = _guide_pour_evenement(chapitre["evenement"])
+    if guide:
+        description += f"\n\n{guide}"
+
     embed = discord.Embed(
         title=f"📖 Quête principale — Chapitre {progression['chapitre']}/{len(chapitres)} : {chapitre['titre']}",
-        description=chapitre["intro"],
+        description=description,
         color=discord.Color.purple(),
     )
     embed.add_field(

@@ -598,6 +598,28 @@ def tirer_pokemon_aleatoire(poids_rarete: dict, multiplicateurs_meteo: dict | No
     return random.choice(pool_pondere)
 
 
+# Zorua, Zoroark (Illusion) et Métamorph (déguisement type tanière Max Raid) apparaissent
+# TOUJOURS sous l'apparence d'un autre Pokémon de la MÊME rareté, jamais la leur — fidèle
+# à leur mécanique dans les vrais jeux. Le déguisement ne touche que l'AFFICHAGE (nom,
+# sprite, types, PC affiché) ; la vraie espèce est révélée à la capture, voir
+# views.py::SelectionBallView._traiter_capture.
+ESPECES_DEGUISABLES = ["Zorua", "Zoroark", "Métamorph"]
+
+
+def appliquer_deguisement_si_applicable(pokemon: dict) -> dict:
+    """Si pokemon est une des ESPECES_DEGUISABLES, retourne un dict d'AFFICHAGE basé sur
+    un autre Pokémon tiré au hasard dans la même rareté (jamais un autre déguisable, pour
+    éviter un Zorua déguisé en Métamorph) — avec la vraie espèce conservée sous la clé
+    "__espece_reelle__" pour la retrouver à la capture. Sinon, retourne pokemon tel quel."""
+    if pokemon["nom"] not in ESPECES_DEGUISABLES:
+        return pokemon
+    candidats = [p for p in POKEDEX if p["rarete"] == pokemon["rarete"] and p["nom"] not in ESPECES_DEGUISABLES]
+    if not candidats:
+        return pokemon  # repli si jamais aucun candidat de cette rareté (ne devrait pas arriver)
+    deguisement = random.choice(candidats)
+    return {**deguisement, "__espece_reelle__": pokemon}
+
+
 def generer_pc(pokemon: dict) -> int:
     """Génère le PC d'un Pokémon sauvage à partir de ses stats de base, d'un multiplicateur
     lié à sa rareté, et d'une légère variance aléatoire (façon IV). Pas de notion de niveau."""

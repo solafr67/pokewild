@@ -21,6 +21,7 @@ from pokemon_data import (
     NOM_OBJETS_DIVERS,
     POKEDEX,
     TAUX_CAPTURE,
+    calculer_pc_derive,
     sprite_pokemon,
 )
 
@@ -122,6 +123,18 @@ class SelectionBallView(discord.ui.View):
         reussite = random.random() < taux
 
         if reussite:
+            # Révélation Zorua/Zoroark/Métamorph : dès qu'une capture réussit, on bascule
+            # self.pokemon/self.pc vers la VRAIE espèce AVANT tout le reste de cette
+            # logique (ajout au Pokédex, quêtes, XP, niveau, sprite affiché) — tout le
+            # code qui suit continue de lire self.pokemon/self.pc normalement, sans
+            # aucun autre changement nécessaire. Le nom affiché (déguisement) est gardé
+            # à part pour le message de révélation plus bas.
+            nom_deguisement_affiche = self.pokemon["nom"]
+            espece_reelle = self.pokemon.get("__espece_reelle__")
+            if espece_reelle is not None:
+                self.pokemon = espece_reelle
+                self.pc = calculer_pc_derive(self.pokemon, self.ivs, self.niveau)
+
             # Vérifié AVANT l'ajout pour savoir si c'est une toute première capture de cette espèce
             nouvelle_entree = database.compter_captures_espece(user_id, self.pokemon["nom"]) == 0
 
@@ -203,6 +216,10 @@ class SelectionBallView(discord.ui.View):
                 user_id, config.XP_POKEMON_PAR_RARETE[self.pokemon["rarete"]]
             )
 
+            texte_revelation = ""
+            if espece_reelle is not None:
+                texte_revelation = f"\n\n🎭 *Ce **{nom_deguisement_affiche}** était en fait un **{self.pokemon['nom']}** déguisé !*"
+
             if est_shiny:
                 embed = discord.Embed(
                     title="✨ CAPTURE SHINY ! ✨",
@@ -210,6 +227,7 @@ class SelectionBallView(discord.ui.View):
                         f"Incroyable ! Tu as capturé un **{self.pokemon['nom']} shiny** "
                         f"({self.pc} PC) !\n+{dollars_gagnes} {EMOJI_POKEDOLLAR} Poké Dollars, +{xp_affichee} XP"
                         f"{quetes_ui_module.texte_notifications_completion(quetes_completees)}"
+                        f"{texte_revelation}"
                     ),
                     color=discord.Color.gold(),
                 )
@@ -221,6 +239,7 @@ class SelectionBallView(discord.ui.View):
                         f"Tu as capturé **{self.pokemon['nom']}** "
                         f"({self.pc} PC) !\n+{dollars_gagnes} {EMOJI_POKEDOLLAR} Poké Dollars, +{xp_affichee} XP"
                         f"{quetes_ui_module.texte_notifications_completion(quetes_completees)}"
+                        f"{texte_revelation}"
                     ),
                     color=discord.Color.green(),
                 )

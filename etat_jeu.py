@@ -2,6 +2,7 @@
 
 meteo_actuelle = None  # None = beau temps (neutre), sinon un dict issu de meteo.METEOS
 heure_de_pointe_pokestop_active = False  # modifié par boucle_evenement_pokestop dans main.py
+marche_noir_actif = False  # modifié par boucle_evenement_marche_noir dans main.py
 
 
 def obtenir_multiplicateurs_types() -> dict:
