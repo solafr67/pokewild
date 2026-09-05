@@ -87,7 +87,11 @@ def init_db():
             date_debut INTEGER NOT NULL,
             channel_annonce_id INTEGER,
             recompense_donnee INTEGER NOT NULL DEFAULT 0,
-            message_id INTEGER
+            message_id INTEGER,
+            date_fin INTEGER,
+            recompense_pd INTEGER NOT NULL DEFAULT 300,
+            recompense_objet TEXT,
+            recompense_quantite_objet INTEGER NOT NULL DEFAULT 0
         )
         """
     )
@@ -95,6 +99,21 @@ def init_db():
         cur.execute("ALTER TABLE defi_collectif_serveur ADD COLUMN message_id INTEGER")
     except sqlite3.OperationalError:
         pass
+
+    # Migration pour les bases créées avant la durée limite + récompense configurable
+    # (voir evenements.py::ModalCibleDefi) — défis déjà en base gardent recompense_pd=300
+    # (ancienne valeur fixe) et date_fin=NULL (pas de limite de temps, comportement
+    # historique inchangé pour ne pas casser un défi déjà en cours au moment du déploi).
+    for colonne, definition in (
+        ("date_fin", "INTEGER"),
+        ("recompense_pd", "INTEGER NOT NULL DEFAULT 300"),
+        ("recompense_objet", "TEXT"),
+        ("recompense_quantite_objet", "INTEGER NOT NULL DEFAULT 0"),
+    ):
+        try:
+            cur.execute(f"ALTER TABLE defi_collectif_serveur ADD COLUMN {colonne} {definition}")
+        except sqlite3.OperationalError:
+            pass
 
     cur.execute(
         """
@@ -1065,6 +1084,15 @@ def init_db():
             pass  # la colonne existe déjà
     try:
         cur.execute("ALTER TABLE combat_equipe ADD COLUMN niveau INTEGER NOT NULL DEFAULT 50")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration : nombre de tours où CE Pokémon précis est resté actif d'affilée depuis
+    # son dernier envoi sur le terrain — remis à 0 à chaque changement, jamais persisté
+    # au-delà du combat. Nécessaire pour Lenteur (Slow Start, voir capacites.py), qui
+    # divise Attaque/Vitesse par 2 pendant les 5 premiers tours après l'envoi.
+    try:
+        cur.execute("ALTER TABLE combat_equipe ADD COLUMN tours_en_jeu INTEGER NOT NULL DEFAULT 0")
     except sqlite3.OperationalError:
         pass  # la colonne existe déjà
 
@@ -2798,6 +2826,32 @@ def previsualiser_doublons(user_id: int) -> dict:
     return resultats
 
 
+def previsualiser_doublons_par_rarete(user_id: int, raretes: set) -> dict:
+    """Comme previsualiser_doublons, mais limité aux espèces dont la rareté figure dans
+    `raretes` — symétrique de relacher_doublons_par_rarete, sans rien supprimer."""
+    import pokemon_data
+
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT pokemon_nom, verrouille,
+               ROW_NUMBER() OVER (PARTITION BY pokemon_nom ORDER BY pc DESC, id ASC) AS rang
+        FROM captures
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+    resultats = {}
+    for row in cur.fetchall():
+        if row["rang"] > 1 and not row["verrouille"]:
+            pokemon = pokemon_data.obtenir_pokemon_par_nom(row["pokemon_nom"])
+            if pokemon and pokemon.get("rarete") in raretes:
+                resultats[row["pokemon_nom"]] = resultats.get(row["pokemon_nom"], 0) + 1
+    conn.close()
+    return resultats
+
+
 def obtenir_doublons_detailles(user_id: int):
     """Comme previsualiser_doublons, mais retourne chaque exemplaire individuel
     (id, pokemon_nom, pc, shiny) plutôt qu'un simple total par espèce — utilisé pour la
@@ -2916,6 +2970,43 @@ def relacher_tous_doublons(user_id: int) -> dict:
         (user_id,),
     )
     a_supprimer = [row for row in cur.fetchall() if row["rang"] > 1 and not row["verrouille"]]
+
+    resultats = {}
+    for row in a_supprimer:
+        resultats[row["pokemon_nom"]] = resultats.get(row["pokemon_nom"], 0) + 1
+
+    if a_supprimer:
+        cur.executemany("DELETE FROM captures WHERE id = ?", [(row["id"],) for row in a_supprimer])
+        conn.commit()
+    conn.close()
+    return resultats
+
+
+def relacher_doublons_par_rarete(user_id: int, raretes: set) -> dict:
+    """Comme relacher_tous_doublons, mais limité aux espèces dont la rareté figure dans
+    `raretes` (ex: {"commun"} ou {"commun", "peu_commun"}) — la rareté est une propriété
+    du Pokédex statique, pas des captures, d'où l'import local de pokemon_data ici plutôt
+    qu'une colonne en base. Retourne {pokemon_nom: quantite_relachee}."""
+    import pokemon_data
+
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT id, pokemon_nom, verrouille,
+               ROW_NUMBER() OVER (PARTITION BY pokemon_nom ORDER BY pc DESC, id ASC) AS rang
+        FROM captures
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+    candidats = [row for row in cur.fetchall() if row["rang"] > 1 and not row["verrouille"]]
+
+    a_supprimer = []
+    for row in candidats:
+        pokemon = pokemon_data.obtenir_pokemon_par_nom(row["pokemon_nom"])
+        if pokemon and pokemon.get("rarete") in raretes:
+            a_supprimer.append(row)
 
     resultats = {}
     for row in a_supprimer:
@@ -3425,8 +3516,46 @@ def changer_pokemon_actif_pvp(combat_id: int, user_id: int, nouveau_nom: str):
         cur.execute("UPDATE combat_pvp SET actif1_nom = ? WHERE id = ?", (nouveau_nom, combat_id))
     else:
         cur.execute("UPDATE combat_pvp SET actif2_nom = ? WHERE id = ?", (nouveau_nom, combat_id))
+    # Réinitialise le compteur "tours en jeu" du nouveau Pokémon actif — nécessaire pour
+    # Lenteur (Slow Start), qui ne dure que les 5 premiers tours après CET envoi précis.
+    cur.execute(
+        "UPDATE combat_equipe SET tours_en_jeu = 0 WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, nouveau_nom),
+    )
     conn.commit()
     conn.close()
+
+
+def incrementer_tours_en_jeu(combat_id: int, user_id: int, pokemon_nom: str) -> int:
+    """À appeler une fois par tour résolu pour le Pokémon RESTÉ actif (pas celui qui vient
+    d'être envoyé, déjà remis à 0 par changer_pokemon_actif_pvp). Retourne le nouveau
+    compteur — utilisé par Lenteur (Slow Start, voir capacites.py)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_equipe SET tours_en_jeu = tours_en_jeu + 1 WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    cur.execute(
+        "SELECT tours_en_jeu FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["tours_en_jeu"] if row else 0
+
+
+def obtenir_tours_en_jeu(combat_id: int, user_id: int, pokemon_nom: str) -> int:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT tours_en_jeu FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["tours_en_jeu"] if row else 0
 
 
 def passer_tour_pvp(combat_id: int, date_limite: int):
@@ -4359,7 +4488,13 @@ def definir_statut(combat_id: int, user_id: int, pokemon_nom: str, statut: str, 
     ⚠️ Respecte aussi les immunités de type des vrais jeux (voir IMMUNITE_STATUT_PAR_TYPE)
     — un Poison/Acier ne peut jamais être empoisonné, un Électrik jamais paralysé, un Feu
     jamais brûlé, un Glace jamais gelé. Centralisé ici pour s'appliquer partout sans
-    exception (1v1, 2v2, dresseurs, raids, ripostes au contact...)."""
+    exception (1v1, 2v2, dresseurs, raids, ripostes au contact...).
+
+    ⚠️ Respecte AUSSI les immunités de CAPACITÉ (Insomnia, Immunité, Ignifugation, Corps
+    Gelé, Limber, Garde Feuille sous Soleil...) — ajouté ici après avoir constaté que ces
+    capacités, bien que déjà curatées dans capacites.py, n'étaient en réalité jamais
+    vérifiées au point principal d'infliction (seule l'immunité de type l'était), les
+    rendant non-fonctionnelles pour leur usage principal malgré leur présence en base."""
     types_a_eviter = IMMUNITE_STATUT_PAR_TYPE.get(statut)
     if types_a_eviter:
         import pokemon_data
@@ -4367,6 +4502,18 @@ def definir_statut(combat_id: int, user_id: int, pokemon_nom: str, statut: str, 
         pokemon = pokemon_data.obtenir_pokemon_par_nom(pokemon_nom)
         if pokemon and types_a_eviter & set(pokemon.get("types", [])):
             return False
+
+    capacite_cible = obtenir_capacite_combat(combat_id, user_id, pokemon_nom)
+    if capacite_cible:
+        import capacites as capacites_module
+
+        if capacites_module.bloque_statut(capacite_cible, statut):
+            return False
+        meteo_actuelle = obtenir_meteo(combat_id)
+        meteo_type = meteo_actuelle["type"] if meteo_actuelle else None
+        if capacites_module.bloque_statut_sous_meteo(capacite_cible, statut, meteo_type):
+            return False
+
     if obtenir_statut(combat_id, user_id, pokemon_nom) is not None:
         return False
     conn = get_connexion()

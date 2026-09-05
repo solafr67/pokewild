@@ -2419,7 +2419,7 @@
         2
       ]
     ],
-    "cible": "soi",
+    "cible": "adversaire",
     "ailment": "confusion",
     "ailment_chance": 0,
     "pp": 15

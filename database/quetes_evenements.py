@@ -21,23 +21,38 @@ from .clan import ajouter_contribution_clan
 from .contrats import incrementer_progression_contrats
 
 
-def demarrer_defi_collectif(type_evenement: str, cible: int, channel_annonce_id: int | None = None) -> int:
+def demarrer_defi_collectif(
+    type_evenement: str,
+    cible: int,
+    channel_annonce_id: int | None = None,
+    duree_secondes: int | None = None,
+    recompense_pd: int = 300,
+    recompense_objet: str | None = None,
+    recompense_quantite_objet: int = 0,
+) -> int:
     """Démarre un nouveau défi collectif, désactivant silencieusement tout défi encore actif
-    (un seul à la fois). Retourne l'id du nouveau défi."""
+    (un seul à la fois). duree_secondes=None = pas de limite de temps (comportement
+    historique). Retourne l'id du nouveau défi."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute("UPDATE defi_collectif_serveur SET actif = 0 WHERE actif = 1")
+    maintenant = int(time.time())
+    date_fin = maintenant + duree_secondes if duree_secondes else None
     cur.execute(
         """
-        INSERT INTO defi_collectif_serveur (type_evenement, cible, progres, actif, date_debut, channel_annonce_id)
-        VALUES (?, ?, 0, 1, ?, ?)
+        INSERT INTO defi_collectif_serveur
+            (type_evenement, cible, progres, actif, date_debut, channel_annonce_id,
+             date_fin, recompense_pd, recompense_objet, recompense_quantite_objet)
+        VALUES (?, ?, 0, 1, ?, ?, ?, ?, ?, ?)
         """,
-        (type_evenement, cible, int(time.time()), channel_annonce_id),
+        (type_evenement, cible, maintenant, channel_annonce_id, date_fin,
+         recompense_pd, recompense_objet, recompense_quantite_objet),
     )
     defi_id = cur.lastrowid
     conn.commit()
     conn.close()
     return defi_id
+
 
 
 def obtenir_defi_collectif_actif() -> dict | None:
@@ -60,12 +75,17 @@ def definir_message_defi_collectif(defi_id: int, message_id: int):
 def progresser_defi_collectif(user_id: int, type_evenement: str, montant: int = 1) -> dict | None:
     """Fait progresser le défi collectif actif s'il correspond à `type_evenement`.
     Retourne un dict avec l'état à jour (et 'vient_de_finir': bool) si un défi actif
-    correspondait, sinon None (aucun défi actif de ce type, rien à faire)."""
+    correspondait, sinon None (aucun défi actif de ce type, rien à faire — y compris si
+    le défi a une date_fin déjà dépassée, même si la boucle périodique ne l'a pas encore
+    officiellement désactivé : une capture après l'heure limite ne doit jamais compter)."""
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute("SELECT * FROM defi_collectif_serveur WHERE actif = 1 AND type_evenement = ? LIMIT 1", (type_evenement,))
     defi = cur.fetchone()
     if defi is None:
+        conn.close()
+        return None
+    if defi["date_fin"] is not None and int(time.time()) > defi["date_fin"]:
         conn.close()
         return None
 
@@ -94,6 +114,38 @@ def arreter_defi_collectif():
     conn = get_connexion()
     cur = conn.cursor()
     cur.execute("UPDATE defi_collectif_serveur SET actif = 0 WHERE actif = 1")
+    conn.commit()
+    conn.close()
+
+
+def obtenir_defis_collectifs_expires_sans_succes() -> list:
+    """Défis encore actifs dont la date_fin est dépassée SANS que la cible ait été
+    atteinte — personne ne reçoit rien dans ce cas (voir evenements.py, la durée est
+    une vraie limite dure). Ne retourne rien pour les défis sans date_fin (pas de
+    limite de temps, comportement historique)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT * FROM defi_collectif_serveur WHERE actif = 1 AND date_fin IS NOT NULL "
+        "AND date_fin <= ? AND progres < cible",
+        (int(time.time()),),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def expirer_defi_collectif_sans_succes(defi_id: int):
+    """Désactive un défi collectif arrivé au bout de son temps sans avoir atteint sa
+    cible — marqué recompense_donnee=1 directement (pas de récompense à distribuer,
+    mais on évite qu'il ressorte par erreur dans obtenir_defis_collectifs_a_recompenser
+    si jamais sa progression finissait par dépasser la cible après coup, ce qui ne
+    devrait plus arriver une fois désactivé de toute façon)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE defi_collectif_serveur SET actif = 0, recompense_donnee = 1 WHERE id = ?", (defi_id,)
+    )
     conn.commit()
     conn.close()
 

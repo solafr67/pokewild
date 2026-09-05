@@ -84,15 +84,19 @@ def _tirer_evenement(duree_label: str, date_debut: int, date_fin: int):
     return planifie_a, evenement["texte"], evenement["bonus_dollars"]
 
 
+def _pokemon_correspond_destination(nom: str, destination: str) -> bool:
+    """Ce Pokémon précis a-t-il un type correspondant au thème de cette destination ?
+    Utilisé à la fois pour le calcul du bonus d'équipe (_a_affinite_type) et pour le
+    marquage visuel ✨ individuel pendant la sélection d'équipe."""
+    types_theme = DESTINATIONS_EXPLORATION[destination]["types_affinite"]
+    pokemon = obtenir_pokemon_par_nom(nom)
+    return bool(pokemon and any(t in types_theme for t in pokemon.get("types", [])))
+
+
 def _a_affinite_type(pokemons: list, destination: str) -> bool:
     """Au moins NB_AFFINITE_REQUIS des Pokémon envoyés ont un type correspondant au
     thème de la destination."""
-    types_theme = DESTINATIONS_EXPLORATION[destination]["types_affinite"]
-    nb_correspondants = 0
-    for nom in pokemons:
-        pokemon = obtenir_pokemon_par_nom(nom)
-        if pokemon and any(t in types_theme for t in pokemon.get("types", [])):
-            nb_correspondants += 1
+    nb_correspondants = sum(1 for nom in pokemons if _pokemon_correspond_destination(nom, destination))
     return nb_correspondants >= NB_AFFINITE_REQUIS
 
 
@@ -222,15 +226,28 @@ class VueTableauDeBord(discord.ui.View):
             if interaction.user.id != self.user_id:
                 await interaction.response.send_message("Ce n'est pas ton tableau de bord !", ephemeral=True)
                 return
-            vue = VueChoixEquipeExploration(self.user_id, slot)
-            if not vue.especes_disponibles:
+            # Vérifié ici, AVANT même de proposer une destination — inutile de faire
+            # choisir un thème à quelqu'un qui n'a de toute façon aucun Pokémon disponible.
+            indisponibles = database.especes_en_exploration(self.user_id)
+            stats = _stats_par_espece(self.user_id)
+            if not any(nom not in indisponibles for nom in stats):
                 await interaction.response.send_message(
                     "Tu n'as aucun Pokémon disponible (déjà tous en exploration, ou aucune capture) !",
                     ephemeral=True,
                 )
                 return
+            vue = VueChoixDestinationExploration(self.user_id, slot)
+            lignes_destinations = [
+                f"{info['emoji']} **{info['nom']}** ({'/'.join(t.capitalize() for t in info['types_affinite'])}) "
+                f"— {info['description']}"
+                for info in DESTINATIONS_EXPLORATION.values()
+            ]
             await interaction.response.send_message(
-                f"Choisis {config.EXPLORATION_TAILLE_EQUIPE} Pokémon à envoyer explorer (emplacement {slot}) :",
+                content=(
+                    f"🗺️ Choisis d'abord une destination (emplacement {slot}) — les types entre "
+                    f"parenthèses donnent le bonus d'affinité si au moins {NB_AFFINITE_REQUIS} de tes "
+                    f"3 Pokémon y correspondent :\n\n" + "\n".join(lignes_destinations)
+                ),
                 view=vue,
                 ephemeral=True,
             )
@@ -247,17 +264,22 @@ class VueTableauDeBord(discord.ui.View):
 
 
 class VueChoixEquipeExploration(discord.ui.View):
-    """Sélection de 3 Pokémon (parmi les espèces disponibles) puis de la durée.
+    """Sélection de 3 Pokémon (parmi les espèces disponibles) — la destination est déjà
+    choisie à ce stade (voir VueChoixDestinationExploration, désormais la toute première
+    étape) : les espèces dont le type correspond au thème sont marquées ✨ pour aider à
+    composer une équipe qui débloque le bonus d'affinité, plutôt que de le découvrir
+    après coup et devoir tout annuler.
 
     Paginée par 25 (limite dure d'un menu déroulant Discord) — la sélection est
     conservée d'une page à l'autre, seul l'AFFICHAGE change en changeant de page."""
 
     TAILLE_PAGE = 25
 
-    def __init__(self, user_id: int, slot: int):
+    def __init__(self, user_id: int, slot: int, destination: str):
         super().__init__(timeout=120)
         self.user_id = user_id
         self.slot = slot
+        self.destination = destination
         self.selection = []
         self.page = 0
 
@@ -277,7 +299,10 @@ class VueChoixEquipeExploration(discord.ui.View):
 
         options = [
             discord.SelectOption(
-                label=f"{nom} ({stats[nom]['pc']} PC)",
+                label=(
+                    f"{'✨ ' if _pokemon_correspond_destination(nom, self.destination) else ''}"
+                    f"{nom} ({stats[nom]['pc']} PC)"
+                ),
                 value=nom,
                 default=(nom in self.selection),
             )
@@ -361,34 +386,38 @@ class VueChoixEquipeExploration(discord.ui.View):
             return
         if len(self.selection) != config.EXPLORATION_TAILLE_EQUIPE:
             return
-        vue = VueChoixDestinationExploration(self.user_id, self.slot, self.selection)
-        lignes_destinations = []
-        for cle, info in DESTINATIONS_EXPLORATION.items():
-            marque = " ✨" if _a_affinite_type(self.selection, cle) else ""
-            lignes_destinations.append(f"{info['emoji']} **{info['nom']}**{marque} — {info['description']}")
+        info = DESTINATIONS_EXPLORATION[self.destination]
+        texte_affinite = (
+            "\n✨ Affinité de type détectée — bonus supplémentaire sur les chances de récompense !"
+            if _a_affinite_type(self.selection, self.destination) else ""
+        )
+        vue = VueChoixDureeExploration(self.user_id, self.slot, self.selection, self.destination)
         await interaction.response.edit_message(
             content=(
-                f"Équipe choisie : **{', '.join(self.selection)}**.\n"
-                f"Choisis une destination (✨ = ton équipe a une affinité de type avec ce thème, bonus supplémentaire) :\n\n"
-                + "\n".join(lignes_destinations)
+                f"Équipe : **{', '.join(self.selection)}**\n"
+                f"Destination : {info['emoji']} **{info['nom']}**{texte_affinite}\n\n"
+                f"Pour combien de temps ?"
             ),
             view=vue,
         )
 
 
 class VueChoixDestinationExploration(discord.ui.View):
-    """Choix de la destination thématique — influence le TYPE de récompense (voir
-    DESTINATIONS_EXPLORATION), avec un bonus supplémentaire (BONUS_AFFINITE_TYPE) si
-    l'équipe envoyée a une affinité de type avec le thème choisi."""
+    """Première étape désormais : choisis la destination AVANT l'équipe (voir
+    VueTableauDeBord._creer_callback_envoyer) — pour savoir quels types visent le bonus
+    d'affinité avant même de composer l'équipe, plutôt que de devoir annuler et
+    recommencer si l'équipe déjà choisie ne correspondait à aucun thème."""
 
-    def __init__(self, user_id: int, slot: int, pokemons: list):
+    def __init__(self, user_id: int, slot: int):
         super().__init__(timeout=60)
         self.user_id = user_id
         self.slot = slot
-        self.pokemons = pokemons
 
         for cle, info in DESTINATIONS_EXPLORATION.items():
-            bouton = discord.ui.Button(label=info["nom"], emoji=info["emoji"], style=discord.ButtonStyle.primary)
+            types_texte = "/".join(t.capitalize() for t in info["types_affinite"])
+            bouton = discord.ui.Button(
+                label=f"{info['nom']} ({types_texte})", emoji=info["emoji"], style=discord.ButtonStyle.primary
+            )
             bouton.callback = self._creer_callback(cle)
             self.add_item(bouton)
 
@@ -398,16 +427,14 @@ class VueChoixDestinationExploration(discord.ui.View):
                 await interaction.response.send_message("Ce n'est pas ta sélection !", ephemeral=True)
                 return
             info = DESTINATIONS_EXPLORATION[destination]
-            texte_affinite = (
-                "\n✨ Affinité de type détectée — bonus supplémentaire sur les chances de récompense !"
-                if _a_affinite_type(self.pokemons, destination) else ""
-            )
-            vue = VueChoixDureeExploration(self.user_id, self.slot, self.pokemons, destination)
+            types_texte = "/".join(t.capitalize() for t in info["types_affinite"])
+            vue = VueChoixEquipeExploration(self.user_id, self.slot, destination)
             await interaction.response.edit_message(
                 content=(
-                    f"Équipe : **{', '.join(self.pokemons)}**\n"
-                    f"Destination : {info['emoji']} **{info['nom']}**{texte_affinite}\n\n"
-                    f"Pour combien de temps ?"
+                    f"Destination : {info['emoji']} **{info['nom']}** ({types_texte})\n"
+                    f"✨ dans la liste = ce Pokémon a une affinité avec ce thème (bonus si au moins "
+                    f"{NB_AFFINITE_REQUIS} d'entre eux dans l'équipe)\n\n"
+                    f"Choisis {config.EXPLORATION_TAILLE_EQUIPE} Pokémon à envoyer explorer :"
                 ),
                 view=vue,
             )

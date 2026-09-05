@@ -577,6 +577,24 @@ def _declencher_talent_entree(combat_id: int, user_id: int, pokemon_nom: str, ad
     if row is None or row["pv_actuels"] <= 0:
         return
     capacite = database.obtenir_capacite_combat(combat_id, user_id, pokemon_nom)
+
+    # Téléchargement (Download) : cas à part, la stat boostée dépend DYNAMIQUEMENT de la
+    # Défense/Défense Spé. de l'ADVERSAIRE au moment de l'envoi — impossible à exprimer
+    # avec le simple stat_entree=(stat, delta) fixe utilisé par les autres talents d'entrée.
+    if capacite == "telechargement":
+        eq_adv = database.obtenir_equipe_pvp(combat_id, adversaire_id)
+        combat_actuel = database.obtenir_combat(combat_id)
+        nom_actif_adv = combat_actuel["actif1_nom"] if adversaire_id == combat_actuel["joueur1_id"] else combat_actuel["actif2_nom"]
+        row_adv = next((r for r in eq_adv if r["pokemon_nom"] == nom_actif_adv), None)
+        if row_adv is None or row_adv["pv_actuels"] <= 0:
+            return
+        stat_choisie = "atk" if row_adv["defe"] < row_adv["def_spe"] else "atk_spe"
+        nouveau_stage_dl = database.modifier_boost(combat_id, user_id, pokemon_nom, stat_choisie, 1)
+        log.append(
+            f"  💾 **{pokemon_nom}** (Téléchargement) : +1 {NOMS_STATS[stat_choisie]} (stage {nouveau_stage_dl:+d})"
+        )
+        return
+
     info = capacites_module.infos_capacite(capacite) if capacite else None
     if not info or not info.get("sur_entree"):
         return
@@ -623,6 +641,21 @@ def _declencher_meteo_entree(combat_id: int, user_id: int, pokemon_nom: str, log
     database.definir_meteo(combat_id, meteo, 5)
     info_capacite = capacites_module.infos_capacite(capacite)
     log.append(f"  {METEO_INFO[meteo]['emoji']} **{pokemon_nom}** ({info_capacite['nom']}) — {METEO_INFO[meteo]['texte_debut']}")
+
+
+def _declencher_terrain_entree(combat_id: int, user_id: int, pokemon_nom: str, log: list):
+    """Électro/Chloro/Aura/Psycho Surge (les 4 Tapu) — même principe que
+    _declencher_meteo_entree, pour le terrain de zone plutôt que la météo."""
+    capacite = database.obtenir_capacite_combat(combat_id, user_id, pokemon_nom)
+    terrain = capacites_module.terrain_declenche_a_entree(capacite) if capacite else None
+    if not terrain:
+        return
+    terrain_actuel = database.obtenir_terrain_zone(combat_id)
+    if terrain_actuel and terrain_actuel["type"] == terrain:
+        return  # déjà actif, rien à refaire
+    database.definir_terrain_zone(combat_id, terrain, 5)
+    info_capacite = capacites_module.infos_capacite(capacite)
+    log.append(f"  {TERRAIN_INFO[terrain]['emoji']} **{pokemon_nom}** ({info_capacite['nom']}) — {TERRAIN_INFO[terrain]['texte_debut']}")
 
 
 def _declencher_fouille_entree(combat_id: int, user_id: int, pokemon_nom: str, adversaire_id: int, log: list):
@@ -762,6 +795,7 @@ async def resoudre_tour(combat_id: int) -> list:
             _appliquer_hazards_entree(combat_id, user_id, nouveau, log)
             _declencher_talent_entree(combat_id, user_id, nouveau, j1 if user_id == j2 else j2, log)
             _declencher_meteo_entree(combat_id, user_id, nouveau, log)
+            _declencher_terrain_entree(combat_id, user_id, nouveau, log)
             _declencher_fouille_entree(combat_id, user_id, nouveau, j1 if user_id == j2 else j2, log)
 
     # --- Phase 2 : potions ---
@@ -796,13 +830,16 @@ async def resoudre_tour(combat_id: int) -> list:
             continue
         boosts = database.obtenir_boosts(combat_id, user_id, nom)
         objet_vitesse = database.obtenir_objet_combat(combat_id, user_id, nom)
+        capacite_pour_vitesse = database.obtenir_capacite_combat(combat_id, user_id, nom)
         vitesse = row["vit"] * mult_stage(boosts["vit"]) * capacites_module.multiplicateur_stat_objet(objet_vitesse, "vit")
         # Chlorophylle/Nage Rapide : Vitesse doublée sous la bonne météo.
         meteo_pour_vitesse = database.obtenir_meteo(combat_id)
         vitesse *= capacites_module.multiplicateur_vitesse_meteo(
-            database.obtenir_capacite_combat(combat_id, user_id, nom),
+            capacite_pour_vitesse,
             meteo_pour_vitesse["type"] if meteo_pour_vitesse else None,
         )
+        # Lenteur (Slow Start) : Vitesse divisée par 2 pendant les 5 premiers tours après l'envoi.
+        vitesse *= capacites_module.multiplicateur_debut_lent(capacite_pour_vitesse, row["tours_en_jeu"])["vit"]
         statut_actuel = database.obtenir_statut(combat_id, user_id, nom)
         if statut_actuel and statut_actuel[0] == "paralysis":
             vitesse /= 2  # la paralysie ralentit
@@ -1251,6 +1288,12 @@ async def resoudre_tour(combat_id: int) -> list:
             stage_def_pour_degats = min(0, boosts_def[cle_boost_def]) if est_critique else boosts_def[cle_boost_def]
             stat_def_boostee = max(1, stat_def * mult_stage(stage_def_pour_degats))
             stat_off_boostee = max(1, stat_off * mult_stage(stage_off_pour_degats) * mult_stat_choix)
+            # Fléau (Chongjian/Baojian/Dinglu/Yuyu) : -25% sur UNE stat précise de tout le
+            # monde SAUF son propre porteur — vérifié depuis la capacité DE L'AUTRE camp,
+            # jamais la sienne propre (fidèle à "jamais chez lui-même" dans les vrais jeux).
+            capacite_atk_pour_fleau = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+            stat_off_boostee *= capacites_module.multiplicateur_fleau(capacite_def_crit, cle_boost_off)
+            stat_def_boostee *= capacites_module.multiplicateur_fleau(capacite_atk_pour_fleau, cle_boost_def)
             # Bonus permanent d'Arène : +X% si l'attaquant a débloqué le badge du type de
             # cette attaque (voir arene.py / config.ARENE_BONUS_DEGATS_PAR_BADGE). Les
             # badges de Repaire de méchants donnent un bonus différent (multiplicateur_boost
@@ -1271,14 +1314,27 @@ async def resoudre_tour(combat_id: int) -> list:
                 mult_talent_objet *= 1.5  # Technicien
             if capacites_module.double_pas_tres_efficace(capacite_atk) and multi_type < 1.0:
                 mult_talent_objet *= 2.0  # Lentiteintée
+            if attaque.get("classe") == "physical":
+                # Lenteur (Slow Start) : ne touche QUE l'Attaque physique, jamais l'Attaque
+                # Spéciale — fidèle aux vrais jeux.
+                mult_talent_objet *= capacites_module.multiplicateur_debut_lent(capacite_atk, row_atk["tours_en_jeu"])["atk"]
 
             capacite_def = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
             mult_talent_objet *= capacites_module.multiplicateur_degats_subis(capacite_def, multi_type)
+            # Bouclier de l'Ombre (Lunala) : -50% dégâts subis tant qu'à pleine vie.
+            mult_talent_objet *= capacites_module.multiplicateur_degats_pleine_vie(
+                capacite_def, row_def["pv_actuels"], row_def["pv_max"]
+            )
 
             # Météo : Feu/Eau boostés ou affaiblis de 50% sous Soleil/Pluie (l'un renforce
             # son propre type et affaiblit l'opposé).
             mult_meteo = 1.0
             meteo_active = database.obtenir_meteo(combat_id)
+            # Air Lock (Rayquaza) — annule l'effet de la météo sur les dégâts, peu importe
+            # quel camp le possède (v1 : voir capacites_module.annule_meteo pour la portée
+            # exacte, ne couvre pas encore la Vitesse ni les dégâts de fin de tour).
+            if capacites_module.annule_meteo(capacite_atk) or capacites_module.annule_meteo(capacite_def):
+                meteo_active = None
             if meteo_active:
                 if meteo_active["type"] == "soleil":
                     mult_meteo = 1.5 if attaque["type"] == "feu" else (0.5 if attaque["type"] == "eau" else 1.0)
@@ -1287,6 +1343,11 @@ async def resoudre_tour(combat_id: int) -> list:
             mult_meteo *= capacites_module.multiplicateur_types_meteo(
                 capacite_atk, meteo_active["type"] if meteo_active else None, attaque["type"]
             )  # Force Sable
+
+            # Aura Fée/Aura Sombre : +33% sur les attaques Fée/Ténèbres de N'IMPORTE QUI
+            # (les deux capacités sont vérifiées côté attaquant ET défenseur).
+            mult_aura = capacites_module.multiplicateur_aura(capacite_atk, capacite_def, attaque["type"])
+            mult_aura *= capacites_module.multiplicateur_type_signature(capacite_atk, attaque["type"])  # Transistor/Gueule Draconique
 
             # Terrain de zone : +30% sur le type assorti, mais UNIQUEMENT si l'attaquant
             # est au sol (Vol/Lévitation ignorent totalement le Terrain).
@@ -1321,7 +1382,7 @@ async def resoudre_tour(combat_id: int) -> list:
             mult_lance_boue = 0.5 if attaque["type"] == "electrik" and database.obtenir_effet_global(combat_id, "lance_boue") else 1.0
             degats = max(1, round(
                 ((2 * row_atk["niveau"] / 5 + 2) * attaque["puissance"] * stat_off_boostee / stat_def_boostee / 50 + 2)
-                * multi_type * stab * variance * bonus_badge * mult_talent_objet * mult_meteo * mult_terrain * mult_ecran * mult_lance_boue * mult_critique
+                * multi_type * stab * variance * bonus_badge * mult_talent_objet * mult_meteo * mult_aura * mult_terrain * mult_ecran * mult_lance_boue * mult_critique
             ))
 
             # Ceinture Force (objet à usage unique, se consomme) OU Rustique (aptitude
@@ -1341,6 +1402,16 @@ async def resoudre_tour(combat_id: int) -> list:
 
             pv_restants = database.appliquer_degats_pvp(combat_id, adversaire_id, nom_def, degats)
             degats_subis_ce_tour.add(adversaire_id)
+
+            # Justicier (Cobalium/Terrakium/Viridium) : +1 Attaque quand touché par une
+            # attaque Ténèbres — vérifié sur la capacité du DÉFENSEUR, se déclenche même
+            # si l'attaque était super efficace/pas très efficace, mais pas si K.O.
+            if pv_restants > 0:
+                boost_justicier = capacites_module.boost_attaque_si_touche_par_type(capacite_def, attaque["type"])
+                if boost_justicier:
+                    stat_j, delta_j = boost_justicier
+                    nouveau_stage_j = database.modifier_boost(combat_id, adversaire_id, nom_def, stat_j, delta_j)
+                    log.append(f"  ⚖️ **{nom_def}** active **Justicier** ! (+{delta_j} {NOMS_STATS[stat_j]}, stage {nouveau_stage_j:+d})")
 
             # Une attaque de type Feu dégèle instantanément la cible, en plus du jet de
             # 20%/tour classique — comme dans les vrais jeux.
@@ -1831,6 +1902,18 @@ async def resoudre_tour(combat_id: int) -> list:
         database.appliquer_degats_pvp(combat_id, user_id_requiem, nom_requiem, 999999)
         log.append(f"🎵 **{nom_requiem}** s'effondre, à bout de souffle... 💀 K.O. !")
 
+    # --- Compteur "tours en jeu" (Lenteur/Slow Start) : incrémenté pour qui est resté
+    # actif tout le tour (un Pokémon qui vient d'être envoyé a déjà été remis à 0 par
+    # changer_pokemon_actif_pvp, donc l'incrémenter ici aussi ferait démarrer son compte
+    # à 1 au lieu de 0 dès son premier tour réellement joué).
+    combat = database.obtenir_combat(combat_id)
+    for user_id in (j1, j2):
+        nom_actif = combat["actif1_nom"] if user_id == j1 else combat["actif2_nom"]
+        eq = database.obtenir_equipe_pvp(combat_id, user_id)
+        actif_row = next((r for r in eq if r["pokemon_nom"] == nom_actif), None)
+        if actif_row and actif_row["pv_actuels"] > 0 and user_id not in switches_volontaires:
+            database.incrementer_tours_en_jeu(combat_id, user_id, nom_actif)
+
     # --- Dégâts de fin de tour : brûlure et poison ---
     combat = database.obtenir_combat(combat_id)
     for user_id in (j1, j2):
@@ -1851,6 +1934,29 @@ async def resoudre_tour(combat_id: int) -> list:
             log.append(f"{info['emoji']} **{nom_actif}** souffre de son statut ({info['nom']}) : -{degats_statut} PV")
             if pv_apres <= 0:
                 log.append(f"  💀 **{nom_actif}** est K.O. !")
+
+        # Cauchemar (Bad Dreams) : dépend de la capacité de L'ADVERSAIRE (pas de celui qui
+        # subit le sommeil), vérifié donc séparément de brûlure/poison ci-dessus. Relit les
+        # PV à jour de ce Pokémon (actif_row peut être périmé si brûlure/poison l'a déjà
+        # blessé juste au-dessus, dans cette même itération).
+        statut_actuel_apres = database.obtenir_statut(combat_id, user_id, nom_actif)
+        if statut_actuel_apres and statut_actuel_apres[0] == "sleep":
+            eq_a_jour = database.obtenir_equipe_pvp(combat_id, user_id)
+            actif_row_a_jour = next((r for r in eq_a_jour if r["pokemon_nom"] == nom_actif), None)
+            if actif_row_a_jour and actif_row_a_jour["pv_actuels"] > 0:
+                adversaire_id = j2 if user_id == j1 else j1
+                nom_actif_adv = combat["actif2_nom"] if user_id == j1 else combat["actif1_nom"]
+                eq_adv = database.obtenir_equipe_pvp(combat_id, adversaire_id)
+                actif_row_adv = next((r for r in eq_adv if r["pokemon_nom"] == nom_actif_adv), None)
+                if actif_row_adv and actif_row_adv["pv_actuels"] > 0:
+                    capacite_adv = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_actif_adv)
+                    fraction_cauchemar = capacites_module.inflige_degats_sommeil_adverse(capacite_adv)
+                    if fraction_cauchemar:
+                        degats_cauchemar = max(1, round(actif_row_a_jour["pv_max"] * fraction_cauchemar))
+                        pv_apres_cauchemar = database.appliquer_degats_pvp(combat_id, user_id, nom_actif, degats_cauchemar)
+                        log.append(f"😴 **{nom_actif}** souffre de Cauchemar (**{nom_actif_adv}**) : -{degats_cauchemar} PV")
+                        if pv_apres_cauchemar <= 0:
+                            log.append(f"  💀 **{nom_actif}** est K.O. !")
 
     # --- Vérifier les K.O. et gérer le remplacement (+ changements volontaires post-attaque) ---
     combat = database.obtenir_combat(combat_id)

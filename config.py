@@ -668,7 +668,9 @@ TYPES_DEFI_COLLECTIF = {
     "pve_victoire": "Victoires contre un Dresseur",
     "pokestop": "Tours de PokéStop",
 }
-RECOMPENSE_DEFI_COLLECTIF_PD = 300  # Poké Dollars par participant ayant contribué au moins 1 fois
+RECOMPENSE_DEFI_COLLECTIF_PD = 300  # VESTIGIAL depuis que la récompense est configurable
+# par lancement (voir evenements.py::ModalCibleDefi et database.demarrer_defi_collectif,
+# paramètre recompense_pd) — plus lu nulle part, gardé seulement pour référence.
 
 XP_RAID_PAR_ETOILE = {1: 50, 2: 75, 3: 100, 4: 150, 5: 250}
 

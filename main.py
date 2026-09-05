@@ -602,13 +602,47 @@ async def boucle_verification_evenements():
         for defi in database.obtenir_defis_collectifs_a_recompenser():
             participants = database.obtenir_participants_defi_collectif(defi["id"])
             for user_id, _contribution in participants:
-                database.ajouter_poke_dollars(user_id, config.RECOMPENSE_DEFI_COLLECTIF_PD)
+                database.ajouter_poke_dollars(user_id, defi["recompense_pd"])
+                if defi["recompense_objet"] and defi["recompense_quantite_objet"]:
+                    database.ajouter_balls(user_id, defi["recompense_objet"], defi["recompense_quantite_objet"])
             database.marquer_defi_collectif_recompense(defi["id"])
             channel = bot.get_channel(defi["channel_annonce_id"]) if defi["channel_annonce_id"] else None
             if channel:
                 nom = config.TYPES_DEFI_COLLECTIF.get(defi["type_evenement"], defi["type_evenement"])
-                embed = evenements_module.construire_embed_defi_termine(nom, defi["cible"], len(participants))
+                embed = evenements_module.construire_embed_defi_termine(
+                    nom, defi["cible"], len(participants),
+                    defi["recompense_pd"], defi["recompense_objet"], defi["recompense_quantite_objet"],
+                )
                 await _editer_ou_envoyer(channel, defi.get("message_id"), embed)
+
+        # Défis collectifs dont le temps s'est écoulé SANS que la cible soit atteinte —
+        # personne ne reçoit rien (durée = vraie limite dure, voir evenements.py)
+        for defi in database.obtenir_defis_collectifs_expires_sans_succes():
+            database.expirer_defi_collectif_sans_succes(defi["id"])
+            channel = bot.get_channel(defi["channel_annonce_id"]) if defi["channel_annonce_id"] else None
+            if channel:
+                nom = config.TYPES_DEFI_COLLECTIF.get(defi["type_evenement"], defi["type_evenement"])
+                embed = evenements_module.construire_embed_defi_echoue(nom, defi["cible"], defi["progres"])
+                await _editer_ou_envoyer(channel, defi.get("message_id"), embed)
+
+        # Rafraîchit la barre de progression du défi collectif ACTIF (s'il a une durée
+        # limite — sinon rien à rafraîchir, pas de compte à rebours à afficher)
+        defi_actif = database.obtenir_defi_collectif_actif()
+        if defi_actif and defi_actif["date_fin"] and defi_actif.get("message_id"):
+            channel = bot.get_channel(defi_actif["channel_annonce_id"]) if defi_actif["channel_annonce_id"] else None
+            if channel:
+                nom = config.TYPES_DEFI_COLLECTIF.get(defi_actif["type_evenement"], defi_actif["type_evenement"])
+                embed = evenements_module.construire_embed_defi_en_cours(
+                    nom, defi_actif["cible"], defi_actif["progres"], defi_actif["date_fin"],
+                    defi_actif["recompense_pd"], defi_actif["recompense_objet"], defi_actif["recompense_quantite_objet"],
+                )
+                try:
+                    message = await channel.fetch_message(defi_actif["message_id"])
+                    await message.edit(embed=embed)
+                except discord.NotFound:
+                    pass
+                except discord.HTTPException:
+                    pass
 
         # Chasses aux shiny arrivées à échéance
         for chasse in database.obtenir_chasses_shiny_a_terminer():

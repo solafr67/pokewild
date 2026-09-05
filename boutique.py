@@ -739,7 +739,7 @@ class VueCategorieAmeliorations(discord.ui.View):
 # ----------------------------------------------------------------------------
 
 def construire_embed_categorie_objets(user_id: int) -> discord.Embed:
-    objets_actuels = database.compter_objets_equipables(user_id)
+    objets_actuels = database.compter_objets_totaux(user_id)
     limite_objets = database.limite_stockage_objets(user_id)
     embed = discord.Embed(title="🎒 Boutique — Objets tenus de combat", color=discord.Color.blurple())
     embed.description = (
@@ -782,7 +782,7 @@ class ModalQuantiteAchatObjet(discord.ui.Modal):
         cout_total = prix_unitaire * quantite
 
         limite_objets = database.limite_stockage_objets(user_id)
-        objets_actuels = database.compter_objets_equipables(user_id)
+        objets_actuels = database.compter_objets_totaux(user_id)
         if objets_actuels + quantite > limite_objets:
             place_restante = max(0, limite_objets - objets_actuels)
             await interaction.response.send_message(
@@ -849,7 +849,7 @@ class VueCategorieObjets(discord.ui.View):
 # ----------------------------------------------------------------------------
 
 def construire_embed_categorie_gemmes_mega(user_id: int) -> discord.Embed:
-    objets_actuels = database.compter_objets_equipables(user_id)
+    objets_actuels = database.compter_objets_totaux(user_id)
     limite_objets = database.limite_stockage_objets(user_id)
     embed = discord.Embed(title="💠 Boutique — Gemmes Méga", color=discord.Color.purple())
     embed.description = (
@@ -894,7 +894,7 @@ class ModalQuantiteAchatGemmeMega(discord.ui.Modal):
         cout_total = config.PRIX_GEMME_MEGA * quantite
 
         limite_objets = database.limite_stockage_objets(user_id)
-        objets_actuels = database.compter_objets_equipables(user_id)
+        objets_actuels = database.compter_objets_totaux(user_id)
         if objets_actuels + quantite > limite_objets:
             place_restante = max(0, limite_objets - objets_actuels)
             await interaction.response.send_message(

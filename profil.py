@@ -304,6 +304,12 @@ class VueConfirmationRelacher(discord.ui.View):
         bouton_tout.callback = self._on_tout_relacher
         self.add_item(bouton_tout)
 
+        bouton_par_rarete = discord.ui.Button(
+            label="Relâcher par rareté...", emoji="🎚️", style=discord.ButtonStyle.secondary, row=1
+        )
+        bouton_par_rarete.callback = self._on_choisir_rarete
+        self.add_item(bouton_par_rarete)
+
         bouton_annuler = discord.ui.Button(
             label="Annuler", emoji="❌", style=discord.ButtonStyle.secondary, row=1
         )
@@ -350,6 +356,16 @@ class VueConfirmationRelacher(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
         self.stop()
 
+    async def _on_choisir_rarete(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        embed = discord.Embed(
+            description="🎚️ Choisis une ou plusieurs raretés à relâcher (seulement les doublons, comme d'habitude).",
+            color=discord.Color.orange(),
+        )
+        vue = VueChoixRareteRelacher(self.user_id)
+        await interaction.response.edit_message(embed=embed, view=vue)
+
     async def _on_annuler(self, interaction: discord.Interaction):
         if not await self._verifier_proprietaire(interaction):
             return
@@ -358,6 +374,129 @@ class VueConfirmationRelacher(discord.ui.View):
         embed = discord.Embed(description="Annulé, rien n'a été relâché.", color=discord.Color.greyple())
         await interaction.response.edit_message(embed=embed, view=self)
         self.stop()
+
+
+NOMS_RARETE_AFFICHAGE = {
+    "commun": "Commun",
+    "peu_commun": "Peu commun",
+    "rare": "Rare",
+    "hyper_rare": "Hyper rare",
+    "legendaire": "Légendaire",
+}
+
+
+class VueChoixRareteRelacher(discord.ui.View):
+    """Étape intermédiaire entre 'Tout relâcher' et la sélection manuelle limitée à 25 —
+    relâche tous les doublons d'une ou plusieurs raretés choisies d'un coup (ex:
+    uniquement les communs). Affiche un aperçu avant confirmation, comme le reste du
+    système de relâcher."""
+
+    def __init__(self, user_id: int):
+        super().__init__(timeout=120)
+        self.user_id = user_id
+        self.raretes_choisies: set = set()
+        self._construire_composants()
+
+    def _construire_composants(self):
+        self.clear_items()
+        options = [
+            discord.SelectOption(
+                label=nom_affiche,
+                value=cle,
+                emoji=EMOJI_RARETE.get(cle),
+                default=(cle in self.raretes_choisies),
+            )
+            for cle, nom_affiche in NOMS_RARETE_AFFICHAGE.items()
+        ]
+        select = discord.ui.Select(
+            placeholder="Choisis une ou plusieurs raretés...",
+            options=options,
+            min_values=0,
+            max_values=len(options),
+            row=0,
+        )
+        select.callback = self._on_select
+        self.add_item(select)
+
+        bouton_confirmer = discord.ui.Button(
+            label="Relâcher ces raretés",
+            emoji="✅",
+            style=discord.ButtonStyle.danger,
+            disabled=not self.raretes_choisies,
+            row=1,
+        )
+        bouton_confirmer.callback = self._on_confirmer
+        self.add_item(bouton_confirmer)
+
+        bouton_retour = discord.ui.Button(label="Retour", emoji="↩️", style=discord.ButtonStyle.secondary, row=1)
+        bouton_retour.callback = self._on_retour
+        self.add_item(bouton_retour)
+
+    async def _verifier_proprietaire(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Ce n'est pas ta confirmation !", ephemeral=True)
+            return False
+        return True
+
+    async def _on_select(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        self.raretes_choisies = set(interaction.data["values"])
+        self._construire_composants()
+
+        if not self.raretes_choisies:
+            embed = discord.Embed(
+                description="🎚️ Choisis une ou plusieurs raretés à relâcher (seulement les doublons).",
+                color=discord.Color.orange(),
+            )
+        else:
+            resultats = database.previsualiser_doublons_par_rarete(self.user_id, self.raretes_choisies)
+            if not resultats:
+                noms = ", ".join(NOMS_RARETE_AFFICHAGE[r] for r in self.raretes_choisies)
+                embed = discord.Embed(
+                    description=f"Aucun doublon à relâcher pour cette sélection ({noms}).",
+                    color=discord.Color.greyple(),
+                )
+            else:
+                description, total_recompense = _construire_lignes_et_total(resultats, self.user_id)
+                noms = ", ".join(NOMS_RARETE_AFFICHAGE[r] for r in self.raretes_choisies)
+                embed = discord.Embed(
+                    title=f"⚠️ Aperçu — {noms}",
+                    description=description,
+                    color=discord.Color.orange(),
+                )
+                embed.set_footer(text=f"Total si relâché : +{total_recompense} Poké Dollars — action irréversible")
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    async def _on_confirmer(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        if not self.raretes_choisies:
+            return
+        resultats = database.relacher_doublons_par_rarete(self.user_id, self.raretes_choisies)
+        if not resultats:
+            embed = discord.Embed(description="Rien à relâcher pour cette sélection.", color=discord.Color.greyple())
+        else:
+            description, total_recompense = _construire_lignes_et_total(resultats, self.user_id)
+            database.ajouter_poke_dollars(self.user_id, total_recompense)
+            noms = ", ".join(NOMS_RARETE_AFFICHAGE[r] for r in self.raretes_choisies)
+            embed = discord.Embed(
+                title=f"👋 Doublons relâchés — {noms}",
+                description=description,
+                color=discord.Color.green(),
+            )
+            embed.set_footer(text=f"Total : +{total_recompense} Poké Dollars")
+        for item in self.children:
+            item.disabled = True
+        await interaction.response.edit_message(embed=embed, view=self)
+        self.stop()
+
+    async def _on_retour(self, interaction: discord.Interaction):
+        if not await self._verifier_proprietaire(interaction):
+            return
+        embed, y_a_quelque_chose = construire_apercu_relacher(self.user_id)
+        vue = VueConfirmationRelacher(self.user_id)
+        await interaction.response.edit_message(embed=embed, view=vue)
 
 
 # ----------------------------------------------------------------------------

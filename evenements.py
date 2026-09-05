@@ -10,10 +10,19 @@ détection de fin d'event se fait dans une boucle périodique côté main.py
 nouveau — le message_id est sauvegardé dès l'envoi (voir database.definir_message_*).
 """
 
+import time
+
 import discord
 
 import config
 import database
+from pokemon_data import EMOJI_BALLS, EMOJI_OBJETS_DIVERS, EMOJI_POKEDOLLAR, EMOJI_SOINS, NOM_BALL_AFFICHAGE, NOM_OBJETS_DIVERS, NOM_SOIN_AFFICHAGE
+
+# Catalogue volontairement restreint pour la récompense bonus d'un défi collectif — balls,
+# potions et objets divers (Cristal de Mutation, Œufs...), pas d'objets tenus/gemmes méga
+# (plus adaptés à un don ciblé via /give-objet qu'à une récompense d'event communautaire).
+_CATALOGUE_RECOMPENSE_EVENT = {**NOM_BALL_AFFICHAGE, **NOM_SOIN_AFFICHAGE, **NOM_OBJETS_DIVERS}
+_EMOJIS_RECOMPENSE_EVENT = {**EMOJI_BALLS, **EMOJI_SOINS, **EMOJI_OBJETS_DIVERS}
 
 
 def _duree_invalide(texte: str) -> int | None:
@@ -157,7 +166,35 @@ class ModalCibleDefi(discord.ui.Modal):
             required=True,
             max_length=8,
         )
+        self.duree_input = discord.ui.TextInput(
+            label="Durée limite (en minutes)",
+            placeholder="Ex: 120 — si non atteint à temps, personne ne reçoit rien",
+            required=True,
+            max_length=6,
+        )
+        self.recompense_pd_input = discord.ui.TextInput(
+            label="Récompense en Poké Dollars (par participant)",
+            placeholder="Ex: 300",
+            required=True,
+            max_length=8,
+        )
+        self.objet_input = discord.ui.TextInput(
+            label="Objet bonus (optionnel) — clé exacte",
+            placeholder="Ex: cristal_mutation, superball, oeuf_rare... (laisser vide si aucun)",
+            required=False,
+            max_length=40,
+        )
+        self.quantite_objet_input = discord.ui.TextInput(
+            label="Quantité de l'objet bonus",
+            placeholder="Ignoré si aucun objet bonus renseigné",
+            required=False,
+            max_length=4,
+        )
         self.add_item(self.cible_input)
+        self.add_item(self.duree_input)
+        self.add_item(self.recompense_pd_input)
+        self.add_item(self.objet_input)
+        self.add_item(self.quantite_objet_input)
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
@@ -168,30 +205,98 @@ class ModalCibleDefi(discord.ui.Modal):
             await interaction.response.send_message("❌ Cible invalide — donne un nombre entier supérieur à 0.", ephemeral=True)
             return
 
+        minutes = _duree_invalide(self.duree_input.value)
+        if minutes is None:
+            await interaction.response.send_message("❌ Durée invalide — donne un nombre entier de minutes supérieur à 0.", ephemeral=True)
+            return
+
+        try:
+            recompense_pd = int(self.recompense_pd_input.value.strip())
+        except ValueError:
+            recompense_pd = -1
+        if recompense_pd <= 0:
+            await interaction.response.send_message("❌ Récompense invalide — donne un nombre entier de Poké Dollars supérieur à 0.", ephemeral=True)
+            return
+
+        objet_cle = self.objet_input.value.strip() or None
+        quantite_objet = 0
+        if objet_cle:
+            if objet_cle not in _CATALOGUE_RECOMPENSE_EVENT:
+                await interaction.response.send_message(
+                    f"❌ Objet inconnu : `{objet_cle}`. Clés valides : balls, potions, objets divers "
+                    f"(ex: pokeball, superpotion, cristal_mutation, oeuf_rare...).",
+                    ephemeral=True,
+                )
+                return
+            try:
+                quantite_objet = int(self.quantite_objet_input.value.strip())
+            except ValueError:
+                quantite_objet = -1
+            if quantite_objet <= 0:
+                await interaction.response.send_message(
+                    "❌ Quantité d'objet bonus invalide — donne un nombre entier supérieur à 0 (ou laisse "
+                    "les 2 champs objet/quantité vides pour n'avoir aucun objet bonus).",
+                    ephemeral=True,
+                )
+                return
+
         channel = interaction.guild.get_channel(config.CHANNEL_EVENT_ID) if interaction.guild else None
-        defi_id = database.demarrer_defi_collectif(self.type_evenement, cible, channel.id if channel else None)
+        defi_id = database.demarrer_defi_collectif(
+            self.type_evenement, cible, channel.id if channel else None,
+            duree_secondes=minutes * 60, recompense_pd=recompense_pd,
+            recompense_objet=objet_cle, recompense_quantite_objet=quantite_objet,
+        )
 
         nom = config.TYPES_DEFI_COLLECTIF[self.type_evenement]
         await interaction.response.send_message(
-            f"✅ Défi collectif lancé : **{nom}** — objectif **{cible}** (cumulé, tous joueurs) !",
+            f"✅ Défi collectif lancé : **{nom}** — objectif **{cible}** en **{minutes} minute(s)** !",
             ephemeral=True,
         )
         if channel:
+            date_fin = int(time.time()) + minutes * 60
             message = await channel.send(
                 content=_contenu_ping_event(),
-                embed=construire_embed_defi_en_cours(nom, cible),
+                embed=construire_embed_defi_en_cours(
+                    nom, cible, 0, date_fin, recompense_pd, objet_cle, quantite_objet
+                ),
                 allowed_mentions=ALLOWED_MENTIONS_ROLE_EVENT,
             )
             database.definir_message_defi_collectif(defi_id, message.id)
 
 
-def construire_embed_defi_en_cours(nom: str, cible: int) -> discord.Embed:
+def construire_embed_defi_en_cours(
+    nom: str, cible: int, progres: int, date_fin: int,
+    recompense_pd: int, recompense_objet: str | None, recompense_quantite_objet: int,
+) -> discord.Embed:
+    """Barre de progression + temps restant + détail de la récompense — voir
+    main.py::boucle_verification_evenements pour le rafraîchissement périodique de cet
+    embed (le progrès et le temps restant changent, donc le message est réédité)."""
+    barre_len = 20
+    remplie = round((progres / cible) * barre_len) if cible > 0 else 0
+    barre = "🟩" * remplie + "⬜" * (barre_len - remplie)
+
+    secondes_restantes = max(0, date_fin - int(time.time()))
+    minutes_restantes = secondes_restantes // 60
+    if minutes_restantes >= 60:
+        temps_texte = f"{minutes_restantes // 60}h{minutes_restantes % 60:02d}"
+    else:
+        temps_texte = f"{minutes_restantes} min"
+
+    lignes_recompense = [f"{EMOJI_POKEDOLLAR} {recompense_pd} Poké Dollars"]
+    if recompense_objet and recompense_quantite_objet:
+        emoji_objet = _EMOJIS_RECOMPENSE_EVENT.get(recompense_objet, "")
+        nom_objet = _CATALOGUE_RECOMPENSE_EVENT.get(recompense_objet, recompense_objet)
+        lignes_recompense.append(f"{emoji_objet} {recompense_quantite_objet}× {nom_objet}")
+
     embed = discord.Embed(
         title="🎯 Event en cours : Défi collectif !",
         description=(
             f"Objectif du serveur : **{cible} {nom.lower()}**, tous joueurs confondus !\n\n"
+            f"{barre}\n**{progres}/{cible}**\n\n"
+            f"⏳ Temps restant : **{temps_texte}**\n"
+            f"⚠️ Si l'objectif n'est pas atteint à temps, personne ne reçoit rien !\n\n"
             f"Chaque contribution compte — dès que l'objectif est atteint, **tous ceux qui "
-            f"y ont participé** reçoivent **{config.RECOMPENSE_DEFI_COLLECTIF_PD} Poké Dollars** !"
+            f"y ont participé** (au moins 1 fois pendant l'event) reçoivent :\n" + "\n".join(lignes_recompense)
         ),
         color=discord.Color.blue(),
     )
@@ -199,12 +304,37 @@ def construire_embed_defi_en_cours(nom: str, cible: int) -> discord.Embed:
     return embed
 
 
-def construire_embed_defi_termine(nom: str, cible: int, nb_participants: int) -> discord.Embed:
+def construire_embed_defi_echoue(nom: str, cible: int, progres: int) -> discord.Embed:
+    """Le temps est écoulé sans que la cible ait été atteinte — personne ne reçoit rien
+    (durée = vraie limite dure, voir ModalCibleDefi)."""
+    embed = discord.Embed(
+        title="⏱️ Event terminé : Défi collectif — Temps écoulé",
+        description=(
+            f"L'objectif **{cible} {nom.lower()}** n'a pas été atteint à temps "
+            f"(**{progres}/{cible}** au moment où le temps s'est écoulé).\n\n"
+            f"Aucune récompense n'est distribuée cette fois-ci — merci d'avoir participé, "
+            f"et à la prochaine tentative !"
+        ),
+        color=discord.Color.dark_grey(),
+    )
+    embed.set_footer(text="🔴 Event terminé — échoué")
+    return embed
+
+
+def construire_embed_defi_termine(
+    nom: str, cible: int, nb_participants: int,
+    recompense_pd: int, recompense_objet: str | None, recompense_quantite_objet: int,
+) -> discord.Embed:
+    texte_recompense = f"**{recompense_pd} Poké Dollars**"
+    if recompense_objet and recompense_quantite_objet:
+        emoji_objet = _EMOJIS_RECOMPENSE_EVENT.get(recompense_objet, "")
+        nom_objet = _CATALOGUE_RECOMPENSE_EVENT.get(recompense_objet, recompense_objet)
+        texte_recompense += f" + **{recompense_quantite_objet}× {emoji_objet} {nom_objet}**"
     embed = discord.Embed(
         title="🎉 Défi collectif terminé — Réussi !",
         description=(
             f"L'objectif **{cible} {nom.lower()}** a été atteint grâce à **{nb_participants}** "
-            f"participant(s) ! Chacun reçoit **{config.RECOMPENSE_DEFI_COLLECTIF_PD} Poké Dollars** en récompense. 🎉"
+            f"participant(s) ! Chacun reçoit {texte_recompense} en récompense. 🎉"
         ),
         color=discord.Color.green(),
     )

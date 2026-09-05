@@ -39,10 +39,27 @@ CAPACITES = {
         "description": "Baisse l'Attaque de l'adversaire de -1 à l'entrée en jeu.",
         "sur_entree": True, "cible_entree": "adversaire", "stat_entree": ("atk", -1),
     },
+    "intrepide": {
+        "nom": "Intrépide", "emoji": "⚔️",
+        "description": "Augmente sa propre Attaque de +1 à l'entrée en jeu.",
+        "sur_entree": True, "cible_entree": "soi", "stat_entree": ("atk", 1),
+    },
+    "bouclier_royal": {
+        "nom": "Bouclier Royal", "emoji": "🛡️",
+        "description": "Augmente sa propre Défense de +1 à l'entrée en jeu.",
+        "sur_entree": True, "cible_entree": "soi", "stat_entree": ("def", 1),
+    },
     "tenacite": {
         "nom": "Ténacité", "emoji": "💪",
         "description": "+50% dégâts physiques quand ce Pokémon a un problème de statut (ignore aussi le malus d'Attaque de la Brûlure).",
         "mult_degats_infliges": "cran",
+    },
+    "telechargement": {
+        "nom": "Téléchargement", "emoji": "💾",
+        "description": "À l'entrée, +1 Attaque si la Défense adverse est plus basse que sa Défense Spéciale, sinon +1 Attaque Spéciale.",
+        # Traité comme cas spécial directement dans combat.py::_declencher_talent_entree —
+        # la stat boostée est choisie dynamiquement selon l'adversaire, impossible à
+        # exprimer avec le simple stat_entree=(stat, delta) fixe des autres talents d'entrée.
     },
     "insomnia": {
         "nom": "Insomnia", "emoji": "😳",
@@ -53,6 +70,11 @@ CAPACITES = {
         "nom": "Esprit Vital", "emoji": "✨",
         "description": "Ne peut jamais s'endormir.",
         "immunite_statut": ["sleep"],
+    },
+    "etoile_victoire": {
+        "nom": "Étoile Victoire", "emoji": "⭐",
+        "description": "+10% de Précision sur les attaques de ce Pokémon (et de ses alliés en combat 2v2).",
+        "boost_precision_attaque": 1.1,
     },
     "voile_eau": {
         "nom": "Voile Eau", "emoji": "💧",
@@ -89,6 +111,11 @@ CAPACITES = {
         "description": "Immunisé aux attaques Sol.",
         "immunite_type": "sol",
     },
+    "lenteur": {
+        "nom": "Lenteur", "emoji": "🐌",
+        "description": "Attaque et Vitesse divisées par 2 pendant les 5 premiers tours après l'envoi sur le terrain.",
+        "debut_lent": 5,
+    },
     "peau_dure": {
         "nom": "Peau Dure", "emoji": "🦔",
         "description": "Toute attaque physique subie au contact inflige 1/8 des PV max en retour à l'attaquant.",
@@ -119,6 +146,66 @@ CAPACITES = {
         "nom": "Filtre", "emoji": "🔍",
         "description": "-25% de dégâts subis sur les attaques super efficaces.",
         "mult_degats_subis": "solide_roc",
+    },
+    "prisme_armure": {
+        "nom": "Prisme Armure", "emoji": "💎",
+        "description": "-25% de dégâts subis sur les attaques super efficaces.",
+        "mult_degats_subis": "solide_roc",  # même effet mécanique que Filtre, juste un autre nom/porteur
+    },
+    "electro_surge": {
+        "nom": "Électro Surge", "emoji": "⚡",
+        "description": "Déclenche le Terrain Électrique à l'entrée en jeu.",
+        "terrain_entree": "electrique",
+    },
+    "chloro_surge": {
+        "nom": "Chloro Surge", "emoji": "🌿",
+        "description": "Déclenche le Terrain Herbu à l'entrée en jeu.",
+        "terrain_entree": "herbu",
+    },
+    "aura_surge": {
+        "nom": "Aura Surge", "emoji": "🌫️",
+        "description": "Déclenche le Terrain Brumeux à l'entrée en jeu.",
+        "terrain_entree": "brumeux",
+    },
+    "psycho_surge": {
+        "nom": "Psycho Surge", "emoji": "🔮",
+        "description": "Déclenche le Terrain Psychique à l'entrée en jeu.",
+        "terrain_entree": "psychique",
+    },
+    "bouclier_ombre": {
+        "nom": "Bouclier de l'Ombre", "emoji": "🌑",
+        "description": "Dégâts subis divisés par 2 tant que ce Pokémon est à pleine vie.",
+        "reduit_degats_pleine_vie": True,
+    },
+    "garde_feuille": {
+        "nom": "Garde Feuille", "emoji": "🍃",
+        "description": "Immunisé à tout problème de statut tant que le Soleil brille.",
+        "immunite_statut_meteo": ("soleil", ["burn", "poison", "paralysis", "sleep", "freeze"]),
+    },
+    "fleau_tablettes": {
+        "nom": "Fléau des Tablettes", "emoji": "📜",
+        "description": "-25% d'Attaque chez tous les autres Pokémon sur le terrain (jamais chez lui-même).",
+        "fleau_stat": "atk",
+    },
+    "fleau_epee": {
+        "nom": "Fléau de l'Épée", "emoji": "⚔️",
+        "description": "-25% de Défense chez tous les autres Pokémon sur le terrain (jamais chez lui-même).",
+        "fleau_stat": "def",
+    },
+    "fleau_urne": {
+        "nom": "Fléau de l'Urne", "emoji": "🏺",
+        "description": "-25% d'Attaque Spéciale chez tous les autres Pokémon sur le terrain (jamais chez lui-même).",
+        "fleau_stat": "atk_spe",
+    },
+    "fleau_perles": {
+        "nom": "Fléau des Perles", "emoji": "📿",
+        "description": "-25% de Défense Spéciale chez tous les autres Pokémon sur le terrain (jamais chez lui-même).",
+        "fleau_stat": "def_spe",
+    },
+    "rupture_aura": {
+        "nom": "Rupture Aura", "emoji": "💔",
+        "description": "Inverse Aura Fée/Aura Sombre en malus (-25% au lieu de +33%) tant qu'elles sont actives.",
+        "aura_break": True,
     },
     "simple": {
         "nom": "Simple", "emoji": "🎯",
@@ -306,6 +393,11 @@ CAPACITES = {
         "description": "Ne peut jamais subir de coup critique.",
         "immunite_critique": True,
     },
+    "cauchemar": {
+        "nom": "Cauchemar", "emoji": "😴",
+        "description": "Tant que ce Pokémon est sur le terrain, l'adversaire actif endormi perd 1/8 de ses PV max à la fin de chaque tour.",
+        "degats_sommeil_adverse": 1 / 8,
+    },
     "determination": {
         "nom": "Détermination", "emoji": "🎯",
         "description": "Ne peut jamais flancher (Flinch).",
@@ -425,6 +517,36 @@ CAPACITES = {
         "nom": "Pieds Confus", "emoji": "🌀",
         "description": "+20% d'Esquive tant qu'il est confus.",
         "boost_esquive_confusion": 0.20,
+    },
+    "air_lock": {
+        "nom": "Air Lock", "emoji": "🌬️",
+        "description": "Annule l'effet de la météo sur les dégâts tant que ce Pokémon est sur le terrain.",
+        "annule_meteo": True,
+    },
+    "aura_fee": {
+        "nom": "Aura Fée", "emoji": "💗",
+        "description": "+33% sur les attaques Fée de tous les Pokémon présents sur le terrain (y compris le porteur lui-même).",
+        "boost_aura_type": "fee",
+    },
+    "transistor": {
+        "nom": "Transistor", "emoji": "🔌",
+        "description": "+50% sur ses propres attaques Électrik.",
+        "boost_propre_type": "electrik",
+    },
+    "gueule_draconique": {
+        "nom": "Gueule Draconique", "emoji": "🐉",
+        "description": "+50% sur ses propres attaques Dragon.",
+        "boost_propre_type": "dragon",
+    },
+    "justicier": {
+        "nom": "Justicier", "emoji": "⚖️",
+        "description": "+1 Attaque quand touché par une attaque Ténèbres.",
+        "boost_si_touche_par_type": "tenebres",
+    },
+    "aura_sombre": {
+        "nom": "Aura Sombre", "emoji": "🖤",
+        "description": "+33% sur les attaques Ténèbres de tous les Pokémon présents sur le terrain (y compris le porteur lui-même).",
+        "boost_aura_type": "tenebres",
     },
     "agitation": {
         "nom": "Agitation", "emoji": "💪",
@@ -674,6 +796,7 @@ POKEMON_CAPACITES = {
     "Banshitrouye": ["fouille", "insomnia"],
     "Barbicha": ["hydratation"],
     "Barloche": ["hydratation"],
+    "Baojian": ["fleau_epee"],
     "Barpau": ["nage_rapide"],
     "Bastiodon": ["rustique"],
     "Batracné": ["absorb_eau", "hydratation", "nage_rapide"],
@@ -752,6 +875,7 @@ POKEMON_CAPACITES = {
     "Chimpenfeu": ["brasier"],
     "Chinchidou": ["technicien"],
     "Chlorobule": ["chlorophylle", "tempo_perso"],
+    "Chongjian": ["fleau_tablettes"],
     "Chochodile": ["brasier"],
     "Chovsourir": ["simple"],
     "Chrysacier": ["mue"],
@@ -763,6 +887,7 @@ POKEMON_CAPACITES = {
     "Cliticlic": ["corps_sain"],
     "Cléopsytra": ["fouille"],
     "Coatox": ["peau_seche"],
+    "Cobaltium": ["justicier"],
     "Cochignon": ["peau_epaisse"],
     "Coconfort": ["mue"],
     "Coiffeton": ["torrent"],
@@ -805,6 +930,7 @@ POKEMON_CAPACITES = {
     "Créhelf": ["levitation"],
     "Câblifère": ["boost_chimere"],
     "Dardargnan": ["essaim", "sniper"],
+    "Darkrai": ["cauchemar"],
     "Darumarond": ["agitation", "determination"],
     "Darumarond de Galar": ["agitation", "determination"],
     "Debugant": ["esprit_vital", "tenacite"],
@@ -815,6 +941,7 @@ POKEMON_CAPACITES = {
     "Diamat": ["agitation"],
     "Diancie": ["corps_sain"],
     "Dimoret": ["pression"],
+    "Dinglu": ["fleau_urne"],
     "Dinoclier": ["rustique"],
     "Dispareptil": ["corps_sain"],
     "Dodrio": ["pieds_confus"],
@@ -919,6 +1046,7 @@ POKEMON_CAPACITES = {
     "Germignon": ["plante"],
     "Gigalithe": ["force_sable", "rustique", "sable_volant"],
     "Gigansel": ["corps_sain", "rustique"],
+    "Genesect": ["telechargement"],
     "Girafarig": ["determination", "herbivore"],
     "Giratina": ["pression"],
     "Givrali": ["corps_gele"],
@@ -1001,6 +1129,7 @@ POKEMON_CAPACITES = {
     "Katagami": ["boost_chimere"],
     "Keunotor": ["simple"],
     "Khélocrok": ["carapace", "nage_rapide"],
+    "Keldeo": ["justicier"],
     "Kicklee": ["limber"],
     "Kirlia": ["synchro"],
     "Kokiyas": ["carapace", "envelocape"],
@@ -1053,6 +1182,7 @@ POKEMON_CAPACITES = {
     "Lucario": ["determination"],
     "Ludicolo": ["nage_rapide", "tempo_perso"],
     "Lugia": ["pression"],
+    "Lunala": ["bouclier_ombre"],
     "Lugulabre": ["cache_flamme", "corps_ardent"],
     "Luminéon": ["nage_rapide", "voile_eau"],
     "Lumivole": ["farceur", "lentiteintee"],
@@ -1151,6 +1281,7 @@ POKEMON_CAPACITES = {
     "Nanméouïe": ["regenerescence"],
     "Natu": ["synchro"],
     "Neitram": ["synchro"],
+    "Necrozma": ["prisme_armure"],
     "Nidoking": ["poison_de_contact"],
     "Nidoqueen": ["poison_de_contact"],
     "Nidoran♀": ["agitation", "poison_de_contact"],
@@ -1274,12 +1405,16 @@ POKEMON_CAPACITES = {
     "Rapion": ["regard_vif", "sniper"],
     "Ratentif": ["regard_vif"],
     "Rattata": ["agitation", "tenacite"],
+    "Rayquaza": ["air_lock"],
     "Rattata d'Alola": ["agitation", "gourmandise", "peau_epaisse"],
     "Rattatac": ["agitation", "tenacite"],
     "Rattatac d'Alola": ["agitation", "gourmandise", "peau_epaisse"],
     "Regice": ["corps_gele", "corps_sain"],
     "Regirock": ["corps_sain", "rustique"],
     "Registeel": ["corps_sain"],
+    "Regigigas": ["lenteur"],
+    "Regieleki": ["transistor"],
+    "Regidrago": ["gueule_draconique"],
     "Relicanth": ["nage_rapide", "rustique", "tete_de_roc"],
     "Reptincel": ["brasier"],
     "Rexillius": ["tete_de_roc"],
@@ -1335,6 +1470,7 @@ POKEMON_CAPACITES = {
     "Smogogo": ["levitation"],
     "Smogogo de Galar": ["levitation"],
     "Snubbull": ["intimidation"],
+    "Solgaleo": ["corps_sain"],
     "Solaroc": ["levitation"],
     "Solochi": ["agitation"],
     "Sonistrelle": ["fouille"],
@@ -1364,6 +1500,7 @@ POKEMON_CAPACITES = {
     "Tag-Tag": ["farceur"],
     "Tapatoès": ["agitation", "intimidation", "tenacite"],
     "Tarenbulle": ["absorb_eau"],
+    "Terrakium": ["justicier"],
     "Tarinor": ["force_sable", "rustique"],
     "Tarinorme": ["force_sable", "rustique"],
     "Tarpaud": ["absorb_eau", "averse"],
@@ -1389,6 +1526,10 @@ POKEMON_CAPACITES = {
     "Togekiss": ["agitation", "grace_sereine"],
     "Togepi": ["agitation", "grace_sereine"],
     "Togetic": ["agitation", "grace_sereine"],
+    "Tokopiyon": ["psycho_surge"],
+    "Tokopisco": ["aura_surge"],
+    "Tokorico": ["electro_surge"],
+    "Tokotoro": ["chloro_surge"],
     "Torgamord": ["carapace", "nage_rapide"],
     "Tortank": ["torrent"],
     "Torterra": ["carapace", "plante"],
@@ -1423,6 +1564,8 @@ POKEMON_CAPACITES = {
     "Venipatte": ["essaim", "poison_de_contact"],
     "Verpom": ["gourmandise"],
     "Vibraninf": ["levitation"],
+    "Viridium": ["justicier"],
+    "Victini": ["etoile_victoire"],
     "Vigoroth": ["esprit_vital"],
     "Vipélierre": ["plante"],
     "Viskuse": ["absorb_eau"],
@@ -1445,12 +1588,19 @@ POKEMON_CAPACITES = {
     "Wimessir": ["determination", "synchro"],
     "Wushours": ["determination"],
     "Xatu": ["synchro"],
+    "Xerneas": ["aura_fee"],
     "Yanma": ["fouille", "oeil_compose"],
+    "Yuyu": ["fleau_perles"],
     "Yanmega": ["fouille", "lentiteintee"],
     "Ymphect": ["mue"],
+    "Yveltal": ["aura_sombre"],
     "Zapétrel": ["absorb_volt"],
+    "Zacian": ["intrepide"],
+    "Zamazenta": ["bouclier_royal"],
+    "Zarude": ["garde_feuille"],
     "Zarbi": ["levitation"],
     "Zeraora": ["absorb_volt"],
+    "Zygarde": ["rupture_aura"],
     "Zigzaton": ["gourmandise"],
     "Zigzaton de Galar": ["gourmandise"],
     "Zébibron": ["herbivore"],
@@ -1514,6 +1664,16 @@ def bloque_statut(capacite: str, code_statut: str) -> bool:
     return code_statut in info.get("immunite_statut", [])
 
 
+def bloque_statut_sous_meteo(capacite: str, code_statut: str, meteo_active: str | None) -> bool:
+    """Garde Feuille (Zarude) — immunisé aux problèmes de statut UNIQUEMENT sous Soleil,
+    contrairement à bloque_statut qui protège en toutes circonstances."""
+    info = CAPACITES.get(capacite)
+    if not info or "immunite_statut_meteo" not in info:
+        return False
+    meteo_requise, statuts_bloques = info["immunite_statut_meteo"]
+    return meteo_active == meteo_requise and code_statut in statuts_bloques
+
+
 def immunite_type(capacite: str, type_attaque: str) -> dict | None:
     """Retourne des infos si ce talent bloque totalement ce type d'attaque, sinon None."""
     info = CAPACITES.get(capacite)
@@ -1543,6 +1703,16 @@ def multiplicateur_degats_subis(capacite: str, multi_type: float) -> float:
     info = CAPACITES.get(capacite)
     if info and info.get("mult_degats_subis") == "solide_roc" and multi_type >= 2.0:
         return 0.75
+    return 1.0
+
+
+def multiplicateur_degats_pleine_vie(capacite: str, pv_actuels: int, pv_max: int) -> float:
+    """Bouclier de l'Ombre (Lunala) — dégâts subis divisés par 2 tant que ce Pokémon est
+    encore à pleine vie (redevient normal dès la première blessure, comme Multi-Écailles
+    dans les vrais jeux)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("reduit_degats_pleine_vie") and pv_actuels >= pv_max:
+        return 0.5
     return 1.0
 
 
@@ -1630,11 +1800,31 @@ def multiplicateur_vitesse_meteo(capacite: str, meteo_active: str | None) -> flo
     return 1.0
 
 
+def multiplicateur_debut_lent(capacite: str, tours_en_jeu: int) -> dict:
+    """Lenteur (Slow Start) — Attaque et Vitesse divisées par 2 pendant les
+    NB_TOURS_DEBUT_LENT premiers tours après l'envoi (tours_en_jeu 0-indexé : le tour de
+    l'envoi lui-même compte comme le premier). Retourne {"atk": mult, "vit": mult}, tous
+    deux à 1.0 si inapplicable."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("debut_lent") and tours_en_jeu < info["debut_lent"]:
+        return {"atk": 0.5, "vit": 0.5}
+    return {"atk": 1.0, "vit": 1.0}
+
+
 def meteo_declenchee_a_entree(capacite: str) -> str | None:
     """Sécheresse/Averse/Sable Volant/Alerte Neige — météo déclenchée à l'entrée en jeu."""
     info = CAPACITES.get(capacite)
     if info and info.get("sur_entree"):
         return info.get("meteo_entree")
+    return None
+
+
+def terrain_declenche_a_entree(capacite: str) -> str | None:
+    """Électro Surge/Chloro Surge/Aura Surge/Psycho Surge (les 4 Tapu) — terrain de zone
+    déclenché à l'entrée en jeu, même principe que meteo_declenchee_a_entree."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("terrain_entree"):
+        return info["terrain_entree"]
     return None
 
 
@@ -1716,6 +1906,16 @@ def immunise_contre_degats_meteo(capacite: str) -> bool:
     return bool(info and info.get("immunite_degats_meteo"))
 
 
+def inflige_degats_sommeil_adverse(capacite: str) -> float:
+    """Cauchemar (Bad Dreams) — tant que ce Pokémon est sur le terrain, l'adversaire actif
+    endormi perd une fraction de ses PV max à la fin de chaque tour. Retourne la fraction
+    à infliger (0.0 si cette capacité n'a pas cet effet)."""
+    info = CAPACITES.get(capacite)
+    if info and "degats_sommeil_adverse" in info:
+        return info["degats_sommeil_adverse"]
+    return 0.0
+
+
 def meteo_guerissant_statut(capacite: str) -> str | None:
     """Hydratation — guérit le statut en fin de tour sous la bonne météo."""
     info = CAPACITES.get(capacite)
@@ -1772,6 +1972,69 @@ def immunise_contre_degats_meteo_specifique(capacite: str, type_meteo: str) -> b
     qui protège de toutes)."""
     info = CAPACITES.get(capacite)
     return bool(info and info.get("immunite_degats_meteo_specifique") == type_meteo)
+
+
+def annule_meteo(capacite: str) -> bool:
+    """Air Lock (Rayquaza) — annule l'effet de la météo sur les dégâts tant que ce
+    Pokémon est sur le terrain, peu importe le camp. v1 : ne couvre que le boost/malus
+    de dégâts Feu/Eau sous Soleil/Pluie et les boosts de type liés (Force Sable...) — ne
+    couvre pas encore les dégâts de fin de tour du sable/grêle ni le doublement de
+    Vitesse (Chlorophylle...), et n'empêche pas une météo d'être déclenchée à l'entrée
+    par une autre capacité (limitation connue, comme les autres effets \"sur_entree\")."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("annule_meteo"))
+
+
+def multiplicateur_aura(capacite_1: str, capacite_2: str, type_attaque: str) -> float:
+    """Aura Fée (Xerneas) / Aura Sombre (Yveltal) — +33% sur les attaques du type
+    correspondant utilisées par N'IMPORTE QUI sur le terrain (attaquant ET défenseur
+    confondus, y compris le porteur de l'aura lui-même) tant que l'un des deux
+    combattants a la bonne aura active. Rupture Aura (Zygarde), chez l'un OU l'autre
+    combattant, inverse cet effet en -25% au lieu de +33% si une aura est bien active
+    (sans effet si aucune aura n'est présente — rien à "casser")."""
+    aura_active = any(
+        (info := CAPACITES.get(capacite)) and info.get("boost_aura_type") == type_attaque
+        for capacite in (capacite_1, capacite_2)
+    )
+    if not aura_active:
+        return 1.0
+    rupture_active = any(
+        (info := CAPACITES.get(capacite)) and info.get("aura_break")
+        for capacite in (capacite_1, capacite_2)
+    )
+    return 0.75 if rupture_active else 1.33
+
+
+def multiplicateur_type_signature(capacite: str, type_attaque: str) -> float:
+    """Transistor (Regieleki) / Gueule Draconique (Regidrago) — +50% sur les attaques
+    d'UN TYPE PRÉCIS de CE Pokémon uniquement (contrairement à Aura Fée/Sombre qui
+    profite à tout le monde) — peu importe le vrai type du porteur."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("boost_propre_type") == type_attaque:
+        return 1.5
+    return 1.0
+
+
+def multiplicateur_fleau(capacite_adverse: str, stat: str) -> float:
+    """Fléau (Chongjian/Baojian/Dinglu/Yuyu) — -25% sur UNE stat précise de TOUS LES
+    AUTRES Pokémon (jamais son propre porteur) tant qu'il est sur le terrain. Vérifié
+    depuis le point de vue de l'ADVERSAIRE du porteur : si LUI a un Fléau visant cette
+    stat précisément, elle est réduite de 25% chez qui la calcule — jamais chez le
+    porteur lui-même (d'où capacite_adverse, jamais la propre capacité du Pokémon dont
+    on calcule la stat)."""
+    info = CAPACITES.get(capacite_adverse)
+    if info and info.get("fleau_stat") == stat:
+        return 0.75
+    return 1.0
+
+
+def boost_attaque_si_touche_par_type(capacite: str, type_recu: str) -> tuple | None:
+    """Justicier (Cobalium/Terrakium/Viridium) — +1 Attaque quand touché par une attaque
+    du type indiqué. Retourne (stat, delta) si applicable, sinon None."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("boost_si_touche_par_type") == type_recu:
+        return ("atk", 1)
+    return None
 
 
 
