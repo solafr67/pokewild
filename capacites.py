@@ -91,6 +91,61 @@ CAPACITES = {
         "description": "Ne peut jamais être empoisonné.",
         "immunite_statut": ["poison"],
     },
+    "voile_sucre": {
+        "nom": "Voile Sucré", "emoji": "🍬",
+        "description": "Ne peut jamais s'endormir.",
+        "immunite_statut": ["sleep"],
+    },
+    "moelleux": {
+        "nom": "Moelleux", "emoji": "🧸",
+        "description": "Dégâts physiques subis divisés par 2, dégâts Feu subis doublés.",
+        "moelleux": True,
+    },
+    "dommage_sec": {
+        "nom": "Dommage Sec", "emoji": "💢",
+        "description": "En étant mis K.O. par une attaque physique au contact, inflige 25% des PV max de l'attaquant en retour.",
+        "dommage_sec": True,
+    },
+    "expuls_organes": {
+        "nom": "Expuls'Organes", "emoji": "🫀",
+        "description": "En étant mis K.O. (n'importe quelle attaque), inflige à l'attaquant des dégâts égaux à ses propres PV restants avant le coup fatal.",
+        "expuls_organes": True,
+    },
+    "supermutation": {
+        "nom": "Supermutation", "emoji": "🦸",
+        "description": "Passe en forme Super (stats bien plus élevées, v1 approximée à x1.9 uniforme) après un changement hors puis retour sur le terrain, pour le reste du combat.",
+        "supermutation": True,
+    },
+    "bancosphere": {
+        "nom": "Bancosphère", "emoji": "🐟",
+        "description": "Forme École (x6 Attaque/Défense/Attaque Spé/Défense Spé, x0.75 Vitesse, v1 approximé) tant que niveau 20+ et PV au-dessus de 25%.",
+        "bancosphere": True,
+    },
+    "anti_air": {
+        "nom": "Anti-Air", "emoji": "🎯",
+        "description": "Toute attaque touche toujours, que ce Pokémon attaque ou soit visé.",
+        "anti_air": True,
+    },
+    "poigne_de_fer": {
+        "nom": "Poigne de Fer", "emoji": "✊",
+        "description": "+30% sur ses attaques au contact.",
+        "boost_contact": True,
+    },
+    "machoire_brute": {
+        "nom": "Mâchoire Brute", "emoji": "🦷",
+        "description": "+50% sur ses attaques de morsure (liste limitée).",
+        "boost_morsure": True,
+    },
+    "momie": {
+        "nom": "Momie", "emoji": "🧟",
+        "description": "Au contact, transforme la capacité de l'attaquant en Momie — qui se propage à son tour à qui la touche.",
+        "momie": True,
+    },
+    "esprit_vagabond": {
+        "nom": "Esprit Vagabond", "emoji": "👻",
+        "description": "Au contact, échange sa propre capacité avec celle de l'attaquant.",
+        "esprit_vagabond": True,
+    },
     "limber": {
         "nom": "Limber", "emoji": "🤸",
         "description": "Ne peut jamais être paralysé.",
@@ -152,6 +207,11 @@ CAPACITES = {
         "description": "-25% de dégâts subis sur les attaques super efficaces.",
         "mult_degats_subis": "solide_roc",  # même effet mécanique que Filtre, juste un autre nom/porteur
     },
+    "poing_de_fer": {
+        "nom": "Poing de Fer", "emoji": "🥊",
+        "description": "+20% sur ses attaques de poing (liste limitée, voir ATTAQUES_POING).",
+        "boost_poing": True,
+    },
     "electro_surge": {
         "nom": "Électro Surge", "emoji": "⚡",
         "description": "Déclenche le Terrain Électrique à l'entrée en jeu.",
@@ -177,10 +237,32 @@ CAPACITES = {
         "description": "Dégâts subis divisés par 2 tant que ce Pokémon est à pleine vie.",
         "reduit_degats_pleine_vie": True,
     },
+    "carapace_tera": {
+        "nom": "Carapace Téra", "emoji": "🐢",
+        "description": "Tant qu'à pleine vie, toute attaque qui touche est plafonnée à \"pas très efficace\", même si elle aurait dû être neutre ou super efficace.",
+        "plafonne_efficacite_pleine_vie": True,
+    },
+    "corps_contraire": {
+        "nom": "Corps Contraire", "emoji": "🔄",
+        "description": "Tout changement de stat que subit ce Pokémon est inversé — une baisse devient une hausse, et vice versa.",
+        "inverse_stats": True,
+    },
     "garde_feuille": {
         "nom": "Garde Feuille", "emoji": "🍃",
         "description": "Immunisé à tout problème de statut tant que le Soleil brille.",
         "immunite_statut_meteo": ("soleil", ["burn", "poison", "paralysis", "sleep", "freeze"]),
+    },
+    "multitype": {
+        "nom": "Multitype", "emoji": "💠",
+        "description": "Change de type selon la Plaque tenue (voir Boutique/Exploration) — sans Plaque, reste Normal.",
+        # Purement informatif : le vrai changement de type/stats vit dans
+        # formes_objets.py (FORMES_OBJETS, entrées "plaque_*"), qui ne dépend PAS de
+        # cette capacité pour s'activer (uniquement de l'objet tenu + l'espèce).
+    },
+    "systeme_alpha": {
+        "nom": "Système Alpha", "emoji": "💠",
+        "description": "Change de type selon la ROM tenue (voir Boutique/Exploration) — sans ROM, reste Normal.",
+        # Idem Multitype : mécanisme réel dans formes_objets.py (entrées "rom_*").
     },
     "fleau_tablettes": {
         "nom": "Fléau des Tablettes", "emoji": "📜",
@@ -388,6 +470,21 @@ CAPACITES = {
         "description": "Immunisé aux attaques Plante — gagne +1 Attaque au lieu d'en subir les dégâts.",
         "immunite_type": "plante", "immunite_type_boost_stat": ("atk", 1),
     },
+    "cuisson_parfaite": {
+        "nom": "Cuisson Parfaite", "emoji": "🥖",
+        "description": "Immunisé aux attaques Feu — gagne +2 Défense au lieu d'en subir les dégâts.",
+        "immunite_type": "feu", "immunite_type_boost_stat": ("def", 2),
+    },
+    "magnetisme": {
+        "nom": "Magnétisme", "emoji": "🧲",
+        "description": "Immunisé aux attaques Électrik — gagne +1 Attaque Spéciale au lieu d'en subir les dégâts.",
+        "immunite_type": "electrik", "immunite_type_boost_stat": ("atk_spe", 1),
+    },
+    "absorbe_averse": {
+        "nom": "Absorbe Averse", "emoji": "🌊",
+        "description": "Immunisé aux attaques Eau — gagne +1 Attaque Spéciale au lieu d'en subir les dégâts.",
+        "immunite_type": "eau", "immunite_type_boost_stat": ("atk_spe", 1),
+    },
     "carapace": {
         "nom": "Carapace", "emoji": "🐚",
         "description": "Ne peut jamais subir de coup critique.",
@@ -418,6 +515,118 @@ CAPACITES = {
         "description": "Fait briller le soleil (5 tours) à l'entrée en jeu.",
         "sur_entree": True, "meteo_entree": "soleil",
     },
+    "pulsion_orichalque": {
+        "nom": "Pulsion Orichalque", "emoji": "🔥",
+        "description": "Fait briller le soleil (5 tours) à l'entrée en jeu, et +33% d'Attaque tant que le Soleil brille.",
+        "sur_entree": True, "meteo_entree": "soleil",
+        "boost_stat_meteo": ("soleil", "atk", 4 / 3),
+    },
+    "moteur_hadron": {
+        "nom": "Moteur Hadron", "emoji": "⚡",
+        "description": "Déclenche le Terrain Électrique (5 tours) à l'entrée en jeu, et +33% d'Attaque Spéciale tant que ce terrain est actif.",
+        "terrain_entree": "electrique",
+        "boost_stat_terrain": ("electrique", "atk_spe", 4 / 3),
+    },
+    "vigueur_ancestrale": {
+        "nom": "Vigueur Ancestrale", "emoji": "☀️",
+        "description": "+30% (ou +50% si c'est la Vitesse) sur sa stat de base la plus élevée, tant que le Soleil brille.",
+        "stat_dominante_condition": ("meteo", "soleil"),
+    },
+    "turbo_circuit": {
+        "nom": "Turbo Circuit", "emoji": "🔋",
+        "description": "+30% (ou +50% si c'est la Vitesse) sur sa stat de base la plus élevée, tant que le Terrain Électrique est actif.",
+        "stat_dominante_condition": ("terrain", "electrique"),
+    },
+    "ecailles_magiques": {
+        "nom": "Écailles Magiques", "emoji": "🐟",
+        "description": "+50% Défense tant qu'il a un problème de statut.",
+        "boost_defense_si_statut": True,
+    },
+    "pied_veloce": {
+        "nom": "Pied Véloce", "emoji": "🏃",
+        "description": "+50% Vitesse tant qu'il a un problème de statut.",
+        "boost_vitesse_si_statut": True,
+    },
+    "ronfleur": {
+        "nom": "Ronfleur", "emoji": "🔇",
+        "description": "Immunisé aux attaques sonores (liste limitée).",
+        "immunite_sonore": True,
+    },
+    "cran_vital": {
+        "nom": "Cran Vital", "emoji": "💨",
+        "description": "+1 Vitesse à la fin de chaque tour passé actif sur le terrain.",
+        "cran_vital": True,
+    },
+    "wonder_guard": {
+        "nom": "Wonder Guard", "emoji": "🌟",
+        "description": "Immunisé à toute attaque qui n'est pas super efficace.",
+        "wonder_guard": True,
+    },
+    "absenteisme": {
+        "nom": "Absentéisme", "emoji": "😴",
+        "description": "N'agit qu'un tour sur deux, glande l'autre.",
+        "absenteisme": True,
+    },
+    "facsimile": {
+        "nom": "Fac-similé", "emoji": "🎎",
+        "description": "Bloque intégralement un coup sur toute la durée du combat (1/8 PV max perdu à la place).",
+        "facsimile": True,
+    },
+    "ombre_portee": {
+        "nom": "Ombre Portée", "emoji": "🕶️",
+        "description": "Empêche l'adversaire de changer volontairement de Pokémon tant qu'il est en vie.",
+        "piege_adversaire": True,
+    },
+    "chochotte": {
+        "nom": "Chochotte", "emoji": "😟",
+        "description": "Attaque et Attaque Spéciale divisées par 2 dès que les PV tombent à 50% ou moins.",
+        "chochotte": True,
+    },
+    "pure_puissance": {
+        "nom": "Pure Puissance", "emoji": "💪",
+        "description": "Double sa propre Attaque physique (jamais l'Attaque Spéciale).",
+        "pure_puissance": True,
+    },
+    "tactiques_simiesques": {
+        "nom": "Tactiques Simiesques", "emoji": "🦍",
+        "description": "+50% Attaque physique (v1 simplifiée : ne verrouille pas sur la première attaque choisie, contrairement aux vrais jeux).",
+        "tactiques_simiesques": True,
+    },
+    "fourrure_renforcee": {
+        "nom": "Fourrure Renforcée", "emoji": "🧥",
+        "description": "Dégâts physiques subis divisés par 2 (jamais les dégâts spéciaux).",
+        "fourrure_renforcee": True,
+    },
+    "or_pur": {
+        "nom": "Or Pur", "emoji": "🪙",
+        "description": "Immunisé à toute attaque de statut adverse.",
+        "bloque_statut_adverse": True,
+    },
+    "armure_fragile": {
+        "nom": "Armure Fragile", "emoji": "🔨",
+        "description": "Quand touché par une attaque physique : -1 Défense, +2 Vitesse.",
+        "armure_fragile": True,
+    },
+    "pixelisation": {
+        "nom": "Pixilate", "emoji": "🌸",
+        "description": "Ses attaques Normal deviennent Fée, avec +30% de puissance.",
+        "transforme_normal_en": "fee",
+    },
+    "porte_secours": {
+        "nom": "Porte de Secours", "emoji": "🚪",
+        "description": "Se retire automatiquement du combat la première fois que ses PV passent sous 50%.",
+        "porte_secours": True,
+    },
+    "corps_maudit": {
+        "nom": "Corps Maudit", "emoji": "👻",
+        "description": "30% de chance de désactiver (4 tours) l'attaque adverse qui vient de toucher.",
+        "chance_desactivation": 0.30,
+    },
+    "stance_change": {
+        "nom": "Stance Change", "emoji": "⚔️",
+        "description": "Passe en forme Lame (Attaque/Attaque Spé élevées) sur une attaque offensive, en forme Bouclier (Défense/Défense Spé élevées) sur Bouclier Royal.",
+        "stance_change": True,
+    },
     "averse": {
         "nom": "Averse", "emoji": "🌧️",
         "description": "Fait pleuvoir (5 tours) à l'entrée en jeu.",
@@ -443,10 +652,110 @@ CAPACITES = {
         "description": "Immunisé aux baisses de Défense infligées par l'adversaire (les siennes restent possibles).",
         "protege_stat_adverse": "def",
     },
+    "bras_seca": {
+        "nom": "Bras Séca", "emoji": "✂️",
+        "description": "Immunisé aux baisses d'Attaque infligées par l'adversaire (les siennes restent possibles).",
+        "protege_stat_adverse": "atk",
+    },
+    "chloro_semence": {
+        "nom": "Chloro Semence", "emoji": "🌱",
+        "description": "Déclenche le Terrain Herbu (5 tours) quand touché par une attaque offensive.",
+        "terrain_entree": "herbu",
+    },
+    "force_brute": {
+        "nom": "Force Brute", "emoji": "💥",
+        "description": "+30% de puissance sur ses attaques ayant un effet secondaire, mais annule cet effet secondaire.",
+        "force_brute": True,
+    },
+    "corrosion": {
+        "nom": "Corrosion", "emoji": "🧪",
+        "description": "Peut empoisonner un Pokémon Poison ou Acier malgré leur immunité de type naturelle.",
+        "corrosion": True,
+    },
+    "mega_blaster": {
+        "nom": "Méga Blaster", "emoji": "💦",
+        "description": "+50% sur ses attaques de la famille vibration/aura (liste limitée, voir ATTAQUES_PULSE).",
+        "boost_pulse": True,
+    },
+    "turbine_eolienne": {
+        "nom": "Turbine Éolienne", "emoji": "🌬️",
+        "description": "Immunisé aux dégâts d'une attaque de la famille vent (liste limitée), et gagne +1 Attaque en plus.",
+        "immunite_vent": True,
+    },
+    "mycelium_might": {
+        "nom": "Mycelium Might", "emoji": "🍄",
+        "description": "Ses attaques de statut agissent toujours en dernier dans leur tranche de priorité, mais ignorent l'immunité de capacité de la cible.",
+        "mycelium_might": True,
+    },
+    "illusion": {
+        "nom": "Illusion", "emoji": "🎭",
+        "description": "Se déguise en le dernier Pokémon conscient de l'équipe jusqu'à subir un coup.",
+        "illusion": True,
+    },
+    "metal_leger": {
+        "nom": "Métal Léger", "emoji": "🪶",
+        "description": "Son poids effectif est divisé par 2 pour le calcul des attaques basées sur le poids (Nœud Herbe, Balayage, Tacle Lourd, Tacle Feu).",
+        "mult_poids": 0.5,
+    },
+    "metal_lourd": {
+        "nom": "Métal Lourd", "emoji": "⚓",
+        "description": "Son poids effectif est doublé pour le calcul des attaques basées sur le poids (Nœud Herbe, Balayage, Tacle Lourd, Tacle Feu).",
+        "mult_poids": 2.0,
+    },
+    "hospitalite": {
+        "nom": "Hospitalité", "emoji": "🍵",
+        "description": "Soigne son allié de 25% de ses PV max à l'entrée en jeu (2v2 uniquement — aucun effet en 1v1).",
+        "soin_allie_entree": 0.25,
+    },
+    "voile_floral": {
+        "nom": "Voile Floral", "emoji": "🌸",
+        "description": "Protège les alliés Plante des baisses de stats et des problèmes de statut (2v2 uniquement — aucun effet en 1v1).",
+        "protege_allie_type": "plante",
+    },
+    "ordre_royal": {
+        "nom": "Ordre Royal", "emoji": "👑",
+        "description": "Bloque toute attaque adverse à priorité positive (liste limitée).",
+        "bloque_priorite": True,
+    },
+    "miroir_magik": {
+        "nom": "Miroir Magik", "emoji": "🪞",
+        "description": "Renvoie une attaque de statut adverse vers son lanceur au lieu de la subir.",
+        "miroir_magik": True,
+    },
+    "adaptabilite": {
+        "nom": "Adaptabilité", "emoji": "🔥",
+        "description": "Le STAB (bonus de même type) passe de x1.5 à x2.0.",
+        "adaptabilite": True,
+    },
+    "garde_magique": {
+        "nom": "Garde Magique", "emoji": "🛡️",
+        "description": "Immunisé à tout dégât indirect (statut, météo).",
+        "garde_magique": True,
+    },
+    "camouflage": {
+        "nom": "Camouflage", "emoji": "🦎",
+        "description": "Change son propre type pour correspondre à la dernière attaque offensive subie.",
+        "camouflage": True,
+    },
+    "forme_meteo": {
+        "nom": "Forme Météo", "emoji": "🌈",
+        "description": "Change son propre type selon la météo active : Soleil -> Feu, Pluie -> Eau, Grêle -> Glace, sinon Normal.",
+        "forme_meteo": True,
+    },
     "tension": {
         "nom": "Tension", "emoji": "😰",
         "description": "L'adversaire ne peut pas manger sa Baie de soin face à ce Pokémon.",
         "empeche_baie_adverse": True,
+    },
+    "multi_coups": {
+        "nom": "Multi-Coups", "emoji": "🔢",
+        "description": "Les attaques à coups multiples portent toujours le nombre maximal de coups (liste limitée).",
+        "multi_coups": True,
+    },
+    "charme_ensorceleur": {
+        "nom": "Charme Ensorceleur", "emoji": "💕",
+        "description": "30% de chance d'infatuer l'attaquant au contact, si son genre est opposé au sien.",
+        "charme_ensorceleur": True,
     },
     "technicien": {
         "nom": "Technicien", "emoji": "🔧",
@@ -508,6 +817,16 @@ CAPACITES = {
         "description": "+25% d'Esquive sous la Tempête de Sable. Immunisé aux dégâts de Tempête de Sable.",
         "boost_esquive_meteo": ("sable", 0.25), "immunite_degats_meteo_specifique": "sable",
     },
+    "voile_neige": {
+        "nom": "Voile Neige", "emoji": "❄️",
+        "description": "+25% d'Esquive sous la Grêle. Immunisé aux dégâts de Grêle.",
+        "boost_esquive_meteo": ("grele", 0.25), "immunite_degats_meteo_specifique": "grele",
+    },
+    "vagues_electriques": {
+        "nom": "Vagues Électriques", "emoji": "🏄",
+        "description": "Double sa Vitesse tant que le Terrain Électrique est actif.",
+        "boost_stat_terrain": ("electrique", "vit", 2.0),
+    },
     "oeil_compose": {
         "nom": "Œil Composé", "emoji": "🪰",
         "description": "+30% de Précision sur ses propres attaques.",
@@ -542,6 +861,122 @@ CAPACITES = {
         "nom": "Justicier", "emoji": "⚖️",
         "description": "+1 Attaque quand touché par une attaque Ténèbres.",
         "boost_si_touche_par_type": "tenebres",
+    },
+    "phobique": {
+        "nom": "Phobique", "emoji": "😱",
+        "description": "+1 Vitesse quand touché par une attaque Ténèbres, Spectre ou Insecte (v1 : pas de déclenchement par Intimidation).",
+        "phobique": True,
+    },
+    "competiteur": {
+        "nom": "Compétiteur", "emoji": "📈",
+        "description": "+2 Attaque Spéciale dès qu'une de ses stats est abaissée par l'adversaire.",
+        "boost_si_stat_baissee": ("atk_spe", 2),
+    },
+    "defiant": {
+        "nom": "Défiant", "emoji": "😤",
+        "description": "+2 Attaque dès qu'une de ses stats est abaissée par l'adversaire.",
+        "boost_si_stat_baissee": ("atk", 2),
+    },
+    "ossature": {
+        "nom": "Ossature", "emoji": "💢",
+        "description": "+1 Attaque Spéciale la première fois que ses PV passent sous 50% suite à des dégâts.",
+        "boost_ossature": True,
+    },
+    "hennissement_glace": {
+        "nom": "Hennissement Glacé", "emoji": "🐴",
+        "description": "+1 Attaque quand ce Pokémon inflige lui-même un K.O. avec une attaque offensive.",
+        "boost_si_ko": ("atk", 1),
+    },
+    "hennissement_sepulcral": {
+        "nom": "Hennissement Sépulcral", "emoji": "👻",
+        "description": "+1 Attaque Spéciale quand ce Pokémon inflige lui-même un K.O. avec une attaque offensive.",
+        "boost_si_ko": ("atk_spe", 1),
+    },
+    "coeur_ame": {
+        "nom": "Cœur d'Âme", "emoji": "💗",
+        "description": "+1 Attaque Spéciale à chaque K.O. survenant au combat, peu importe qui l'inflige.",
+        "boost_si_ko_temoin": ("atk_spe", 1),
+    },
+    "magicien": {
+        "nom": "Magicien", "emoji": "🎩",
+        "description": "Vole l'objet tenu de la cible en la touchant avec une attaque offensive, s'il ne tient déjà rien lui-même.",
+        "vole_objet": True,
+    },
+    "turboblaze": {
+        "nom": "Turboblaze", "emoji": "🔥",
+        "description": "Ignore la capacité défensive de l'adversaire (immunités, réductions de dégâts liées à une capacité).",
+        "ignore_capacite_def": True,
+    },
+    "teravolt": {
+        "nom": "Teravolt", "emoji": "⚡",
+        "description": "Ignore la capacité défensive de l'adversaire (immunités, réductions de dégâts liées à une capacité).",
+        "ignore_capacite_def": True,
+    },
+    "brise_moule": {
+        "nom": "Brise Moule", "emoji": "🔨",
+        "description": "Ignore la capacité défensive de l'adversaire (immunités, réductions de dégâts liées à une capacité).",
+        "ignore_capacite_def": True,
+    },
+    "pose_spore": {
+        "nom": "Pose Spore", "emoji": "🍄",
+        "description": "30% de chance totale d'infliger poison/paralysie/sommeil à l'attaquant au contact.",
+        "pose_spore": True,
+    },
+    "coloforce": {
+        "nom": "Coloforce", "emoji": "🖐️",
+        "description": "Vole l'objet tenu de l'attaquant au contact.",
+        "vole_objet_contact": True,
+    },
+    "bajoues": {
+        "nom": "Bajoues", "emoji": "😋",
+        "description": "Soigne 33% des PV max en plus après avoir consommé une Baie.",
+        "bajoues": True,
+    },
+    "delestage": {
+        "nom": "Délestage", "emoji": "🏃",
+        "description": "+2 stages de Vitesse en consommant son objet tenu (v1 : approximation, pas un x2 garanti).",
+        "delestage": True,
+    },
+    "coeur_soin": {
+        "nom": "Cœur Soin", "emoji": "💗",
+        "description": "30% de chance de guérir le statut d'un allié en fin de tour (2v2 uniquement — aucun effet en 1v1).",
+        "coeur_soin": True,
+    },
+    "danseuse": {
+        "nom": "Danseuse", "emoji": "💃",
+        "description": "Copie automatiquement toute attaque de danse utilisée par un autre Pokémon, sans consommer de tour ni de PP (aucun effet dans ce jeu — pas de système de catégorie \"danse\").",
+    },
+    "degobage": {
+        "nom": "Dégobage", "emoji": "🤢",
+        "description": "Inflige 1/4 des PV max au premier Pokémon qui l'attaque après l'usage de Plongée/Surf (aucun effet dans ce jeu — déclencheur trop spécifique non câblé).",
+    },
+    "declic_fringale": {
+        "nom": "Déclic Fringale", "emoji": "🍫",
+        "description": "Alterne chaque tour entre Ventre Creux et Faim de Loup, changeant le type de sa capacité signature (aucun effet dans ce jeu — cette attaque n'existe pas ici).",
+    },
+    "escampette": {
+        "nom": "Escampette", "emoji": "🏃",
+        "description": "Permet de fuir n'importe quel Pokémon sauvage (aucun effet en combat contre un autre joueur).",
+    },
+    "poing_fantome": {
+        "nom": "Poing Fantôme", "emoji": "👊",
+        "description": "Ignore Abri/Protection de l'adversaire.",
+        "ignore_protection": True,
+    },
+    "temeraire": {
+        "nom": "Téméraire", "emoji": "😶",
+        "description": "Ignore les changements de stats de l'adversaire (ses boosts d'Attaque quand il défend, ses boosts de Défense quand il attaque).",
+        "ignore_stage_adverse": True,
+    },
+    "chaine_toxique": {
+        "nom": "Chaîne Toxique", "emoji": "⛓️",
+        "description": "30% de chance d'empoisonner la cible sur une attaque offensive.",
+        "chance_poison_sur_coup": 0.30,
+    },
+    "marionnettiste_toxique": {
+        "nom": "Marionnettiste Toxique", "emoji": "🎭",
+        "description": "Quand ce Pokémon empoisonne sa cible avec une de ses attaques, elle devient aussi confuse.",
+        "confond_si_poison": True,
     },
     "aura_sombre": {
         "nom": "Aura Sombre", "emoji": "🖤",
@@ -741,6 +1176,154 @@ def talent_semi_coherent(types_pokemon: list) -> str | None:
 # encore exhaustif sur les 1025 espèces. Une espèce absente de ce dict retombe sur
 # talent_aleatoire() (un talent générique au hasard) en attendant d'être curatée ici.
 POKEMON_CAPACITES = {
+    "Sovkipou": ["escampette"],
+    "Plumeline": ["danseuse"],
+    "Nigosier": ["degobage"],
+    "Morpeko": ["declic_fringale"],
+    "Fluvetin": ["coeur_soin"],
+    "Cocotine": ["coeur_soin"],
+    "Balignon": ["pose_spore"],
+    "Spododo": ["pose_spore"],
+    "Lampignon": ["pose_spore"],
+    "Sapereau": ["coloforce"],
+    "Dedenne": ["bajoues"],
+    "Goupilou": ["delestage"],
+    "Roublenard": ["delestage"],
+    "Délestin": ["brise_moule"],
+    "Monaflèmit": ["absenteisme"],
+    "Flingouste": ["mega_blaster"],
+    "Hexadron": ["carapace"],
+    "Froussardine": ["bancosphere"],
+    "Morphéo": ["forme_meteo"],
+    "Rondoudou": ["charme_ensorceleur"],
+    "Toudoudou": ["charme_ensorceleur"],
+    "Skitty": ["charme_ensorceleur"],
+    "Delcatty": ["charme_ensorceleur"],
+    "Capumain": ["multi_coups"],
+    "Théffroi": ["corps_maudit"],
+    "Bibichut": ["miroir_magik"],
+    "Chapotus": ["miroir_magik"],
+    "Croquine": ["garde_feuille"],
+    "Candine": ["garde_feuille"],
+    "Mimantis": ["garde_feuille"],
+    "Floramantis": ["garde_feuille"],
+    "Briochien": ["cuisson_parfaite"],
+    "Toutombe": ["moelleux"],
+    "Tomberro": ["moelleux"],
+    "Mordudor": ["phobique"],
+    "Superdofin": ["supermutation"],
+    "Concombaffe": ["expuls_organes"],
+    "Nigirigon": ["absorbe_averse"],
+    "Wattapik": ["electro_surge"],
+    "Dolman": ["psycho_surge"],
+    "Bekaglaçon": ["psycho_surge"],
+    "Charibari": ["metal_lourd"],
+    "Denticrisse": ["ordre_royal"],
+    "Dodoala": ["carapace"],
+    "Météno": ["carapace"],
+    "Quartermac": ["defiant"],
+    "Darumacho de Galar": ["tactiques_simiesques"],
+    "Lilia": ["absorbe_averse"],
+    "Vacilys": ["absorbe_averse"],
+    "Tutafeh": ["momie"],
+    "Tutankafer": ["momie"],
+    "Tutétékri": ["esprit_vagabond"],
+    "Monorpale": ["anti_air"],
+    "Dimoclès": ["anti_air"],
+    "Berserkatt": ["poigne_de_fer"],
+    "Voltoutou": ["machoire_brute"],
+    "Fulgudog": ["machoire_brute"],
+    "Sucroquin": ["voile_sucre"],
+    "Cupcanaille": ["voile_sucre"],
+    "Crèmy": ["voile_sucre"],
+    "Charmilly": ["voile_sucre"],
+    "Nounourson": ["moelleux"],
+    "Moumouton": ["moelleux"],
+    "Moumouflon": ["moelleux"],
+    "Baudrive": ["dommage_sec"],
+    "Grodrive": ["dommage_sec"],
+    "Grindur": ["peau_dure"],
+    "Noacier": ["peau_dure"],
+    "Tadmorv": ["poison_de_contact"],
+    "Méditikka": ["pure_puissance"],
+    "Charmina": ["pure_puissance"],
+    "Charkos": ["force_brute"],
+    "Ceriflor": ["chlorophylle"],
+    "Miasmax": ["armure_fragile"],
+    "Tritox": ["corrosion"],
+    "Malamandre": ["corrosion"],
+    "Chrysapile": ["oeil_compose"],
+    "Excavarenne": ["pure_puissance"],
+    "Couafarel": ["fourrure_renforcee"],
+    "Sepiatop": ["corps_contraire"],
+    "Sepiatroce": ["corps_contraire"],
+    "Manglouton": ["adaptabilite"],
+    "Argouste": ["adaptabilite"],
+    "Crabagarre": ["bras_seca"],
+    "Crabominable": ["bras_seca"],
+    "Posipi": ["magnetisme"],
+    "Arkéapti": ["chochotte"],
+    "Momartik": ["voile_neige"],
+    "Bargantua": ["adaptabilite"],
+    "Darumacho": ["force_brute"],
+    "Miamiasme": ["armure_fragile"],
+    "Polarhume": ["voile_neige"],
+    "Gringolem": ["voile_sable"],
+    "Golemastoc": ["voile_sable"],
+    "Qulbutoké": ["ombre_portee"],
+    "Okéoké": ["ombre_portee"],
+    "Mimiqui": ["facsimile"],
+    "Olivini": ["chloro_semence"],
+    "Olivado": ["chloro_semence"],
+    "Corayon de Galar": ["corps_maudit"],
+    "Parecool": ["absenteisme"],
+    "Munja": ["wonder_guard"],
+    "Medhyèna": ["pied_veloce"],
+    "Teddiursa": ["pied_veloce"],
+    "Chuchmur": ["ronfleur"],
+    "Ninjask": ["cran_vital"],
+    "Kranidos": ["force_brute"],
+    "Kraknoix": ["bras_seca"],
+    "Évoli": ["adaptabilite"],
+    "Mélofée": ["garde_magique"],
+    "Mélo": ["garde_magique"],
+    "Mélodelfe": ["garde_magique"],
+    "Porygon": ["telechargement"],
+    "Kecleon": ["camouflage"],
+    "Poltchageist": ["armure_fragile"],
+    "Terracool": ["mycelium_might"],
+    "Germéclat": ["corrosion"],
+    "Virevorreur": ["turbine_eolienne"],
+    "Virovent": ["turbine_eolienne"],
+    "Flabébé": ["voile_floral"],
+    "Floette": ["voile_floral"],
+    "Zorua": ["illusion"],
+    "Zorua d'Hisui": ["illusion"],
+    "Zoroark d'Hisui": ["illusion"],
+    "Ponyta de Galar": ["immunite"],
+    "Sablaireau d'Alola": ["voile_neige"],
+    "Sabelette d'Alola": ["voile_neige"],
+    "Raichu d'Alola": ["vagues_electriques"],
+    "Fort-Ivoire": ["vigueur_ancestrale"],
+    "Hurle-Queue": ["vigueur_ancestrale"],
+    "Fongus-Furie": ["vigueur_ancestrale"],
+    "Flotte-Mèche": ["vigueur_ancestrale"],
+    "Rampe-Ailes": ["vigueur_ancestrale"],
+    "Pelage-Sablé": ["vigueur_ancestrale"],
+    "Rugit-Lune": ["vigueur_ancestrale"],
+    "Serpente-Eau": ["vigueur_ancestrale"],
+    "Feu-Perçant": ["vigueur_ancestrale"],
+    "Ire-Foudre": ["vigueur_ancestrale"],
+    "Roue-de-Fer": ["turbo_circuit"],
+    "Hotte-de-Fer": ["turbo_circuit"],
+    "Paume-de-Fer": ["turbo_circuit"],
+    "Têtes-de-Fer": ["turbo_circuit"],
+    "Mite-de-Fer": ["turbo_circuit"],
+    "Épine-de-Fer": ["turbo_circuit"],
+    "Garde-de-Fer": ["turbo_circuit"],
+    "Vert-de-Fer": ["turbo_circuit"],
+    "Roc-de-Fer": ["turbo_circuit"],
+    "Chef-de-Fer": ["turbo_circuit"],
     "Abo": ["intimidation", "mue", "tension"],
     "Abra": ["determination", "synchro"],
     "Absol": ["pression"],
@@ -755,6 +1338,7 @@ POKEMON_CAPACITES = {
     "Amassel": ["corps_sain", "rustique"],
     "Amonistar": ["carapace", "nage_rapide"],
     "Amonita": ["carapace", "nage_rapide"],
+    "Amovénus": ["corps_contraire"],
     "Amphinobi": ["torrent"],
     "Ampibidou": ["statik"],
     "Anchwatt": ["levitation"],
@@ -766,6 +1350,8 @@ POKEMON_CAPACITES = {
     "Arakdo": ["nage_rapide"],
     "Araqua": ["absorb_eau"],
     "Arbok": ["intimidation", "mue", "tension"],
+    "Arboliva": ["chloro_semence"],
+    "Arceus": ["multitype"],
     "Arcanin": ["cache_flamme", "intimidation"],
     "Arcanin d'Hisui": ["cache_flamme", "intimidation", "tete_de_roc"],
     "Archéduc": ["plante"],
@@ -777,6 +1363,7 @@ POKEMON_CAPACITES = {
     "Armulys": ["mue"],
     "Arrozard": ["sniper", "torrent"],
     "Artikodin": ["pression"],
+    "Artikodin de Galar": ["competiteur"],
     "Aspicot": ["ecran_poudre"],
     "Astronelle": ["essaim", "fouille"],
     "Avaltout": ["gourmandise"],
@@ -785,6 +1372,7 @@ POKEMON_CAPACITES = {
     "Azumarill": ["herbivore", "peau_epaisse"],
     "Azurill": ["herbivore", "peau_epaisse"],
     "Aéromite": ["ecran_poudre", "lentiteintee"],
+    "Aéroptéryx": ["tete_de_roc"],
     "Babimanta": ["absorb_eau", "nage_rapide", "voile_eau"],
     "Bacabouh": ["voile_sable"],
     "Badabouin": ["plante"],
@@ -809,6 +1397,7 @@ POKEMON_CAPACITES = {
     "Blindépique": ["plante"],
     "Blizzaroi": ["alerte_neige"],
     "Blizzi": ["alerte_neige"],
+    "Blizzeval": ["hennissement_glace"],
     "Boguérisse": ["plante"],
     "Bombydou": ["ecran_poudre"],
     "Boréas": ["farceur"],
@@ -898,10 +1487,12 @@ POKEMON_CAPACITES = {
     "Coléodôme": ["essaim", "oeil_compose"],
     "Compagnol": ["tempo_perso"],
     "Coquiperl": ["carapace"],
+    "Corayôme": ["armure_fragile"],
     "Corayon": ["agitation", "regenerescence", "vigilance"],
     "Corboss": ["insomnia"],
     "Cornèbre": ["farceur", "insomnia"],
     "Corvaillus": ["pression", "tension"],
+    "Cosmog": ["temeraire"],
     "Cosmovum": ["rustique"],
     "Cotovol": ["chlorophylle"],
     "Couaneton": ["coeur_de_coq", "hydratation", "regard_vif"],
@@ -963,11 +1554,13 @@ POKEMON_CAPACITES = {
     "Draïeul": ["herbivore"],
     "Dunaconda": ["mue", "voile_sable"],
     "Dunaja": ["mue", "voile_sable"],
+    "Duralugon": ["metal_leger"],
     "Dynavolt": ["statik"],
     "Déflaisan": ["coeur_de_coq"],
     "Démanta": ["absorb_eau", "nage_rapide", "voile_eau"],
     "Démolosse": ["cache_flamme", "tension"],
     "Démétéros": ["force_sable"],
+    "Ectoplasma": ["corps_maudit"],
     "Efflèche": ["plante"],
     "Embrochet": ["nage_rapide"],
     "Embrylex": ["tenacite", "voile_sable"],
@@ -977,6 +1570,7 @@ POKEMON_CAPACITES = {
     "Entei": ["determination", "pression"],
     "Escargaume": ["carapace", "envelocape", "hydratation"],
     "Escroco": ["intimidation"],
+    "Exagide": ["stance_change"],
     "Excelangue": ["tempo_perso"],
     "Famignol": ["technicien"],
     "Fantominus": ["levitation"],
@@ -986,7 +1580,8 @@ POKEMON_CAPACITES = {
     "Farfuret d'Hisui": ["determination", "regard_vif"],
     "Farfurex": ["pression"],
     "Farigiraf": ["herbivore"],
-    "Favianos": ["technicien"],
+    "Favianos": ["chaine_toxique"],
+    "Félicanis": ["chaine_toxique"],
     "Ferdeter": ["voile_sable"],
     "Fermite": ["agitation", "essaim"],
     "Feuforêve": ["levitation"],
@@ -1007,6 +1602,8 @@ POKEMON_CAPACITES = {
     "Flamoutan": ["brasier", "gourmandise"],
     "Flobio": ["torrent"],
     "Floravol": ["chlorophylle"],
+    "Floréclat": ["corrosion"],
+    "Florges": ["voile_floral"],
     "Florizarre": ["chlorophylle", "plante"],
     "Flotajou": ["gourmandise", "torrent"],
     "Flotillon": ["fouille"],
@@ -1016,7 +1613,7 @@ POKEMON_CAPACITES = {
     "Forgelina": ["tempo_perso"],
     "Forgella": ["tempo_perso"],
     "Forgerette": ["tempo_perso"],
-    "Fortusimia": ["fouille"],
+    "Fortusimia": ["chaine_toxique"],
     "Fouinar": ["fouille", "regard_vif"],
     "Fouinette": ["fouille", "regard_vif"],
     "Fourbelin": ["farceur", "fouille"],
@@ -1036,10 +1633,13 @@ POKEMON_CAPACITES = {
     "Galekid": ["rustique", "tete_de_roc"],
     "Galeking": ["rustique", "tete_de_roc"],
     "Galifeu": ["brasier"],
+    "Gallame": ["determination"],
     "Galopa": ["cache_flamme", "corps_ardent"],
+    "Galopa de Galar": ["immunite"],
     "Galvagla": ["absorb_volt", "statik"],
     "Galvagon": ["absorb_volt", "agitation"],
     "Galvaran": ["peau_seche", "voile_sable"],
+    "Gamblast": ["mega_blaster"],
     "Gambex": ["essaim", "lentiteintee"],
     "Gardevoir": ["synchro"],
     "Gaulet": ["regenerescence"],
@@ -1077,8 +1677,10 @@ POKEMON_CAPACITES = {
     "Grodoudou": ["fouille"],
     "Grolem": ["rustique", "tete_de_roc", "voile_sable"],
     "Grolem d'Alola": ["rustique"],
+    "Gromago": ["or_pur"],
     "Grondogue": ["intimidation"],
     "Groret": ["gourmandise", "peau_epaisse", "tempo_perso"],
+    "Grotadmorv": ["poison_de_contact"],
     "Grotadmorv d'Alola": ["gourmandise"],
     "Grotichon": ["brasier", "peau_epaisse"],
     "Groudon": ["secheresse"],
@@ -1097,6 +1699,7 @@ POKEMON_CAPACITES = {
     "Hippodocus": ["force_sable", "sable_volant"],
     "Hippopotas": ["force_sable", "sable_volant"],
     "Ho-Oh": ["pression", "regenerescence"],
+    "Hoopa": ["magicien"],
     "Hoothoot": ["insomnia", "lentiteintee", "regard_vif"],
     "Hydragla": ["absorb_eau", "corps_gele"],
     "Hydragon": ["absorb_eau"],
@@ -1133,6 +1736,7 @@ POKEMON_CAPACITES = {
     "Kicklee": ["limber"],
     "Kirlia": ["synchro"],
     "Kokiyas": ["carapace", "envelocape"],
+    "Koraidon": ["pulsion_orichalque"],
     "Korillon": ["levitation"],
     "Krabboss": ["carapace"],
     "Krabby": ["carapace"],
@@ -1202,6 +1806,7 @@ POKEMON_CAPACITES = {
     "Macronium": ["plante"],
     "Maganon": ["corps_ardent", "esprit_vital"],
     "Magby": ["corps_ardent", "esprit_vital"],
+    "Magearna": ["coeur_ame"],
     "Magicarpe": ["nage_rapide"],
     "Magirêve": ["levitation"],
     "Magmar": ["corps_ardent", "esprit_vital"],
@@ -1232,7 +1837,9 @@ POKEMON_CAPACITES = {
     "Mateloutre": ["carapace", "torrent"],
     "Matoufeu": ["brasier", "intimidation"],
     "Matourgeon": ["plante"],
+    "Melmetal": ["poing_de_fer"],
     "Meloetta": ["grace_sereine"],
+    "Meltan": ["poing_de_fer"],
     "Mentali": ["synchro"],
     "Mesmérella": ["fouille"],
     "Mew": ["synchro"],
@@ -1242,6 +1849,7 @@ POKEMON_CAPACITES = {
     "Miaouss de Galar": ["tension"],
     "Miascarade": ["plante"],
     "Migalos": ["essaim", "insomnia", "sniper"],
+    "Milobellus": ["ecailles_magiques"],
     "Mime Jr.": ["filtre", "technicien"],
     "Mimigal": ["essaim", "insomnia", "sniper"],
     "Mimitoss": ["lentiteintee", "oeil_compose"],
@@ -1249,6 +1857,7 @@ POKEMON_CAPACITES = {
     "Minisange": ["coeur_de_coq", "regard_vif", "tension"],
     "Minotaupe": ["force_sable"],
     "Miradar": ["regard_vif"],
+    "Miraidon": ["moteur_hadron"],
     "Mistigrix": ["farceur", "regard_vif"],
     "Monthracite": ["cache_flamme", "corps_ardent"],
     "Motisma": ["levitation"],
@@ -1300,12 +1909,14 @@ POKEMON_CAPACITES = {
     "Nosferalto": ["determination"],
     "Nosferapti": ["determination"],
     "Nostenfer": ["determination"],
+    "Nymphali": ["pixelisation"],
     "Nucléos": ["envelocape", "regenerescence"],
     "Négapi": ["absorb_volt"],
     "Némélios": ["tension"],
     "Nénupiot": ["nage_rapide", "tempo_perso"],
     "Obalie": ["corps_gele", "peau_epaisse"],
     "Octillery": ["sniper"],
+    "Ogerpon": ["defiant"],
     "Ohmassacre": ["levitation"],
     "Oniglali": ["corps_gele", "determination"],
     "Onix": ["rustique", "tete_de_roc"],
@@ -1323,6 +1934,7 @@ POKEMON_CAPACITES = {
     "Ouvrifier": ["tenacite"],
     "Oyacata": ["voile_eau"],
     "Pachirisu": ["absorb_volt"],
+    "Pachyradjah": ["force_brute"],
     "Palarticho": ["querelleur"],
     "Palkia": ["pression"],
     "Palmaval": ["torrent"],
@@ -1336,6 +1948,7 @@ POKEMON_CAPACITES = {
     "Parasect": ["peau_seche"],
     "Pashmilla": ["technicien"],
     "Passerouge": ["coeur_de_coq"],
+    "Pêchaminus": ["marionnettiste_toxique"],
     "Persian": ["limber", "technicien", "tension"],
     "Persian d'Alola": ["technicien"],
     "Phanpy": ["voile_sable"],
@@ -1363,6 +1976,7 @@ POKEMON_CAPACITES = {
     "Poissoroy": ["nage_rapide", "voile_eau"],
     "Polagriffe": ["nage_rapide"],
     "Polichombr": ["fouille", "insomnia"],
+    "Polthégeist": ["armure_fragile"],
     "Pomdepik": ["envelocape", "rustique"],
     "Pomdorochi": ["regenerescence"],
     "Pomdramour": ["gourmandise"],
@@ -1371,6 +1985,8 @@ POKEMON_CAPACITES = {
     "Ponchiot": ["esprit_vital"],
     "Pondralugon": ["rustique"],
     "Ponyta": ["cache_flamme", "corps_ardent"],
+    "Porygon2": ["telechargement"],
+    "Porygon-Z": ["telechargement"],
     "Poulpaf": ["limber", "technicien"],
     "Poussacha": ["plante"],
     "Poussifeu": ["brasier"],
@@ -1416,6 +2032,7 @@ POKEMON_CAPACITES = {
     "Regieleki": ["transistor"],
     "Regidrago": ["gueule_draconique"],
     "Relicanth": ["nage_rapide", "rustique", "tete_de_roc"],
+    "Reshiram": ["turboblaze"],
     "Reptincel": ["brasier"],
     "Rexillius": ["tete_de_roc"],
     "Rhinastoc": ["solide_roc"],
@@ -1446,10 +2063,12 @@ POKEMON_CAPACITES = {
     "Salamèche": ["brasier"],
     "Salarsen": ["technicien"],
     "Sancoki": ["force_sable"],
+    "Sarmuraï": ["porte_secours"],
     "Saquedeneu": ["chlorophylle", "regenerescence"],
     "Scalpereur": ["pression"],
     "Scalpion": ["determination", "pression"],
     "Scalproie": ["determination", "pression"],
+    "Scarabrute": ["bras_seca"],
     "Scarhino": ["essaim", "tenacite"],
     "Scobolide": ["essaim", "poison_de_contact"],
     "Scolocendre": ["cache_flamme", "corps_ardent"],
@@ -1462,9 +2081,12 @@ POKEMON_CAPACITES = {
     "Shaofouine": ["determination", "regenerescence"],
     "Sharpedo": ["peau_dure"],
     "Shaymin": ["vigilance"],
+    "Shifours": ["poing_fantome"],
     "Sidérella": ["fouille"],
+    "Silvallié": ["systeme_alpha"],
     "Simiabraz": ["brasier"],
     "Simularbre": ["rustique", "tete_de_roc"],
+    "Sinistrail": ["hospitalite"],
     "Skelénox": ["fouille", "levitation"],
     "Smogo": ["levitation"],
     "Smogogo": ["levitation"],
@@ -1474,10 +2096,12 @@ POKEMON_CAPACITES = {
     "Solaroc": ["levitation"],
     "Solochi": ["agitation"],
     "Sonistrelle": ["fouille"],
+    "Sorcilence": ["miroir_magik"],
     "Soporifik": ["determination", "insomnia"],
     "Sorbouboul": ["alerte_neige", "corps_gele"],
     "Sorboul": ["corps_gele"],
     "Sorbébé": ["corps_gele"],
+    "Spectreval": ["hennissement_sepulcral"],
     "Spectrum": ["levitation"],
     "Spinda": ["pieds_confus", "tempo_perso"],
     "Spiritomb": ["pression"],
@@ -1488,8 +2112,10 @@ POKEMON_CAPACITES = {
     "Statitik": ["essaim", "oeil_compose", "tension"],
     "Steelix": ["rustique", "tete_de_roc"],
     "Strassie": ["corps_sain", "rustique"],
+    "Sucreine": ["ordre_royal"],
     "Suicune": ["determination", "pression"],
     "Sulfura": ["corps_ardent", "pression"],
+    "Sulfura de Galar": ["ossature"],
     "Sylveroy": ["tension"],
     "Symbios": ["envelocape", "regenerescence"],
     "Séléroc": ["levitation"],
@@ -1501,6 +2127,7 @@ POKEMON_CAPACITES = {
     "Tapatoès": ["agitation", "intimidation", "tenacite"],
     "Tarenbulle": ["absorb_eau"],
     "Terrakium": ["justicier"],
+    "Théffroyable": ["turbine_eolienne"],
     "Tarinor": ["force_sable", "rustique"],
     "Tarinorme": ["force_sable", "rustique"],
     "Tarpaud": ["absorb_eau", "averse"],
@@ -1516,7 +2143,9 @@ POKEMON_CAPACITES = {
     "Tengalice": ["chlorophylle"],
     "Tentacool": ["corps_sain"],
     "Tentacruel": ["corps_sain"],
+    "Terapagos": ["carapace_tera"],
     "Terhal": ["corps_sain"],
+    "Terracruel": ["mycelium_might"],
     "Terraiste": ["absorb_eau", "poison_de_contact"],
     "Tiboudet": ["determination", "tempo_perso"],
     "Tic": ["corps_sain"],
@@ -1550,6 +2179,7 @@ POKEMON_CAPACITES = {
     "Trépassable": ["voile_sable"],
     "Tygnon": ["determination", "regard_vif"],
     "Tylton": ["vigilance"],
+    "Type:0": ["carapace"],
     "Typhlosion": ["brasier", "cache_flamme"],
     "Typhlosion d'Hisui": ["brasier", "fouille"],
     "Tyranocif": ["sable_volant", "tension"],
@@ -1599,7 +2229,9 @@ POKEMON_CAPACITES = {
     "Zamazenta": ["bouclier_royal"],
     "Zarude": ["garde_feuille"],
     "Zarbi": ["levitation"],
+    "Zekrom": ["teravolt"],
     "Zeraora": ["absorb_volt"],
+    "Zoroark": ["illusion"],
     "Zygarde": ["rupture_aura"],
     "Zigzaton": ["gourmandise"],
     "Zigzaton de Galar": ["gourmandise"],
@@ -1613,6 +2245,7 @@ POKEMON_CAPACITES = {
     "Ékaïser": ["envelocape"],
     "Élecsprint": ["statik"],
     "Électhor": ["pression", "statik"],
+    "Électhor de Galar": ["defiant"],
     "Électrode": ["statik"],
     "Électrode d'Hisui": ["statik"],
     "Élekable": ["esprit_vital"],
@@ -1645,6 +2278,23 @@ def capacite_pour_espece(pokemon_nom: str) -> str:
         return semi_coherent
 
     return talent_aleatoire()
+
+
+def tire_genre_pour_espece(pokemon_nom: str) -> str:
+    """Tire un genre pour ce Pokémon selon le VRAI ratio de son espèce (genre_taux dans
+    pokedex_complet.json, valeur PokeAPI officielle : -1 = asexué, 0 = toujours mâle,
+    8 = toujours femelle, valeurs intermédiaires = huitièmes de femelle). SNAPSHOTÉ une
+    fois par combat (voir initialiser_equipe_combat_pvp) plutôt que fixé une fois pour
+    toutes par capture — aucune donnée de genre n'existe côté captures pour l'instant."""
+    import pokemon_data
+
+    pokemon = pokemon_data.obtenir_pokemon_par_nom(pokemon_nom)
+    taux = pokemon.get("genre_taux", -1) if pokemon else -1
+    if taux == -1:
+        return "aucun"
+    if random.randint(0, 7) < taux:
+        return "femelle"
+    return "male"
 
 
 def infos_capacite(cle: str) -> dict | None:
@@ -1714,6 +2364,19 @@ def multiplicateur_degats_pleine_vie(capacite: str, pv_actuels: int, pv_max: int
     if info and info.get("reduit_degats_pleine_vie") and pv_actuels >= pv_max:
         return 0.5
     return 1.0
+
+
+def plafonne_efficacite_pleine_vie(capacite: str, pv_actuels: int, pv_max: int, multi_type_actuel: float) -> float:
+    """Carapace Téra (Terapagos) — tant qu'à pleine vie, toute attaque qui touche est
+    PLAFONNÉE à "pas très efficace" (0.5x), même si elle aurait normalement été neutre
+    ou super efficace — remplace multi_type plutôt que de le multiplier. Ne s'applique
+    jamais si l'attaque était déjà totalement inefficace (immunité de type, multi_type
+    == 0) ni si le multiplicateur réel est DÉJÀ inférieur ou égal à 0.5 (pas d'aggravation)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("plafonne_efficacite_pleine_vie") and pv_actuels >= pv_max:
+        if multi_type_actuel > 0.5:
+            return 0.5
+    return multi_type_actuel
 
 
 def talent_declenche_sturdy(capacite: str) -> bool:
@@ -1800,6 +2463,379 @@ def multiplicateur_vitesse_meteo(capacite: str, meteo_active: str | None) -> flo
     return 1.0
 
 
+def multiplicateur_stat_meteo_signature(capacite: str, meteo_active: str | None, stat: str) -> float:
+    """Pulsion Orichalque (Koraidon) — +33% sur UNE stat précise (son Attaque) tant
+    qu'UNE météo précise (Soleil) est active — combiné avec meteo_declenchee_a_entree
+    qui déclenche cette météo à l'entrée."""
+    info = CAPACITES.get(capacite)
+    if info and "boost_stat_meteo" in info:
+        meteo_requise, stat_requise, mult = info["boost_stat_meteo"]
+        if meteo_active == meteo_requise and stat == stat_requise:
+            return mult
+    return 1.0
+
+
+def multiplicateur_stat_terrain_signature(capacite: str, terrain_actif: str | None, stat: str) -> float:
+    """Moteur Hadron (Miraidon) — même principe que multiplicateur_stat_meteo_signature,
+    mais pour un terrain de zone (Électrique) plutôt qu'une météo."""
+    info = CAPACITES.get(capacite)
+    if info and "boost_stat_terrain" in info:
+        terrain_requis, stat_requise, mult = info["boost_stat_terrain"]
+        if terrain_actif == terrain_requis and stat == stat_requise:
+            return mult
+    return 1.0
+
+
+def multiplicateur_stat_dominante(
+    capacite: str, meteo_active: str | None, terrain_actif: str | None, row: dict, cle_stat: str
+) -> float:
+    """Vigueur Ancestrale (Protosynthesis, les 10 Paradoxes du passé) / Turbo Circuit
+    (Quark Drive, les 10 Paradoxes du futur) — +30% (ou +50% si c'est la Vitesse) sur
+    la stat de BASE la plus élevée du Pokémon, tant que le Soleil brille (Vigueur
+    Ancestrale) ou que le Terrain Électrique est actif (Turbo Circuit). En cas d'égalité
+    entre plusieurs stats, priorité Attaque > Défense > Attaque Spé > Défense Spé >
+    Vitesse, comme dans les vrais jeux. v1 : ne couvre pas la Capsule Dynamo (Booster
+    Energy), qui donnerait le même effet en continu sans dépendre de la météo/du
+    terrain — cet objet n'existe pas encore dans ce jeu."""
+    info = CAPACITES.get(capacite)
+    if not info or "stat_dominante_condition" not in info:
+        return 1.0
+    type_condition, valeur_requise = info["stat_dominante_condition"]
+    if type_condition == "meteo" and meteo_active != valeur_requise:
+        return 1.0
+    if type_condition == "terrain" and terrain_actif != valeur_requise:
+        return 1.0
+
+    candidats = [
+        ("atk", row["atq"]), ("def", row["defe"]), ("atk_spe", row["atq_spe"]),
+        ("def_spe", row["def_spe"]), ("vit", row["vit"]),
+    ]
+    stat_dominante = max(candidats, key=lambda c: c[1])[0]  # max() garde le 1er trouvé en cas d'égalité, déjà dans l'ordre de départage voulu
+
+    if cle_stat != stat_dominante:
+        return 1.0
+    return 1.5 if stat_dominante == "vit" else 1.3
+
+
+def multiplicateur_defense_si_statut(capacite: str, a_statut: bool) -> float:
+    """Écailles Magiques (Marvel Scale, Milobellus) — +50% Défense tant qu'il a un
+    problème de statut (poison/brûlure/paralysie/sommeil/gel — pas la confusion, qui
+    est un statut volatil séparé, jamais un "problème de statut" au sens classique)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("boost_defense_si_statut") and a_statut:
+        return 1.5
+    return 1.0
+
+
+def multiplicateur_vitesse_si_statut(capacite: str, a_statut: bool) -> float:
+    """Pied Véloce (Quick Feet, Teddiursa) — +50% Vitesse tant qu'il a un problème de
+    statut (même principe qu'Écailles Magiques, mais sur la Vitesse)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("boost_vitesse_si_statut") and a_statut:
+        return 1.5
+    return 1.0
+
+
+# Attaques "sonores" reconnues par Ronfleur (Soundproof, Chuchmur) — liste limitée aux
+# attaques identifiées avec confiance dans ce Pokédex.
+ATTAQUES_SONORES = {"Ultrason", "Grondement", "Voix Envoûtante", "Hurlement", "Rugissement", "Ronflement", "Requiem"}
+
+
+def immunise_attaque_sonore(capacite: str, nom_attaque: str) -> bool:
+    """Ronfleur (Soundproof, Chuchmur) — immunisé aux attaques sonores reconnues (voir
+    ATTAQUES_SONORES)."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("immunite_sonore") and nom_attaque in ATTAQUES_SONORES)
+
+
+def a_cran_vital(capacite: str) -> bool:
+    """Cran Vital (Speed Boost, Ninjask) — +1 Vitesse à la fin de chaque tour où ce
+    Pokémon est resté actif. Le déclenchement (une fois par tour) se fait côté
+    combat.py, cette fonction ne fait que détecter la capacité."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("cran_vital"))
+
+
+def a_wonder_guard(capacite: str) -> bool:
+    """Wonder Guard (Munja) — immunisé à toute attaque qui n'est pas super efficace.
+    v1 : ne protège que des attaques offensives typées (comme dans les vrais jeux, où
+    Lutte/Struggle et les dégâts indirects passent quand même) — la vérification du
+    multiplicateur de type et l'exclusion de Lutte se font côté combat.py."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("wonder_guard"))
+
+
+def a_absenteisme(capacite: str) -> bool:
+    """Absentéisme (Truant, Parecool) — n'agit qu'un tour sur deux, glande l'autre.
+    Toute la logique d'alternance (glande_prochain_tour) se fait côté combat.py, cette
+    fonction ne fait que détecter la capacité."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("absenteisme"))
+
+
+def multiplicateur_moelleux(capacite: str, classe_attaque: str | None, type_attaque: str | None) -> float:
+    """Moelleux (Fluffy, Nounourson/Moumouton/Moumouflon) — dégâts physiques (contact,
+    approximé par classe == physical comme Peau Dure) divisés par 2, dégâts Feu
+    doublés. Si l'attaque est À LA FOIS physique ET Feu, les deux s'annulent (comme
+    dans les vrais jeux — Moelleux ne fait alors ni bien ni mal)."""
+    info = CAPACITES.get(capacite)
+    if not info or not info.get("moelleux"):
+        return 1.0
+    mult = 1.0
+    if classe_attaque == "physical":
+        mult *= 0.5
+    if type_attaque == "feu":
+        mult *= 2.0
+    return mult
+
+
+def declenche_dommage_sec(capacite: str, classe_attaque: str | None) -> bool:
+    """Dommage Sec (Aftermath, Baudrive/Grodrive) — en étant mis K.O. par une attaque
+    physique (approximé "au contact" comme Peau Dure), inflige 25% des PV max de
+    l'attaquant en retour. Le déclenchement (vérifier le K.O.) se fait côté combat.py."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("dommage_sec") and classe_attaque == "physical")
+
+
+def a_expuls_organes(capacite: str) -> bool:
+    """Expuls'Organes (Innards Out, Concombaffe) — en étant mis K.O. (n'importe quelle
+    classe d'attaque, contrairement à Dommage Sec/Peau Dure qui exigent le contact),
+    inflige à l'attaquant des dégâts égaux à SES PROPRES PV restants avant le coup
+    fatal (pas un pourcentage fixe). Le calcul se fait côté combat.py."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("expuls_organes"))
+
+
+def a_supermutation(capacite: str) -> bool:
+    """Supermutation (Zero to Hero, Superdofin) — passe en forme Super (stats bien
+    plus élevées) après un changement volontaire hors puis retour sur le terrain,
+    définitivement pour le reste du combat. v1 : approxime le vrai bond de stats par
+    un x1.9 uniforme sur toutes les stats de combat, plutôt que les vraies valeurs de
+    base précises de la forme Super (proche, pas identique)."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("supermutation"))
+
+
+def en_forme_ecole(capacite: str, niveau: int, pv_actuels: int, pv_max: int) -> bool:
+    """Bancosphère (Schooling, Froussardine) — forme École (stats bien plus élevées,
+    sauf Vitesse qui baisse) tant que le niveau est 20+ ET les PV au-dessus de 25%,
+    recalculé EN DIRECT à chaque instant (jamais persistant, comme Forme Météo — les
+    vrais jeux le réévaluent aussi à chaque tour, pas seulement à l'entrée). v1 :
+    approxime le vrai bond de stats (x7/x6.5/x5.6/x5.4 selon la stat précisément) par
+    un x6 uniforme sur Attaque/Défense/Attaque Spé/Défense Spé, et x0.75 sur la
+    Vitesse — proche, pas identique aux vraies valeurs de base de la forme École."""
+    info = CAPACITES.get(capacite)
+    if not info or not info.get("bancosphere"):
+        return False
+    return niveau >= 20 and pv_max > 0 and pv_actuels / pv_max > 0.25
+
+
+def a_anti_air(capacite: str) -> bool:
+    """Anti-Air (No Guard, Monorpale/Dimoclès) — toute attaque touche toujours, que ce
+    Pokémon attaque ou soit visé."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("anti_air"))
+
+
+def boost_attaque_contact(capacite: str, classe_attaque: str | None) -> float:
+    """Poigne de Fer (Tough Claws, Berserkatt) — +30% sur les attaques au contact
+    (approximé classe == physical, comme Peau Dure)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("boost_contact") and classe_attaque == "physical":
+        return 1.3
+    return 1.0
+
+
+# Attaques "morsure" reconnues par Mâchoire Brute (Strong Jaw) — liste limitée aux
+# attaques identifiées avec confiance dans ce Pokédex.
+ATTAQUES_MORSURE = {"Morsure", "Croc Fatal", "Crochet Venin", "Crocs Éclair", "Crocs Givre", "Crocs Feu", "Psycho-Croc"}
+
+
+def boost_attaque_morsure(capacite: str, nom_attaque: str) -> float:
+    """Mâchoire Brute (Strong Jaw, Voltoutou/Fulgudog) — +50% sur les attaques de
+    morsure reconnues (voir ATTAQUES_MORSURE)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("boost_morsure") and nom_attaque in ATTAQUES_MORSURE:
+        return 1.5
+    return 1.0
+
+
+def change_capacite_au_contact(capacite: str, classe_attaque: str | None) -> str | None:
+    """Momie (Mummy, Tutafeh/Tutankafer) / Esprit Vagabond (Wandering Spirit,
+    Tutétékri) — au contact (approximé classe == physical), transforme la capacité de
+    L'ATTAQUANT. Momie devient toujours "momie" (qui se propage à son tour, un
+    Pokémon Momie touché au contact rend Momie l'attaquant suivant). Esprit Vagabond
+    ÉCHANGE les deux capacités au lieu de forcer la sienne — géré différemment côté
+    combat.py, cette fonction retourne juste la NOUVELLE capacité à donner à
+    l'attaquant pour le cas Momie (simple à sens unique), ou None si inapplicable/pas
+    Momie (Esprit Vagabond est détecté séparément via a_esprit_vagabond)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("momie") and classe_attaque == "physical":
+        return "momie"
+    return None
+
+
+def a_esprit_vagabond(capacite: str, classe_attaque: str | None) -> bool:
+    """Esprit Vagabond (Wandering Spirit, Tutétékri) — au contact, ÉCHANGE sa propre
+    capacité avec celle de l'attaquant (contrairement à Momie qui impose la sienne à
+    sens unique). L'échange lui-même se fait côté combat.py."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("esprit_vagabond") and classe_attaque == "physical")
+
+
+def riposte_contact(capacite: str, classe_attaque: str | None) -> float:
+    """Peau Dure (Rough Skin) / Piquant (Iron Barbs) — inflige un pourcentage des PV
+    max de l'ATTAQUANT en retour, sur toute attaque au CONTACT subie. v1 : "au contact"
+    approximé par classe == "physical" (heuristique raisonnable — la plupart des
+    attaques physiques font contact dans les vrais jeux, quelques exceptions comme
+    Séisme ne sont pas distinguées ici, faute d'un champ "contact" dans ce Pokédex).
+    Retourne le pourcentage (0.0 si inapplicable)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("contact_riposte") and classe_attaque == "physical":
+        return info.get("riposte_pourcent", 0.0)
+    return 0.0
+
+
+def a_facsimile(capacite: str) -> bool:
+    """Fac-similé (Disguise, Mimiqui) — bloque intégralement UN SEUL coup sur toute la
+    durée du combat (1/8 PV max perdu à la place). Toute la logique de consommation
+    (facsimile_brise) se fait côté combat.py, cette fonction ne fait que détecter la
+    capacité."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("facsimile"))
+
+
+def piege_adversaire(capacite: str) -> bool:
+    """Ombre Portée (Shadow Tag, Qulbutoké/Okéoké) — empêche l'adversaire de changer
+    volontairement de Pokémon tant qu'il est en vie. v1 : bloqué au moment de la
+    résolution plutôt que dans l'interface de choix (le joueur peut toujours cliquer
+    sur changer, l'action échoue avec un message)."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("piege_adversaire"))
+
+
+def multiplicateur_chochotte(capacite: str, pv_actuels: int, pv_max: int) -> float:
+    """Chochotte (Defeatist, Arkéapti) — Attaque et Attaque Spéciale divisées par 2 dès
+    que les PV tombent à 50% ou moins (pas seulement en-dessous, contrairement à
+    Ossature/Porte de Secours — le seuil de 50% pile compte déjà)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("chochotte") and pv_max > 0 and pv_actuels / pv_max <= 0.5:
+        return 0.5
+    return 1.0
+
+
+def a_pure_puissance(capacite: str) -> bool:
+    """Pure Puissance (Huge Power, Excavarenne) — double sa propre Attaque de base
+    (physique uniquement, jamais l'Attaque Spéciale)."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("pure_puissance"))
+
+
+def a_tactiques_simiesques(capacite: str) -> bool:
+    """Tactiques Simiesques (Gorilla Tactics, Darumacho de Galar) — +50% Attaque
+    physique. v1 SIMPLIFIÉE : dans les vrais jeux, cette capacité verrouille aussi le
+    porteur sur sa PREMIÈRE attaque choisie pour tout le combat (comme un objet Choix)
+    — cette contrainte n'est PAS reproduite ici, seul le bonus de puissance l'est."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("tactiques_simiesques"))
+
+
+def multiplicateur_fourrure_renforcee(capacite: str, classe_attaque: str | None) -> float:
+    """Fourrure Renforcée (Fur Coat, Couafarel) — dégâts physiques subis divisés par 2
+    (jamais les dégâts spéciaux)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("fourrure_renforcee") and classe_attaque == "physical":
+        return 0.5
+    return 1.0
+
+
+def bloque_attaque_statut_adverse(capacite: str, classe_attaque: str | None) -> bool:
+    """Or Pur (Good as Gold, Gromago) — immunisé à toute attaque de STATUT adverse
+    (jamais aux attaques offensives, même avec un effet secondaire de statut — seules
+    les attaques 100% statut comme Toxic ou Rugissement sont bloquées)."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("bloque_statut_adverse") and classe_attaque == "status")
+
+
+# Dupliquée localement plutôt qu'importée de combat.py (qui importe déjà capacites.py —
+# un import inverse créerait un cycle). Doit rester synchronisée avec
+# ATTAQUES_PRIORITE_POSITIVE dans combat.py si cette liste est un jour étendue.
+ATTAQUES_PRIORITE_POSITIVE_CAPACITES = {"Vive-Attaque", "Ombre Portée", "Poing Éclair", "Direct Toxik"}
+
+
+def bloque_attaque_prioritaire(capacite: str, nom_attaque: str) -> bool:
+    """Ordre Royal (Queenly Majesty, Sucreine) — bloque toute attaque adverse à
+    priorité positive (voir ATTAQUES_PRIORITE_POSITIVE dans combat.py). v1 : ne couvre
+    que les attaques à priorité FIXE de cette liste, pas les attaques de statut
+    dynamiquement boostées en priorité par Farceur/Mycelium Might chez l'attaquant."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("bloque_priorite") and nom_attaque in ATTAQUES_PRIORITE_POSITIVE_CAPACITES)
+
+
+def a_miroir_magik(capacite: str, classe_attaque: str | None) -> bool:
+    """Miroir Magik (Magic Bounce, Sorcilence) — sur une attaque de STATUT adverse
+    (jamais offensive), renvoie l'effet vers son lanceur au lieu de le subir. v1 : ne
+    couvre pas la Malédiction spectrale (exception réelle qui touche quand même la
+    cible), ni les capacités Brise Moule/Turbo Brasier/Téra-Voltage qui devraient
+    ignorer ce renvoi. Toute la logique de redirection se fait côté combat.py."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("miroir_magik") and classe_attaque == "status")
+
+
+def a_adaptabilite(capacite: str) -> bool:
+    """Adaptabilité (Adaptability, Évoli) — le STAB passe de x1.5 à x2.0."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("adaptabilite"))
+
+
+def a_garde_magique(capacite: str) -> bool:
+    """Garde Magique (Magic Guard, Mélofée/Mélo/Mélodelfe) — immunisé à tout dégât
+    INDIRECT (statut, météo...). v1 : ne couvre que le statut (poison/brûlure) et la
+    météo (sable/grêle), pas le recul (Life Orb) ni les hazards à l'entrée."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("garde_magique"))
+
+
+def a_camouflage(capacite: str) -> bool:
+    """Camouflage (Color Change, Kecleon) — change son propre type pour correspondre à
+    la dernière attaque offensive subie. Toute la logique de déclenchement/lecture se
+    fait côté combat.py (colonne type_camouflage), cette fonction ne fait que détecter
+    la capacité."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("camouflage"))
+
+
+def type_forme_meteo(capacite: str, meteo_active: str | None) -> str | None:
+    """Forme Météo (Forecast, Morphéo) — change son propre type selon la météo
+    ACTIVE, recalculé en direct (jamais persistant, contrairement à Camouflage) :
+    Soleil -> Feu, Pluie -> Eau, Grêle -> Glace, sinon (ou Tempête de Sable) -> Normal
+    (son type de base). Retourne le type à utiliser, ou None si inapplicable (pas
+    Forme Météo)."""
+    info = CAPACITES.get(capacite)
+    if not info or not info.get("forme_meteo"):
+        return None
+    return {"soleil": "feu", "pluie": "eau", "grele": "glace"}.get(meteo_active, "normal")
+
+
+def boost_si_touche_physique(capacite: str) -> tuple | None:
+    """Armure Fragile (Weak Armor, Polthégeist/Corayôme) — quand touché par une attaque
+    PHYSIQUE (peu importe le type), -1 Défense et +2 Vitesse. Retourne
+    (stat_baissee, stat_haussee) si applicable, sinon None."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("armure_fragile"):
+        return ("def", -1), ("vit", 2)
+    return None
+
+
+def transforme_type_normal(capacite: str) -> bool:
+    """Pixilate (Nymphali) — transforme ses propres attaques Normal en Fée (+30% de
+    puissance). Le VRAI travail (copie sûre du dict d'attaque, jamais de mutation du
+    catalogue partagé) se fait côté combat.py — cette fonction ne fait que détecter la
+    capacité."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("transforme_normal_en"))
+
+
 def multiplicateur_debut_lent(capacite: str, tours_en_jeu: int) -> dict:
     """Lenteur (Slow Start) — Attaque et Vitesse divisées par 2 pendant les
     NB_TOURS_DEBUT_LENT premiers tours après l'envoi (tours_en_jeu 0-indexé : le tour de
@@ -1853,6 +2889,23 @@ def boost_attaques_faible_puissance(capacite: str) -> bool:
     return bool(info and info.get("boost_attaques_faible_puissance"))
 
 
+def a_force_brute(capacite: str) -> bool:
+    """Force Brute (Sheer Force, Pachyradjah) — +30% de puissance sur toute attaque
+    ayant un effet secondaire (ailment ou changement de stat), mais annule CET effet
+    secondaire en échange. La détection ET la suppression se font côté combat.py
+    (nécessite de lire/modifier les champs de l'attaque avant le calcul de dégâts)."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("force_brute"))
+
+
+def a_corrosion(capacite: str) -> bool:
+    """Corrosion (Floréclat) — peut empoisonner un Poison/Acier malgré leur immunité de
+    type naturelle. Passé en paramètre ignore_immunite_poison_type de
+    database.definir_statut par l'appelant."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("corrosion"))
+
+
 def bloque_effets_secondaires_subis(capacite: str) -> bool:
     """Écran Poudre — immunisé aux effets secondaires (pas aux dégâts) des attaques subies."""
     info = CAPACITES.get(capacite)
@@ -1887,6 +2940,56 @@ def a_priorite_attaques_statut(capacite: str) -> bool:
     """Farceur — priorité +1 sur les attaques de statut de ce Pokémon."""
     info = CAPACITES.get(capacite)
     return bool(info and info.get("priorite_attaques_statut"))
+
+
+def a_mycelium_might(capacite: str) -> bool:
+    """Mycelium Might (Terracruel) — symétrique de Farceur : SES PROPRES attaques de
+    statut agissent toujours en dernier dans leur tranche de priorité (géré côté
+    combat.py, symétrique de a_priorite_attaques_statut ci-dessus), mais ignorent en
+    échange la capacité d'immunité de statut de la cible. v1 : ne couvre que cette
+    immunité de statut précise — pas les autres capacités "ignorables" que les vrais
+    jeux bypassent aussi (Corps Sain contre une baisse de stat, par exemple)."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("mycelium_might"))
+
+
+def a_illusion(capacite: str) -> bool:
+    """Illusion (Zoroark) — se déguise en le dernier Pokémon conscient de l'équipe
+    jusqu'à subir un coup. ⚠️ Adaptation : dans les vrais jeux, ne trompe que
+    l'adversaire, jamais son propre dresseur — ici visible de tout le monde (voir
+    commentaire sur la colonne deguise_en dans database/__init__.py pour le pourquoi).
+    Toute la détection/révélation se fait côté combat.py, cette fonction ne fait que
+    détecter la capacité."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("illusion"))
+
+
+def pourcent_soin_allie_entree(capacite: str) -> float:
+    """Hospitalité (Sinistrail) — soigne son allié de 25% de ses PV max à l'entrée en
+    jeu. Utile UNIQUEMENT en 2v2 (aucun allié en 1v1) — retourne 0.0 si inapplicable."""
+    info = CAPACITES.get(capacite)
+    if info and "soin_allie_entree" in info:
+        return info["soin_allie_entree"]
+    return 0.0
+
+
+def protege_allie_type(capacite: str) -> str | None:
+    """Voile Floral (Flower Veil, Florges) — protège les alliés d'UN TYPE précis
+    (Plante) des baisses de stats et des problèmes de statut. Utile UNIQUEMENT en 2v2
+    (aucun allié en 1v1) — retourne le type protégé, ou None si inapplicable."""
+    info = CAPACITES.get(capacite)
+    return info.get("protege_allie_type") if info else None
+
+
+def multiplicateur_poids_effectif(capacite: str) -> float:
+    """Métal Léger (Light Metal) divise son PROPRE poids effectif par 2, Métal Lourd
+    (Heavy Metal) le double — affecte uniquement le calcul de puissance des attaques
+    basées sur le poids (Nœud Herbe, Balayage, Tacle Lourd, Tacle Feu), jamais le poids
+    réel affiché ailleurs (Pokédex, etc.)."""
+    info = CAPACITES.get(capacite)
+    if info and "mult_poids" in info:
+        return info["mult_poids"]
+    return 1.0
 
 
 def multiplicateur_types_meteo(capacite: str, meteo_active: str | None, type_attaque: str) -> float:
@@ -2014,8 +3117,149 @@ def multiplicateur_type_signature(capacite: str, type_attaque: str) -> float:
         return 1.5
     return 1.0
 
+# Attaques de poing reconnues par Poing de Fer (Meltan/Melmetal) — liste EXPLICITE plutôt
+# qu'une recherche de sous-chaîne "Poing", qui inclurait à tort des attaques comme
+# "Poing Karaté" (= Karate Chop dans les vrais jeux, jamais concernée par Poing de Fer
+# malgré son nom). Liste volontairement limitée aux attaques identifiées avec confiance
+# dans ce Pokédex — quelques attaques au nom ambigu (Poing Dard, Poing Obscur, Poing
+# Sonique, Poing de Colère, Mitra-Poing, Écrous d'Poing) sont omises faute de certitude
+# sur leur correspondance exacte avec une vraie attaque de poing des jeux officiels.
+ATTAQUES_POING = {
+    "Poing Comète", "Poing Feu", "Poing Glace", "Poing Éclair", "Dynamo-Poing",
+    "Poing Météore", "Poing Ombre", "Marto-Poing", "Vampi-Poing", "Pisto-Poing",
+    "Poing Boost", "Ultimapoing",
+}
 
-def multiplicateur_fleau(capacite_adverse: str, stat: str) -> float:
+
+# Attaques de la famille "vibration/aura" (pulse) reconnues par Méga Blaster (Mega
+# Launcher, Gamblast) — liste limitée aux attaques identifiées avec confiance dans ce
+# Pokédex (Aura Sphere, Water Pulse, Origin Pulse). D'autres membres réels de la famille
+# (Dark Pulse, Dragon Pulse, Heal Pulse, Terrain Pulse) n'ont pas été retrouvés sous un
+# nom français univoque dans ce jeu — omis faute de certitude plutôt que devinés.
+ATTAQUES_PULSE = {"Aurasphère", "Vibraqua", "Onde Originelle"}
+
+
+# Attaques "vent" reconnues par Turbine Éolienne (Wind Rider, Théffroyable) — liste
+# limitée aux attaques identifiées avec confiance (Hurricane, Tailwind, Icy Wind, Fairy
+# Wind). D'autres membres réels de la famille (Gust, Twister, Whirlwind, Petal Blizzard,
+# Sandstorm) n'ont pas de correspondance française univoque retrouvée dans ce jeu.
+ATTAQUES_VENT = {"Ouragan", "Vent Arrière", "Vent Glace", "Vent Féérique"}
+
+
+def immunise_et_boost_si_vent(capacite: str, nom_attaque: str) -> bool:
+    """Turbine Éolienne (Wind Rider, Théffroyable) — immunisé aux dégâts d'une attaque
+    de la famille "vent" reconnue (voir ATTAQUES_VENT), et gagne +1 Attaque en plus. Le
+    boost de stat est appliqué côté combat.py (retourne juste si applicable ici)."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("immunite_vent") and nom_attaque in ATTAQUES_VENT)
+
+
+# Attaques dont la puissance dépend du POIDS — Nœud Herbe/Balayage (poids de LA CIBLE),
+# Tacle Lourd/Tacle Feu (ratio attaquant/cible). Nécessite pokemon_data.poids_kg,
+# ajouté au Pokédex spécifiquement pour ces 4 attaques et Métal Léger/Lourd.
+ATTAQUES_POIDS_CIBLE = {"Nœud Herbe", "Balayage"}
+ATTAQUES_POIDS_RATIO = {"Tacle Lourd", "Tacle Feu"}
+
+
+# Attaques à coups multiples reconnues — (min, max) coups. Liste limitée aux attaques
+# identifiées avec confiance dans ce Pokédex. v1 : le nombre de coups tirés au hasard
+# APPROXIME l'effet en multipliant la puissance totale par le nombre de coups, plutôt
+# que de résoudre chaque coup séparément (crit/effet indirect par coup) — un choix
+# délibéré à faible risque pour ne pas restructurer toute la boucle de dégâts déjà
+# construite autour d'un seul coup par attaque.
+ATTAQUES_COUPS_MULTIPLES = {
+    "Furie": (2, 5), "Dard-Nuée": (2, 5), "Double Pied": (2, 2),
+}
+
+
+def declenche_charme_ensorceleur(capacite_def: str, genre_def: str, genre_atk: str, classe_attaque: str | None) -> bool:
+    """Charme Ensorceleur (Cute Charm, Rondoudou/Toudoudou/Skitty/Delcatty) — 30% de
+    chance d'infatuer L'ATTAQUANT au contact (approximé classe == physical, comme
+    Peau Dure), SEULEMENT si les deux ont un genre opposé (jamais si l'un des deux est
+    asexué — "aucun" ne matche jamais rien, même pas un autre "aucun")."""
+    info = CAPACITES.get(capacite_def)
+    if not info or not info.get("charme_ensorceleur") or classe_attaque != "physical":
+        return False
+    if genre_def == "aucun" or genre_atk == "aucun" or genre_def == genre_atk:
+        return False
+    return random.random() < 0.30
+
+
+def tire_nombre_coups(nom_attaque: str, capacite_atk: str) -> int | None:
+    """Retourne le nombre de coups tirés pour une attaque à coups multiples reconnue
+    (voir ATTAQUES_COUPS_MULTIPLES), ou None si l'attaque n'en fait pas partie. Multi-
+    Coups (Skill Link, Capumain) force TOUJOURS le maximum. Sinon, distribution
+    officielle des vrais jeux pour du 2-5 coups : 35%/35%/15%/15% pour 2/3/4/5 coups."""
+    if nom_attaque not in ATTAQUES_COUPS_MULTIPLES:
+        return None
+    mini, maxi = ATTAQUES_COUPS_MULTIPLES[nom_attaque]
+    if mini == maxi:
+        return mini
+    info = CAPACITES.get(capacite_atk)
+    if info and info.get("multi_coups"):
+        return maxi
+    tirage = random.random()
+    if tirage < 0.35:
+        return 2
+    if tirage < 0.70:
+        return 3
+    if tirage < 0.85:
+        return 4
+    return 5
+
+
+def puissance_selon_poids_cible(poids_kg: float) -> int:
+    """Nœud Herbe (Grass Knot) / Balayage (Low Kick) — puissance selon le poids RÉEL
+    (déjà ajusté par Métal Léger/Lourd si applicable) de la cible."""
+    if poids_kg < 10:
+        return 20
+    if poids_kg < 25:
+        return 40
+    if poids_kg < 50:
+        return 60
+    if poids_kg < 100:
+        return 80
+    if poids_kg < 200:
+        return 100
+    return 120
+
+
+def puissance_selon_ratio_poids(poids_atk_kg: float, poids_def_kg: float) -> int:
+    """Tacle Lourd (Heavy Slam) / Tacle Feu (Heat Crash) — puissance selon le RATIO du
+    poids de l'attaquant sur celui du défenseur (déjà ajustés par Métal Léger/Lourd)."""
+    if poids_def_kg <= 0:
+        return 40
+    ratio = poids_atk_kg / poids_def_kg
+    if ratio >= 5:
+        return 120
+    if ratio >= 4:
+        return 100
+    if ratio >= 3:
+        return 80
+    if ratio >= 2:
+        return 60
+    return 40
+
+
+def boost_attaque_pulse(capacite: str, nom_attaque: str) -> float:
+    """Méga Blaster (Mega Launcher, Gamblast) — +50% sur les attaques de la famille
+    vibration/aura reconnues (voir ATTAQUES_PULSE)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("boost_pulse") and nom_attaque in ATTAQUES_PULSE:
+        return 1.5
+    return 1.0
+
+
+def boost_attaque_poing(capacite: str, nom_attaque: str) -> float:
+    """Poing de Fer (Meltan/Melmetal) — +20% sur les attaques de poing reconnues (voir
+    ATTAQUES_POING)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("boost_poing") and nom_attaque in ATTAQUES_POING:
+        return 1.2
+    return 1.0
+
+
+
     """Fléau (Chongjian/Baojian/Dinglu/Yuyu) — -25% sur UNE stat précise de TOUS LES
     AUTRES Pokémon (jamais son propre porteur) tant qu'il est sur le terrain. Vérifié
     depuis le point de vue de l'ADVERSAIRE du porteur : si LUI a un Fléau visant cette
@@ -2035,6 +3279,221 @@ def boost_attaque_si_touche_par_type(capacite: str, type_recu: str) -> tuple | N
     if info and info.get("boost_si_touche_par_type") == type_recu:
         return ("atk", 1)
     return None
+
+
+def boost_vitesse_phobique(capacite: str, type_recu: str) -> bool:
+    """Phobique (Rattled, Mordudor) — +1 Vitesse quand touché par une attaque
+    Ténèbres/Spectre/Insecte. v1 : ne couvre PAS le déclenchement par Intimidation
+    (celui-ci vit dans un point de code différent, l'entrée en jeu adverse, jamais
+    câblé pour cette capacité précise faute de temps)."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("phobique") and type_recu in ("tenebres", "spectre", "insecte"))
+
+
+def boost_si_stat_baissee_par_adversaire(capacite: str) -> tuple | None:
+    """Compétiteur (Artikodin de Galar) / Défiant (Électhor de Galar) — +2 sur une stat
+    propre dès que N'IMPORTE LAQUELLE de ses stats est abaissée par l'adversaire (peu
+    importe laquelle). Retourne (stat, delta) si applicable, sinon None."""
+    info = CAPACITES.get(capacite)
+    if info and "boost_si_stat_baissee" in info:
+        return info["boost_si_stat_baissee"]
+    return None
+
+
+def declenche_ossature(capacite: str, pv_avant: int, pv_apres: int, pv_max: int) -> tuple | None:
+    """Ossature (Berserk, Sulfura de Galar) — +1 Attaque Spéciale la première fois que
+    les PV passent SOUS 50% suite à des dégâts (jamais si déjà sous 50% avant le coup,
+    jamais si K.O.). Retourne (stat, delta) si applicable, sinon None."""
+    info = CAPACITES.get(capacite)
+    if not info or not info.get("boost_ossature"):
+        return None
+    seuil = pv_max / 2
+    if pv_avant > seuil >= pv_apres > 0:
+        return ("atk_spe", 1)
+    return None
+
+
+def declenche_porte_secours(capacite: str, pv_avant: int, pv_apres: int, pv_max: int) -> bool:
+    """Porte de Secours (Emergency Exit, Sarmuraï) — se retire automatiquement du combat
+    la première fois que les PV passent SOUS 50% suite à des dégâts (même seuil de
+    franchissement qu'Ossature, mais déclenche un changement forcé plutôt qu'un boost —
+    voir combat.py, qui réutilise le même mécanisme "switches_volontaires" que Change
+    Éclair/Demi-Tour pour l'envoi du remplaçant). Jamais si déjà sous 50% avant le coup,
+    jamais si K.O. (retirer un Pokémon déjà K.O. n'a pas de sens)."""
+    info = CAPACITES.get(capacite)
+    if not info or not info.get("porte_secours"):
+        return False
+    seuil = pv_max / 2
+    return pv_avant > seuil >= pv_apres > 0
+
+
+def chance_corps_maudit(capacite: str) -> float:
+    """Corps Maudit (Cursed Body, Ectoplasma) — 30% de chance de désactiver (4 tours)
+    l'attaque de l'adversaire qui vient de toucher ce Pokémon. Retourne la probabilité
+    (0.0 si inapplicable) — la durée (4 tours) et le nom de l'attaque à désactiver sont
+    gérés côté combat.py, cette fonction ne fait que détecter la capacité et sa chance."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("chance_desactivation"):
+        return info["chance_desactivation"]
+    return 0.0
+
+
+def a_stance_change(capacite: str) -> bool:
+    """Stance Change (Exagide) — détecte la capacité. Le VRAI changement de forme (Lame
+    à l'usage d'une attaque offensive, Bouclier à Bouclier Royal) et le swap de stats
+    associé (Attaque<->Défense, Attaque Spé<->Défense Spé en forme Lame) se gèrent
+    entièrement côté combat.py — centralisés dans infos_actif() pour le swap, et au
+    moment du choix d'attaque pour le changement de forme lui-même."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("stance_change"))
+
+
+def stats_echangees_si_lame(row: dict, en_forme_lame: bool) -> dict:
+    """Applique le swap Attaque<->Défense / Attaque Spé<->Défense Spé de Stance Change
+    si en_forme_lame est vrai — retourne une COPIE modifiée de row, ne mute jamais
+    l'original (même principe de sécurité que pour Pixilate : ne jamais muter un objet
+    potentiellement partagé/réutilisé ailleurs)."""
+    if not en_forme_lame:
+        return row
+    return {**row, "atq": row["defe"], "defe": row["atq"], "atq_spe": row["def_spe"], "def_spe": row["atq_spe"]}
+
+
+def boost_si_ko_inflige(capacite: str) -> tuple | None:
+    """Hennissement Glacé (Blizzeval) / Hennissement Sépulcral (Spectreval) — +1 sur une
+    stat propre quand ce Pokémon inflige lui-même le K.O. avec une attaque offensive.
+    Retourne (stat, delta) si applicable, sinon None."""
+    info = CAPACITES.get(capacite)
+    if info and "boost_si_ko" in info:
+        return info["boost_si_ko"]
+    return None
+
+
+def boost_si_ko_temoin(capacite: str) -> tuple | None:
+    """Cœur d'Âme (Soul-Heart, Magearna) — +1 sur une stat propre à chaque fois qu'UN
+    K.O. survient au combat, peu importe qui l'inflige (contrairement à Hennissement
+    Glacé/Sépulcral, qui exige que CE Pokémon soit lui-même l'auteur du coup). v1 :
+    ne couvre que les K.O. par coup direct, pas ceux par statut (poison/brûlure) en fin
+    de tour. Retourne (stat, delta) si applicable, sinon None."""
+    info = CAPACITES.get(capacite)
+    if info and "boost_si_ko_temoin" in info:
+        return info["boost_si_ko_temoin"]
+    return None
+
+
+def vole_objet_sur_coup(capacite: str) -> bool:
+    """Magicien (Hoopa) — vole l'objet tenu de la cible dès qu'il la touche avec une
+    attaque offensive, à condition de ne rien tenir lui-même. v1 : ne bloque pas le vol
+    des objets liés à une transformation (Plaques, ROM, Orbes...) — voir
+    ESPECES_A_NE_JAMAIS_VOLER dans combat.py pour cette exclusion précise, gérée côté
+    appelant plutôt qu'ici."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("vole_objet"))
+
+
+def vole_objet_au_contact(capacite: str, classe_attaque: str | None) -> bool:
+    """Coloforce (Pickpocket, Sapereau) — sens INVERSE de Magicien : quand CE Pokémon
+    (le défenseur) est touché au contact (approximé classe == physical, comme Peau
+    Dure), vole l'objet tenu de L'ATTAQUANT plutôt que l'inverse. Mêmes conditions de
+    validité (jamais s'il tient déjà quelque chose, jamais un objet de transformation)
+    gérées côté appelant, comme pour Magicien."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("vole_objet_contact") and classe_attaque == "physical")
+
+
+def tire_statut_pose_spore(capacite: str, classe_attaque: str | None) -> str | None:
+    """Pose Spore (Effect Spore, Balignon/Spododo/Lampignon) — au contact, 30% de
+    chance totale d'infliger à L'ATTAQUANT poison (9%)/paralysie (10%)/sommeil (11%),
+    taux exacts officiels. Retourne le statut à infliger, ou None si rien ne se
+    déclenche."""
+    info = CAPACITES.get(capacite)
+    if not info or not info.get("pose_spore") or classe_attaque != "physical":
+        return None
+    tirage = random.random()
+    if tirage < 0.09:
+        return "poison"
+    if tirage < 0.19:
+        return "paralysis"
+    if tirage < 0.30:
+        return "sleep"
+    return None
+
+
+def a_bajoues(capacite: str) -> bool:
+    """Bajoues (Cheek Pouch, Dedenne) — soigne 33% des PV max EN PLUS après avoir
+    consommé une Baie."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("bajoues"))
+
+
+def a_delestage(capacite: str) -> bool:
+    """Délestage (Unburden, Goupilou/Roublenard) — accélère fortement en consommant
+    son objet tenu. v1 : approxime le vrai doublement hors-stage des vrais jeux par
+    +2 stages de Vitesse (plus simple à intégrer au système de stages déjà existant,
+    mais pas un x2 garanti si un adversaire baisse ensuite cette même stat)."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("delestage"))
+
+
+def a_coeur_soin(capacite: str) -> bool:
+    """Cœur Soin (Healer, Fluvetin/Cocotine) — 30% de chance de guérir le statut d'un
+    allié en fin de tour, avant les dégâts de brûlure/poison de ce même tour. Utile
+    UNIQUEMENT en 2v2 (aucun allié en 1v1, jamais câblée côté combat.py 1v1)."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("coeur_soin"))
+
+
+def ignore_capacite_defensive(capacite: str) -> bool:
+    """Turboblaze (Reshiram) / Teravolt (Zekrom) — ignore la capacité DÉFENSIVE de
+    l'adversaire lors du calcul de dégâts (immunité de type par capacité, Filtre/Prisme
+    Armure, Bouclier de l'Ombre/Carapace Téra...). v1 : ne couvre que les 4 hooks
+    "défensifs" identifiés dans combat.py au moment de l'implémentation — n'ignore
+    JAMAIS les capacités réactives/de riposte de l'adversaire (Justicier,
+    Compétiteur/Défiant, Ossature...), fidèle aux vrais jeux où Cassure Moule ne bloque
+    que les capacités qui empêcheraient/réduiraient le coup, pas celles qui ripostent
+    après qu'il ait porté."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("ignore_capacite_def"))
+
+
+def ignore_protection(capacite: str) -> bool:
+    """Poing Fantôme (Unseen Fist, Shifours) — ignore Abri/Protection de l'adversaire.
+    v1 : bypass universel pour toutes les attaques de ce Pokémon, plutôt que de vérifier
+    si l'attaque fait spécifiquement "contact" (cette notion n'existe pas encore dans
+    les données d'attaques de ce jeu) — dans les vrais jeux, Poing Fantôme ne
+    fonctionne QUE sur les attaques de contact."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("ignore_protection"))
+
+
+def ignore_stage_adverse(capacite: str) -> bool:
+    """Téméraire (Unaware, Cosmog) — ignore les changements de stats de L'AUTRE Pokémon
+    lors du calcul de dégâts : ignore les boosts d'Attaque adverse quand il défend,
+    ignore les boosts de Défense adverse quand il attaque. Ses PROPRES stages restent
+    inchangés dans les deux cas."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("ignore_stage_adverse"))
+
+
+def chance_poison_chaine_toxique(capacite: str) -> float:
+    """Chaîne Toxique (Félicanis/Fortusimia/Favianos) — 30% de chance d'empoisonner la
+    cible sur une attaque OFFENSIVE (jamais une attaque de statut). v1 : applique un
+    poison classique (dégâts fixes), pas la version "gravement empoisonné" à dégâts
+    croissants des vrais jeux — cette distinction n'existe pas encore dans ce système
+    de statuts. Retourne la probabilité (0.0 si inapplicable)."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("chance_poison_sur_coup"):
+        return info["chance_poison_sur_coup"]
+    return 0.0
+
+
+def confond_aussi_si_poison(capacite: str) -> bool:
+    """Marionnettiste Toxique (Pêchaminus) — quand ce Pokémon empoisonne sa cible avec
+    UNE DE SES ATTAQUES, la cible devient aussi confuse. Réintégrée après séparation de
+    la confusion du statut principal (voir combat_confusion) — auparavant impossible,
+    la confusion et le poison partageaient le même emplacement unique de statut."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("confond_si_poison"))
+
 
 
 
@@ -2089,3 +3548,16 @@ def double_les_boosts(capacite: str) -> bool:
     """Talent Simple : tout changement de stat (subi ou infligé par ce Pokémon) est doublé."""
     info = CAPACITES.get(capacite)
     return bool(info and info.get("double_boosts"))
+
+
+def inverse_changements_stats(capacite: str) -> bool:
+    """Corps Contraire (Contrary, Amovénus) — inverse TOUT changement de stat que subit
+    ce Pokémon (une baisse devient une hausse et vice versa), peu importe la source :
+    sa propre attaque (Léviathan le boosterait au lieu de le pénaliser), une attaque
+    adverse (Rugissement le boosterait au lieu de l'affaiblir), ou une capacité
+    déclenchée (Justicier/Compétiteur...). Centralisé dans
+    database.modifier_boost — jamais vérifié directement ici en dehors de ce point
+    unique."""
+    info = CAPACITES.get(capacite)
+    return bool(info and info.get("inverse_stats"))
+

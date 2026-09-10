@@ -231,6 +231,31 @@ def _joueurs(combat_id: int) -> list:
     return database.obtenir_joueurs_2v2(combat_id)
 
 
+def _protege_par_voile_floral(combat_id: int, cible_user_id: int, cible_nom: str) -> bool:
+    """Voile Floral (Flower Veil, Florges) — vrai UNIQUEMENT en 2v2 (aucun allié en
+    1v1, jamais câblé côté combat.py 1v1 pour cette raison). Protège un Pokémon du BON
+    TYPE des baisses de stats et des problèmes de statut si SON COÉQUIPIER (pas
+    lui-même) a Voile Floral actif. Vérifie le type de la CIBLE, pas du porteur."""
+    if not cible_nom:
+        return False
+    pokemon_cible = obtenir_pokemon_par_nom(cible_nom)
+    if not pokemon_cible:
+        return False
+    joueurs = _joueurs(combat_id)
+    cible_j = next((j for j in joueurs if j["user_id"] == cible_user_id), None)
+    if cible_j is None:
+        return False
+    coequipier = next(
+        (j for j in joueurs if j["equipe"] == cible_j["equipe"] and j["user_id"] != cible_user_id and not j["abandonne"] and j["actif_nom"]),
+        None,
+    )
+    if coequipier is None:
+        return False
+    capacite_coequipier = database.obtenir_capacite_combat(combat_id, coequipier["user_id"], coequipier["actif_nom"])
+    type_protege = capacites_module.protege_allie_type(capacite_coequipier) if capacite_coequipier else None
+    return bool(type_protege and type_protege in pokemon_cible.get("types", []))
+
+
 def _row_actif(combat_id: int, user_id: int, actif_nom: str):
     if not actif_nom:
         return None
@@ -430,6 +455,24 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                     info_objet_adv = capacites_module.infos_objet(objet_adv)
                     texte_objet = f"**{info_objet_adv['nom']}**" if info_objet_adv else "aucun objet"
                     log.append(f"  🔍 **{nouveau}** (Fouille) — **{j_adv['actif_nom']}** tient : {texte_objet}")
+            # Hospitalité (Sinistrail) : soigne son allié de 25% de ses PV max à
+            # l'entrée — utile UNIQUEMENT en 2v2 (pas d'allié en 1v1, jamais curatée
+            # pour cette capacité côté combat.py 1v1). Même recherche d'allié que
+            # Fontaine de Vie plus bas dans ce fichier.
+            pourcent_hospitalite = capacites_module.pourcent_soin_allie_entree(capacite_nouveau) if capacite_nouveau else 0.0
+            if pourcent_hospitalite:
+                allie_hospitalite = next(
+                    (x for x in _joueurs(combat_id) if x["equipe"] == j["equipe"] and x["user_id"] != j["user_id"] and not x["abandonne"]),
+                    None,
+                )
+                if allie_hospitalite and allie_hospitalite["actif_nom"]:
+                    row_allie_hospitalite = _row_actif(combat_id, allie_hospitalite["user_id"], allie_hospitalite["actif_nom"])
+                    if row_allie_hospitalite is not None and row_allie_hospitalite["pv_actuels"] > 0:
+                        soin_hospitalite = max(1, round(row_allie_hospitalite["pv_max"] * pourcent_hospitalite))
+                        database.soigner_pvp(combat_id, allie_hospitalite["user_id"], allie_hospitalite["actif_nom"], soin_hospitalite)
+                        log.append(
+                            f"  🍵 **{nouveau}** (Hospitalité) — **{allie_hospitalite['actif_nom']}** récupère {soin_hospitalite} PV !"
+                        )
 
     # --- Phase 2 : potions ---
     for j in joueurs:
@@ -1180,7 +1223,12 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                         compteur = random.randint(1, 3)
                     elif ailment == "confusion":
                         compteur = random.randint(1, 4)
-                    if database.definir_statut(combat_id, adversaire_id, nom_def, ailment, compteur):
+                    # Voile Floral (Florges) : protège un allié Plante des problèmes de
+                    # statut — vrai uniquement en 2v2 (aucun allié en 1v1).
+                    if _protege_par_voile_floral(combat_id, adversaire_id, nom_def):
+                        info_vf = STATUTS_INFO[ailment]
+                        log.append(f"  🌸 **{nom_def}** est protégé de {info_vf['nom']} par **Voile Floral** !")
+                    elif database.definir_statut(combat_id, adversaire_id, nom_def, ailment, compteur):
                         info = STATUTS_INFO[ailment]
                         log.append(f"  {info['emoji']} **{nom_def}** est {info['nom']} !")
                         _verifier_baie_statut_2v2(combat_id, adversaire_id, nom_def, ailment, log)
@@ -1219,12 +1267,22 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
                             capacites_module.stat_protegee_contre_adversaire(capacite_cible_stat)
                             if cible_effective != "soi" else None
                         )
+                        # Voile Floral (Florges) : protège un allié Plante de TOUTES les
+                        # baisses de stats (pas une seule en particulier, contrairement à
+                        # Cœur de Coq/Bras Séca ci-dessus) — vrai uniquement en 2v2.
+                        protege_voile_floral = (
+                            cible_effective != "soi" and _protege_par_voile_floral(combat_id, cible_stat_id, cible_stat_nom)
+                        )
                         if protege_corps_sain and all(delta < 0 for _, delta in changements_secondaires):
                             log.append(f"  🛡️ **{cible_stat_nom}** est protégé grâce à **Corps Sain** !")
+                        elif protege_voile_floral and all(delta < 0 for _, delta in changements_secondaires):
+                            log.append(f"  🌸 **{cible_stat_nom}** est protégé grâce à **Voile Floral** !")
                         else:
                             stat_specifique_bloquee = False
                             for stat, delta in changements_secondaires:
                                 if protege_corps_sain and delta < 0:
+                                    continue
+                                if protege_voile_floral and delta < 0:
                                     continue
                                 if stat_protegee_specifique and stat == stat_protegee_specifique and delta < 0:
                                     stat_specifique_bloquee = True
@@ -1449,6 +1507,27 @@ async def resoudre_tour_2v2(combat_id: int) -> list:
     for user_id_requiem, nom_requiem in database.decrementer_requiem_actifs(combat_id, actifs_requiem_2v2):
         database.appliquer_degats_pvp(combat_id, user_id_requiem, nom_requiem, 999999)
         log.append(f"🎵 **{nom_requiem}** s'effondre, à bout de souffle... 💀 K.O. !")
+
+    # Cœur Soin (Healer, Fluvetin/Cocotine) : 30% de chance de guérir le statut d'un
+    # allié en fin de tour, AVANT les dégâts de brûlure/poison de ce même tour (comme
+    # dans les vrais jeux — un poison guéri ainsi ne fait alors plus de dégât du tout).
+    for j_soin in _joueurs(combat_id):
+        if j_soin["abandonne"] or not j_soin["actif_nom"]:
+            continue
+        statut_a_soigner = database.obtenir_statut(combat_id, j_soin["user_id"], j_soin["actif_nom"])
+        if not statut_a_soigner:
+            continue
+        coequipier_soin = next(
+            (j for j in _joueurs(combat_id) if j["equipe"] == j_soin["equipe"] and j["user_id"] != j_soin["user_id"] and not j["abandonne"] and j["actif_nom"]),
+            None,
+        )
+        if coequipier_soin is None:
+            continue
+        capacite_coequipier_soin = database.obtenir_capacite_combat(combat_id, coequipier_soin["user_id"], coequipier_soin["actif_nom"])
+        if capacites_module.a_coeur_soin(capacite_coequipier_soin) and random.random() < 0.30:
+            info_soin = STATUTS_INFO[statut_a_soigner[0]]
+            database.retirer_statut(combat_id, j_soin["user_id"], j_soin["actif_nom"])
+            log.append(f"  💗 **{coequipier_soin['actif_nom']}** guérit **{j_soin['actif_nom']}** de {info_soin['nom']} grâce à **Cœur Soin** !")
 
     # --- Dégâts de fin de tour : brûlure et poison, sur les 4 actifs ---
     for j in _joueurs(combat_id):

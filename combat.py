@@ -135,6 +135,7 @@ CHANCE_MUE = 0.30                # Mue : 30% de guérir son propre statut chaque
 CHANCE_CRITIQUE = 1 / 24         # Taux de critique officiel de base (pas de ratio par attaque pour l'instant)
 CHANCE_CONFUSION_SKIP = 0.33     # 33% de se blesser au lieu d'agir
 DOLLARS_VICTOIRE = 150
+PLAFOND_MISE_DUEL_RATIO = 0.20   # Duels par mise : jamais plus de 20% du solde du plus pauvre des 2
 
 
 def _est_au_sol(pokemon: dict, capacite: str | None, combat_id: int = None) -> bool:
@@ -258,15 +259,35 @@ def sprite_anime(pokemon: dict) -> str | None:
 
 
 def _verifier_baie_statut(combat_id: int, user_id: int, pokemon_nom: str, code_statut: str, log: list):
-    """À appeler juste après tout database.definir_statut(...) réussi : si le Pokémon qui
-    vient de recevoir ce statut tient une baie qui le guérit (Pêcha/Chéri/Kika...), elle se
-    déclenche immédiatement et se consomme — comme dans les vrais jeux."""
+    """À appeler juste après toute application réussie d'un statut (principal via
+    database.definir_statut, OU confusion via database.definir_confusion) : si le
+    Pokémon qui vient de le recevoir tient une baie qui le guérit (Pêcha/Chéri/Kika...),
+    elle se déclenche immédiatement et se consomme — comme dans les vrais jeux."""
     objet = database.obtenir_objet_combat(combat_id, user_id, pokemon_nom)
     info_baie = capacites_module.guerison_statut_objet(objet, code_statut)
     if info_baie:
-        database.retirer_statut(combat_id, user_id, pokemon_nom)
+        if code_statut == "confusion":
+            database.retirer_confusion(combat_id, user_id, pokemon_nom)
+        else:
+            database.retirer_statut(combat_id, user_id, pokemon_nom)
         database.definir_objet_combat(combat_id, user_id, pokemon_nom, None)
         log.append(f"  {info_baie['emoji']} **{pokemon_nom}** guérit aussitôt grâce à sa **{info_baie['nom']}** !")
+        # Bajoues (Cheek Pouch, Dedenne) : soigne 33% des PV max EN PLUS, après l'effet
+        # de la Baie — v1 : ne couvre que les baies de statut consommées ici, pas
+        # d'éventuelles baies de PV consommées à un autre point du code.
+        capacite_pour_bajoues = database.obtenir_capacite_combat(combat_id, user_id, pokemon_nom)
+        if capacites_module.a_bajoues(capacite_pour_bajoues):
+            eq_bajoues = database.obtenir_equipe_pvp(combat_id, user_id)
+            row_bajoues = next((r for r in eq_bajoues if r["pokemon_nom"] == pokemon_nom), None)
+            if row_bajoues:
+                soin_bajoues = max(1, round(row_bajoues["pv_max"] * 0.33))
+                database.soigner_pvp(combat_id, user_id, pokemon_nom, soin_bajoues)
+                log.append(f"  😋 **{pokemon_nom}** récupère {soin_bajoues} PV en plus grâce à **Bajoues** !")
+        # Délestage (Unburden, Goupilou/Roublenard) : +2 Vitesse (approxime le vrai
+        # doublement hors-stage des vrais jeux, v1 simplifiée) en consommant son objet.
+        if capacites_module.a_delestage(capacite_pour_bajoues):
+            nouveau_stage_delestage = database.modifier_boost(combat_id, user_id, pokemon_nom, "vit", 2)
+            log.append(f"  🏃 **{pokemon_nom}** s'allège et accélère grâce à **Délestage** ! (stage Vitesse {nouveau_stage_delestage:+d})")
 
 
 def _bloc_reserve(equipe, actif_nom: str) -> str:
@@ -658,6 +679,35 @@ def _declencher_terrain_entree(combat_id: int, user_id: int, pokemon_nom: str, l
     log.append(f"  {TERRAIN_INFO[terrain]['emoji']} **{pokemon_nom}** ({info_capacite['nom']}) — {TERRAIN_INFO[terrain]['texte_debut']}")
 
 
+def _declencher_illusion_entree(combat_id: int, user_id: int, pokemon_nom: str):
+    """Illusion (Zoroark) — se déguise en le dernier Pokémon conscient de l'équipe.
+    JAMAIS de message de log ici (contrairement aux autres effets d'entrée) : annoncer
+    le déguisement dans le journal casserait tout le mystère qu'il est censé créer.
+    v1 : même limitation que _declencher_talent_entree — ne se déclenche que sur un
+    CHANGEMENT explicite en cours de combat, pas sur l'envoi initial du tout premier
+    tour (l'appel initial de mise en place d'équipe ne passe pas par ce même chemin)."""
+    capacite = database.obtenir_capacite_combat(combat_id, user_id, pokemon_nom)
+    if not capacite or not capacites_module.a_illusion(capacite):
+        return
+    deguisement = database.dernier_conscient_pour_illusion(combat_id, user_id, pokemon_nom)
+    database.definir_illusion(combat_id, user_id, pokemon_nom, deguisement)
+
+
+def _declencher_supermutation_entree(combat_id: int, user_id: int, pokemon_nom: str, log: list):
+    """Supermutation (Zero to Hero, Superdofin) — passe en forme Super, définitivement
+    pour le reste du combat. Se déclenche TOUJOURS ici (jamais à l'envoi initial) car
+    ce point d'entrée ne se déclenche QUE sur un changement explicite en cours de
+    combat (même limitation v1 documentée pour Illusion ci-dessus) — ce qui correspond
+    PILE au vrai mécanisme ("change de forme en quittant puis en revenant sur le
+    terrain"), sans logique supplémentaire nécessaire."""
+    capacite = database.obtenir_capacite_combat(combat_id, user_id, pokemon_nom)
+    if not capacite or not capacites_module.a_supermutation(capacite):
+        return
+    if not database.a_forme_super(combat_id, user_id, pokemon_nom):
+        database.activer_forme_super(combat_id, user_id, pokemon_nom)
+        log.append(f"  🦸 **{pokemon_nom}** prend sa **Forme Super** grâce à **Supermutation** !")
+
+
 def _declencher_fouille_entree(combat_id: int, user_id: int, pokemon_nom: str, adversaire_id: int, log: list):
     """Fouille — révèle l'objet tenu de l'adversaire à l'entrée en jeu (même limitation v1)."""
     capacite = database.obtenir_capacite_combat(combat_id, user_id, pokemon_nom)
@@ -695,6 +745,17 @@ def _generer_fichier_scene_combat(combat_id: int, noms: dict, log_tour: list = N
             pokemon = formes_objets_module.pokemon_effectif(obtenir_pokemon_par_nom(nom_actif), objet)
             pokemon = mega_evolutions_module.pokemon_effectif_mega(pokemon, database.obtenir_mega_actif(combat_id, user_id))
             nom_affiche = formes_objets_module.nom_affichage(nom_actif, objet)
+            # Illusion (Zoroark) : substitue le sprite ET le nom affichés par ceux du
+            # Pokémon dont il se déguise — TOUJOURS APRÈS les formes à objet ci-dessus
+            # (le vrai Zoroark ne porte jamais lui-même de forme alternative), jamais
+            # touché la logique de combat elle-même (row/statut/boosts restent ceux du
+            # VRAI Zoroark, seuls le sprite et le nom changent).
+            deguisement = database.obtenir_illusion(combat_id, user_id, nom_actif)
+            if deguisement:
+                pokemon_deguise = obtenir_pokemon_par_nom(deguisement)
+                if pokemon_deguise:
+                    pokemon = pokemon_deguise
+                    nom_affiche = deguisement
             statut = database.obtenir_statut(combat_id, user_id, nom_actif)
             code_statut = statut[0] if statut else None
             boosts = database.obtenir_boosts(combat_id, user_id, nom_actif)
@@ -744,6 +805,10 @@ async def resoudre_tour(combat_id: int) -> list:
     if not combat or not combat["actif"]:
         return []
 
+    # Abri/Protection ne dure qu'UN SEUL tour déclaré — jamais reportée sur le suivant,
+    # remise à zéro ici avant que quiconque n'ait encore agi ce tour-ci.
+    database.reinitialiser_protections(combat_id)
+
     j1, j2 = combat["joueur1_id"], combat["joueur2_id"]
     a1 = combat["action1"] or f"attaque:{ATTAQUE_DEFAUT_NOM}"
     a2 = combat["action2"] or f"attaque:{ATTAQUE_DEFAUT_NOM}"
@@ -755,6 +820,33 @@ async def resoudre_tour(combat_id: int) -> list:
         nom = cbt["actif1_nom"] if user_id == j1 else cbt["actif2_nom"]
         eq = database.obtenir_equipe_pvp(combat_id, user_id)
         row = next((r for r in eq if r["pokemon_nom"] == nom), None)
+        if row is not None:
+            # Stance Change (Exagide) : swap Attaque<->Défense / Attaque Spé<->Défense
+            # Spé si en forme Lame — centralisé ICI pour propager automatiquement à
+            # TOUS les points qui lisent row_atk/row_def (dégâts, vitesse...), sans
+            # avoir à toucher chaque site d'utilisation individuellement.
+            capacite_pour_stance = database.obtenir_capacite_combat(combat_id, user_id, nom)
+            if capacites_module.a_stance_change(capacite_pour_stance):
+                row = capacites_module.stats_echangees_si_lame(row, bool(row["forme_lame"]))
+            # Supermutation (Superdofin) : x1.9 uniforme sur toutes les stats de combat
+            # en Forme Super — centralisé ici pour la même raison que Stance Change
+            # ci-dessus. Copie sûre (jamais de mutation de l'original).
+            if capacites_module.a_supermutation(capacite_pour_stance) and database.a_forme_super(combat_id, user_id, nom):
+                row = {
+                    **row,
+                    "atq": round(row["atq"] * 1.9), "defe": round(row["defe"] * 1.9),
+                    "atq_spe": round(row["atq_spe"] * 1.9), "def_spe": round(row["def_spe"] * 1.9),
+                    "vit": round(row["vit"] * 1.9),
+                }
+            # Bancosphère (Schooling, Froussardine) : recalculé EN DIRECT (pas
+            # persistant, comme Forme Météo) selon le niveau et le % PV actuels.
+            if capacites_module.en_forme_ecole(capacite_pour_stance, row["niveau"], row["pv_actuels"], row["pv_max"]):
+                row = {
+                    **row,
+                    "atq": round(row["atq"] * 6), "defe": round(row["defe"] * 6),
+                    "atq_spe": round(row["atq_spe"] * 6), "def_spe": round(row["def_spe"] * 6),
+                    "vit": round(row["vit"] * 0.75),
+                }
         return nom, row
 
     def mult_stage(stage: int) -> float:
@@ -773,6 +865,25 @@ async def resoudre_tour(combat_id: int) -> list:
         if action.startswith("changer:"):
             ancien_nom, ancien_row = infos_actif(user_id)
             nouveau = action.split(":", 1)[1]
+            # Ombre Portée (Shadow Tag, Qulbutoké/Okéoké) : empêche l'ADVERSAIRE de
+            # changer volontairement de Pokémon tant qu'il est en vie (un Pokémon K.O.
+            # doit quand même être remplacé — passe par un chemin différent, pas ce
+            # changement volontaire ici). v1 : bloqué au moment de la résolution plutôt
+            # que dans l'interface de choix elle-même (le joueur peut toujours CLIQUER
+            # sur changer, mais l'action échoue avec un message explicite).
+            adversaire_pour_piege = j2 if user_id == j1 else j1
+            nom_adversaire_piege, row_adversaire_piege = infos_actif(adversaire_pour_piege)
+            capacite_adversaire_piege = (
+                database.obtenir_capacite_combat(combat_id, adversaire_pour_piege, nom_adversaire_piege)
+                if row_adversaire_piege else None
+            )
+            if (
+                ancien_row and ancien_row["pv_actuels"] > 0
+                and row_adversaire_piege and row_adversaire_piege["pv_actuels"] > 0
+                and capacites_module.piege_adversaire(capacite_adversaire_piege)
+            ):
+                log.append(f"<@{user_id}> ne peut pas changer de Pokémon — **{nom_adversaire_piege}** a **Ombre Portée** !")
+                continue
             capacite_sortant = database.obtenir_capacite_combat(combat_id, user_id, ancien_nom)
             if ancien_row and ancien_row["pv_actuels"] > 0:
                 # Régénération : soigne un % des PV max en quittant volontairement le combat.
@@ -797,6 +908,11 @@ async def resoudre_tour(combat_id: int) -> list:
             _declencher_meteo_entree(combat_id, user_id, nouveau, log)
             _declencher_terrain_entree(combat_id, user_id, nouveau, log)
             _declencher_fouille_entree(combat_id, user_id, nouveau, j1 if user_id == j2 else j2, log)
+            _declencher_illusion_entree(combat_id, user_id, nouveau)
+            _declencher_supermutation_entree(combat_id, user_id, nouveau, log)
+            # Absentéisme (Truant, Parecool) : prêt à agir dès son premier tour après un
+            # envoi (comme dans les vrais jeux).
+            database.reinitialiser_absenteisme(combat_id, user_id, nouveau)
 
     # --- Phase 2 : potions ---
     for user_id, action in ((j1, a1), (j2, a2)):
@@ -840,7 +956,27 @@ async def resoudre_tour(combat_id: int) -> list:
         )
         # Lenteur (Slow Start) : Vitesse divisée par 2 pendant les 5 premiers tours après l'envoi.
         vitesse *= capacites_module.multiplicateur_debut_lent(capacite_pour_vitesse, row["tours_en_jeu"])["vit"]
+        # Vigueur Ancestrale/Turbo Circuit (Paradoxes) : +50% sur la Vitesse si c'est sa
+        # stat de base la plus élevée, sous la bonne météo/le bon terrain.
+        terrain_pour_vitesse = database.obtenir_terrain_zone(combat_id)
+        vitesse *= capacites_module.multiplicateur_stat_dominante(
+            capacite_pour_vitesse,
+            meteo_pour_vitesse["type"] if meteo_pour_vitesse else None,
+            terrain_pour_vitesse["type"] if terrain_pour_vitesse else None,
+            row,
+            "vit",
+        )
+        # Vagues Électriques (Surge Surfer, Raichu d'Alola) : double sa Vitesse sous le
+        # Terrain Électrique — même fonction que Moteur Hadron (Miraidon), jamais
+        # appelée jusqu'ici au calcul de VITESSE (seulement aux dégâts), donc ajoutée
+        # ici spécifiquement pour cette capacité.
+        vitesse *= capacites_module.multiplicateur_stat_terrain_signature(
+            capacite_pour_vitesse, terrain_pour_vitesse["type"] if terrain_pour_vitesse else None, "vit"
+        )
         statut_actuel = database.obtenir_statut(combat_id, user_id, nom)
+        # Pied Véloce (Quick Feet, Teddiursa) : +50% Vitesse tant qu'il a un problème
+        # de statut — réutilise statut_actuel déjà calculé ci-dessus.
+        vitesse *= capacites_module.multiplicateur_vitesse_si_statut(capacite_pour_vitesse, statut_actuel is not None)
         if statut_actuel and statut_actuel[0] == "paralysis":
             vitesse /= 2  # la paralysie ralentit
 
@@ -886,12 +1022,23 @@ async def resoudre_tour(combat_id: int) -> list:
         # Farceur : priorité +1 sur les attaques de statut (puissance absente/None).
         if nom_attaque_demandee and nom_attaque_demandee != NOM_LUTTE:
             attaque_pour_priorite = obtenir_attaque(nom_attaque_demandee)
+            capacite_pour_priorite = database.obtenir_capacite_combat(combat_id, user_id, nom)
             if (
                 attaque_pour_priorite
                 and not attaque_pour_priorite.get("puissance")
-                and capacites_module.a_priorite_attaques_statut(database.obtenir_capacite_combat(combat_id, user_id, nom))
+                and capacites_module.a_priorite_attaques_statut(capacite_pour_priorite)
             ):
                 vitesse_effective = vitesse + 1_000_000
+            # Mycelium Might (Terracruel) : symétrique de Farceur — SES PROPRES attaques
+            # de statut agissent toujours en DERNIER (pénalité modérée, très inférieure
+            # à la priorité -3 réelle des attaques comme Mitra-Poing, pour rester "en
+            # dernier dans sa tranche de priorité" plutôt que dernier absolu du tour).
+            if (
+                attaque_pour_priorite
+                and not attaque_pour_priorite.get("puissance")
+                and capacites_module.a_mycelium_might(capacite_pour_priorite)
+            ):
+                vitesse_effective = vitesse - 500
         attaquants.append((vitesse_effective + random.random(), user_id, adversaire_id, nom_attaque_demandee))
 
     attaquants.sort(reverse=True)  # le plus rapide agit en premier
@@ -913,6 +1060,23 @@ async def resoudre_tour(combat_id: int) -> list:
         if user_id in flinch_ce_tour:
             log.append(f"😨 **{nom_atk}** a eu peur et n'a pas pu attaquer !")
             continue
+
+        # Absentéisme (Truant, Parecool) : n'agit qu'un tour sur deux — vérifié TRÈS
+        # tôt (avant même le statut), puisqu'un tour où il glande ne consomme rien
+        # (ni PP, ni déclencheurs d'aucune sorte).
+        capacite_atk_pour_absenteisme = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+        if capacites_module.a_absenteisme(capacite_atk_pour_absenteisme):
+            if database.bascule_absenteisme(combat_id, user_id, nom_atk):
+                log.append(f"😴 **{nom_atk}** glande et ne fait rien à cause de son **Absentéisme** !")
+                continue
+
+        # Charme (infatuation) : 50% de chance d'échouer à attaquer tant qu'infatué —
+        # statut volatil séparé (voir combat_confusion pour le même principe), jamais
+        # levé automatiquement ici (seulement en quittant le terrain, voir plus bas).
+        if database.est_infatue(combat_id, user_id, nom_atk):
+            if random.random() < 0.5:
+                log.append(f"💕 **{nom_atk}** est trop amoureux pour attaquer !")
+                continue
 
         # --- Le statut de l'attaquant peut l'empêcher d'agir ---
         statut_atk = database.obtenir_statut(combat_id, user_id, nom_atk)
@@ -946,16 +1110,20 @@ async def resoudre_tour(combat_id: int) -> list:
             elif code_statut == "paralysis" and random.random() < CHANCE_PARALYSIE_SKIP:
                 log.append(f"⚡ **{nom_atk}** est paralysé ! Il ne peut pas attaquer !")
                 continue
-            elif code_statut == "confusion":
-                compteur = database.decrementer_compteur_statut(combat_id, user_id, nom_atk)
-                if compteur <= 0:
-                    database.retirer_statut(combat_id, user_id, nom_atk)
-                    log.append(f"✨ **{nom_atk}** n'est plus confus !")
-                elif random.random() < CHANCE_CONFUSION_SKIP:
-                    degats_confusion = max(1, round(row_atk["pv_max"] * 0.05))
-                    database.appliquer_degats_pvp(combat_id, user_id, nom_atk, degats_confusion)
-                    log.append(f"🌀 **{nom_atk}** est confus et se blesse lui-même ! (-{degats_confusion} PV)")
-                    continue
+
+        # Confusion : statut VOLATIL séparé du statut principal ci-dessus (peut coexister
+        # avec poison/brûlure/etc. — voir Marionnettiste Toxique, Pêchaminus). Vérifiée
+        # indépendamment, que statut_atk soit vide ou non.
+        if database.obtenir_confusion(combat_id, user_id, nom_atk) is not None:
+            compteur_confusion = database.decrementer_confusion(combat_id, user_id, nom_atk)
+            if compteur_confusion <= 0:
+                database.retirer_confusion(combat_id, user_id, nom_atk)
+                log.append(f"✨ **{nom_atk}** n'est plus confus !")
+            elif random.random() < CHANCE_CONFUSION_SKIP:
+                degats_confusion = max(1, round(row_atk["pv_max"] * 0.05))
+                database.appliquer_degats_pvp(combat_id, user_id, nom_atk, degats_confusion)
+                log.append(f"🌀 **{nom_atk}** est confus et se blesse lui-même ! (-{degats_confusion} PV)")
+                continue
 
         # --- Charge / recharge (attaques à deux tours type Lance-Soleil, Ultimaton) ---
         charge_info = database.obtenir_charge(combat_id, user_id, nom_atk)
@@ -976,6 +1144,56 @@ async def resoudre_tour(combat_id: int) -> list:
             attaque = ATTAQUE_LUTTE
         else:
             attaque = obtenir_attaque(nom_attaque)
+            # Pixilate (Nymphali) : transforme SES PROPRES attaques Normal en Fée, +30%
+            # de puissance — copie locale du dict, JAMAIS de mutation directe (obtenir_
+            # attaque renvoie une référence partagée au catalogue ATTAQUES, une écriture
+            # directe corromprait cette attaque pour tout le monde, définitivement).
+            if attaque.get("type") == "normal" and attaque.get("puissance"):
+                capacite_atk_pour_pixilate = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+                if capacites_module.transforme_type_normal(capacite_atk_pour_pixilate):
+                    attaque = {**attaque, "type": "fee", "puissance": round(attaque["puissance"] * 1.3)}
+            # Force Brute (Sheer Force, Pachyradjah) : +30% de puissance sur une attaque
+            # ayant un effet secondaire (ailment ou changement de stat), en échange de
+            # SUPPRIMER cet effet secondaire — même principe de copie sûre que Pixilate
+            # ci-dessus. En vidant ailment/stats dans la copie, les blocs qui les
+            # traitent plus loin ne trouvent naturellement plus rien à appliquer, sans
+            # avoir à les toucher un par un.
+            if attaque.get("puissance") and (attaque.get("ailment") or attaque.get("stats")):
+                capacite_atk_pour_force_brute = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+                if capacites_module.a_force_brute(capacite_atk_pour_force_brute):
+                    attaque = {
+                        **attaque,
+                        "puissance": round(attaque["puissance"] * 1.3),
+                        "ailment": None, "ailment_chance": 0, "stats": [],
+                    }
+            # Attaques basées sur le poids (Nœud Herbe/Balayage/Tacle Lourd/Tacle Feu) :
+            # puissance calculée dynamiquement plutôt que fixe dans le catalogue —
+            # même principe de copie sûre. Poids toujours lu depuis l'espèce RÉELLE
+            # (obtenir_pokemon_par_nom), pas depuis pok_atk/pok_def transformés par une
+            # forme à objet/Méga-Évolution (limite v1 : une forme alternative garde le
+            # poids de son espèce de base).
+            if nom_attaque in capacites_module.ATTAQUES_POIDS_CIBLE or nom_attaque in capacites_module.ATTAQUES_POIDS_RATIO:
+                pokemon_reel_atk = obtenir_pokemon_par_nom(nom_atk)
+                pokemon_reel_def = obtenir_pokemon_par_nom(nom_def)
+                capacite_atk_pour_poids = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+                capacite_def_pour_poids = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
+                if nom_attaque in capacites_module.ATTAQUES_POIDS_CIBLE:
+                    poids_def_effectif = pokemon_reel_def.get("poids_kg", 0) * capacites_module.multiplicateur_poids_effectif(capacite_def_pour_poids)
+                    nouvelle_puissance = capacites_module.puissance_selon_poids_cible(poids_def_effectif)
+                else:
+                    poids_atk_effectif = pokemon_reel_atk.get("poids_kg", 0) * capacites_module.multiplicateur_poids_effectif(capacite_atk_pour_poids)
+                    poids_def_effectif = pokemon_reel_def.get("poids_kg", 0) * capacites_module.multiplicateur_poids_effectif(capacite_def_pour_poids)
+                    nouvelle_puissance = capacites_module.puissance_selon_ratio_poids(poids_atk_effectif, poids_def_effectif)
+                attaque = {**attaque, "puissance": nouvelle_puissance}
+            # Attaques à coups multiples (Furie/Dard-Nuée/Double Pied) : puissance
+            # totale multipliée par le nombre de coups tirés — approxime l'effet sans
+            # résoudre chaque coup séparément (voir docstring de tire_nombre_coups).
+            nombre_coups_multiples = None
+            if attaque.get("puissance") and nom_attaque in capacites_module.ATTAQUES_COUPS_MULTIPLES:
+                capacite_atk_pour_coups = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+                nombre_coups_multiples = capacites_module.tire_nombre_coups(nom_attaque, capacite_atk_pour_coups)
+                if nombre_coups_multiples:
+                    attaque = {**attaque, "puissance": attaque["puissance"] * nombre_coups_multiples}
             pp_max = pp_max_attaque(attaque)
             # Pression : le défenseur fait consommer 2 PP au lieu d'1 pour toute attaque
             # utilisée contre lui (y compris les attaques de statut qui ne le ciblent
@@ -988,6 +1206,107 @@ async def resoudre_tour(combat_id: int) -> list:
             else:
                 pp_restant = database.consommer_pp(combat_id, user_id, nom_atk, nom_attaque, pp_max, cout_pp)
         emoji_type = EMOJI_TYPES.get(attaque["type"], "⚔️")
+
+        # Stance Change (Exagide) : passe en forme Lame AVANT de résoudre une attaque
+        # offensive (pour que CETTE attaque bénéficie déjà des stats échangées, fidèle
+        # aux vrais jeux), repasse en forme Bouclier sur Bouclier Royal précisément.
+        # Aucune autre attaque de statut ne change la forme.
+        capacite_atk_pour_stance = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+        if capacites_module.a_stance_change(capacite_atk_pour_stance):
+            changement_forme = False
+            if attaque.get("puissance"):
+                database.definir_forme_lame(combat_id, user_id, nom_atk, True)
+                changement_forme = True
+            elif nom_attaque == "Bouclier Royal":
+                database.definir_forme_lame(combat_id, user_id, nom_atk, False)
+                changement_forme = True
+            if changement_forme:
+                # row_atk a été fixé AVANT ce changement (ligne ~929, bien plus haut) et
+                # reste utilisé pour tout le calcul de dégâts qui suit — sans ce
+                # rafraîchissement, CETTE attaque utiliserait encore les stats de
+                # l'ANCIENNE forme, ratant la nuance la plus importante de Stance Change.
+                _, row_atk = infos_actif(user_id)
+
+        # Corps Maudit (Ectoplasma) : cette attaque précise a été désactivée par
+        # l'adversaire il y a peu — échoue immédiatement, comme dans les vrais jeux
+        # (où elle serait de toute façon grisée dans le menu de sélection). Le compteur
+        # décompte à CHAQUE tour joué par ce Pokémon, peu importe l'attaque choisie —
+        # vérifié AVANT décrémentation pour que le dernier tour de blocage compte bien.
+        attaque_bloquee = database.obtenir_attaque_desactivee(combat_id, user_id, nom_atk)
+        if attaque_bloquee:
+            database.decrementer_desactivation(combat_id, user_id, nom_atk)
+        if attaque_bloquee == nom_attaque:
+            log.append(f"<@{user_id}> : **{nom_atk}** ne peut pas utiliser **{nom_attaque}** — désactivée par **Corps Maudit** !")
+            continue
+
+        if nom_attaque in ("Abri", "Protection"):
+            database.definir_protection(combat_id, user_id, nom_atk, True)
+            log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** — se protège !")
+            continue
+
+        # Or Pur (Good as Gold, Gromago) : immunisé à toute attaque de STATUT adverse —
+        # jamais aux attaques offensives (même avec un effet secondaire de statut), et
+        # jamais si le lanceur cible SA PROPRE équipe (Dopant/Danse Fleur...).
+        if attaque.get("cible") != "soi" and capacites_module.bloque_attaque_statut_adverse(
+            database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def), attaque.get("classe")
+        ):
+            log.append(
+                f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... "
+                f"mais **{nom_def}** est immunisé grâce à **Or Pur** !"
+            )
+            continue
+
+        # Ordre Royal (Queenly Majesty, Sucreine) : bloque toute attaque adverse à
+        # priorité positive (liste limitée, voir ATTAQUES_PRIORITE_POSITIVE_CAPACITES).
+        if capacites_module.bloque_attaque_prioritaire(
+            database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def), nom_attaque
+        ):
+            log.append(
+                f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... "
+                f"mais **{nom_def}** bloque l'attaque grâce à **Ordre Royal** !"
+            )
+            continue
+
+        # Miroir Magik (Magic Bounce, Sorcilence) : renvoie une attaque de STATUT
+        # adverse vers son lanceur au lieu de la subir — applique directement les
+        # données de l'attaque (ailment/stats) sur L'ATTAQUANT, plutôt que de tenter un
+        # "swap" complet des rôles (plus sûr, évite tout effet de bord sur le reste du
+        # tour déjà engagé pour le vrai attaquant, comme le PP déjà consommé).
+        if attaque.get("cible") != "soi" and capacites_module.a_miroir_magik(
+            database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def), attaque.get("classe")
+        ):
+            log.append(
+                f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... "
+                f"mais **{nom_def}** renvoie l'effet grâce à **Miroir Magik** !"
+            )
+            ailment_renvoye = attaque.get("ailment")
+            if ailment_renvoye and ailment_renvoye in STATUTS_INFO:
+                if ailment_renvoye == "confusion":
+                    if database.definir_confusion(combat_id, user_id, nom_atk, random.randint(1, 4)):
+                        info_conf = STATUTS_INFO["confusion"]
+                        log.append(f"  {info_conf['emoji']} **{nom_atk}** est {info_conf['nom']} !")
+                else:
+                    compteur_renvoye = random.randint(1, 3) if ailment_renvoye == "sleep" else 0
+                    if database.definir_statut(combat_id, user_id, nom_atk, ailment_renvoye, compteur_renvoye):
+                        info_ail = STATUTS_INFO[ailment_renvoye]
+                        log.append(f"  {info_ail['emoji']} **{nom_atk}** est {info_ail['nom']} !")
+            for stat_renvoyee, delta_renvoye in attaque.get("stats", []):
+                nouveau_stage_renvoye = database.modifier_boost(combat_id, user_id, nom_atk, stat_renvoyee, delta_renvoye)
+                signe_renvoye = "+" if delta_renvoye > 0 else ""
+                log.append(f"  {signe_renvoye}{delta_renvoye} {NOMS_STATS[stat_renvoyee]} pour **{nom_atk}** (stage {nouveau_stage_renvoye:+d}) !")
+            continue
+
+        # Ronfleur (Soundproof, Chuchmur) : immunisé aux attaques sonores reconnues (voir
+        # ATTAQUES_SONORES) — vérifié ici, AVANT la séparation offensive/statut plus bas,
+        # car les attaques sonores de ce jeu sont un mélange des deux classes.
+        if attaque.get("cible") != "soi" and capacites_module.immunise_attaque_sonore(
+            database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def), nom_attaque
+        ):
+            log.append(
+                f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... "
+                f"mais **{nom_def}** est immunisé grâce à **Ronfleur** !"
+            )
+            continue
 
         if not liberation_charge and nom_attaque in ATTAQUES_CHARGE:
             database.definir_charge(combat_id, user_id, nom_atk, nom_attaque, False)
@@ -1052,19 +1371,21 @@ async def resoudre_tour(combat_id: int) -> list:
             # Voile Sable (sous tempête de sable) / Pieds Confus (si confus) — bonus
             # d'esquive additif directement en points de précision, appliqué APRÈS le
             # calcul de stage pour rester simple à lire.
-            statut_def_pour_esquive = database.obtenir_statut(combat_id, adversaire_id, nom_def)
             meteo_pour_esquive = database.obtenir_meteo(combat_id)
             bonus_esquive = capacites_module.bonus_esquive_defenseur(
                 capacite_def_precision,
                 meteo_pour_esquive["type"] if meteo_pour_esquive else None,
-                bool(statut_def_pour_esquive and statut_def_pour_esquive[0] == "confusion"),
+                database.obtenir_confusion(combat_id, adversaire_id, nom_def) is not None,
             )
             precision_effective *= (1 - bonus_esquive)
             # Gravité : x5/3 sur la précision de TOUTES les attaques (offensives comme
             # les autres, tant qu'elles ont un champ "precision" défini).
             if database.obtenir_effet_global(combat_id, "gravite"):
                 precision_effective *= 5 / 3
-            if random.random() * 100 > precision_effective:
+            # Anti-Air (No Guard, Monorpale/Dimoclès) : touche TOUJOURS, que ce soit le
+            # porteur qui attaque ou qui soit visé (concerne les deux camps).
+            a_anti_air = capacites_module.a_anti_air(capacite_atk_precision) or capacites_module.a_anti_air(capacite_def_precision)
+            if not a_anti_air and random.random() * 100 > precision_effective:
                 log.append(f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... mais rate !")
                 continue
 
@@ -1184,6 +1505,16 @@ async def resoudre_tour(combat_id: int) -> list:
             continue
 
         if attaque.get("puissance"):
+            # Abri/Protection : bloque TOUTE attaque offensive ciblant ce Pokémon ce
+            # tour-ci, sauf si l'attaquant a Poing Fantôme (Unseen Fist).
+            if database.est_protege(combat_id, adversaire_id, nom_def):
+                capacite_atk_protection = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+                if not capacites_module.ignore_protection(capacite_atk_protection):
+                    log.append(
+                        f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}**... "
+                        f"mais **{nom_def}** se protège avec **Abri** !"
+                    )
+                    continue
             # --- Attaque offensive ---
             pok_atk = formes_objets_module.pokemon_effectif(
                 obtenir_pokemon_par_nom(nom_atk), database.obtenir_objet_combat(combat_id, user_id, nom_atk)
@@ -1193,12 +1524,38 @@ async def resoudre_tour(combat_id: int) -> list:
             )
             types_atk_pokemon = pok_atk["types"] if pok_atk else ["normal"]
             types_def = pok_def["types"] if pok_def else ["normal"]
+            # Camouflage (Color Change, Kecleon) : remplace le(s) type(s) normaux par le
+            # type camouflé actif, des deux côtés (attaquant ET défenseur) — utile pour
+            # le STAB de son côté comme pour l'efficacité de type subie de l'autre.
+            camouflage_atk = database.obtenir_camouflage(combat_id, user_id, nom_atk)
+            if camouflage_atk:
+                types_atk_pokemon = [camouflage_atk]
+            camouflage_def = database.obtenir_camouflage(combat_id, adversaire_id, nom_def)
+            if camouflage_def:
+                types_def = [camouflage_def]
+            # Forme Météo (Forecast, Morphéo) : recalculé en DIRECT selon la météo
+            # active (jamais persistant, contrairement à Camouflage) — des deux côtés.
+            meteo_pour_forme = database.obtenir_meteo(combat_id)
+            meteo_type_pour_forme = meteo_pour_forme["type"] if meteo_pour_forme else None
+            capacite_atk_pour_forme = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+            type_forme_atk = capacites_module.type_forme_meteo(capacite_atk_pour_forme, meteo_type_pour_forme)
+            if type_forme_atk:
+                types_atk_pokemon = [type_forme_atk]
+            capacite_def_pour_forme = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
+            type_forme_def = capacites_module.type_forme_meteo(capacite_def_pour_forme, meteo_type_pour_forme)
+            if type_forme_def:
+                types_def = [type_forme_def]
 
             if attaque["type"] is None:
                 multi_type, stab = 1.0, 1.0  # Lutte : ni faiblesse/résistance, ni STAB
             else:
                 multi_type = calculer_multiplicateur_type([attaque["type"]], types_def)
                 stab = 1.5 if attaque["type"] in types_atk_pokemon else 1.0
+                # Adaptabilité (Évoli) : le STAB passe de x1.5 à x2.0.
+                if stab == 1.5:
+                    capacite_atk_pour_adapt = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+                    if capacites_module.a_adaptabilite(capacite_atk_pour_adapt):
+                        stab = 2.0
 
             # Querelleur : les attaques Normal/Combat de l'attaquant touchent les Spectre
             # comme si l'immunité de type n'existait pas (recalcule sans le type Spectre).
@@ -1215,7 +1572,20 @@ async def resoudre_tour(combat_id: int) -> list:
             # — prioritaire sur l'immunité de type-chart classique, et peut soigner au
             # lieu de bloquer sèchement (Absorb Volt/Eau).
             capacite_def = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
-            info_immunite = capacites_module.immunite_type(capacite_def, attaque["type"]) if attaque["type"] else None
+            # Turboblaze (Reshiram) / Teravolt (Zekrom) : ignore la capacité DÉFENSIVE de
+            # l'adversaire pour les 4 vérifications ci-dessous (immunité de type par
+            # capacité, Filtre/Prisme Armure, Bouclier de l'Ombre/Carapace Téra) — jamais
+            # pour les capacités réactives/de riposte (Justicier...), qui utilisent
+            # capacite_def normalement plus loin, pas cette version neutralisée.
+            capacite_def_pour_defense = (
+                "" if capacites_module.ignore_capacite_defensive(capacite_atk_querelleur) else capacite_def
+            )
+            # Carapace Téra (Terapagos) : plafonne l'efficacité à "pas très efficace" tant
+            # que le défenseur est à pleine vie — remplace multi_type, ne le multiplie pas.
+            multi_type = capacites_module.plafonne_efficacite_pleine_vie(
+                capacite_def_pour_defense, row_def["pv_actuels"], row_def["pv_max"], multi_type
+            )
+            info_immunite = capacites_module.immunite_type(capacite_def_pour_defense, attaque["type"]) if attaque["type"] else None
             if info_immunite:
                 log.append(
                     f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** sur **{nom_def}**..."
@@ -1238,6 +1608,50 @@ async def resoudre_tour(combat_id: int) -> list:
                     )
                 else:
                     log.append(f"  {info_immunite['emoji']} **{nom_def}** est immunisé grâce à **{info_immunite['nom']}** !")
+                continue
+
+            # Turbine Éolienne (Wind Rider, Théffroyable) : même principe que l'immunité
+            # de type ci-dessus, mais basé sur le NOM de l'attaque plutôt que son type
+            # (les attaques "vent" reconnues n'ont pas un type unique commun) — voir
+            # ATTAQUES_VENT dans capacites.py pour la liste exacte.
+            if capacites_module.immunise_et_boost_si_vent(capacite_def_pour_defense, nom_attaque):
+                log.append(
+                    f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** sur **{nom_def}**..."
+                )
+                nouveau_stage_vent = database.modifier_boost(combat_id, adversaire_id, nom_def, "atk", 1)
+                log.append(
+                    f"  🌬️ **{nom_def}** absorbe l'attaque grâce à **Turbine Éolienne** — "
+                    f"Attaque +1 (stage {nouveau_stage_vent:+d}) !"
+                )
+                continue
+
+            # Fac-similé (Disguise, Mimiqui) : bloque intégralement UN SEUL coup sur
+            # toute la durée du combat (1/8 PV max perdu à la place) — vérifié sur
+            # capacite_def_pour_defense (Turboblaze/Teravolt le contournent aussi dans
+            # les vrais jeux). Jamais si déjà immunisé par le type (rien à "bloquer").
+            if (
+                attaque["type"] is not None
+                and multi_type != 0.0
+                and capacites_module.a_facsimile(capacite_def_pour_defense)
+                and database.consommer_facsimile(combat_id, adversaire_id, nom_def)
+            ):
+                degats_facsimile = max(1, row_def["pv_max"] // 8)
+                database.appliquer_degats_pvp(combat_id, adversaire_id, nom_def, degats_facsimile)
+                log.append(
+                    f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** sur **{nom_def}**...\n"
+                    f"  🎎 **Fac-similé** absorbe le coup pour **{nom_def}** ! (-{degats_facsimile} PV au lieu des dégâts complets)"
+                )
+                continue
+
+            # Wonder Guard (Munja) : immunisé à toute attaque qui n'est pas super
+            # efficace (multi_type < 2.0) — sauf Lutte, qui touche toujours dans les
+            # vrais jeux peu importe le type. Vérifié sur capacite_def_pour_defense
+            # (Turboblaze/Teravolt peuvent bien le contourner, comme dans les vrais jeux).
+            if attaque["type"] is not None and multi_type < 2.0 and capacites_module.a_wonder_guard(capacite_def_pour_defense):
+                log.append(
+                    f"<@{user_id}> : **{nom_atk}** utilise {emoji_type} **{nom_attaque}** sur **{nom_def}**..."
+                )
+                log.append(f"  🌟 **{nom_def}** est protégé par **Wonder Guard** — seule une attaque super efficace peut le toucher !")
                 continue
 
             # Immunité totale : aucun dégât (plus jamais de "-1 PV / aucun effet")
@@ -1286,6 +1700,17 @@ async def resoudre_tour(combat_id: int) -> list:
             )
             stage_off_pour_degats = max(0, boosts_atk[cle_boost_off]) if est_critique else boosts_atk[cle_boost_off]
             stage_def_pour_degats = min(0, boosts_def[cle_boost_def]) if est_critique else boosts_def[cle_boost_def]
+            # Téméraire (Unaware, Cosmog) : ignore les changements de stats DE L'AUTRE —
+            # le défenseur Téméraire ignore les boosts d'Attaque adverse (stage_off remis
+            # à 0), l'attaquant Téméraire ignore les boosts de Défense adverse (stage_def
+            # remis à 0). Jamais ses propres stages, qui restent inchangés. Récupéré
+            # localement ici (capacite_atk n'est définie que PLUS LOIN dans cette
+            # fonction à ce stade de l'exécution).
+            capacite_atk_pour_temeraire = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
+            if capacites_module.ignore_stage_adverse(capacite_def_crit):
+                stage_off_pour_degats = 0
+            if capacites_module.ignore_stage_adverse(capacite_atk_pour_temeraire):
+                stage_def_pour_degats = 0
             stat_def_boostee = max(1, stat_def * mult_stage(stage_def_pour_degats))
             stat_off_boostee = max(1, stat_off * mult_stage(stage_off_pour_degats) * mult_stat_choix)
             # Fléau (Chongjian/Baojian/Dinglu/Yuyu) : -25% sur UNE stat précise de tout le
@@ -1294,6 +1719,41 @@ async def resoudre_tour(combat_id: int) -> list:
             capacite_atk_pour_fleau = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
             stat_off_boostee *= capacites_module.multiplicateur_fleau(capacite_def_crit, cle_boost_off)
             stat_def_boostee *= capacites_module.multiplicateur_fleau(capacite_atk_pour_fleau, cle_boost_def)
+            # Chochotte (Defeatist, Arkéapti) : Attaque ET Attaque Spéciale divisées par
+            # 2 dès 50% PV ou moins — s'applique ici puisque stat_off_boostee EST déjà
+            # l'une des deux (physique ou spéciale) selon le type de l'attaque utilisée.
+            stat_off_boostee *= capacites_module.multiplicateur_chochotte(capacite_atk_pour_fleau, row_atk["pv_actuels"], row_atk["pv_max"])
+            # Pure Puissance (Huge Power, Excavarenne) : double SA PROPRE Attaque
+            # physique — jamais l'Attaque Spéciale, vérifié via cle_boost_off.
+            if cle_boost_off == "atk" and capacites_module.a_pure_puissance(capacite_atk_pour_fleau):
+                stat_off_boostee *= 2.0
+            # Tactiques Simiesques (Gorilla Tactics, Darumacho de Galar) : +50%
+            # Attaque physique (v1 simplifiée, voir docstring).
+            if cle_boost_off == "atk" and capacites_module.a_tactiques_simiesques(capacite_atk_pour_fleau):
+                stat_off_boostee *= 1.5
+            # Fourrure Renforcée (Fur Coat, Couafarel) : dégâts physiques subis divisés
+            # par 2 — vérifié sur la capacité du DÉFENSEUR, jamais les dégâts spéciaux.
+            stat_def_boostee /= capacites_module.multiplicateur_fourrure_renforcee(capacite_def_crit, attaque["classe"])
+            # Vigueur Ancestrale/Turbo Circuit (Paradoxes) : +30-50% sur SA PROPRE stat de
+            # base la plus élevée, sous la bonne météo/le bon terrain — récupérés
+            # localement pour éviter tout risque d'utiliser une valeur périmée d'un point
+            # antérieur de cette fonction.
+            meteo_pour_paradoxe = database.obtenir_meteo(combat_id)
+            terrain_pour_paradoxe = database.obtenir_terrain_zone(combat_id)
+            meteo_type_paradoxe = meteo_pour_paradoxe["type"] if meteo_pour_paradoxe else None
+            terrain_type_paradoxe = terrain_pour_paradoxe["type"] if terrain_pour_paradoxe else None
+            stat_off_boostee *= capacites_module.multiplicateur_stat_dominante(
+                capacite_atk_pour_fleau, meteo_type_paradoxe, terrain_type_paradoxe, row_atk, cle_boost_off
+            )
+            stat_def_boostee *= capacites_module.multiplicateur_stat_dominante(
+                capacite_def_crit, meteo_type_paradoxe, terrain_type_paradoxe, row_def, cle_boost_def
+            )
+            # Écailles Magiques (Milobellus) : +50% Défense tant que le DÉFENSEUR a un
+            # problème de statut (poison/brûlure/paralysie/sommeil/gel).
+            statut_def_pour_ecailles = database.obtenir_statut(combat_id, adversaire_id, nom_def)
+            stat_def_boostee *= capacites_module.multiplicateur_defense_si_statut(
+                capacite_def_crit, statut_def_pour_ecailles is not None
+            )
             # Bonus permanent d'Arène : +X% si l'attaquant a débloqué le badge du type de
             # cette attaque (voir arene.py / config.ARENE_BONUS_DEGATS_PAR_BADGE). Les
             # badges de Repaire de méchants donnent un bonus différent (multiplicateur_boost
@@ -1319,11 +1779,10 @@ async def resoudre_tour(combat_id: int) -> list:
                 # Spéciale — fidèle aux vrais jeux.
                 mult_talent_objet *= capacites_module.multiplicateur_debut_lent(capacite_atk, row_atk["tours_en_jeu"])["atk"]
 
-            capacite_def = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
-            mult_talent_objet *= capacites_module.multiplicateur_degats_subis(capacite_def, multi_type)
+            mult_talent_objet *= capacites_module.multiplicateur_degats_subis(capacite_def_pour_defense, multi_type)
             # Bouclier de l'Ombre (Lunala) : -50% dégâts subis tant qu'à pleine vie.
             mult_talent_objet *= capacites_module.multiplicateur_degats_pleine_vie(
-                capacite_def, row_def["pv_actuels"], row_def["pv_max"]
+                capacite_def_pour_defense, row_def["pv_actuels"], row_def["pv_max"]
             )
 
             # Météo : Feu/Eau boostés ou affaiblis de 50% sous Soleil/Pluie (l'un renforce
@@ -1348,6 +1807,17 @@ async def resoudre_tour(combat_id: int) -> list:
             # (les deux capacités sont vérifiées côté attaquant ET défenseur).
             mult_aura = capacites_module.multiplicateur_aura(capacite_atk, capacite_def, attaque["type"])
             mult_aura *= capacites_module.multiplicateur_type_signature(capacite_atk, attaque["type"])  # Transistor/Gueule Draconique
+            mult_aura *= capacites_module.boost_attaque_poing(capacite_atk, nom_attaque)  # Poing de Fer
+            mult_aura *= capacites_module.boost_attaque_pulse(capacite_atk, nom_attaque)  # Méga Blaster
+            # Moelleux (Fluffy, Nounourson/Moumouton/Moumouflon) : dégâts physiques
+            # divisés par 2, dégâts Feu doublés — capacité du DÉFENSEUR.
+            mult_aura *= capacites_module.multiplicateur_moelleux(capacite_def, attaque["classe"], attaque["type"])
+            # Poigne de Fer (Tough Claws, Berserkatt) : +30% sur ses propres attaques
+            # au contact.
+            mult_aura *= capacites_module.boost_attaque_contact(capacite_atk, attaque["classe"])
+            # Mâchoire Brute (Strong Jaw, Voltoutou/Fulgudog) : +50% sur ses propres
+            # attaques de morsure reconnues.
+            mult_aura *= capacites_module.boost_attaque_morsure(capacite_atk, nom_attaque)
 
             # Terrain de zone : +30% sur le type assorti, mais UNIQUEMENT si l'attaquant
             # est au sol (Vol/Lévitation ignorent totalement le Terrain).
@@ -1361,6 +1831,16 @@ async def resoudre_tour(combat_id: int) -> list:
             if terrain_actif and terrain_actif["type"] == "herbu" and nom_attaque in ATTAQUES_SEISME:
                 if _est_au_sol(pok_def, capacite_def, combat_id):
                     mult_terrain *= 0.5
+            # Pulsion Orichalque (Koraidon) / Moteur Hadron (Miraidon) : +33% sur SA
+            # propre Attaque (ou Attaque Spéciale) sous la météo/le terrain qu'il a
+            # lui-même déclenché à son entrée — s'applique même si un autre effet a
+            # entre-temps changé la météo/le terrain, tant que ça correspond encore.
+            mult_aura *= capacites_module.multiplicateur_stat_meteo_signature(
+                capacite_atk, meteo_active["type"] if meteo_active else None, cle_boost_off
+            )
+            mult_aura *= capacites_module.multiplicateur_stat_terrain_signature(
+                capacite_atk, terrain_actif["type"] if terrain_actif else None, cle_boost_off
+            )
 
             # Écrans d'équipe (Reflet/Mur Lumière/Voile Aurore) : -50% de dégâts subis
             # par l'équipe protégée, mais ignorés en cas de coup critique (comme dans
@@ -1402,6 +1882,125 @@ async def resoudre_tour(combat_id: int) -> list:
 
             pv_restants = database.appliquer_degats_pvp(combat_id, adversaire_id, nom_def, degats)
             degats_subis_ce_tour.add(adversaire_id)
+            # Attaques à coups multiples (Furie/Dard-Nuée/Double Pied) : précise le
+            # nombre de coups tirés, quelle que soit la variante de message ci-dessus
+            # qui vient de s'afficher (critique/type/normal...).
+            if nombre_coups_multiples:
+                log.append(f"  🔢 Touché **{nombre_coups_multiples}** fois !")
+
+            # Illusion (Zoroark) : révélée dès le premier coup subi, peu importe le
+            # dégât ou le K.O. — fidèle aux vrais jeux, où c'est justement en encaissant
+            # une attaque que le subterfuge s'effondre.
+            deguisement_actif = database.obtenir_illusion(combat_id, adversaire_id, nom_def)
+            if deguisement_actif:
+                database.definir_illusion(combat_id, adversaire_id, nom_def, None)
+                log.append(f"  🎭 Ce n'était qu'une **Illusion** ! **{nom_def}** est en fait révélé !")
+
+            # Peau Dure/Piquant : riposte au contact, inflige un % des PV max de
+            # L'ATTAQUANT en retour — même si celui-ci vient de mettre K.O. le
+            # défenseur (l'attaque a bien fait contact, peu importe l'issue pour lui).
+            pourcent_riposte = capacites_module.riposte_contact(capacite_def, attaque["classe"])
+            if pourcent_riposte:
+                degats_riposte = max(1, round(row_atk["pv_max"] * pourcent_riposte))
+                database.appliquer_degats_pvp(combat_id, user_id, nom_atk, degats_riposte)
+                log.append(f"  🦔 **{nom_atk}** est blessé au contact de **{nom_def}** ! (-{degats_riposte} PV)")
+
+            # Momie (Tutafeh/Tutankafer) : au contact, transforme la capacité de
+            # L'ATTAQUANT en Momie, qui se propage à son tour à qui la touche ensuite —
+            # jamais si l'attaquant a DÉJÀ Momie (rien à changer).
+            nouvelle_capacite_momie = capacites_module.change_capacite_au_contact(capacite_def, attaque["classe"])
+            if nouvelle_capacite_momie and capacite_atk != nouvelle_capacite_momie:
+                database.definir_capacite_combat(combat_id, user_id, nom_atk, nouvelle_capacite_momie)
+                log.append(f"  🧟 **{nom_atk}** attrape **Momie** au contact de **{nom_def}** !")
+
+            # Esprit Vagabond (Tutétékri) : au contact, ÉCHANGE sa propre capacité avec
+            # celle de l'attaquant (contrairement à Momie, à sens unique).
+            if capacites_module.a_esprit_vagabond(capacite_def, attaque["classe"]):
+                database.definir_capacite_combat(combat_id, user_id, nom_atk, capacite_def)
+                database.definir_capacite_combat(combat_id, adversaire_id, nom_def, capacite_atk)
+                log.append(f"  👻 **{nom_def}** échange sa capacité avec **{nom_atk}** grâce à **Esprit Vagabond** !")
+
+            # Charme Ensorceleur (Cute Charm, Rondoudou/Toudoudou/Skitty/Delcatty) : 30%
+            # de chance d'infatuer L'ATTAQUANT au contact, si les genres sont opposés —
+            # genres SNAPSHOTÉS par combat (voir tire_genre_pour_espece), jamais si K.O.
+            if pv_restants > 0:
+                genre_def_charme = database.obtenir_genre_combat(combat_id, adversaire_id, nom_def)
+                genre_atk_charme = database.obtenir_genre_combat(combat_id, user_id, nom_atk)
+                if capacites_module.declenche_charme_ensorceleur(capacite_def, genre_def_charme, genre_atk_charme, attaque["classe"]):
+                    database.definir_infatuation(combat_id, user_id, nom_atk, True)
+                    log.append(f"  💕 **{nom_atk}** tombe amoureux de **{nom_def}** grâce à **Charme Ensorceleur** !")
+
+                # Pose Spore (Effect Spore, Balignon/Spododo/Lampignon) : au contact,
+                # 30% de chance totale d'infliger poison/paralysie/sommeil à
+                # L'ATTAQUANT — taux exacts officiels (9%/10%/11%).
+                statut_pose_spore = capacites_module.tire_statut_pose_spore(capacite_def, attaque["classe"])
+                if statut_pose_spore:
+                    compteur_spore = random.randint(1, 3) if statut_pose_spore == "sleep" else 0
+                    if database.definir_statut(combat_id, user_id, nom_atk, statut_pose_spore, compteur_spore):
+                        info_spore = STATUTS_INFO[statut_pose_spore]
+                        log.append(f"  {info_spore['emoji']} **{nom_atk}** est {info_spore['nom']} par **Pose Spore** !")
+
+                # Coloforce (Pickpocket, Sapereau) : au contact, vole l'objet tenu de
+                # L'ATTAQUANT (sens inverse de Magicien) — jamais si le défenseur tient
+                # déjà quelque chose, jamais si l'attaquant n'a rien à voler, jamais un
+                # objet lié à une transformation.
+                if (
+                    capacites_module.vole_objet_au_contact(capacite_def, attaque["classe"])
+                    and not objet_def
+                    and objet_atk
+                    and objet_atk not in formes_objets_module.FORMES_OBJETS
+                ):
+                    database.definir_objet_combat(combat_id, adversaire_id, nom_def, objet_atk)
+                    database.definir_objet_combat(combat_id, user_id, nom_atk, None)
+                    nom_objet_vole_cf = capacites_module.infos_objet(objet_atk)
+                    nom_affiche_cf = nom_objet_vole_cf["nom"] if nom_objet_vole_cf else objet_atk
+                    log.append(f"  🖐️ **{nom_def}** vole **{nom_affiche_cf}** à **{nom_atk}** grâce à **Coloforce** !")
+
+            # Camouflage (Color Change, Kecleon) : change son propre type pour
+            # correspondre à l'attaque qui vient de le toucher — jamais si K.O., jamais
+            # sur Lutte (type None), jamais si déjà de ce type précis (rien à changer).
+            if pv_restants > 0 and attaque["type"] is not None:
+                capacite_def_pour_camouflage = database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def)
+                if capacites_module.a_camouflage(capacite_def_pour_camouflage) and attaque["type"] not in types_def:
+                    database.definir_camouflage(combat_id, adversaire_id, nom_def, attaque["type"])
+                    log.append(f"  🦎 **{nom_def}** devient de type **{attaque['type'].capitalize()}** grâce à **Camouflage** !")
+
+            # Magicien (Hoopa) : vole l'objet tenu de la cible sur TOUT coup réussi (pas
+            # seulement un K.O., contrairement à Justicier/Ossature/Hennissement plus bas)
+            # — jamais s'il tient déjà quelque chose lui-même, jamais si la cible n'a
+            # rien à voler, et jamais un objet lié à une transformation (Plaque, ROM,
+            # Orbe...), pour éviter le cas bizarre de rendre normal un Pokémon
+            # transformé juste en le touchant.
+            if (
+                capacites_module.vole_objet_sur_coup(capacite_atk)
+                and not objet_atk
+                and objet_def
+                and objet_def not in formes_objets_module.FORMES_OBJETS
+            ):
+                database.definir_objet_combat(combat_id, user_id, nom_atk, objet_def)
+                database.definir_objet_combat(combat_id, adversaire_id, nom_def, None)
+                nom_objet_vole = capacites_module.infos_objet(objet_def)
+                nom_affiche_objet = nom_objet_vole["nom"] if nom_objet_vole else objet_def
+                log.append(f"  🎩 **{nom_atk}** vole **{nom_affiche_objet}** à **{nom_def}** grâce à **Magicien** !")
+
+            # Dommage Sec (Aftermath, Baudrive/Grodrive) : en étant mis K.O. par une
+            # attaque physique, inflige 25% des PV max de L'ATTAQUANT en retour —
+            # vérification INDÉPENDANTE du bloc "pv_restants > 0" suivant (ce
+            # déclencheur est justement l'exact opposé : seulement SI K.O.).
+            if pv_restants <= 0 and capacites_module.declenche_dommage_sec(capacite_def, attaque["classe"]):
+                degats_dommage_sec = max(1, round(row_atk["pv_max"] * 0.25))
+                database.appliquer_degats_pvp(combat_id, user_id, nom_atk, degats_dommage_sec)
+                log.append(f"  💢 **{nom_atk}** subit le contrecoup de **Dommage Sec** ! (-{degats_dommage_sec} PV)")
+
+            # Expuls'Organes (Innards Out, Concombaffe) : en étant mis K.O. (n'importe
+            # quelle classe d'attaque, contrairement à Dommage Sec/Peau Dure), inflige à
+            # L'ATTAQUANT des dégâts égaux à SES PROPRES PV restants AVANT ce coup fatal
+            # (row_def["pv_actuels"] est la valeur PRÉ-dégâts, fixée plus haut par
+            # infos_actif avant que ce tour ne soit résolu).
+            if pv_restants <= 0 and capacites_module.a_expuls_organes(capacite_def):
+                degats_expuls = max(1, row_def["pv_actuels"])
+                database.appliquer_degats_pvp(combat_id, user_id, nom_atk, degats_expuls)
+                log.append(f"  🫀 **{nom_atk}** subit le contrecoup d'**Expuls'Organes** ! (-{degats_expuls} PV)")
 
             # Justicier (Cobalium/Terrakium/Viridium) : +1 Attaque quand touché par une
             # attaque Ténèbres — vérifié sur la capacité du DÉFENSEUR, se déclenche même
@@ -1411,7 +2010,91 @@ async def resoudre_tour(combat_id: int) -> list:
                 if boost_justicier:
                     stat_j, delta_j = boost_justicier
                     nouveau_stage_j = database.modifier_boost(combat_id, adversaire_id, nom_def, stat_j, delta_j)
+
+                # Phobique (Rattled, Mordudor) : +1 Vitesse quand touché par une attaque
+                # Ténèbres/Spectre/Insecte.
+                if capacites_module.boost_vitesse_phobique(capacite_def, attaque["type"]):
+                    nouveau_stage_phobique = database.modifier_boost(combat_id, adversaire_id, nom_def, "vit", 1)
+                    log.append(f"  😱 **{nom_def}** active **Phobique** ! (+1 Vitesse, stage {nouveau_stage_phobique:+d})")
+
+                # Armure Fragile (Polthégeist/Corayôme) : -1 Défense, +2 Vitesse quand
+                # touché par une attaque PHYSIQUE, peu importe son type.
+                if attaque.get("classe") == "physical":
+                    boost_armure = capacites_module.boost_si_touche_physique(capacite_def)
+                    if boost_armure:
+                        (stat_baisse, delta_baisse), (stat_hausse, delta_hausse) = boost_armure
+                        database.modifier_boost(combat_id, adversaire_id, nom_def, stat_baisse, delta_baisse)
+                        nouveau_stage_v = database.modifier_boost(combat_id, adversaire_id, nom_def, stat_hausse, delta_hausse)
+                        log.append(
+                            f"  🔨 **{nom_def}** active **Armure Fragile** ! ({delta_baisse} {NOMS_STATS[stat_baisse]}, "
+                            f"+{delta_hausse} {NOMS_STATS[stat_hausse]}, stage Vitesse {nouveau_stage_v:+d})"
+                        )
                     log.append(f"  ⚖️ **{nom_def}** active **Justicier** ! (+{delta_j} {NOMS_STATS[stat_j]}, stage {nouveau_stage_j:+d})")
+
+                # Ossature (Berserk, Sulfura de Galar) : +1 Attaque Spéciale la première
+                # fois que les PV passent sous 50% suite à CE coup précis.
+                boost_ossature = capacites_module.declenche_ossature(
+                    capacite_def, row_def["pv_actuels"], pv_restants, row_def["pv_max"]
+                )
+                if boost_ossature:
+                    stat_o, delta_o = boost_ossature
+                    nouveau_stage_o = database.modifier_boost(combat_id, adversaire_id, nom_def, stat_o, delta_o)
+                    log.append(f"  💢 **{nom_def}** active **Ossature** ! (+{delta_o} {NOMS_STATS[stat_o]}, stage {nouveau_stage_o:+d})")
+
+                # Porte de Secours (Sarmuraï) : se retire automatiquement du combat la
+                # première fois que ses PV passent sous 50% — réutilise EXACTEMENT le
+                # même mécanisme "switches_volontaires" que Change Éclair/Demi-Tour pour
+                # que la boucle de fin de tour gère l'envoi du remplaçant. relais=False
+                # (comme Change Éclair, pas Relais/Baton Pass) : aucun transfert de boosts.
+                if capacites_module.declenche_porte_secours(capacite_def, row_def["pv_actuels"], pv_restants, row_def["pv_max"]):
+                    switches_volontaires[adversaire_id] = (False, nom_def)
+                    log.append(f"  🚪 **{nom_def}** se retire du combat grâce à **Porte de Secours** !")
+
+                # Corps Maudit (Ectoplasma) : 30% de chance de désactiver l'attaque de
+                # L'ATTAQUANT qui vient de toucher — vérifié sur la capacité du
+                # DÉFENSEUR, jamais si K.O. (désactiver l'attaque d'un Pokémon qui
+                # vient d'en mettre K.O. un autre n'a pas de sens).
+                if pv_restants > 0:
+                    chance_maudit = capacites_module.chance_corps_maudit(capacite_def)
+                    if chance_maudit and random.random() < chance_maudit:
+                        database.definir_attaque_desactivee(combat_id, user_id, nom_atk, nom_attaque, 4)
+                        log.append(f"  👻 **{nom_attaque}** de **{nom_atk}** est désactivée par **Corps Maudit** !")
+
+                    # Chloro Semence (Seed Sower, Arboliva) : déclenche le Terrain Herbu
+                    # quand touché par une attaque offensive — réutilise TELLE QUELLE la
+                    # même fonction que les 4 Tapu, juste appelée ici (réactif) plutôt
+                    # qu'à l'entrée en jeu.
+                    _declencher_terrain_entree(combat_id, adversaire_id, nom_def, log)
+
+                # Chaîne Toxique (Félicanis/Fortusimia/Favianos) : chance d'empoisonner la
+                # cible sur une attaque OFFENSIVE (jamais une attaque de statut, jamais si
+                # déjà sous un autre statut). Vérifié sur la capacité de L'ATTAQUANT.
+                if attaque.get("classe") in ("physical", "special"):
+                    chance_toxique = capacites_module.chance_poison_chaine_toxique(capacite_atk)
+                    if chance_toxique and random.random() < chance_toxique:
+                        if database.definir_statut(combat_id, adversaire_id, nom_def, "poison"):
+                            log.append(f"  ⛓️ **{nom_def}** est empoisonné par **Chaîne Toxique** !")
+            else:
+                # Hennissement Glacé (Blizzeval) / Hennissement Sépulcral (Spectreval) :
+                # +1 sur une stat propre quand CE Pokémon inflige lui-même le K.O. —
+                # vérifié sur la capacité de L'ATTAQUANT cette fois (pas du défenseur),
+                # jamais s'il ne s'agit que d'un statut (poison/brûlure) qui achève plus
+                # tard, seulement sur le coup direct qui inflige le K.O.
+                boost_hennissement = capacites_module.boost_si_ko_inflige(capacite_atk)
+                if boost_hennissement:
+                    stat_h, delta_h = boost_hennissement
+                    nouveau_stage_h = database.modifier_boost(combat_id, user_id, nom_atk, stat_h, delta_h)
+                    log.append(f"  🐴 **{nom_atk}** active son Hennissement ! (+{delta_h} {NOMS_STATS[stat_h]}, stage {nouveau_stage_h:+d})")
+
+                # Cœur d'Âme (Magearna) : +1 sur une stat propre à CHAQUE K.O., peu importe
+                # qui l'inflige — contrairement à Hennissement Glacé/Sépulcral ci-dessus qui
+                # exige que ce soit CE Pokémon l'auteur du coup. En 1v1, le seul témoin
+                # possible est justement l'attaquant (le seul autre Pokémon présent).
+                boost_coeur_ame = capacites_module.boost_si_ko_temoin(capacite_atk)
+                if boost_coeur_ame:
+                    stat_c, delta_c = boost_coeur_ame
+                    nouveau_stage_c = database.modifier_boost(combat_id, user_id, nom_atk, stat_c, delta_c)
+                    log.append(f"  💗 **{nom_atk}** active **Cœur d'Âme** ! (+{delta_c} {NOMS_STATS[stat_c]}, stage {nouveau_stage_c:+d})")
 
             # Une attaque de type Feu dégèle instantanément la cible, en plus du jet de
             # 20%/tour classique — comme dans les vrais jeux.
@@ -1544,10 +2227,14 @@ async def resoudre_tour(combat_id: int) -> list:
                     tours_restants = etat_furie["tours_restants"] - 1
                     if tours_restants <= 0:
                         database.definir_furie(combat_id, user_id, nom_atk, None)
-                        deja_confus = database.obtenir_statut(combat_id, user_id, nom_atk)
-                        if not deja_confus:
-                            database.definir_statut(combat_id, user_id, nom_atk, "confusion", random.randint(1, 4))
-                        log.append(f"  😵 **{nom_atk}** se laisse emporter par sa furie et devient confus !")
+                        deja_confus = database.obtenir_confusion(combat_id, user_id, nom_atk)
+                        if deja_confus is None:
+                            if database.definir_confusion(combat_id, user_id, nom_atk, random.randint(1, 4)):
+                                log.append(f"  😵 **{nom_atk}** se laisse emporter par sa furie et devient confus !")
+                            else:
+                                log.append(f"  😵 **{nom_atk}** se laisse emporter par sa furie, mais reste immunisé à la confusion !")
+                        else:
+                            log.append(f"  😵 **{nom_atk}** se laisse emporter par sa furie et devient confus !")
                     else:
                         database.definir_furie(combat_id, user_id, nom_atk, nom_attaque, tours_restants)
 
@@ -1565,21 +2252,43 @@ async def resoudre_tour(combat_id: int) -> list:
                 chance = attaque.get("ailment_chance", 0) or 100  # 0 = garanti (attaques de statut pur)
                 chance *= capacites_module.multiplicateur_chance_secondaire(capacite_atk)  # Grâce Sereine
                 if random.random() * 100 < chance:
-                    compteur = 0
-                    if ailment == "sleep":
-                        compteur = random.randint(1, 3)
-                    elif ailment == "confusion":
-                        compteur = random.randint(1, 4)
-                    if database.definir_statut(combat_id, adversaire_id, nom_def, ailment, compteur):
-                        info = STATUTS_INFO[ailment]
-                        log.append(f"  {info['emoji']} **{nom_def}** est {info['nom']} !")
-                        _verifier_baie_statut(combat_id, adversaire_id, nom_def, ailment, log)
-                        # Synchro : renvoie le même statut à l'attaquant (Poison/Brûlure/
-                        # Paralysie uniquement — pas Sommeil/Gel/Confusion dans les vrais jeux)
-                        if ailment in ("poison", "burn", "paralysis") and capacites_module.a_synchro(capacite_def):
-                            if not database.obtenir_statut(combat_id, user_id, nom_atk):
-                                if database.definir_statut(combat_id, user_id, nom_atk, ailment, 0):
-                                    log.append(f"  🔗 **{nom_atk}** est aussi {info['nom']} à cause de la **Synchro** de **{nom_def}** !")
+                    if ailment == "confusion":
+                        # Statut VOLATIL séparé (voir combat_confusion) — jamais bloqué par
+                        # un statut principal déjà actif, contrairement aux autres ailments
+                        # ci-dessous qui échouent si un statut est déjà en place.
+                        if database.definir_confusion(combat_id, adversaire_id, nom_def, random.randint(1, 4)):
+                            info_confusion = STATUTS_INFO["confusion"]
+                            log.append(f"  {info_confusion['emoji']} **{nom_def}** est {info_confusion['nom']} !")
+                            _verifier_baie_statut(combat_id, adversaire_id, nom_def, "confusion", log)
+                        else:
+                            log.append(f"  ❌ **{nom_def}** n'est pas affecté(e) (immunisé à la confusion) !")
+                        # Marionnettiste Toxique (Pêchaminus) : si CETTE MÊME attaque a
+                        # aussi empoisonné la cible (voir plus bas, ailment principal
+                        # "poison" séparé), les deux se cumulent naturellement puisque la
+                        # confusion ne bloque jamais rien — rien de plus à faire ici.
+                    else:
+                        compteur = random.randint(1, 3) if ailment == "sleep" else 0
+                        # Corrosion (Floréclat) : peut empoisonner un Poison/Acier malgré
+                        # leur immunité de type naturelle.
+                        ignore_immunite_poison = ailment == "poison" and capacites_module.a_corrosion(capacite_atk)
+                        if database.definir_statut(combat_id, adversaire_id, nom_def, ailment, compteur, ignore_immunite_poison):
+                            info = STATUTS_INFO[ailment]
+                            log.append(f"  {info['emoji']} **{nom_def}** est {info['nom']} !")
+                            _verifier_baie_statut(combat_id, adversaire_id, nom_def, ailment, log)
+                            # Marionnettiste Toxique (Pêchaminus) : si CE poison vient d'une
+                            # de SES attaques, la cible devient AUSSI confuse — possible
+                            # maintenant que la confusion ne partage plus le même
+                            # emplacement que le statut principal.
+                            if ailment == "poison" and capacites_module.confond_aussi_si_poison(capacite_atk):
+                                if database.definir_confusion(combat_id, adversaire_id, nom_def, random.randint(1, 4)):
+                                    log.append(f"  🎭 **{nom_def}** est aussi confus à cause de **Marionnettiste Toxique** !")
+                                    _verifier_baie_statut(combat_id, adversaire_id, nom_def, "confusion", log)
+                            # Synchro : renvoie le même statut à l'attaquant (Poison/Brûlure/
+                            # Paralysie uniquement — pas Sommeil/Gel/Confusion dans les vrais jeux)
+                            if ailment in ("poison", "burn", "paralysis") and capacites_module.a_synchro(capacite_def):
+                                if not database.obtenir_statut(combat_id, user_id, nom_atk):
+                                    if database.definir_statut(combat_id, user_id, nom_atk, ailment, 0):
+                                        log.append(f"  🔗 **{nom_atk}** est aussi {info['nom']} à cause de la **Synchro** de **{nom_def}** !")
 
             # Effet secondaire de stat éventuel (ex: Nitrocharge +1 Vitesse sur soi
             # garanti, Griffe Acier +1 Attaque sur soi à 10%, Étreinte -1 Défense sur la
@@ -1637,6 +2346,16 @@ async def resoudre_tour(combat_id: int) -> list:
                                 nouveau_stage = database.modifier_boost(combat_id, cible_stat_id, cible_stat_nom, stat, delta_reel)
                                 signe = "+" if delta_reel > 0 else ""
                                 morceaux.append(f"{signe}{delta_reel} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
+                                # Compétiteur/Défiant : se déclenche dès qu'une stat est
+                                # abaissée PAR L'ADVERSAIRE (peu importe laquelle) — jamais
+                                # sur une baisse auto-infligée (cible_stat_id == soi).
+                                if cible_stat_id == adversaire_id and delta_reel < 0:
+                                    boost_cd = capacites_module.boost_si_stat_baissee_par_adversaire(capacite_cible_stat)
+                                    if boost_cd:
+                                        stat_cd, delta_cd = boost_cd
+                                        nouveau_stage_cd = database.modifier_boost(combat_id, adversaire_id, cible_stat_nom, stat_cd, delta_cd)
+                                        log.append(f"  📈 **{cible_stat_nom}** riposte ! (+{delta_cd} {NOMS_STATS[stat_cd]}, stage {nouveau_stage_cd:+d})")
+
                             if stat_specifique_bloquee:
                                 info_cs = capacites_module.infos_capacite(capacite_cible_stat)
                                 log.append(f"  🛡️ **{cible_stat_nom}** protège sa {NOMS_STATS[stat_protegee_specifique]} grâce à **{info_cs['nom']}** !")
@@ -1777,6 +2496,13 @@ async def resoudre_tour(combat_id: int) -> list:
                         nouveau_stage = database.modifier_boost(combat_id, cible_id, cible_nom, stat, delta_reel)
                         signe = "+" if delta_reel > 0 else ""
                         morceaux.append(f"{signe}{delta_reel} {NOMS_STATS[stat]} (stage {nouveau_stage:+d})")
+                        if cible_id == adversaire_id and delta_reel < 0:
+                            boost_cd2 = capacites_module.boost_si_stat_baissee_par_adversaire(capacite_cible)
+                            if boost_cd2:
+                                stat_cd2, delta_cd2 = boost_cd2
+                                nouveau_stage_cd2 = database.modifier_boost(combat_id, adversaire_id, cible_nom, stat_cd2, delta_cd2)
+                                log.append(f"  📈 **{cible_nom}** riposte ! (+{delta_cd2} {NOMS_STATS[stat_cd2]}, stage {nouveau_stage_cd2:+d})")
+
                     if stat_specifique_bloquee_pure:
                         info_cs2 = capacites_module.infos_capacite(capacite_cible)
                         log.append(f"  🛡️ **{cible_nom}** protège sa {NOMS_STATS[stat_protegee_pure]} grâce à **{info_cs2['nom']}** !")
@@ -1792,25 +2518,43 @@ async def resoudre_tour(combat_id: int) -> list:
                 cible_ailment_id, cible_ailment_nom = (
                     (user_id, nom_atk) if attaque.get("cible") == "soi" else (adversaire_id, nom_def)
                 )
-                compteur = 0
-                if ailment == "sleep":
-                    compteur = random.randint(1, 3)
-                elif ailment == "confusion":
-                    compteur = random.randint(1, 4)
-                if database.definir_statut(combat_id, cible_ailment_id, cible_ailment_nom, ailment, compteur):
-                    info = STATUTS_INFO[ailment]
-                    log.append(f"  {info['emoji']} **{cible_ailment_nom}** est {info['nom']} !")
-                    _verifier_baie_statut(combat_id, cible_ailment_id, cible_ailment_nom, ailment, log)
-                    if (
-                        cible_ailment_id == adversaire_id
-                        and ailment in ("poison", "burn", "paralysis")
-                        and capacites_module.a_synchro(database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def))
-                        and not database.obtenir_statut(combat_id, user_id, nom_atk)
-                    ):
-                        if database.definir_statut(combat_id, user_id, nom_atk, ailment, 0):
-                            log.append(f"  🔗 **{nom_atk}** est aussi {info['nom']} à cause de la **Synchro** de **{nom_def}** !")
+                if ailment == "confusion":
+                    # Statut VOLATIL séparé (voir combat_confusion) — ne partage jamais
+                    # l'emplacement du statut principal, jamais bloqué par lui.
+                    if database.definir_confusion(combat_id, cible_ailment_id, cible_ailment_nom, random.randint(1, 4)):
+                        info_confusion = STATUTS_INFO["confusion"]
+                        log.append(f"  {info_confusion['emoji']} **{cible_ailment_nom}** est {info_confusion['nom']} !")
+                        _verifier_baie_statut(combat_id, cible_ailment_id, cible_ailment_nom, "confusion", log)
+                    else:
+                        log.append(f"  ❌ **{cible_ailment_nom}** n'est pas affecté(e) (immunisé à la confusion) !")
                 else:
-                    log.append(f"  ❌ **{cible_ailment_nom}** n'est pas affecté(e) (déjà un statut, ou immunisé par son type) !")
+                    compteur = random.randint(1, 3) if ailment == "sleep" else 0
+                    ignore_immunite_poison2 = (
+                        ailment == "poison" and cible_ailment_id == adversaire_id and capacites_module.a_corrosion(capacite_atk)
+                    )
+                    # Mycelium Might (Terracruel) : sur SA PROPRE attaque de statut,
+                    # ignore l'immunité de CAPACITÉ de la cible (jamais l'immunité de
+                    # type, gérée séparément juste au-dessus).
+                    ignore_capacite_mycelium = (
+                        cible_ailment_id == adversaire_id and capacites_module.a_mycelium_might(capacite_atk)
+                    )
+                    if database.definir_statut(
+                        combat_id, cible_ailment_id, cible_ailment_nom, ailment, compteur,
+                        ignore_immunite_poison2, ignore_capacite_mycelium,
+                    ):
+                        info = STATUTS_INFO[ailment]
+                        log.append(f"  {info['emoji']} **{cible_ailment_nom}** est {info['nom']} !")
+                        _verifier_baie_statut(combat_id, cible_ailment_id, cible_ailment_nom, ailment, log)
+                        if (
+                            cible_ailment_id == adversaire_id
+                            and ailment in ("poison", "burn", "paralysis")
+                            and capacites_module.a_synchro(database.obtenir_capacite_combat(combat_id, adversaire_id, nom_def))
+                            and not database.obtenir_statut(combat_id, user_id, nom_atk)
+                        ):
+                            if database.definir_statut(combat_id, user_id, nom_atk, ailment, 0):
+                                log.append(f"  🔗 **{nom_atk}** est aussi {info['nom']} à cause de la **Synchro** de **{nom_def}** !")
+                    else:
+                        log.append(f"  ❌ **{cible_ailment_nom}** n'est pas affecté(e) (déjà un statut, ou immunisé par son type) !")
 
     # --- Météo : dégâts de fin de tour (Tempête de Sable/Grêle) + décompte de durée ---
     meteo_active = database.obtenir_meteo(combat_id)
@@ -1830,6 +2574,8 @@ async def resoudre_tour(combat_id: int) -> list:
                 continue  # Envelocape
             if capacites_module.immunise_contre_degats_meteo_specifique(database.obtenir_capacite_combat(combat_id, user_id, nom_actif_m), meteo_active["type"]):
                 continue  # Voile Sable (sable uniquement)
+            if capacites_module.a_garde_magique(database.obtenir_capacite_combat(combat_id, user_id, nom_actif_m)):
+                continue  # Garde Magique — aucun dégât indirect, peu importe la source
             degats_meteo = max(1, round(actif_row_m["pv_max"] / 16))
             pv_apres_meteo = database.appliquer_degats_pvp(combat_id, user_id, nom_actif_m, degats_meteo)
             log.append(f"{METEO_INFO[meteo_active['type']]['emoji']} **{nom_actif_m}** souffre de la météo : -{degats_meteo} PV")
@@ -1913,6 +2659,13 @@ async def resoudre_tour(combat_id: int) -> list:
         actif_row = next((r for r in eq if r["pokemon_nom"] == nom_actif), None)
         if actif_row and actif_row["pv_actuels"] > 0 and user_id not in switches_volontaires:
             database.incrementer_tours_en_jeu(combat_id, user_id, nom_actif)
+            # Cran Vital (Speed Boost, Ninjask) : +1 Vitesse à la fin de chaque tour où
+            # ce Pokémon est resté actif — même condition que le compteur ci-dessus (pas
+            # sur le tour où il vient d'être envoyé).
+            capacite_pour_cran_vital = database.obtenir_capacite_combat(combat_id, user_id, nom_actif)
+            if capacites_module.a_cran_vital(capacite_pour_cran_vital):
+                nouveau_stage_cran_vital = database.modifier_boost(combat_id, user_id, nom_actif, "vit", 1)
+                log.append(f"  💨 **{nom_actif}** gagne en Vitesse grâce à **Cran Vital** ! (stage {nouveau_stage_cran_vital:+d})")
 
     # --- Dégâts de fin de tour : brûlure et poison ---
     combat = database.obtenir_combat(combat_id)
@@ -1927,6 +2680,10 @@ async def resoudre_tour(combat_id: int) -> list:
             continue
         code = statut_actif[0]
         if code in ("burn", "poison"):
+            capacite_pour_garde_magique = database.obtenir_capacite_combat(combat_id, user_id, nom_actif)
+            if capacites_module.a_garde_magique(capacite_pour_garde_magique):
+                log.append(f"  🛡️ **{nom_actif}** ignore les dégâts de son statut grâce à **Garde Magique** !")
+                continue
             pourcent = DEGATS_BRULURE_POURCENT if code == "burn" else DEGATS_POISON_POURCENT
             degats_statut = max(1, round(actif_row["pv_max"] * pourcent))
             pv_apres = database.appliquer_degats_pvp(combat_id, user_id, nom_actif, degats_statut)
@@ -1990,6 +2747,26 @@ async def resoudre_tour(combat_id: int) -> list:
             # timeout anti-AFK — voir _on_envoyer_remplacant et traiter_choix_ko).
             if not est_relais:
                 database.reinitialiser_boosts(combat_id, user_id, nom_actif)
+            # Stance Change (Exagide) : revient TOUJOURS en forme Bouclier en quittant le
+            # terrain (K.O. ou changement, Relais compris — contrairement aux boosts,
+            # ce n'est pas quelque chose que Relais transfère dans les vrais jeux).
+            capacite_sortant_stance = database.obtenir_capacite_combat(combat_id, user_id, nom_actif)
+            if capacites_module.a_stance_change(capacite_sortant_stance):
+                database.definir_forme_lame(combat_id, user_id, nom_actif, False)
+            # Illusion (Zoroark) : efface le déguisement en quittant le terrain — sera
+            # réévalué frais (contre le NOUVEAU dernier conscient) à son prochain envoi.
+            if capacites_module.a_illusion(capacite_sortant_stance):
+                database.definir_illusion(combat_id, user_id, nom_actif, None)
+            # Camouflage (Kecleon) : redevient son type normal en quittant le terrain.
+            if capacites_module.a_camouflage(capacite_sortant_stance):
+                database.definir_camouflage(combat_id, user_id, nom_actif, None)
+            # Charme (infatuation) : levée en quittant le terrain — v1 : ne couvre que
+            # le cas où c'est le Pokémon INFATUÉ lui-même qui part (fidèle aux vrais
+            # jeux). Le cas où c'est plutôt SON BÉGUIN qui change de Pokémon en face
+            # n'est pas couvert (nécessiterait de tracer PRÉCISÉMENT qui a causé
+            # l'infatuation, pas juste un flag booléen) — l'infatuation persisterait
+            # alors un peu plus longtemps que dans les vrais jeux.
+            database.definir_infatuation(combat_id, user_id, nom_actif, False)
             if est_ko:
                 vivants = [r["pokemon_nom"] for r in eq if r["pv_actuels"] > 0]
             else:
@@ -2094,6 +2871,15 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
 
     vainqueur_id = combat["joueur2_id"] if perdant_id == combat["joueur1_id"] else combat["joueur1_id"]
     database.terminer_combat_pvp(combat_id)
+
+    # Duels par mise (voir VueDefiMise) : le pot déjà prélevé aux DEUX joueurs à
+    # l'acceptation du défi revient intégralement au vainqueur, abandon compris — se
+    # défiler d'un duel avec mise ne protège pas la mise du perdant.
+    montant_mise = database.obtenir_mise_combat(combat_id)
+    if montant_mise:
+        database.ajouter_poke_dollars(vainqueur_id, montant_mise)
+        database.retirer_mise_combat(combat_id)
+
     mult_repetition = database.enregistrer_victoire_pvp_repetition(vainqueur_id, perdant_id)
     database.ajouter_poke_dollars(vainqueur_id, round(DOLLARS_VICTOIRE * mult_repetition * database.multiplicateur_boost(vainqueur_id, "argent")))
     # La quête "gagner un combat PvP" ne compte QUE les victoires jouées jusqu'au bout —
@@ -2127,6 +2913,7 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
     xp_reels = round(round(XP_VICTOIRE * mult_repetition) * database.multiplicateur_boost(vainqueur_id, "xp"))
     xp_defaite_reelle = round(XP_DEFAITE * database.multiplicateur_boost(perdant_id, "xp"))
     note_reduction = "\n*(récompense réduite : déjà battu cet adversaire aujourd'hui)*" if mult_repetition < 1.0 else ""
+    note_mise = f"\n💰 **+{montant_mise} Poké Dollars de mise remportée !**" if montant_mise else ""
 
     journal.logger(f"🏳️ <@{perdant_id}> a abandonné son combat PvP contre <@{vainqueur_id}> (victoire par forfait).")
 
@@ -2134,7 +2921,7 @@ async def resoudre_abandon(bot, combat_id: int, perdant_id: int):
         title=f"🏳️ {nom_perdant} a abandonné !",
         description=(
             f"<@{vainqueur_id}> remporte le combat par forfait.\n\n"
-            f"🎖️ +{dollars_reels} Poké Dollars & +{xp_reels} XP au vainqueur.{note_reduction}\n"
+            f"🎖️ +{dollars_reels} Poké Dollars & +{xp_reels} XP au vainqueur.{note_reduction}{note_mise}\n"
             f"+{xp_defaite_reelle} XP de consolation pour <@{perdant_id}>."
         ),
         color=discord.Color.orange(),
@@ -2253,6 +3040,14 @@ async def _tick_resolution_pvp(bot, combat_id: int, thread_id: int, message_id: 
         if vainqueur_id is not None:
             database.terminer_combat_pvp(combat_id)
             perdant_id = combat["joueur2_id"] if vainqueur_id == combat["joueur1_id"] else combat["joueur1_id"]
+
+            # Duels par mise (voir VueDefiMise) : même principe que dans resoudre_abandon
+            # ci-dessus — le pot revient intégralement au vainqueur.
+            montant_mise = database.obtenir_mise_combat(combat_id)
+            if montant_mise:
+                database.ajouter_poke_dollars(vainqueur_id, montant_mise)
+                database.retirer_mise_combat(combat_id)
+
             annonce_envoyee = False
             try:
                 journal.logger(f"🥊 <@{vainqueur_id}> a battu <@{perdant_id}> en combat PvP.")
@@ -2284,6 +3079,8 @@ async def _tick_resolution_pvp(bot, combat_id: int, thread_id: int, message_id: 
                 texte_recompense = f"\n\n🎖️ +{dollars_reels} Poké Dollars & +{xp_reels} XP au vainqueur !"
                 if mult_repetition < 1.0:
                     texte_recompense += "\n*(récompense réduite : déjà battu cet adversaire aujourd'hui)*"
+                if montant_mise:
+                    texte_recompense += f"\n💰 **+{montant_mise} Poké Dollars de mise remportée !**"
                 embed = discord.Embed(
                     title=f"🏆 {nom_vainqueur} remporte le combat !",
                     description=(

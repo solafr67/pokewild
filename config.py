@@ -563,6 +563,7 @@ PRIX_GEMME_MEGA = 1200
 # volontairement élevé, une vraie prime : le but est "je paie cher pour éviter
 # d'attendre le hasard", pas de dévaluer le fait de les gagner en jouant normalement.
 DUREE_MARCHE_NOIR = 60 * 60  # 1h, indépendante de DUREE_HEURE_DE_POINTE_POKESTOP (30 min)
+DUREE_FAILLE_EXPLORATION = 60 * 60  # 1h/jour, même fenêtre 9h-23h que Marché Noir/PokéStop
 
 # Deux catégories avec des plafonds d'achat différents (voir CAP_MARCHE_NOIR_* plus bas) :
 # les communs (cristal + œufs) sont de simples accélérateurs de RNG, les légendaires
@@ -579,6 +580,7 @@ PRIX_MARCHE_NOIR_LEGENDAIRE = {
     "fleur_gracidea": 2500, "orbe_griseous": 2500, "orbe_adamant": 2500,
     "perle_lustree": 2500, "orbe_bleue": 2500, "orbe_rouge": 2500,
     "vase_entrave": 2500, "epee_rouillee": 2500, "bouclier_rouille": 2500,
+    "plaque_poing": 2500, "plaque_ciel": 2500, "plaque_toxik": 2500, "plaque_terre": 2500, "plaque_roc": 2500, "plaque_insecte": 2500, "plaque_fantome": 2500, "plaque_fer": 2500, "plaque_flamme": 2500, "plaque_hydro": 2500, "plaque_herbe": 2500, "plaque_volt": 2500, "plaque_esprit": 2500, "plaque_glace": 2500, "plaque_draco": 2500, "plaque_ombre": 2500, "plaque_pixie": 2500, "rom_poing": 2500, "rom_ciel": 2500, "rom_toxik": 2500, "rom_terre": 2500, "rom_roc": 2500, "rom_insecte": 2500, "rom_fantome": 2500, "rom_fer": 2500, "rom_flamme": 2500, "rom_hydro": 2500, "rom_herbe": 2500, "rom_volt": 2500, "rom_esprit": 2500, "rom_glace": 2500, "rom_draco": 2500, "rom_ombre": 2500, "rom_pixie": 2500,
 }
 CAP_MARCHE_NOIR_COMMUN = 3      # cristal + œufs : jusqu'à 3 exemplaires du même objet
 CAP_MARCHE_NOIR_LEGENDAIRE = 1  # formes légendaires : 1 seul exemplaire
@@ -703,6 +705,12 @@ EXPLORATION_DUREES = {
     "6h": 6 * 3600,
     "24h": 24 * 3600,
 }
+# Emplacement BONUS réservé à la Faille Spatio-Temporelle (voir exploration.py::VueAnnonceFaille)
+# — jamais compté dans nb_slots_exploration (1-2 normalement), pour que les joueurs ayant
+# déjà leurs slots normaux occupés par de longues expéditions puissent quand même profiter
+# de la Faille sans attendre. Valeur arbitraire hors de la plage normale (1-2) pour ne
+# jamais entrer en collision avec un vrai numéro de slot acheté.
+SLOT_FAILLE_EXPLORATION = 99
 # Le PC total de l'équipe envoyée est plafonné pour le calcul de récompense, pour éviter
 # qu'une équipe de 3 légendaires ne rende le système infini une fois la collection montée.
 EXPLORATION_PLAFOND_PC = 6000
@@ -787,6 +795,16 @@ EXPLORATION_CHANCE_OEUF = {
     "6h":  {"base": 0.05, "bonus_max": 0.05, "max": 0.10},
     "24h": {"base": 0.10, "bonus_max": 0.08, "max": 0.18},
 }
+
+# Faille Spatio-Temporelle (voir exploration.py::FAILLE_EXPLORATION) : récompenses FIXES,
+# pas calculées par la grille normale ci-dessus (dont le "1h" donnerait 0% d'objet de
+# forme légendaire, contradictoire avec l'esprit "tout y est démultiplié" de la Faille).
+# Le bonus "Chance" (Mutation de dresseur) s'applique quand même PAR-DESSUS ces valeurs
+# (voir _calculer_recompense), plafonné à 95% comme partout ailleurs.
+FAILLE_RECOMPENSE_DOLLARS = 300
+FAILLE_CHANCE_CRISTAL = 0.50
+FAILLE_CHANCE_OEUF = 0.33
+FAILLE_CHANCE_OBJET_FORME = 0.03
 
 
 # --- Quêtes ---

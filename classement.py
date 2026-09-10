@@ -46,6 +46,11 @@ def _lignes_exploration(limite: int) -> list:
     return [f"{_puce(i)} <@{row['user_id']}> — {row['explorations_terminees']} expéditions" for i, row in enumerate(top)]
 
 
+def _lignes_roguelike(limite: int) -> list:
+    top = database.classement_roguelike(limite)
+    return [f"{_puce(i)} <@{row['joueur_id']}> — étage {row['meilleur_etage']}" for i, row in enumerate(top)]
+
+
 def _lignes_clans() -> list:
     top_equipes = database.classement_equipes()
     scores_par_equipe = {row["equipe"]: row for row in top_equipes}
@@ -70,6 +75,7 @@ CATEGORIES = {
     "pvp": {"emoji": "🥊", "titre": "Plus de victoires PvP", "lignes": _lignes_pvp},
     "shiny": {"emoji": "🌟", "titre": "Plus de Pokémon shiny capturés", "lignes": _lignes_shiny},
     "exploration": {"emoji": "🗺️", "titre": "Plus d'expéditions terminées", "lignes": _lignes_exploration},
+    "roguelike": {"emoji": "🏰", "titre": "Meilleur étage Roguelike atteint", "lignes": _lignes_roguelike},
 }
 
 
@@ -80,7 +86,7 @@ def construire_embed_apercu() -> discord.Embed:
     tassent sur plusieurs lignes illisibles avec des pseudos longs."""
     embed = discord.Embed(title="🏆 Classements", color=discord.Color.gold())
 
-    for cle in ("captures", "dollars", "pokedex", "pvp", "shiny"):
+    for cle in ("captures", "dollars", "pokedex", "pvp", "shiny", "roguelike"):
         cat = CATEGORIES[cle]
         lignes = cat["lignes"](3)
         if not lignes:

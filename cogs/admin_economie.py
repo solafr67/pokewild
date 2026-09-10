@@ -13,6 +13,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+import random
+
 import capacites as capacites_module
 import database
 import formes_objets as formes_objets_module
@@ -233,21 +235,43 @@ class AdminEconomieCog(commands.Cog):
 
     @app_commands.command(
         name="backfill-talents",
-        description="[Admin] Attribue un talent aux captures d'avant l'introduction du système talents/objets",
+        description="[Admin] Attribue un talent aux captures qui n'en ont pas, et corrige celles devenues incohérentes",
     )
     @app_commands.checks.has_permissions(administrator=True)
     async def backfill_talents(self, interaction: discord.Interaction):
         await interaction.response.defer()
 
-        captures = database.obtenir_captures_sans_talent()
-        for capture_id, pokemon_nom in captures:
+        # Phase 1 : captures d'avant l'introduction du système talents/objets (jamais
+        # touchées depuis, comme avant).
+        captures_sans_talent = database.obtenir_captures_sans_talent()
+        for capture_id, pokemon_nom in captures_sans_talent:
             database.definir_capacite_capture(capture_id, capacites_module.capacite_pour_espece(pokemon_nom))
 
-        journal.logger(f"🛠️ <@{interaction.user.id}> a lancé /backfill-talents : {len(captures)} captures mises à jour.")
+        # Phase 2 : captures ayant DÉJÀ un talent, mais qui ne correspond plus aux
+        # vraies aptitudes curatées de leur espèce (attribué au hasard AVANT que cette
+        # espèce précise ne soit curatée dans capacites.POKEMON_CAPACITES — ex: toutes
+        # les curations faites au fil des sessions de talents légendaires/rares/peu
+        # communs/communs). Ne touche QUE les espèces désormais curatées dont le talent
+        # actuel de la capture n'en fait PLUS partie — jamais une capture déjà cohérente
+        # avec sa curation actuelle, même si cette curation a valu plusieurs choix
+        # possibles et que ce n'est pas celui qui aurait été tiré aujourd'hui.
+        captures_avec_talent = database.obtenir_captures_avec_talent()
+        nb_corrigees = 0
+        for capture_id, pokemon_nom, capacite_actuelle in captures_avec_talent:
+            possibles = capacites_module.POKEMON_CAPACITES.get(pokemon_nom)
+            if possibles and capacite_actuelle not in possibles:
+                database.definir_capacite_capture(capture_id, random.choice(possibles))
+                nb_corrigees += 1
+
+        journal.logger(
+            f"🛠️ <@{interaction.user.id}> a lancé /backfill-talents : "
+            f"{len(captures_sans_talent)} captures sans talent complétées, {nb_corrigees} captures incohérentes corrigées."
+        )
         await interaction.followup.send(
-            f"✅ Talent attribué à **{len(captures)}** captures qui n'en avaient pas encore "
-            f"(d'avant l'introduction du système talents/objets). Relançable sans risque, ne "
-            f"touche jamais une capture qui a déjà un talent."
+            f"✅ Talent attribué à **{len(captures_sans_talent)}** captures qui n'en avaient pas encore "
+            f"(d'avant l'introduction du système talents/objets), et **{nb_corrigees}** captures dont le talent "
+            f"ne correspondait plus aux vraies aptitudes curatées de leur espèce ont été corrigées. "
+            f"Relançable sans risque, ne touche jamais une capture déjà cohérente avec sa curation actuelle."
         )
 
     @app_commands.command(name="give-ct", description="[Admin] Donne la CT d'une attaque à un joueur (possédée pour toujours)")
@@ -266,6 +290,51 @@ class AdminEconomieCog(commands.Cog):
         database.acheter_ct(membre.id, attaque)
         journal.logger(f"🛠️ <@{interaction.user.id}> a donné la CT de {attaque} à <@{membre.id}> (/give-ct).")
         await interaction.response.send_message(f"✅ CT **{attaque}** donnée à {membre.mention} — utilisable pour toujours.")
+
+    @app_commands.command(
+        name="reset-classement-roguelike",
+        description="[Admin] Remet TOUT le classement Roguelike à zéro (irréversible)",
+    )
+    @app_commands.checks.has_permissions(administrator=True)
+    async def reset_classement_roguelike(self, interaction: discord.Interaction):
+        vue = _VueConfirmationResetRoguelike(interaction.user.id)
+        await interaction.response.send_message(
+            "⚠️ Ça va effacer **définitivement** le record de TOUS les joueurs au Roguelike "
+            "(meilleur étage atteint). Les runs en cours ne sont pas touchées. Confirmer ?",
+            view=vue,
+            ephemeral=True,
+        )
+
+
+class _VueConfirmationResetRoguelike(discord.ui.View):
+    """Confirmation à un clic avant un reset irréversible — même précaution que pour
+    toute autre action destructive de ce genre dans le jeu (ex: abandon de combat)."""
+
+    def __init__(self, admin_id: int):
+        super().__init__(timeout=60)
+        self.admin_id = admin_id
+
+    @discord.ui.button(label="Confirmer le reset", style=discord.ButtonStyle.danger, emoji="⚠️")
+    async def confirmer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.admin_id:
+            await interaction.response.send_message("Ce n'est pas ta confirmation !", ephemeral=True)
+            return
+        nb_effaces = database.reinitialiser_classement_roguelike()
+        journal.logger(f"🛠️ <@{interaction.user.id}> a réinitialisé le classement Roguelike ({nb_effaces} records effacés).")
+        for item in self.children:
+            item.disabled = True
+        await interaction.response.edit_message(
+            content=f"✅ Classement Roguelike réinitialisé — **{nb_effaces}** records effacés.", view=self
+        )
+
+    @discord.ui.button(label="Annuler", style=discord.ButtonStyle.secondary)
+    async def annuler(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.admin_id:
+            await interaction.response.send_message("Ce n'est pas ta confirmation !", ephemeral=True)
+            return
+        for item in self.children:
+            item.disabled = True
+        await interaction.response.edit_message(content="❌ Reset annulé — rien n'a été touché.", view=self)
 
 
 async def setup(bot: commands.Bot):

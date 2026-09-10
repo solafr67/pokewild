@@ -264,6 +264,128 @@ def creer_annonce_marketplace(vendeur_id: int, capture_id: int, prix: int, duree
     return annonce_id
 
 
+def creer_annonce_enchere(vendeur_id: int, capture_id: int, prix_depart: int, duree_secondes: int) -> int:
+    """Comme creer_annonce_marketplace, mais type_annonce='enchere' — "prix" sert de MISE
+    À PRIX (jamais modifiée ensuite), prix_actuel/enchereur_actuel_id restent NULL tant
+    qu'aucune enchère n'a été placée (voir placer_enchere)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    maintenant = int(time.time())
+    cur.execute(
+        """
+        INSERT INTO marketplace_annonces
+            (vendeur_id, capture_id, prix, date_creation, date_expiration, statut, type_annonce)
+        VALUES (?, ?, ?, ?, ?, 'active', 'enchere')
+        """,
+        (vendeur_id, capture_id, prix_depart, maintenant, maintenant + duree_secondes),
+    )
+    annonce_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return annonce_id
+
+
+def placer_enchere(annonce_id: int, encherisseur_id: int, montant: int) -> tuple:
+    """Place une enchère de façon atomique : re-vérifie l'annonce, le montant minimum
+    valide, et les fonds — puis DÉBITE IMMÉDIATEMENT l'enchérisseur (fonds retenus en
+    escrow, jamais un simple engagement) et REMBOURSE l'ancien plus offrant s'il y en
+    avait un. Retourne (succes: bool, message_erreur: str | None)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM marketplace_annonces WHERE id = ?", (annonce_id,))
+    annonce = cur.fetchone()
+    conn.close()
+
+    if annonce is None or annonce["statut"] != "active" or annonce["type_annonce"] != "enchere":
+        return False, "Cette enchère n'est plus disponible (déjà terminée ou retirée)."
+    if annonce["date_expiration"] <= int(time.time()):
+        return False, "Cette enchère est déjà terminée, la résolution est en cours."
+    if annonce["vendeur_id"] == encherisseur_id:
+        return False, "Tu ne peux pas enchérir sur ton propre Pokémon !"
+
+    montant_minimum = annonce["prix_actuel"] + 1 if annonce["prix_actuel"] else annonce["prix"]
+    if montant < montant_minimum:
+        return False, f"Ton enchère doit être d'au moins {montant_minimum} Poké Dollars."
+
+    ancien_enchereur_id = annonce["enchereur_actuel_id"]
+    ancien_montant = annonce["prix_actuel"]
+
+    solde = obtenir_poke_dollars(encherisseur_id)
+    if solde < montant:
+        return False, f"Il te manque des Poké Dollars pour cette enchère ({solde}/{montant})."
+
+    conn = get_connexion()
+    cur = conn.cursor()
+    # Re-vérifie qu'aucune enchère concurrente n'a été acceptée entre-temps (deux joueurs
+    # enchérissant à la même seconde) — la condition sur prix_actuel dans le WHERE rend
+    # cette mise à jour atomique : si elle échoue, quelqu'un d'autre est passé devant.
+    cur.execute(
+        """
+        UPDATE marketplace_annonces SET prix_actuel = ?, enchereur_actuel_id = ?
+        WHERE id = ? AND statut = 'active'
+        AND (prix_actuel IS ? OR prix_actuel < ?)
+        """,
+        (montant, encherisseur_id, annonce_id, ancien_montant, montant),
+    )
+    a_reussi = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+
+    if not a_reussi:
+        return False, "Quelqu'un d'autre vient d'enchérir en même temps — réessaie avec un montant plus élevé."
+
+    ajouter_poke_dollars(encherisseur_id, -montant)
+    if ancien_enchereur_id is not None:
+        ajouter_poke_dollars(ancien_enchereur_id, ancien_montant)
+    return True, None
+
+
+def resoudre_enchere_expiree(annonce_id: int) -> dict:
+    """À appeler UNE SEULE FOIS par annonce expirée (voir marketplace.purger_annonces_expirees) :
+    si un enchérisseur existe, lui transfère le Pokémon (ses fonds sont DÉJÀ débités
+    depuis placer_enchere) et crédite le vendeur ; sinon, l'annonce expire normalement
+    (Pokémon jamais déplacé, personne n'a jamais rien payé). Retourne
+    {vendu: bool, vendeur_id, enchereur_id ou None, prix_final ou None, capture_id,
+    pokemon_nom} pour que l'appelant construise l'annonce de résultat."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT m.*, c.pokemon_nom FROM marketplace_annonces m JOIN captures c ON c.id = m.capture_id WHERE m.id = ?",
+        (annonce_id,),
+    )
+    annonce = cur.fetchone()
+    if annonce is None:
+        conn.close()
+        return {"vendu": False}
+
+    resultat = {
+        "vendeur_id": annonce["vendeur_id"], "capture_id": annonce["capture_id"],
+        "pokemon_nom": annonce["pokemon_nom"], "enchereur_id": annonce["enchereur_actuel_id"],
+        "prix_final": annonce["prix_actuel"],
+    }
+
+    if annonce["enchereur_actuel_id"] is None:
+        cur.execute("UPDATE marketplace_annonces SET statut = 'expiree' WHERE id = ?", (annonce_id,))
+        conn.commit()
+        conn.close()
+        resultat["vendu"] = False
+        return resultat
+
+    cur.execute("UPDATE captures SET user_id = ? WHERE id = ?", (annonce["enchereur_actuel_id"], annonce["capture_id"]))
+    cur.execute(
+        "UPDATE marketplace_annonces SET statut = 'vendue', acheteur_id = ? WHERE id = ?",
+        (annonce["enchereur_actuel_id"], annonce_id),
+    )
+    conn.commit()
+    conn.close()
+
+    # Les fonds de l'enchérisseur sont déjà débités depuis placer_enchere — reste
+    # seulement à créditer le vendeur.
+    ajouter_poke_dollars(annonce["vendeur_id"], annonce["prix_actuel"])
+    resultat["vendu"] = True
+    return resultat
+
+
 def definir_message_annonce_marketplace(annonce_id: int, message_id: int):
     conn = get_connexion()
     cur = conn.cursor()

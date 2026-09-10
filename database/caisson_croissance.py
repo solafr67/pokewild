@@ -23,6 +23,22 @@ def obtenir_caisson(user_id: int) -> dict:
     return {slot: occupes.get(slot) for slot in range(1, NB_SLOTS_CAISSON + 1)}
 
 
+def especes_en_caisson(user_id: int) -> set:
+    """Retourne l'ensemble des NOMS d'espèces actuellement au Caisson de Croissance pour
+    ce joueur — même principe que database.especes_en_exploration (voir
+    obtenir_equipe_combat_disponible, qui exclut les deux ensembles). Un Pokémon en
+    pleine croissance ne peut plus être aligné en combat tant qu'il n'est pas retiré."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT pokemon_nom FROM caisson_croissance_slots WHERE user_id = ?",
+        (user_id,),
+    )
+    especes = {row["pokemon_nom"] for row in cur.fetchall()}
+    conn.close()
+    return especes
+
+
 def deposer_caisson(user_id: int, slot: int, pokemon_nom: str, maintenant: int):
     conn = get_connexion()
     cur = conn.cursor()

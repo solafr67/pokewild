@@ -197,6 +197,24 @@ def init_db():
         """
     )
 
+    # Journal de dresseur mensuel : snapshot des compteurs de stats_lifetime au moment du
+    # DERNIER journal envoyé — stats_lifetime étant cumulatif depuis toujours (jamais par
+    # période), c'est la SEULE façon de calculer "ce mois-ci" sans ajouter un timestamp à
+    # chaque événement individuel (capture, victoire...). Une ligne = un joueur, mise à
+    # jour à chaque envoi (jamais un historique complet, juste le dernier point de repère).
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS journal_dresseur_snapshot (
+            user_id INTEGER PRIMARY KEY,
+            date_snapshot TEXT NOT NULL,
+            captures_totales INTEGER NOT NULL,
+            shiny_totaux INTEGER NOT NULL,
+            victoires_pvp INTEGER NOT NULL,
+            explorations_terminees INTEGER NOT NULL
+        )
+        """
+    )
+
     # Compteur d'interactions avec Gladio (le rival) — détermine le palier de familiarité
     # utilisé pour choisir le ton de ses répliques (distant -> familier -> respect bourru).
     cur.execute(
@@ -893,10 +911,29 @@ def init_db():
             date_expiration INTEGER NOT NULL,
             statut TEXT NOT NULL DEFAULT 'active',
             message_id TEXT,
-            acheteur_id INTEGER
+            acheteur_id INTEGER,
+            type_annonce TEXT NOT NULL DEFAULT 'vente_directe',
+            prix_actuel INTEGER,
+            enchereur_actuel_id INTEGER
         )
         """
     )
+
+    # Migration : enchères au Marketplace — "prix" devient la MISE À PRIX pour une
+    # enchère (jamais modifiée après création), "prix_actuel" suit la plus haute enchère
+    # en cours (NULL tant qu'aucune enchère n'a été placée), "enchereur_actuel_id" le
+    # joueur derrière cette enchère. Les fonds du plus haut enchérisseur sont RETENUS
+    # (déjà débités) dès sa mise, remboursés immédiatement s'il est surenchéri — jamais
+    # un simple "engagement sur l'honneur" qui pourrait échouer à la résolution finale.
+    for _colonne, _definition in (
+        ("type_annonce", "TEXT NOT NULL DEFAULT 'vente_directe'"),
+        ("prix_actuel", "INTEGER"),
+        ("enchereur_actuel_id", "INTEGER"),
+    ):
+        try:
+            cur.execute(f"ALTER TABLE marketplace_annonces ADD COLUMN {_colonne} {_definition}")
+        except sqlite3.OperationalError:
+            pass  # la colonne existe déjà
 
     cur.execute(
         """
@@ -1021,6 +1058,18 @@ def init_db():
         """
     )
 
+    # Duels par mise : montant total du pot (déjà PRÉLEVÉ aux deux joueurs à l'acceptation
+    # du défi, voir VueDefiMise) à verser en entier au vainqueur quand le combat se conclut
+    # — un combat PvP normal (sans /defier-mise) n'a simplement aucune ligne ici.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_mises (
+            combat_id INTEGER PRIMARY KEY,
+            montant_total INTEGER NOT NULL
+        )
+        """
+    )
+
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS combat_2v2_joueurs (
@@ -1093,6 +1142,93 @@ def init_db():
     # divise Attaque/Vitesse par 2 pendant les 5 premiers tours après l'envoi.
     try:
         cur.execute("ALTER TABLE combat_equipe ADD COLUMN tours_en_jeu INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration : Abri/Protection — bloque toute attaque offensive ciblant ce Pokémon
+    # CE TOUR-CI uniquement. Remis à 0 en tout début de résolution de tour, pour
+    # TOUT LE MONDE, avant que personne n'ait encore agi (voir resoudre_tour). Utilisé
+    # aussi par Poing Fantôme (Unseen Fist, Shifours), qui l'ignore pour ses propres
+    # attaques.
+    try:
+        cur.execute("ALTER TABLE combat_equipe ADD COLUMN protege_ce_tour INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration : Stance Change (Exagide) — forme Lame (offensive) ou Bouclier
+    # (défensive, par défaut). Change AVANT la résolution d'une attaque offensive/de
+    # Bouclier Royal, jamais sur une autre attaque de statut. Swap Attaque<->Défense et
+    # Attaque Spé<->Défense Spé quand en forme Lame — géré centralement dans
+    # infos_actif() plutôt qu'à chaque site d'utilisation des stats.
+    try:
+        cur.execute("ALTER TABLE combat_equipe ADD COLUMN forme_lame INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration : Illusion (Zoroark) — nom de l'espèce dont ce Pokémon se déguise (NULL
+    # si pas de déguisement actif/déjà révélé). ⚠️ Adaptation du mécanisme réel : dans
+    # les vrais jeux, l'Illusion ne trompe QUE l'adversaire, jamais son propre dresseur.
+    # Ici, l'image de combat est PARTAGÉE entre les deux joueurs (pas de vue privée
+    # séparée) — le déguisement est donc visible de TOUT LE MONDE (mystère + révélation
+    # sur le premier coup subi), plutôt que masqué à un seul camp. Toute la LOGIQUE
+    # interne (stats, type, capacité, choix d'attaque) utilise toujours le VRAI nom —
+    # seul l'AFFICHAGE (combat_visuel.py) est concerné.
+    try:
+        cur.execute("ALTER TABLE combat_equipe ADD COLUMN deguise_en TEXT")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration : Camouflage (Color Change, Kecleon) — change son propre type pour
+    # correspondre à la dernière attaque offensive subie (persiste jusqu'au prochain
+    # coup, ou disparaît en quittant le terrain). NULL = type normal de l'espèce.
+    try:
+        cur.execute("ALTER TABLE combat_equipe ADD COLUMN type_camouflage TEXT")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration : Absentéisme (Truant, Parecool) — alterne agir/glander un tour sur
+    # deux. 0 = a agi ce tour (glandera le prochain), 1 = a glandé ce tour (agira le
+    # prochain). Remis à 0 (prêt à agir) à chaque envoi sur le terrain.
+    try:
+        cur.execute("ALTER TABLE combat_equipe ADD COLUMN glande_prochain_tour INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration : Fac-similé (Disguise, Mimiqui) — bloque intégralement UN SEUL coup
+    # sur toute la durée du combat (1/8 PV max perdu à la place), jamais réinitialisée
+    # tant que le combat dure, même en changeant de Pokémon puis en revenant (fidèle
+    # aux vrais jeux : reste "brisé" pour le reste du combat une fois consommé).
+    try:
+        cur.execute("ALTER TABLE combat_equipe ADD COLUMN facsimile_brise INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration : Supermutation (Zero to Hero, Superdofin) — passe en forme Super
+    # après un changement volontaire hors puis retour sur le terrain, JAMAIS
+    # réinitialisée tant que le combat dure (même principe que facsimile_brise
+    # ci-dessus : une fois transformé, le reste définitivement pour tout le combat).
+    try:
+        cur.execute("ALTER TABLE combat_equipe ADD COLUMN forme_super INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration : genre — SNAPSHOTÉ par combat comme le talent/objet ci-dessus (aucune
+    # donnée de genre n'existe côté captures/Pokédex hors combat pour l'instant, donc
+    # tiré au hasard selon le vrai ratio de l'espèce — genre_taux dans
+    # pokedex_complet.json — à chaque nouveau combat, plutôt que fixé une fois pour
+    # toutes par capture). "male" / "femelle" / "aucun" (asexué).
+    try:
+        cur.execute("ALTER TABLE combat_equipe ADD COLUMN genre TEXT NOT NULL DEFAULT 'aucun'")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
+    # Migration : Charme (infatuation, Charme Ensorceleur/Cute Charm) — statut volatil
+    # séparé, comme la confusion (voir combat_confusion) : 50% de chance d'échouer à
+    # attaquer tant qu'infatué. Effacé en quittant le terrain (le sien OU celui de la
+    # "cible" de son béguin, mais en 1v1 il n'y a qu'un adversaire actif possible à la
+    # fois, donc un simple flag suffit sans avoir besoin de tracer PRÉCISÉMENT qui).
+    try:
+        cur.execute("ALTER TABLE combat_equipe ADD COLUMN infatue INTEGER NOT NULL DEFAULT 0")
     except sqlite3.OperationalError:
         pass  # la colonne existe déjà
 
@@ -1401,6 +1537,20 @@ def init_db():
         """
     )
 
+    # Migration : Corps Maudit (Cursed Body, Ectoplasma) — désactive une attaque précise
+    # de l'adversaire pour quelques tours. Vit sur combat_choix (pas de nouvelle table)
+    # puisque c'est déjà "un état par Pokémon en combat", même famille que
+    # attaque_verrouillee juste au-dessus (mais sens opposé : ici, INTERDIT plutôt
+    # qu'IMPOSÉ).
+    try:
+        cur.execute("ALTER TABLE combat_choix ADD COLUMN attaque_desactivee TEXT")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+    try:
+        cur.execute("ALTER TABLE combat_choix ADD COLUMN tours_desactivation INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # la colonne existe déjà
+
     # Migration 2v2 : cible mémorisée au tour de charge (NULL en 1v1, ciblage implicite)
     try:
         cur.execute("ALTER TABLE combat_charge ADD COLUMN cible_user_id INTEGER")
@@ -1414,6 +1564,24 @@ def init_db():
             user_id INTEGER NOT NULL,
             pokemon_nom TEXT NOT NULL,
             statut TEXT NOT NULL,
+            compteur INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (combat_id, user_id, pokemon_nom)
+        )
+        """
+    )
+
+    # La confusion vit dans SA PROPRE table, séparée de combat_statuts (le statut
+    # "principal" — poison/brûlure/paralysie/sommeil/gel, un seul à la fois) — fidèle
+    # aux vrais jeux, où la confusion est un statut "volatil" qui peut coexister avec
+    # n'importe quel statut principal (ex: un Pokémon empoisonné ET confus en même
+    # temps). Nécessaire pour Marionnettiste Toxique (Pêchaminus), qui empoisonne ET
+    # confond sur le même coup — impossible avec un seul statut à la fois.
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS combat_confusion (
+            combat_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            pokemon_nom TEXT NOT NULL,
             compteur INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (combat_id, user_id, pokemon_nom)
         )
@@ -2357,11 +2525,15 @@ def ajouter_balls(user_id: int, ball_type: str, quantite: int):
     conn.close()
 
 
-def transformer_objets(user_id: int, type_source: str) -> tuple:
-    """Convertit AUTANT DE LOTS COMPLETS que possible de `type_source` (10 par lot, voir
+def transformer_objets(user_id: int, type_source: str, nb_lots_demande: int = None) -> tuple:
+    """Convertit des lots complets de `type_source` (10 par lot, voir
     config.CHAINES_TRANSFORMATION) vers le palier supérieur — ex: 47 Poké Balls → 4 Super
     Balls + il reste 7 Poké Balls. Retourne (nb_lots_convertis, type_cible, quantite_source_consommee).
-    (0, None, 0) si le type n'est pas convertible ou s'il n'y a pas de quoi faire un lot complet."""
+    (0, None, 0) si le type n'est pas convertible ou s'il n'y a pas de quoi faire un lot complet.
+
+    nb_lots_demande : nombre de lots voulu par le joueur (1 à nb_lots_max_possible). None
+    (ou toute valeur >= au max possible) garde l'ANCIEN comportement : convertit AUTANT
+    DE LOTS COMPLETS que possible. Une valeur <= 0 explicite ne convertit rien (0, None, 0)."""
     if type_source not in config.CHAINES_TRANSFORMATION:
         return 0, None, 0
     type_cible, quantite_requise = config.CHAINES_TRANSFORMATION[type_source]
@@ -2374,10 +2546,18 @@ def transformer_objets(user_id: int, type_source: str) -> tuple:
     )
     row = cur.fetchone()
     quantite_actuelle = row["quantite"] if row else 0
-    nb_lots = quantite_actuelle // quantite_requise
-    if nb_lots <= 0:
+    nb_lots_max = quantite_actuelle // quantite_requise
+    if nb_lots_max <= 0:
         conn.close()
         return 0, None, 0
+
+    if nb_lots_demande is None:
+        nb_lots = nb_lots_max
+    elif nb_lots_demande <= 0:
+        conn.close()
+        return 0, None, 0
+    else:
+        nb_lots = min(nb_lots_demande, nb_lots_max)
 
     quantite_consommee = nb_lots * quantite_requise
     cur.execute(
@@ -3264,16 +3444,18 @@ def initialiser_equipe_combat_pvp(combat_id: int, user_id: int, equipe: list, id
             capacite = capacites_module.capacite_pour_espece(mon["nom"])
             objet_tenu = random.choice(list(capacites_module.OBJETS_TENUS.keys())) if random.random() < 0.5 else None
 
+        genre = capacites_module.tire_genre_pour_espece(mon["nom"])
+
         cur.execute(
             """
             INSERT INTO combat_equipe
-                (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau, capacite, objet_tenu)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (combat_id, user_id, pokemon_nom, pv_max, pv_actuels, position, atq, defe, atq_spe, def_spe, vit, niveau, capacite, objet_tenu, genre)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 combat_id, user_id, mon["nom"], mon["pv"], mon["pv"], i,
                 mon["attaque"], mon["defense"], mon["attaque_spe"], mon["defense_spe"], mon["vitesse"],
-                mon.get("niveau", 50), capacite, objet_tenu,
+                mon.get("niveau", 50), capacite, objet_tenu, genre,
             ),
         )
     conn.commit()
@@ -3324,6 +3506,47 @@ def obtenir_objet_combat(combat_id: int, user_id: int, pokemon_nom: str) -> str 
     row = cur.fetchone()
     conn.close()
     return row["objet_tenu"] if row else None
+
+
+def obtenir_genre_combat(combat_id: int, user_id: int, pokemon_nom: str) -> str:
+    """Genre SNAPSHOTÉ pour ce combat précis — voir obtenir_capacite_combat et
+    tire_genre_pour_espece. Retourne "aucun" si introuvable (jamais None, pour éviter
+    tout risque de confusion avec une comparaison de genre absente)."""
+    user_id = _id_equipe(user_id)
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT genre FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["genre"] if row else "aucun"
+
+
+def definir_infatuation(combat_id: int, user_id: int, pokemon_nom: str, actif: bool):
+    """Charme (infatuation, Cute Charm) — statut volatil séparé (comme la confusion,
+    voir combat_confusion) : 50% de chance d'échouer à attaquer tant qu'infatué."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_equipe SET infatue = ? WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (1 if actif else 0, combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def est_infatue(combat_id: int, user_id: int, pokemon_nom: str) -> bool:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT infatue FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return bool(row and row["infatue"])
 
 
 def definir_objet_combat(combat_id: int, user_id: int, pokemon_nom: str, objet: str | None):
@@ -3558,6 +3781,199 @@ def obtenir_tours_en_jeu(combat_id: int, user_id: int, pokemon_nom: str) -> int:
     return row["tours_en_jeu"] if row else 0
 
 
+def definir_protection(combat_id: int, user_id: int, pokemon_nom: str, actif: bool):
+    """Abri/Protection : marque ce Pokémon comme protégé pour le reste du tour en
+    cours. Voir reinitialiser_protections pour la remise à zéro en tout début de tour."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_equipe SET protege_ce_tour = ? WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (1 if actif else 0, combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def definir_forme_lame(combat_id: int, user_id: int, pokemon_nom: str, en_lame: bool):
+    """Stance Change (Exagide) — bascule vers la forme Lame (offensive) ou Bouclier
+    (défensive, la valeur par défaut)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_equipe SET forme_lame = ? WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (1 if en_lame else 0, combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def definir_illusion(combat_id: int, user_id: int, pokemon_nom: str, nom_deguise: str | None):
+    """Illusion (Zoroark) — définit (ou efface avec None) l'espèce dont ce Pokémon se
+    déguise, uniquement pour l'AFFICHAGE (voir combat_visuel.py) — jamais la logique
+    de combat, qui utilise toujours pokemon_nom, le vrai nom."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_equipe SET deguise_en = ? WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (nom_deguise, combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_illusion(combat_id: int, user_id: int, pokemon_nom: str) -> str | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT deguise_en FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["deguise_en"] if row else None
+
+
+def definir_camouflage(combat_id: int, user_id: int, pokemon_nom: str, type_camouflage: str | None):
+    """Camouflage (Color Change, Kecleon) — change son propre type (None = redevient
+    son type normal)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_equipe SET type_camouflage = ? WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (type_camouflage, combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_camouflage(combat_id: int, user_id: int, pokemon_nom: str) -> str | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT type_camouflage FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["type_camouflage"] if row else None
+
+
+def bascule_absenteisme(combat_id: int, user_id: int, pokemon_nom: str) -> bool:
+    """Absentéisme (Truant, Parecool) — inverse le flag glande_prochain_tour et
+    retourne SA VALEUR AVANT bascule (True = ce Pokémon glande CE tour-ci, doit être
+    appelé au moment même où il tenterait d'agir)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT glande_prochain_tour FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    glande_maintenant = bool(row["glande_prochain_tour"]) if row else False
+    cur.execute(
+        "UPDATE combat_equipe SET glande_prochain_tour = ? WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (0 if glande_maintenant else 1, combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+    return glande_maintenant
+
+
+def consommer_facsimile(combat_id: int, user_id: int, pokemon_nom: str) -> bool:
+    """Fac-similé (Disguise, Mimiqui) — consomme le "coup gratuit" s'il est encore
+    disponible cette fois-ci (retourne True), sinon False (déjà utilisé ce combat)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT facsimile_brise FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    if row and row["facsimile_brise"]:
+        conn.close()
+        return False
+    cur.execute(
+        "UPDATE combat_equipe SET facsimile_brise = 1 WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def activer_forme_super(combat_id: int, user_id: int, pokemon_nom: str):
+    """Supermutation (Zero to Hero, Superdofin) — passe en forme Super, définitivement
+    pour le reste du combat (jamais réinitialisée, même en rechangeant de Pokémon)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_equipe SET forme_super = 1 WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def a_forme_super(combat_id: int, user_id: int, pokemon_nom: str) -> bool:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT forme_super FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return bool(row and row["forme_super"])
+
+
+def reinitialiser_absenteisme(combat_id: int, user_id: int, pokemon_nom: str):
+    """À appeler à l'envoi sur le terrain — prêt à agir dès son premier tour, comme
+    dans les vrais jeux."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_equipe SET glande_prochain_tour = 0 WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def dernier_conscient_pour_illusion(combat_id: int, user_id: int, pokemon_illusionniste: str) -> str | None:
+    """Illusion (Zoroark) — l'espèce du DERNIER Pokémon conscient de l'équipe (position
+    la plus haute parmi ceux encore en vie), en excluant Zoroark lui-même. Retourne None
+    si Zoroark est le seul Pokémon vivant de l'équipe (rien pour se déguiser)."""
+    eq = obtenir_equipe_pvp(combat_id, user_id)
+    candidats = [r for r in eq if r["pokemon_nom"] != pokemon_illusionniste and r["pv_actuels"] > 0]
+    if not candidats:
+        return None
+    dernier = max(candidats, key=lambda r: r["position"])
+    return dernier["pokemon_nom"]
+
+
+def est_protege(combat_id: int, user_id: int, pokemon_nom: str) -> bool:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT protege_ce_tour FROM combat_equipe WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return bool(row and row["protege_ce_tour"])
+
+
+def reinitialiser_protections(combat_id: int):
+    """À appeler en tout début de résolution de tour, avant que quiconque n'ait encore
+    agi — la protection d'Abri/Protection ne dure qu'UN SEUL tour déclaré, jamais
+    reportée sur le suivant."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("UPDATE combat_equipe SET protege_ce_tour = 0 WHERE combat_id = ?", (combat_id,))
+    conn.commit()
+    conn.close()
+
+
 def passer_tour_pvp(combat_id: int, date_limite: int):
     conn = get_connexion()
     cur = conn.cursor()
@@ -3708,6 +4124,40 @@ def obtenir_combats_pvp_actifs():
 
 # marquer_runs_arene_en_cours_defaite : déplacée dans database/dresseurs_gladio.py
 # (avec le reste du domaine dresseurs/Gladio, voir plus bas dans ce fichier).
+
+def definir_mise_combat(combat_id: int, montant_total: int):
+    """Duels par mise — enregistre le pot total (déjà prélevé aux deux joueurs) pour ce
+    combat précis. Appelée une seule fois, à l'acceptation du défi (voir VueDefiMise)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO combat_mises (combat_id, montant_total) VALUES (?, ?)",
+        (combat_id, montant_total),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_mise_combat(combat_id: int) -> int | None:
+    """Retourne le pot total en jeu pour ce combat, ou None si ce n'était pas un duel
+    par mise (combat PvP normal)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT montant_total FROM combat_mises WHERE combat_id = ?", (combat_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row["montant_total"] if row else None
+
+
+def retirer_mise_combat(combat_id: int):
+    """Nettoie l'entrée après versement au vainqueur (ou après un remboursement en cas
+    d'annulation) — évite qu'une ligne orpheline traîne indéfiniment en base."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM combat_mises WHERE combat_id = ?", (combat_id,))
+    conn.commit()
+    conn.close()
+
 
 def terminer_combat_pvp(combat_id: int):
     conn = get_connexion()
@@ -3865,7 +4315,19 @@ def obtenir_boosts(combat_id: int, user_id: int, pokemon_nom: str) -> dict:
 
 def modifier_boost(combat_id: int, user_id: int, pokemon_nom: str, stat: str, delta: int) -> int:
     """Applique un delta de stage à une stat (atk/def/atk_spe/def_spe/vit/precision/esquive),
-    borné entre -6 et +6. Retourne le nouveau stage."""
+    borné entre -6 et +6. Retourne le nouveau stage.
+
+    ⚠️ Respecte Corps Contraire (Contrary, Amovénus) — inverse le delta pour CE Pokémon
+    précis, peu importe la source du changement (sa propre attaque, celle de
+    l'adversaire, une capacité comme Justicier/Compétiteur...). Centralisé ici plutôt
+    que dans chaque appelant, pour s'appliquer partout sans exception."""
+    capacite_cible = obtenir_capacite_combat(combat_id, user_id, pokemon_nom)
+    if capacite_cible:
+        import capacites as capacites_module
+
+        if capacites_module.inverse_changements_stats(capacite_cible):
+            delta = -delta
+
     boosts = obtenir_boosts(combat_id, user_id, pokemon_nom)
     nouveau = max(-6, min(6, boosts[stat] + delta))
     boosts[stat] = nouveau
@@ -4447,6 +4909,50 @@ def definir_attaque_verrouillee(combat_id: int, user_id: int, pokemon_nom: str, 
     conn.close()
 
 
+def definir_attaque_desactivee(combat_id: int, user_id: int, pokemon_nom: str, nom_attaque: str, tours: int):
+    """Corps Maudit (Ectoplasma) — interdit une attaque précise pour quelques tours."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO combat_choix (combat_id, user_id, pokemon_nom, attaque_desactivee, tours_desactivation)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(combat_id, user_id, pokemon_nom) DO UPDATE SET
+            attaque_desactivee = excluded.attaque_desactivee, tours_desactivation = excluded.tours_desactivation
+        """,
+        (combat_id, user_id, pokemon_nom, nom_attaque, tours),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obtenir_attaque_desactivee(combat_id: int, user_id: int, pokemon_nom: str) -> str | None:
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT attaque_desactivee, tours_desactivation FROM combat_choix WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    if row and row["tours_desactivation"] > 0:
+        return row["attaque_desactivee"]
+    return None
+
+
+def decrementer_desactivation(combat_id: int, user_id: int, pokemon_nom: str):
+    """À appeler une fois par tour joué par ce Pokémon — la désactivation expire après
+    quelques tours, comme dans les vrais jeux."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_choix SET tours_desactivation = MAX(0, tours_desactivation - 1) WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
 def reinitialiser_verrouillage_choix(combat_id: int, user_id: int, pokemon_nom: str):
     """Le verrouillage saute quand le Pokémon quitte le terrain (switch) — comme dans les
     vrais jeux, un nouveau Pokémon envoyé peut choisir librement sa 1ère attaque."""
@@ -4481,7 +4987,7 @@ IMMUNITE_STATUT_PAR_TYPE = {
 }
 
 
-def definir_statut(combat_id: int, user_id: int, pokemon_nom: str, statut: str, compteur: int = 0) -> bool:
+def definir_statut(combat_id: int, user_id: int, pokemon_nom: str, statut: str, compteur: int = 0, ignore_immunite_poison_type: bool = False, ignore_immunite_capacite: bool = False) -> bool:
     """Applique une altération de statut, seulement si le Pokémon n'en a pas déjà une
     (un seul statut à la fois, comme dans les vrais jeux). Retourne True si appliqué.
 
@@ -4494,9 +5000,20 @@ def definir_statut(combat_id: int, user_id: int, pokemon_nom: str, statut: str, 
     Gelé, Limber, Garde Feuille sous Soleil...) — ajouté ici après avoir constaté que ces
     capacités, bien que déjà curatées dans capacites.py, n'étaient en réalité jamais
     vérifiées au point principal d'infliction (seule l'immunité de type l'était), les
-    rendant non-fonctionnelles pour leur usage principal malgré leur présence en base."""
+    rendant non-fonctionnelles pour leur usage principal malgré leur présence en base.
+
+    ignore_immunite_poison_type : Corrosion (Floréclat) — permet à l'ATTAQUANT
+    d'empoisonner un Poison/Acier malgré leur immunité de type naturelle. Passé par
+    l'appelant (jamais déterminé ici, cette fonction ne connaît pas qui inflige le
+    statut) — ne contourne QUE l'immunité de TYPE, jamais celle de capacité juste
+    en dessous (fidèle aux vrais jeux, où Corrosion ne touche que le poison/acier).
+
+    ignore_immunite_capacite : Mycelium Might (Terracruel) — sur une attaque de statut
+    de l'ATTAQUANT, ignore l'immunité de CAPACITÉ de la cible (Insomnia, Immunité...),
+    mais jamais l'immunité de TYPE juste au-dessus (fidèle aux vrais jeux : Mycelium
+    Might contourne les capacités "ignorables", pas les immunités de type-chart)."""
     types_a_eviter = IMMUNITE_STATUT_PAR_TYPE.get(statut)
-    if types_a_eviter:
+    if types_a_eviter and not (statut == "poison" and ignore_immunite_poison_type):
         import pokemon_data
 
         pokemon = pokemon_data.obtenir_pokemon_par_nom(pokemon_nom)
@@ -4504,7 +5021,7 @@ def definir_statut(combat_id: int, user_id: int, pokemon_nom: str, statut: str, 
             return False
 
     capacite_cible = obtenir_capacite_combat(combat_id, user_id, pokemon_nom)
-    if capacite_cible:
+    if capacite_cible and not ignore_immunite_capacite:
         import capacites as capacites_module
 
         if capacites_module.bloque_statut(capacite_cible, statut):
@@ -4549,6 +5066,80 @@ def decrementer_compteur_statut(combat_id: int, user_id: int, pokemon_nom: str) 
     conn.commit()
     cur.execute(
         "SELECT compteur FROM combat_statuts WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["compteur"] if row else 0
+
+
+def obtenir_confusion(combat_id: int, user_id: int, pokemon_nom: str) -> int | None:
+    """Retourne le compteur de tours restants de confusion, ou None si pas confus.
+    Table séparée de combat_statuts — voir son commentaire de création pour le pourquoi."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT compteur FROM combat_confusion WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["compteur"] if row else None
+
+
+def definir_confusion(combat_id: int, user_id: int, pokemon_nom: str, compteur: int) -> bool:
+    """Applique la confusion — contrairement à definir_statut, ne vérifie PAS l'absence
+    d'un autre statut (la confusion peut coexister avec poison/brûlure/etc.). Écrase
+    toujours une confusion déjà active (ex: Vantardise réappliquée prolonge/relance le
+    compteur plutôt que d'échouer).
+
+    ⚠️ Respecte quand même Tempo Perso (Own Tempo) — jamais confus, peu importe la
+    source — centralisé ici comme les autres immunités de capacité dans definir_statut,
+    pour s'appliquer partout sans exception. Retourne False si bloqué, True sinon."""
+    capacite_cible = obtenir_capacite_combat(combat_id, user_id, pokemon_nom)
+    if capacite_cible:
+        import capacites as capacites_module
+
+        if capacites_module.bloque_statut(capacite_cible, "confusion"):
+            return False
+
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO combat_confusion (combat_id, user_id, pokemon_nom, compteur)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(combat_id, user_id, pokemon_nom) DO UPDATE SET compteur = excluded.compteur
+        """,
+        (combat_id, user_id, pokemon_nom, compteur),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def retirer_confusion(combat_id: int, user_id: int, pokemon_nom: str):
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM combat_confusion WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    conn.close()
+
+
+def decrementer_confusion(combat_id: int, user_id: int, pokemon_nom: str) -> int:
+    """Décrémente le compteur de confusion. Retourne le nouveau compteur (0 si absente)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE combat_confusion SET compteur = MAX(0, compteur - 1) WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
+        (combat_id, user_id, pokemon_nom),
+    )
+    conn.commit()
+    cur.execute(
+        "SELECT compteur FROM combat_confusion WHERE combat_id = ? AND user_id = ? AND pokemon_nom = ?",
         (combat_id, user_id, pokemon_nom),
     )
     row = cur.fetchone()
@@ -4830,8 +5421,12 @@ def definir_race(user_id: int, race_nom: str, pity_compteur: int):
 # (obtenir_equipe_combat_disponible juste après reste ici, domaine combat).
 
 def obtenir_equipe_combat_disponible(user_id: int) -> list:
-    """Équipe de combat, en excluant les espèces actuellement parties en exploration."""
-    indisponibles = especes_en_exploration(user_id)
+    """Équipe de combat, en excluant les espèces actuellement parties en exploration OU
+    déposées au Caisson de Croissance (les deux rendent un Pokémon indisponible en
+    combat, chacun avec son propre ensemble — un Pokémon ne peut jamais être dans les
+    deux à la fois, voir caisson_croissance.deposer, mais autant vérifier les deux
+    ensembles séparément que présumer cette exclusion mutuelle ailleurs)."""
+    indisponibles = especes_en_exploration(user_id) | especes_en_caisson(user_id)
     return [nom for nom in obtenir_equipe_combat(user_id) if nom not in indisponibles]
 
 
@@ -5130,6 +5725,93 @@ def classement_explorations(limite: int = 10):
     resultats = cur.fetchall()
     conn.close()
     return resultats
+
+
+def joueurs_actifs_pour_journal() -> list:
+    """Tous les user_id de stats_lifetime ayant AU MOINS une capture à vie — sert de base
+    pour la boucle mensuelle du Journal de dresseur (voir main.py::boucle_journal_dresseur_mensuel).
+    Un joueur à 0 capture n'a jamais vraiment commencé à jouer, pas la peine de le DM."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT user_id FROM stats_lifetime WHERE captures_totales > 0")
+    resultats = [row["user_id"] for row in cur.fetchall()]
+    conn.close()
+    return resultats
+
+
+def generer_journal_dresseur(user_id: int) -> dict:
+    """Calcule les stats "de ce mois-ci" pour ce joueur (delta depuis le DERNIER journal
+    envoyé, ou depuis 0 si c'est son tout premier), puis met à jour son snapshot pour le
+    mois suivant. Retourne un dict avec les 4 deltas + "premier_journal" (True si aucun
+    snapshot précédent n'existait — les deltas couvrent alors TOUTE sa progression à vie,
+    pas juste un mois, ce que l'appelant doit refléter dans le texte affiché)."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT captures_totales, shiny_totaux, victoires_pvp, explorations_terminees "
+        "FROM stats_lifetime WHERE user_id = ?",
+        (user_id,),
+    )
+    actuel = cur.fetchone()
+    if actuel is None:
+        conn.close()
+        return {
+            "premier_journal": True, "captures": 0, "shiny": 0, "victoires_pvp": 0, "explorations": 0,
+        }
+
+    cur.execute(
+        "SELECT captures_totales, shiny_totaux, victoires_pvp, explorations_terminees "
+        "FROM journal_dresseur_snapshot WHERE user_id = ?",
+        (user_id,),
+    )
+    snapshot_precedent = cur.fetchone()
+    premier_journal = snapshot_precedent is None
+
+    if premier_journal:
+        deltas = {
+            "captures": actuel["captures_totales"], "shiny": actuel["shiny_totaux"],
+            "victoires_pvp": actuel["victoires_pvp"], "explorations": actuel["explorations_terminees"],
+        }
+    else:
+        deltas = {
+            "captures": actuel["captures_totales"] - snapshot_precedent["captures_totales"],
+            "shiny": actuel["shiny_totaux"] - snapshot_precedent["shiny_totaux"],
+            "victoires_pvp": actuel["victoires_pvp"] - snapshot_precedent["victoires_pvp"],
+            "explorations": actuel["explorations_terminees"] - snapshot_precedent["explorations_terminees"],
+        }
+
+    cur.execute(
+        """
+        INSERT INTO journal_dresseur_snapshot
+            (user_id, date_snapshot, captures_totales, shiny_totaux, victoires_pvp, explorations_terminees)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            date_snapshot = excluded.date_snapshot,
+            captures_totales = excluded.captures_totales,
+            shiny_totaux = excluded.shiny_totaux,
+            victoires_pvp = excluded.victoires_pvp,
+            explorations_terminees = excluded.explorations_terminees
+        """,
+        (
+            user_id, time.strftime("%Y-%m-%d"),
+            actuel["captures_totales"], actuel["shiny_totaux"],
+            actuel["victoires_pvp"], actuel["explorations_terminees"],
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    deltas["premier_journal"] = premier_journal
+    return deltas
+
+
+def classement_captures_du_mois(deltas_captures: dict) -> dict:
+    """Classe un dict {user_id: nb_captures_ce_mois} et retourne {user_id: rang} — reçoit
+    les deltas déjà calculés par l'appelant (voir boucle_journal_dresseur_mensuel) plutôt
+    que de recalculer quoi que ce soit lui-même, pour ne faire qu'UN seul passage sur tous
+    les joueurs actifs au lieu d'une requête SQL par joueur."""
+    classement = sorted(deltas_captures.items(), key=lambda kv: kv[1], reverse=True)
+    return {user_id: rang + 1 for rang, (user_id, _captures) in enumerate(classement)}
 
 
 def obtenir_captures_totales(user_id: int) -> int:

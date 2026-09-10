@@ -80,6 +80,8 @@ from pokemon_data import (
 )
 from boutique import construire_embed_boutique, construire_embed_marche_noir, VueBoutique, VueMarcheNoir
 from cogs.messages_fixes import construire_embed_village, VueVillage
+from cogs.gladio_raids_echanges import effectuer_reroll_raids
+import journal_dresseur as journal_dresseur_module
 from profil import (
     construire_embed_fixe as construire_embed_profil_fixe,
     construire_embed_profil,
@@ -183,6 +185,42 @@ def construire_embed_pokestop() -> discord.Embed:
     return embed
 
 
+def _seuils_ball_avec_chance(mult_chance: float) -> tuple:
+    """Retourne les 4 seuils cumulatifs (pokeball, superball, hyperball, masterball)
+    du tirage PokéStop, décalés vers les paliers rares selon le bonus "Chance" (Mutation
+    de dresseur, voir races.py) — contrairement à Repaires/Exploration où le bonus se
+    multiplie directement à une chance indépendante, ici les 5 issues (4 balls + rien)
+    forment un tout qui doit rester à 100%, donc le bonus RETIRE de la masse à "rien"
+    et Poké Ball, pour la redistribuer vers les paliers plus rares.
+
+    mult_chance == 1.0 (aucune Mutation Chance) redonne EXACTEMENT les seuils d'origine
+    (0.55/0.85/0.95/0.951) — comportement inchangé pour un joueur sans cette Mutation."""
+    bonus_chance = max(0.0, mult_chance - 1.0)
+
+    POKEBALL, SUPERBALL, HYPERBALL, MASTERBALL, RIEN = 0.55, 0.30, 0.10, 0.001, 0.049
+
+    # "Rien" rétrécit vers 0 à mesure que le bonus grandit (division, jamais négatif).
+    nouveau_rien = RIEN / (1 + bonus_chance)
+    masse_liberee_rien = RIEN - nouveau_rien
+
+    # Poké Ball rétrécit aussi, mais moins agressivement, au profit de Super Ball.
+    nouveau_pokeball = POKEBALL / (1 + bonus_chance * 0.5)
+    masse_liberee_pokeball = POKEBALL - nouveau_pokeball
+
+    # La masse libérée de "rien" va à Hyper Ball (70%) et Master Ball (30% — le plus
+    # gros boost RELATIF vu son poids de base minuscule) ; celle de Poké Ball va à
+    # Super Ball.
+    nouveau_hyperball = HYPERBALL + masse_liberee_rien * 0.7
+    nouveau_masterball = MASTERBALL + masse_liberee_rien * 0.3
+    nouveau_superball = SUPERBALL + masse_liberee_pokeball
+
+    seuil_pokeball = nouveau_pokeball
+    seuil_superball = seuil_pokeball + nouveau_superball
+    seuil_hyperball = seuil_superball + nouveau_hyperball
+    seuil_masterball = seuil_hyperball + nouveau_masterball
+    return seuil_pokeball, seuil_superball, seuil_hyperball, seuil_masterball
+
+
 class VuePokestop(discord.ui.View):
     """Vue persistante attachée au message fixe du channel PokéStop."""
 
@@ -243,23 +281,28 @@ class VuePokestop(discord.ui.View):
             texte_bonus_ball = "🎒 Ton sac est plein, pas de bonus objets cette fois !"
         else:
             # --- Tirage ball ---
+            # Seuils décalés vers les paliers rares selon la Mutation "Chance" (voir
+            # races.py) — mult_chance == 1.0 (aucune Mutation Chance) redonne EXACTEMENT
+            # les seuils d'origine (0.55/0.85/0.95/0.951), rien ne change pour les autres.
+            mult_chance = database.multiplicateur_boost(user_id, "chance")
+            seuil_pokeball, seuil_superball, seuil_hyperball, seuil_masterball = _seuils_ball_avec_chance(mult_chance)
             tirage_ball = random.random()
-            if tirage_ball < 0.55:
+            if tirage_ball < seuil_pokeball:
                 quantite = min(round(random.randint(2, 5) * mult_pointe), place_disponible)
                 database.ajouter_balls(user_id, "pokeball", quantite)
                 texte_bonus_ball = f"{EMOJI_BALLS['pokeball']} {quantite}× Poké Ball"
-            elif tirage_ball < 0.85:
+            elif tirage_ball < seuil_superball:
                 quantite = min(round(random.randint(1, 3) * mult_pointe), place_disponible)
                 database.ajouter_balls(user_id, "superball", quantite)
                 texte_bonus_ball = f"{EMOJI_BALLS['superball']} {quantite}× Super Ball"
-            elif tirage_ball < 0.95:
+            elif tirage_ball < seuil_hyperball:
                 quantite = min(round(random.randint(1, 3) * mult_pointe), place_disponible)
                 database.ajouter_balls(user_id, "hyperball", quantite)
                 texte_bonus_ball = f"{EMOJI_BALLS['hyperball']} {quantite}× Hyper Ball"
-            elif tirage_ball < 0.951:  # 0,1% de chance, inchangé
+            elif tirage_ball < seuil_masterball:
                 database.ajouter_balls(user_id, "masterball", 1)
                 texte_bonus_ball = f"{EMOJI_BALLS['masterball']} 1× Master Ball ! Incroyable !"
-            # sinon (4,9%) : pas de ball ce tirage-ci
+            # sinon : pas de ball ce tirage-ci
 
             # --- Tirage potion (indépendant du tirage ball) — inclut désormais Total Soin ---
             objets_actuels_apres_ball = database.compter_objets_totaux(user_id)
@@ -290,9 +333,10 @@ class VuePokestop(discord.ui.View):
                     texte_bonus_potion = f"{EMOJI_SOINS['totalsoin']} {quantite}× Total Soin"
                 # sinon (5%) : pas de potion ce tirage-ci
 
-            # --- Tirage Objet rare (indépendant) : Cristal de Mutation, petite chance ---
+            # --- Tirage Objet rare (indépendant) : Cristal de Mutation, petite chance —
+            # boosté par mult_pointe (Heure de pointe) ET mult_chance (Mutation dresseur).
             objets_actuels_apres_potion = database.compter_objets_totaux(user_id)
-            if objets_actuels_apres_potion < limite_objets and random.random() < min(1.0, config.CHANCE_CRISTAL_POKESTOP * mult_pointe):
+            if objets_actuels_apres_potion < limite_objets and random.random() < min(1.0, config.CHANCE_CRISTAL_POKESTOP * mult_pointe * mult_chance):
                 database.ajouter_balls(user_id, "cristal_mutation", 1)
                 texte_bonus_rare = f"{EMOJI_OBJETS_DIVERS['cristal_mutation']} 1× {NOM_OBJETS_DIVERS['cristal_mutation']}"
             else:
@@ -302,10 +346,11 @@ class VuePokestop(discord.ui.View):
             # Légendaire volontairement écrasé de rareté ---
             objets_actuels_apres_rare = database.compter_objets_totaux(user_id)
             if objets_actuels_apres_rare < limite_objets:
-                # Diviser le tirage par le multiplicateur resserre la plage vers le bas,
-                # ce qui augmente la chance de tomber sous un des seuils — sans changer
-                # la répartition relative entre paliers d'œuf.
-                tirage_oeuf = random.random() / mult_pointe
+                # Diviser le tirage par les multiplicateurs (Heure de pointe ET Mutation
+                # "Chance") resserre la plage vers le bas, ce qui augmente la chance de
+                # tomber sous un des seuils — sans changer la répartition relative entre
+                # paliers d'œuf.
+                tirage_oeuf = random.random() / (mult_pointe * mult_chance)
                 seuil = 0.0
                 for palier, poids in config.OEUF_POIDS_POKESTOP.items():
                     seuil += poids
@@ -845,6 +890,127 @@ async def boucle_evenement_pokestop():
             journal.logger("🔴 Erreur dans `boucle_evenement_pokestop` — voir les logs serveur pour le détail complet.")
 
 
+async def boucle_reroll_raids_hebdomadaire():
+    """Relance automatiquement le roster de raid chaque DIMANCHE à partir de 20h, heure
+    de Paris — remplace le besoin de lancer /reroll-raids manuellement chaque semaine
+    (qui reste disponible pour un reroll ponctuel entre-temps si besoin).
+
+    Suit la date du DERNIER reroll automatique en base (paramètre
+    "dernier_reroll_raids_auto_date") plutôt qu'un horaire exact à la minute près : si le
+    bot était hors ligne pile à 20h dimanche, il rattrape automatiquement dès son retour
+    (tant qu'on est encore dimanche après 20h), sans jamais redéclencher deux fois le
+    même dimanche."""
+    await bot.wait_until_ready()
+    tz = ZoneInfo("Europe/Paris")
+
+    while not bot.is_closed():
+        await asyncio.sleep(60)
+        DERNIERE_ACTIVITE_BOUCLES["reroll_raids_hebdomadaire"] = time.time()
+
+        try:
+            maintenant_dt = datetime.now(tz)
+            if maintenant_dt.weekday() != 6 or maintenant_dt.hour < 20:
+                continue  # pas encore dimanche 20h (weekday() : lundi=0 ... dimanche=6)
+
+            aujourdhui = maintenant_dt.date().isoformat()
+            derniere_date = database.obtenir_parametre("dernier_reroll_raids_auto_date")
+            if derniere_date == aujourdhui:
+                continue  # déjà fait ce dimanche, on attend la prochaine semaine
+
+            _nouveau_roster, lignes_resultat = effectuer_reroll_raids()
+            database.definir_parametre("dernier_reroll_raids_auto_date", aujourdhui)
+
+            journal.logger("🛠️ Reroll automatique du roster de raid (dimanche 20h).")
+            channel = bot.get_channel(config.CHANNEL_PING_RAID_ID)
+            if channel:
+                embed = discord.Embed(
+                    title="🎲 Nouveau roster de raid de la semaine !",
+                    description="\n".join(lignes_resultat),
+                    color=discord.Color.gold(),
+                )
+                embed.set_footer(text="Effectif immédiatement pour les prochains raids.")
+                await channel.send(content=f"<@&{config.ROLE_PING_RAID_ID}>", embed=embed)
+        except Exception:
+            import traceback
+
+            print("⚠️ Erreur dans boucle_reroll_raids_hebdomadaire (le cycle suivant sera quand même tenté) :")
+            traceback.print_exc()
+            journal.logger("🔴 Erreur dans `boucle_reroll_raids_hebdomadaire` — voir les logs serveur pour le détail complet.")
+
+
+async def boucle_journal_dresseur_mensuel():
+    """Envoie le Journal de dresseur (résumé façon "Wrapped") en DM à chaque joueur actif
+    le 1er de chaque mois — voir journal_dresseur.py et database.generer_journal_dresseur.
+
+    Comme pour boucle_reroll_raids_hebdomadaire, suit la date du DERNIER envoi en base
+    (paramètre "dernier_journal_dresseur_mois") plutôt qu'un horaire exact : si le bot
+    était hors ligne le 1er, il rattrape dès son retour tant qu'on est encore dans le
+    même mois, sans jamais renvoyer deux fois le même mois."""
+    await bot.wait_until_ready()
+    tz = ZoneInfo("Europe/Paris")
+
+    while not bot.is_closed():
+        await asyncio.sleep(3600)  # vérifié une fois par heure — suffisant pour un événement mensuel
+        DERNIERE_ACTIVITE_BOUCLES["journal_dresseur_mensuel"] = time.time()
+
+        try:
+            maintenant_dt = datetime.now(tz)
+            if maintenant_dt.day != 1:
+                continue
+
+            mois_actuel = maintenant_dt.strftime("%Y-%m")
+            dernier_mois_envoye = database.obtenir_parametre("dernier_journal_dresseur_mois")
+            if dernier_mois_envoye == mois_actuel:
+                continue  # déjà envoyé ce mois-ci
+
+            joueurs = database.joueurs_actifs_pour_journal()
+            if not joueurs:
+                database.definir_parametre("dernier_journal_dresseur_mois", mois_actuel)
+                continue
+
+            # Calcule TOUS les deltas d'abord (nécessaire pour établir le classement du
+            # mois avant d'envoyer le moindre DM) — une seule passe, jamais un aller-retour
+            # base par joueur pour le classement.
+            tous_les_deltas = {uid: database.generer_journal_dresseur(uid) for uid in joueurs}
+            deltas_captures = {uid: d["captures"] for uid, d in tous_les_deltas.items()}
+            classement = database.classement_captures_du_mois(deltas_captures)
+            total_joueurs = len(joueurs)
+
+            database.definir_parametre("dernier_journal_dresseur_mois", mois_actuel)
+
+            nb_envoyes, nb_bloques = 0, 0
+            for uid in joueurs:
+                try:
+                    membre = bot.get_user(uid) or await bot.fetch_user(uid)
+                except discord.HTTPException:
+                    membre = None
+                if membre is None:
+                    continue
+
+                embed = journal_dresseur_module.construire_embed_journal(
+                    uid, tous_les_deltas[uid], classement.get(uid), total_joueurs
+                )
+                try:
+                    await membre.send(embed=embed)
+                    nb_envoyes += 1
+                except discord.Forbidden:
+                    nb_bloques += 1  # DM fermés — rien d'autre à faire, pas une erreur
+                except discord.HTTPException:
+                    pass
+                await asyncio.sleep(1)  # évite de saturer le rate-limit Discord sur un envoi en masse
+
+            journal.logger(
+                f"🛠️ Journal de dresseur mensuel envoyé ({mois_actuel}) : "
+                f"{nb_envoyes} DM envoyés, {nb_bloques} joueurs avec DM fermés."
+            )
+        except Exception:
+            import traceback
+
+            print("⚠️ Erreur dans boucle_journal_dresseur_mensuel (le cycle suivant sera quand même tenté) :")
+            traceback.print_exc()
+            journal.logger("🔴 Erreur dans `boucle_journal_dresseur_mensuel` — voir les logs serveur pour le détail complet.")
+
+
 async def boucle_evenement_marche_noir():
     """Tire un créneau aléatoire de 1h par jour (9h-23h, heure de Paris), INDÉPENDANT
     de l'Heure de pointe PokéStop (horaire séparé, voir config.DUREE_MARCHE_NOIR),
@@ -921,6 +1087,99 @@ async def boucle_evenement_marche_noir():
             print("⚠️ Erreur dans boucle_evenement_marche_noir (le cycle suivant sera quand même tenté) :")
             traceback.print_exc()
             journal.logger("🔴 Erreur dans `boucle_evenement_marche_noir` — voir les logs serveur pour le détail complet.")
+
+
+async def boucle_faille_exploration():
+    """Tire un créneau aléatoire de 1h par jour (9h-23h, heure de Paris), INDÉPENDANT du
+    Marché Noir et de l'Heure de pointe PokéStop (horaire propre, voir config.DUREE_FAILLE_EXPLORATION),
+    pendant lequel la Faille Spatio-Temporelle apparaît comme destination d'exploration
+    sélectionnable (multiplicateurs bien supérieurs à toute destination fixe) — voir
+    exploration.py::FAILLE_EXPLORATION. Même pattern EXACT que boucle_evenement_marche_noir,
+    juste appliqué à un dict de destination plutôt qu'à un message de channel."""
+    await bot.wait_until_ready()
+    tz = ZoneInfo("Europe/Paris")
+
+    while not bot.is_closed():
+        await asyncio.sleep(60)
+        DERNIERE_ACTIVITE_BOUCLES["faille_exploration"] = time.time()
+
+        try:
+            maintenant_dt = datetime.now(tz)
+            aujourdhui = maintenant_dt.date().isoformat()
+
+            date_programmee = database.obtenir_parametre("faille_exploration_date")
+            debut_str = database.obtenir_parametre("faille_exploration_debut")
+
+            if date_programmee != aujourdhui:
+                # Nouveau jour : tirer un nouvel horaire aléatoire, indépendant de celui
+                # du Marché Noir et du PokéStop (clé de paramètre différente = tirage différent).
+                fin_fenetre_dt = maintenant_dt.replace(
+                    hour=config.HEURE_FIN_FENETRE_POINTE, minute=0, second=0, microsecond=0
+                )
+                dernier_depart_possible = fin_fenetre_dt - timedelta(seconds=config.DUREE_FAILLE_EXPLORATION)
+                minutes_fenetre = int((dernier_depart_possible.hour * 60 + dernier_depart_possible.minute) - config.HEURE_DEBUT_FENETRE_POINTE * 60)
+                offset_minutes = random.randint(0, max(0, minutes_fenetre))
+                debut_dt = maintenant_dt.replace(
+                    hour=config.HEURE_DEBUT_FENETRE_POINTE, minute=0, second=0, microsecond=0
+                ) + timedelta(minutes=offset_minutes)
+
+                database.definir_parametre("faille_exploration_date", aujourdhui)
+                database.definir_parametre("faille_exploration_debut", str(int(debut_dt.timestamp())))
+                debut_str = str(int(debut_dt.timestamp()))
+                print(f"🌀 Faille Spatio-Temporelle programmée aujourd'hui à {debut_dt.strftime('%H:%M')} (heure de Paris).")
+
+            debut_epoch = int(debut_str)
+            fin_epoch = debut_epoch + config.DUREE_FAILLE_EXPLORATION
+            maintenant_epoch = time.time()
+            en_cours = debut_epoch <= maintenant_epoch < fin_epoch
+
+            if en_cours and not etat_jeu.faille_exploration_active:
+                etat_jeu.faille_exploration_active = True
+                exploration_module.DESTINATIONS_EXPLORATION["faille"] = exploration_module.FAILLE_EXPLORATION
+                channel = bot.get_channel(config.CHANNEL_EXPLORATION_ID)
+                if channel:
+                    try:
+                        info = exploration_module.FAILLE_EXPLORATION
+                        embed = discord.Embed(
+                            title=f"{info['emoji']} La {info['nom']} s'ouvre !",
+                            description=(
+                                f"{info['description']}\n\n"
+                                f"Disponible comme destination pendant **1 heure seulement** — "
+                                f"lance une exploration maintenant pour en profiter !"
+                            ),
+                            color=discord.Color.purple(),
+                        )
+                        message = await channel.send(embed=embed, view=exploration_module.VueAnnonceFaille())
+                        database.definir_parametre("faille_exploration_message_id", str(message.id))
+                        journal.logger("🌀 Faille Spatio-Temporelle ouverte pour 1h.")
+                    except (discord.Forbidden, discord.HTTPException):
+                        pass
+                else:
+                    print("⚠️ CHANNEL_EXPLORATION_ID introuvable — la Faille n'a pas pu s'annoncer aujourd'hui.")
+            elif not en_cours and etat_jeu.faille_exploration_active:
+                etat_jeu.faille_exploration_active = False
+                exploration_module.DESTINATIONS_EXPLORATION.pop("faille", None)
+                channel = bot.get_channel(config.CHANNEL_EXPLORATION_ID)
+                message_id = database.obtenir_parametre("faille_exploration_message_id")
+                if channel and message_id:
+                    try:
+                        message = await channel.fetch_message(int(message_id))
+                        await message.edit(
+                            embed=discord.Embed(
+                                title="🌀 La Faille Spatio-Temporelle se referme...",
+                                description="Elle rouvrira un autre jour, à une heure différente. Reste à l'affût !",
+                                color=discord.Color.dark_grey(),
+                            )
+                        )
+                    except (discord.NotFound, discord.HTTPException):
+                        pass
+                journal.logger("🌀 Faille Spatio-Temporelle refermée pour aujourd'hui.")
+        except Exception:
+            import traceback
+
+            print("⚠️ Erreur dans boucle_faille_exploration (le cycle suivant sera quand même tenté) :")
+            traceback.print_exc()
+            journal.logger("🔴 Erreur dans `boucle_faille_exploration` — voir les logs serveur pour le détail complet.")
 
 
 async def boucle_gladio_spontane():
@@ -1487,6 +1746,7 @@ async def on_ready():
     appliquer_emojis_objets(capacites_module.OBJETS_TENUS, formes_objets_module.FORMES_OBJETS, EMOJI_SOINS)
     await nettoyer_etats_orphelins_au_demarrage()
     bot.add_view(VuePokestop())  # réenregistre la vue persistante après un redémarrage
+    bot.add_view(exploration_module.VueAnnonceFaille())  # idem pour le bouton d'envoi direct sur l'annonce de la Faille
     bot.add_view(VueBoutique())  # idem pour la boutique
     bot.add_view(VueVillage())  # idem pour le Village Pokémon (Boutique/PokéStop/Maître des Capacités regroupés)
     bot.add_view(VueProfil())  # idem pour le profil
@@ -1499,6 +1759,7 @@ async def on_ready():
     bot.add_view(elevage_module.VueLaboratoire())  # idem pour le Laboratoire
     bot.add_view(VuePingRaid())  # idem pour le bouton de ping raid
     bot.add_view(marketplace_module.VueAnnonce())  # idem pour les annonces marketplace (générique, voir la classe)
+    bot.add_view(marketplace_module.VueAnnonceEnchere())  # idem pour les enchères marketplace
     bot.add_view(roguelike_module.VueRoom())  # idem pour le bouton "Continuer" (générique, voir la classe)
     bot.add_view(roguelike_module.VueCombatRoguelike())  # idem pour le bouton "Attaquer"
     # Note : VueRaid n'est plus enregistrée en persistante (elle a besoin d'un raid_id précis,
@@ -1548,9 +1809,21 @@ async def on_ready():
         bot.loop.create_task(boucle_evenement_pokestop())
         bot.boucle_evenement_pokestop_lancee = True
 
+    if not getattr(bot, "boucle_reroll_raids_hebdomadaire_lancee", False):
+        bot.loop.create_task(boucle_reroll_raids_hebdomadaire())
+        bot.boucle_reroll_raids_hebdomadaire_lancee = True
+
+    if not getattr(bot, "boucle_journal_dresseur_mensuel_lancee", False):
+        bot.loop.create_task(boucle_journal_dresseur_mensuel())
+        bot.boucle_journal_dresseur_mensuel_lancee = True
+
     if not getattr(bot, "boucle_evenement_marche_noir_lancee", False):
         bot.loop.create_task(boucle_evenement_marche_noir())
         bot.boucle_evenement_marche_noir_lancee = True
+
+    if not getattr(bot, "boucle_faille_exploration_lancee", False):
+        bot.loop.create_task(boucle_faille_exploration())
+        bot.boucle_faille_exploration_lancee = True
 
     if not getattr(bot, "boucle_quiz_lancee", False):
         bot.loop.create_task(quiz_module.boucle_quiz(bot))

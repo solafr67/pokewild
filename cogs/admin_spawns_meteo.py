@@ -16,8 +16,16 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import config
+import database
 import dresseurs as dresseurs_module
+import etat_jeu
+import exploration as exploration_module
+import journal
 import meteo
 from pokemon_data import POIDS_RARETE_CLASSIQUE, POIDS_RARETE_VIP, obtenir_pokemon_par_nom
 
@@ -238,6 +246,49 @@ class AdminSpawnsMeteoCog(commands.Cog):
             await interaction.response.send_message("ℹ️ Les spawns tournaient déjà.", ephemeral=True)
         else:
             await interaction.response.send_message("▶️ Spawns relancés.")
+
+    @app_commands.command(
+        name="forcer-faille",
+        description="[Admin] Ouvre immédiatement la Faille Spatio-Temporelle (exploration) pour 1h, pour tester",
+    )
+    @app_commands.checks.has_permissions(administrator=True)
+    async def forcer_faille(self, interaction: discord.Interaction):
+        if etat_jeu.faille_exploration_active:
+            await interaction.response.send_message("ℹ️ La Faille est déjà ouverte en ce moment !", ephemeral=True)
+            return
+
+        # Fait démarrer la fenêtre "maintenant" plutôt que de simplement activer le flag
+        # d'état — boucle_faille_exploration (main.py) revérifie ces paramètres toutes les
+        # 60 secondes, sans ça elle croirait la fenêtre déjà expirée et refermerait la
+        # Faille au prochain passage au lieu de la laisser ouverte pour la vraie durée.
+        tz = ZoneInfo("Europe/Paris")
+        maintenant_dt = datetime.now(tz)
+        database.definir_parametre("faille_exploration_date", maintenant_dt.date().isoformat())
+        database.definir_parametre("faille_exploration_debut", str(int(time.time())))
+
+        etat_jeu.faille_exploration_active = True
+        exploration_module.DESTINATIONS_EXPLORATION["faille"] = exploration_module.FAILLE_EXPLORATION
+
+        info = exploration_module.FAILLE_EXPLORATION
+        embed = discord.Embed(
+            title=f"{info['emoji']} La {info['nom']} s'ouvre !",
+            description=(
+                f"{info['description']}\n\n"
+                f"Disponible comme destination pendant **1 heure seulement** — "
+                f"lance une exploration maintenant pour en profiter !"
+            ),
+            color=discord.Color.purple(),
+        )
+        channel = self.bot.get_channel(config.CHANNEL_EXPLORATION_ID)
+        if channel:
+            message = await channel.send(embed=embed, view=exploration_module.VueAnnonceFaille())
+            database.definir_parametre("faille_exploration_message_id", str(message.id))
+
+        journal.logger(f"🛠️ <@{interaction.user.id}> a forcé l'ouverture de la Faille Spatio-Temporelle (/forcer-faille).")
+        await interaction.response.send_message(
+            f"✅ Faille ouverte pour 1h" + (f" dans {channel.mention}" if channel else " (⚠️ CHANNEL_EXPLORATION_ID introuvable, pas d'annonce postée)") + ".",
+            ephemeral=True,
+        )
 
 
 async def setup(bot: commands.Bot):

@@ -211,8 +211,9 @@ async def _resoudre_etape(bot, joueur_id, channel, repaire_id, equipe_mechante, 
     import formes_objets as formes_objets_module
 
     objets_obtenus = []
+    chance_objet_repaire = config.REPAIRE_CHANCE_OBJET_PAR_OBJET * database.multiplicateur_boost(joueur_id, "chance")
     for cle_objet in formes_objets_module.FORMES_OBJETS:
-        if random.random() < config.REPAIRE_CHANCE_OBJET_PAR_OBJET:
+        if random.random() < chance_objet_repaire:
             database.ajouter_balls(joueur_id, cle_objet, 1)
             objets_obtenus.append(cle_objet)
     if objets_obtenus:

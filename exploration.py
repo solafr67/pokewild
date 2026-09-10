@@ -49,8 +49,25 @@ DESTINATIONS_EXPLORATION = {
         "nom": "Ruines Antiques", "emoji": "🏛️",
         "types_affinite": ["psy", "spectre", "dragon"],
         "mult_cristal": 1.0, "mult_oeuf": 0.7, "mult_objet_forme": 1.8,
-        "description": "Vestiges d'une civilisation oubliée — de loin le meilleur endroit pour les objets de forme légendaire.",
+        "description": "Vestiges d'une civilisation oubliée — de loin le meilleur endroit PERMANENT pour les objets de forme légendaire.",
     },
+}
+
+# Faille d'exploration — événement temporaire (1h/jour, voir main.py::boucle_faille_exploration),
+# AJOUTÉE/RETIRÉE dynamiquement de DESTINATIONS_EXPLORATION plutôt que codée en dur dedans :
+# VueChoixDestinationExploration itère directement sur ce dict, donc l'ajouter ici suffit à
+# la faire apparaître comme destination sélectionnable sans toucher au code de l'interface.
+# types_affinite couvre TOUTES les vraies valeurs de type utilisées dans ce Pokédex (dont les
+# deux graphies fantome/spectre) — n'importe quelle équipe obtient donc le bonus d'affinité,
+# aucune restriction de thème pour cet événement exceptionnel.
+FAILLE_EXPLORATION = {
+    "nom": "Faille Spatio-Temporelle", "emoji": "🌀",
+    "types_affinite": [
+        "acier", "combat", "dragon", "eau", "electrik", "fantome", "spectre", "fee",
+        "feu", "glace", "insecte", "normal", "plante", "poison", "psy", "roche", "sol", "tenebres", "vol",
+    ],
+    "mult_cristal": 2.2, "mult_oeuf": 1.8, "mult_objet_forme": 2.2,
+    "description": "Une brèche instable entre les dimensions — pour une heure seulement, tout y est démultiplié.",
 }
 
 # --- Événements aléatoires en cours de route ---
@@ -82,6 +99,19 @@ def _tirer_evenement(duree_label: str, date_debut: int, date_fin: int):
     fraction = random.uniform(0.2, 0.8)
     planifie_a = round(date_debut + (date_fin - date_debut) * fraction)
     return planifie_a, evenement["texte"], evenement["bonus_dollars"]
+
+
+def _texte_types_pour_bouton(types_affinite: list) -> str:
+    """Texte des types d'affinité à afficher DANS UN LABEL DE BOUTON DISCORD (limite
+    stricte de 80 caractères sur le label ENTIER, emoji+nom+parenthèses inclus) — bascule
+    sur "Tous types" au-delà de 6 types plutôt que de tous les lister, sinon une
+    destination universelle (Faille Spatio-Temporelle, 19 types) fait planter l'envoi du
+    message avec une erreur Discord peu claire (400 Bad Request, label trop long). Le
+    message qui ACCOMPAGNE le bouton (contenu, pas composant) n'a pas cette limite et
+    continue de lister le détail complet ailleurs."""
+    if len(types_affinite) > 6:
+        return "Tous types"
+    return "/".join(t.capitalize() for t in types_affinite)
 
 
 def _pokemon_correspond_destination(nom: str, destination: str) -> bool:
@@ -194,6 +224,27 @@ def construire_tableau_de_bord(user_id: int):
     if nb_slots < 2:
         embed.set_footer(text="Astuce : un 2e emplacement est achetable dans la boutique (catégorie Améliorations).")
 
+    # Emplacement BONUS Faille : affiché SEULEMENT s'il est occupé (une expédition en
+    # cours à suivre/récupérer) OU si la Faille est actuellement ouverte (invite à en
+    # profiter) — jamais affiché "Libre" en permanence comme les emplacements normaux,
+    # ce serait trompeur puisqu'il n'existe QUE pendant l'heure d'ouverture.
+    row_faille = explorations.get(config.SLOT_FAILLE_EXPLORATION)
+    if row_faille is not None:
+        pokemons = [row_faille["pokemon1"], row_faille["pokemon2"], row_faille["pokemon3"]]
+        termine = row_faille["date_fin"] <= maintenant
+        statut = "✅ Prête à récupérer !" if termine else f"⏳ Retour <t:{row_faille['date_fin']}:R>"
+        embed.add_field(
+            name="🌀 Emplacement Faille (bonus)",
+            value=f"{', '.join(pokemons)}\n{statut}",
+            inline=False,
+        )
+    elif "faille" in DESTINATIONS_EXPLORATION:
+        embed.add_field(
+            name="🌀 Emplacement Faille (bonus)",
+            value="*Libre — la Faille est ouverte, envoie une équipe depuis son message d'annonce !*",
+            inline=False,
+        )
+
     vue = VueTableauDeBord(user_id, nb_slots, explorations, maintenant)
     return embed, vue
 
@@ -221,6 +272,24 @@ class VueTableauDeBord(discord.ui.View):
                 )
             self.add_item(bouton)
 
+        # Emplacement bonus Faille — mêmes callbacks génériques que les slots normaux
+        # (ils fonctionnent pour n'importe quel numéro de slot), juste affiché seulement
+        # quand pertinent (voir construire_tableau_de_bord pour la même condition).
+        row_faille = explorations.get(config.SLOT_FAILLE_EXPLORATION)
+        if row_faille is not None:
+            if row_faille["date_fin"] <= maintenant:
+                bouton_faille = discord.ui.Button(label="Récupérer (Faille)", emoji="🎁", style=discord.ButtonStyle.primary)
+                bouton_faille.callback = self._creer_callback_recuperer(config.SLOT_FAILLE_EXPLORATION)
+            else:
+                bouton_faille = discord.ui.Button(
+                    label="En cours (Faille)", emoji="⏳", style=discord.ButtonStyle.secondary, disabled=True
+                )
+            self.add_item(bouton_faille)
+        elif "faille" in DESTINATIONS_EXPLORATION:
+            bouton_faille = discord.ui.Button(label="Envoyer une équipe (Faille)", emoji="🌀", style=discord.ButtonStyle.success)
+            bouton_faille.callback = self._creer_callback_envoyer(config.SLOT_FAILLE_EXPLORATION)
+            self.add_item(bouton_faille)
+
     def _creer_callback_envoyer(self, slot: int):
         async def callback(interaction: discord.Interaction):
             if interaction.user.id != self.user_id:
@@ -228,7 +297,7 @@ class VueTableauDeBord(discord.ui.View):
                 return
             # Vérifié ici, AVANT même de proposer une destination — inutile de faire
             # choisir un thème à quelqu'un qui n'a de toute façon aucun Pokémon disponible.
-            indisponibles = database.especes_en_exploration(self.user_id)
+            indisponibles = database.especes_en_exploration(self.user_id) | database.especes_en_caisson(self.user_id)
             stats = _stats_par_espece(self.user_id)
             if not any(nom not in indisponibles for nom in stats):
                 await interaction.response.send_message(
@@ -283,7 +352,7 @@ class VueChoixEquipeExploration(discord.ui.View):
         self.selection = []
         self.page = 0
 
-        indisponibles = database.especes_en_exploration(user_id)
+        indisponibles = database.especes_en_exploration(user_id) | database.especes_en_caisson(user_id)
         stats = _stats_par_espece(user_id)
         self.especes_disponibles = sorted(
             (nom for nom in stats if nom not in indisponibles),
@@ -402,6 +471,68 @@ class VueChoixEquipeExploration(discord.ui.View):
         )
 
 
+class VueAnnonceFaille(discord.ui.View):
+    """Bouton PERSISTANT (survit à un redémarrage, voir bot.add_view dans main.py) attaché
+    DIRECTEMENT au message d'annonce de la Faille dans le channel Exploration — un SEUL
+    message partagé par TOUS les joueurs, contrairement aux vues éphémères habituelles
+    (VueTableauDeBord etc.) qui appartiennent à un seul utilisateur. Chaque clic construit
+    dynamiquement une VueChoixEquipeExploration pour LA PERSONNE QUI CLIQUE, envoyée en
+    réponse éphémère — jamais de state partagé entre joueurs différents.
+
+    Pensé spécifiquement pour les joueurs dont les emplacements normaux (1-2) sont déjà
+    occupés par de longues expéditions (6h/24h) : sans ce bouton, ils devraient attendre
+    leur retour avant de pouvoir profiter de la fenêtre d'1h de la Faille, ratant
+    l'événement entièrement. L'emplacement Faille (config.SLOT_FAILLE_EXPLORATION) est
+    un BONUS indépendant des 1-2 emplacements normaux, jamais compté dans nb_slots_exploration."""
+
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="Envoyer une équipe dans la Faille",
+        emoji="🌀",
+        style=discord.ButtonStyle.success,
+        custom_id="faille_exploration_envoyer_bouton",
+    )
+    async def envoyer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if "faille" not in DESTINATIONS_EXPLORATION:
+            await interaction.response.send_message(
+                "❌ La Faille s'est refermée entre-temps — ce message est obsolète.", ephemeral=True
+            )
+            return
+
+        user_id = interaction.user.id
+        explorations_actuelles = {row["slot"]: row for row in database.obtenir_explorations_actives(user_id)}
+        if config.SLOT_FAILLE_EXPLORATION in explorations_actuelles:
+            await interaction.response.send_message(
+                "❌ Tu as déjà envoyé une équipe dans la Faille aujourd'hui — un seul envoi bonus par ouverture "
+                "(va au Centre des Explorations, bouton **Gérer mes explorations**, pour suivre ou récupérer cette expédition).",
+                ephemeral=True,
+            )
+            return
+
+        indisponibles = database.especes_en_exploration(user_id) | database.especes_en_caisson(user_id)
+        stats = _stats_par_espece(user_id)
+        if not any(nom not in indisponibles for nom in stats):
+            await interaction.response.send_message(
+                "❌ Tu n'as aucun Pokémon disponible (déjà tous en exploration/Caisson, ou aucune capture) !",
+                ephemeral=True,
+            )
+            return
+
+        vue = VueChoixEquipeExploration(user_id, config.SLOT_FAILLE_EXPLORATION, "faille")
+        info = DESTINATIONS_EXPLORATION["faille"]
+        await interaction.response.send_message(
+            content=(
+                f"{info['emoji']} **{info['nom']}** (bonus, 1h fixe) — ✨ dans la liste = affinité avec ce thème "
+                f"(bonus si au moins {NB_AFFINITE_REQUIS} d'entre eux dans l'équipe, mais ici absolument TOUS "
+                f"les types y correspondent).\n\nChoisis {config.EXPLORATION_TAILLE_EQUIPE} Pokémon à envoyer :"
+            ),
+            view=vue,
+            ephemeral=True,
+        )
+
+
 class VueChoixDestinationExploration(discord.ui.View):
     """Première étape désormais : choisis la destination AVANT l'équipe (voir
     VueTableauDeBord._creer_callback_envoyer) — pour savoir quels types visent le bonus
@@ -414,7 +545,7 @@ class VueChoixDestinationExploration(discord.ui.View):
         self.slot = slot
 
         for cle, info in DESTINATIONS_EXPLORATION.items():
-            types_texte = "/".join(t.capitalize() for t in info["types_affinite"])
+            types_texte = _texte_types_pour_bouton(info["types_affinite"])
             bouton = discord.ui.Button(
                 label=f"{info['nom']} ({types_texte})", emoji=info["emoji"], style=discord.ButtonStyle.primary
             )
@@ -449,7 +580,12 @@ class VueChoixDureeExploration(discord.ui.View):
         self.pokemons = pokemons
         self.destination = destination
 
-        for duree_label in ("1h", "6h", "24h"):
+        # La Faille Spatio-Temporelle ne dure qu'1h — proposer 6h/24h dessus ferait
+        # perdre tout le bonus au moment de la récompense (le multiplicateur se relit
+        # sur DESTINATIONS_EXPLORATION AU MOMENT DE LA RÉCUPÉRATION, or la clé "faille"
+        # disparaît du dict dès que l'événement se referme). Une seule option, forcée.
+        durees_proposees = ("1h",) if destination == "faille" else ("1h", "6h", "24h")
+        for duree_label in durees_proposees:
             bouton = discord.ui.Button(label=duree_label, style=discord.ButtonStyle.primary, emoji="⏱️")
             bouton.callback = self._creer_callback(duree_label)
             self.add_item(bouton)
@@ -462,10 +598,10 @@ class VueChoixDureeExploration(discord.ui.View):
 
             # Revérifier la disponibilité au moment de la confirmation (évite un doublon
             # si le joueur a ouvert deux menus en parallèle)
-            indisponibles = database.especes_en_exploration(self.user_id)
+            indisponibles = database.especes_en_exploration(self.user_id) | database.especes_en_caisson(self.user_id)
             if any(p in indisponibles for p in self.pokemons):
                 await interaction.response.edit_message(
-                    content="❌ Un des Pokémon choisis est déjà parti en exploration entre-temps.",
+                    content="❌ Un des Pokémon choisis est déjà parti en exploration ou au Caisson de Croissance entre-temps.",
                     view=None,
                 )
                 return
@@ -495,13 +631,33 @@ class VueChoixDureeExploration(discord.ui.View):
         return callback
 
 
-def _calculer_recompense(pc_total: int, duree_label: str, destination: str = None, pokemons: list = None) -> dict:
+def _calculer_recompense(user_id: int, pc_total: int, duree_label: str, destination: str = None, pokemons: list = None) -> dict:
     """destination/pokemons optionnels — None pour une exploration démarrée AVANT
     l'ajout des destinations thématiques, comportement inchangé dans ce cas (aucun
     biais, comme avant)."""
     pc_plafonne = min(pc_total, config.EXPLORATION_PLAFOND_PC)
-    dollars = round(pc_plafonne * config.EXPLORATION_FACTEUR_DOLLARS[duree_label])
     xp = round(pc_plafonne * config.EXPLORATION_FACTEUR_XP[duree_label])
+
+    # Bonus "Chance" (Mutation de dresseur, voir races.py) : appliqué APRÈS les plafonds
+    # normaux — laisse volontairement la Mutation dépasser ce plafond habituel (c'est
+    # tout l'intérêt d'un vrai bonus de chance), avec un plafond ABSOLU de sécurité à
+    # 95% pour ne jamais atteindre une certitude totale.
+    mult_chance = database.multiplicateur_boost(user_id, "chance")
+    PLAFOND_ABSOLU_CHANCE = 0.95
+
+    # Faille Spatio-Temporelle : récompenses FIXES (voir config.FAILLE_*), pas la grille
+    # normale par durée — court-circuite tout le calcul habituel ci-dessous, seul le
+    # bonus "Chance" continue de s'appliquer par-dessus (même plafond de sécurité).
+    if destination == "faille":
+        return {
+            "dollars": config.FAILLE_RECOMPENSE_DOLLARS, "xp": xp,
+            "chance_cristal": min(PLAFOND_ABSOLU_CHANCE, config.FAILLE_CHANCE_CRISTAL * mult_chance),
+            "chance_oeuf": min(PLAFOND_ABSOLU_CHANCE, config.FAILLE_CHANCE_OEUF * mult_chance),
+            "chance_objet_forme": min(PLAFOND_ABSOLU_CHANCE, config.FAILLE_CHANCE_OBJET_FORME * mult_chance),
+            "a_affinite": True,  # la Faille couvre tous les types, toujours vrai par construction
+        }
+
+    dollars = round(pc_plafonne * config.EXPLORATION_FACTEUR_DOLLARS[duree_label])
     ratio_puissance = pc_plafonne / config.EXPLORATION_PLAFOND_PC
 
     dest_info = DESTINATIONS_EXPLORATION.get(destination) if destination else None
@@ -513,18 +669,21 @@ def _calculer_recompense(pc_total: int, duree_label: str, destination: str = Non
     if dest_info:
         chance_cristal *= dest_info["mult_cristal"] * mult_affinite
     chance_cristal = min(conf_cristal["max"], chance_cristal)
+    chance_cristal = min(PLAFOND_ABSOLU_CHANCE, chance_cristal * mult_chance)
 
     conf_oeuf = config.EXPLORATION_CHANCE_OEUF[duree_label]
     chance_oeuf = conf_oeuf["base"] + conf_oeuf["bonus_max"] * ratio_puissance
     if dest_info:
         chance_oeuf *= dest_info["mult_oeuf"] * mult_affinite
     chance_oeuf = min(conf_oeuf["max"], chance_oeuf)
+    chance_oeuf = min(PLAFOND_ABSOLU_CHANCE, chance_oeuf * mult_chance)
 
     conf_objet_forme = config.EXPLORATION_CHANCE_OBJET_FORME[duree_label]
     chance_objet_forme = conf_objet_forme["base"] + conf_objet_forme["bonus_max"] * ratio_puissance
     if dest_info:
         chance_objet_forme *= dest_info["mult_objet_forme"] * mult_affinite
     chance_objet_forme = min(conf_objet_forme["max"], chance_objet_forme)
+    chance_objet_forme = min(PLAFOND_ABSOLU_CHANCE, chance_objet_forme * mult_chance)
 
     return {
         "dollars": dollars, "xp": xp, "chance_cristal": chance_cristal, "chance_oeuf": chance_oeuf,
@@ -571,7 +730,7 @@ def recuperer_toutes_recompenses_pretes(user_id: int) -> discord.Embed:
 
         stats = _stats_par_espece(user_id)
         pc_total = sum(stats.get(nom, {}).get("pc", 0) for nom in pokemons)
-        recompense = _calculer_recompense(pc_total, duree_label, destination, pokemons)
+        recompense = _calculer_recompense(user_id, pc_total, duree_label, destination, pokemons)
 
         mult_repetition = database.enregistrer_completion_exploration_repetition(user_id)
         bonus_evenement = row["evenement_bonus_dollars"] or 0
@@ -663,7 +822,7 @@ def recuperer_recompense(user_id: int, slot: int) -> discord.Embed:
     stats = _stats_par_espece(user_id)
     pc_total = sum(stats.get(nom, {}).get("pc", 0) for nom in pokemons)
 
-    recompense = _calculer_recompense(pc_total, duree_label, destination, pokemons)
+    recompense = _calculer_recompense(user_id, pc_total, duree_label, destination, pokemons)
 
     mult_repetition = database.enregistrer_completion_exploration_repetition(user_id)
     bonus_evenement = row["evenement_bonus_dollars"] or 0

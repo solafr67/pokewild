@@ -32,12 +32,12 @@ def _stats_par_espece(user_id: int) -> dict:
 def equiper_meilleure_equipe(user_id: int) -> list:
     """Vide l'équipe actuelle et la reconstitue avec les meilleures espèces DISPONIBLES
     par PC (jusqu'à TAILLE_MAX_EQUIPE) — les espèces actuellement parties en exploration
-    sont exclues du choix, sinon "Équipe la plus forte" pouvait sélectionner des Pokémon
-    indisponibles (bloqués tant que l'exploration n'est pas récupérée), rendant le
-    joueur perplexe de voir son équipe "la plus forte" refusée juste après. Retourne la
-    liste des noms sélectionnés."""
+    OU déposées au Caisson de Croissance sont exclues du choix, sinon "Équipe la plus
+    forte" pouvait sélectionner des Pokémon indisponibles, rendant le joueur perplexe de
+    voir son équipe "la plus forte" refusée juste après. Retourne la liste des noms
+    sélectionnés."""
     stats = _stats_par_espece(user_id)
-    indisponibles = database.especes_en_exploration(user_id)
+    indisponibles = database.especes_en_exploration(user_id) | database.especes_en_caisson(user_id)
     stats_disponibles = {nom: info for nom, info in stats.items() if nom not in indisponibles}
     top = sorted(stats_disponibles.items(), key=lambda kv: -kv[1]["pc"])[:TAILLE_MAX_EQUIPE]
 

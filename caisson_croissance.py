@@ -5,9 +5,10 @@ capture/exploration) — le plafond de niveau par rareté s'applique donc normal
 aucune XP n'est gaspillée au-delà.
 
 Le système est basé sur le NOM D'ESPÈCE (comme l'équipe de combat, pas une capture
-individuelle) — déposer une espèce au Caisson ne la retire d'aucune autre liste (équipe
-de combat, exploration...), c'est juste un marqueur qui fait gagner de l'XP passive en
-plus, en parallèle de tout le reste.
+individuelle). Déposer une espèce au Caisson la rend INDISPONIBLE en équipe de combat ET
+en exploration tant qu'elle n'est pas retirée (voir database.especes_en_caisson, croisé
+avec database.especes_en_exploration à chaque point de sélection concerné) — même
+principe que l'indisponibilité déjà en place pour l'exploration.
 """
 
 import time

@@ -139,6 +139,8 @@ def construire_embed_transformateur(user_id: int) -> discord.Embed:
         description=(
             "Convertis 10 objets d'un palier en 1 du palier supérieur — pratique pour ne "
             "pas laisser traîner un surplus de Poké Balls ou de Potions basiques.\n\n"
+            "Choisis l'objet, puis le **nombre de lots** que tu veux transformer (ou laisse "
+            "vide pour tout transformer d'un coup).\n\n"
             "⚠️ La Master Ball et le Total Soin restent uniquement achetables en boutique, "
             "impossibles à obtenir par transformation."
         ),
@@ -385,6 +387,57 @@ class ModalRechercheCaisson(discord.ui.Modal, title="Rechercher un Pokémon"):
         )
 
 
+class _ModalQuantiteTransformation(discord.ui.Modal):
+    """Demande combien de lots transformer (1 à nb_lots_max), plutôt que de forcer le
+    maximum comme avant — ouverte juste après avoir choisi QUEL objet transformer dans
+    le select de VueTransformateur."""
+
+    def __init__(self, user_id: int, type_source: str, nb_lots_max: int, vue_parente: "VueTransformateur"):
+        super().__init__(title=f"Transformer {_nom_affichage_objet(type_source)}"[:45])
+        self.user_id = user_id
+        self.type_source = type_source
+        self.nb_lots_max = nb_lots_max
+        self.vue_parente = vue_parente
+        self.quantite_input = discord.ui.TextInput(
+            label=f"Nombre de lots (1 à {nb_lots_max})",
+            placeholder=f"Maximum : {nb_lots_max} — laisse vide pour tout transformer",
+            default=str(nb_lots_max),
+            required=False,
+            max_length=len(str(nb_lots_max)),
+        )
+        self.add_item(self.quantite_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        valeur = self.quantite_input.value.strip()
+        if not valeur:
+            nb_lots_demande = self.nb_lots_max  # champ vide = tout transformer, comme avant
+        else:
+            try:
+                nb_lots_demande = int(valeur)
+            except ValueError:
+                await interaction.response.send_message("❌ Entre un nombre entier valide.", ephemeral=True)
+                return
+            if nb_lots_demande <= 0:
+                await interaction.response.send_message("❌ Le nombre de lots doit être positif.", ephemeral=True)
+                return
+
+        nb_lots, type_cible, quantite_consommee = database.transformer_objets(self.user_id, self.type_source, nb_lots_demande)
+        if nb_lots <= 0:
+            await interaction.response.send_message(
+                "Il n'y avait plus assez d'objets pour transformer (quelqu'un a été plus rapide que toi ?).", ephemeral=True
+            )
+            return
+
+        self.vue_parente._construire_options()
+        embed = construire_embed_transformateur(self.user_id)
+        await interaction.response.edit_message(embed=embed, view=self.vue_parente)
+        await interaction.followup.send(
+            f"✅ {quantite_consommee} {_emoji_objet(self.type_source)} {_nom_affichage_objet(self.type_source)} "
+            f"transformés en {nb_lots} {_emoji_objet(type_cible)} {_nom_affichage_objet(type_cible)} !",
+            ephemeral=True,
+        )
+
+
 class VueTransformateur(discord.ui.View):
     def __init__(self, user_id: int):
         super().__init__(timeout=120)
@@ -409,7 +462,7 @@ class VueTransformateur(discord.ui.View):
                 )
             )
         if options:
-            select = discord.ui.Select(placeholder="Choisis quel objet transformer (convertit tout ce qui est possible)…", options=options)
+            select = discord.ui.Select(placeholder="Choisis quel objet transformer…", options=options)
             select.callback = self._on_select
             self.add_item(select)
 
@@ -418,19 +471,18 @@ class VueTransformateur(discord.ui.View):
             await interaction.response.send_message("Ce n'est pas ton Transformateur !", ephemeral=True)
             return
         type_source = interaction.data["values"][0]
-        nb_lots, type_cible, quantite_consommee = database.transformer_objets(self.user_id, type_source)
-        if nb_lots <= 0:
-            await interaction.response.send_message("Il n'y avait plus assez d'objets pour transformer (quelqu'un a été plus rapide que toi ?).", ephemeral=True)
+        inventaire = database.obtenir_inventaire_balls(self.user_id)
+        _type_cible, quantite_requise = config.CHAINES_TRANSFORMATION[type_source]
+        nb_lots_max = inventaire.get(type_source, 0) // quantite_requise
+        if nb_lots_max <= 0:
+            await interaction.response.send_message(
+                "Il n'y avait plus assez d'objets pour transformer (quelqu'un a été plus rapide que toi ?).", ephemeral=True
+            )
+            self._construire_options()
+            await interaction.message.edit(view=self)
             return
+        await interaction.response.send_modal(_ModalQuantiteTransformation(self.user_id, type_source, nb_lots_max, self))
 
-        self._construire_options()
-        embed = construire_embed_transformateur(self.user_id)
-        await interaction.response.edit_message(embed=embed, view=self)
-        await interaction.followup.send(
-            f"✅ {quantite_consommee} {_emoji_objet(type_source)} {_nom_affichage_objet(type_source)} "
-            f"transformés en {nb_lots} {_emoji_objet(type_cible)} {_nom_affichage_objet(type_cible)} !",
-            ephemeral=True,
-        )
 
 
 # ----------------------------------------------------------------------------

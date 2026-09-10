@@ -37,6 +37,31 @@ from pokemon_data import (
 )
 
 
+def effectuer_reroll_raids() -> tuple:
+    """Tire un nouveau roster de raid aléatoire (sur toute la base actuelle), palier par
+    palier, et le sauvegarde en base — réutilisée à la fois par /reroll-raids (manuel)
+    et par la boucle automatique du dimanche 20h (voir main.py::boucle_reroll_raids_hebdomadaire).
+    Retourne (nouveau_roster, lignes_resultat) pour que l'appelant construise l'annonce
+    qui lui convient (embed followup pour la commande, embed + ping de rôle pour la boucle)."""
+    taille_par_etoile = {1: 5, 2: 5, 3: 5, 4: 3, 5: 3}
+    par_rarete = {}
+    for pokemon in POKEDEX:
+        par_rarete.setdefault(pokemon["rarete"], []).append(pokemon["nom"])
+
+    nouveau_roster = {}
+    lignes_resultat = []
+    for etoiles, taille in taille_par_etoile.items():
+        rarete = config.RARETE_PAR_ETOILES.get(etoiles, "commun")
+        candidats = par_rarete.get(rarete, [])
+        taille_reelle = min(taille, len(candidats))
+        noms = random.sample(candidats, taille_reelle) if candidats else []
+        nouveau_roster[str(etoiles)] = noms
+        lignes_resultat.append(f"{'⭐' * etoiles} : {', '.join(noms) if noms else '*(aucun disponible)*'}")
+
+    database.definir_parametre("roster_raid_json", json.dumps(nouveau_roster, ensure_ascii=False))
+    return nouveau_roster, lignes_resultat
+
+
 class VueEchangeProposition(discord.ui.View):
     """Vue visible par tout le monde, mais seul le joueur ciblé peut accepter/refuser."""
 
@@ -252,22 +277,7 @@ class GladioRaidsEchangesCog(commands.Cog):
     async def reroll_raids_cmd(self, interaction: discord.Interaction):
         await interaction.response.defer()
 
-        taille_par_etoile = {1: 5, 2: 5, 3: 5, 4: 3, 5: 3}
-        par_rarete = {}
-        for pokemon in POKEDEX:
-            par_rarete.setdefault(pokemon["rarete"], []).append(pokemon["nom"])
-
-        nouveau_roster = {}
-        lignes_resultat = []
-        for etoiles, taille in taille_par_etoile.items():
-            rarete = config.RARETE_PAR_ETOILES.get(etoiles, "commun")
-            candidats = par_rarete.get(rarete, [])
-            taille_reelle = min(taille, len(candidats))
-            noms = random.sample(candidats, taille_reelle) if candidats else []
-            nouveau_roster[str(etoiles)] = noms
-            lignes_resultat.append(f"{'⭐' * etoiles} : {', '.join(noms) if noms else '*(aucun disponible)*'}")
-
-        database.definir_parametre("roster_raid_json", json.dumps(nouveau_roster, ensure_ascii=False))
+        nouveau_roster, lignes_resultat = effectuer_reroll_raids()
 
         journal.logger(f"🛠️ <@{interaction.user.id}> a relancé le roster de raid (/reroll-raids).")
         embed = discord.Embed(

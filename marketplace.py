@@ -69,6 +69,37 @@ def construire_embed_annonce(annonce, vendeur_nom: str, pokemon_nom: str, pc: in
     return embed
 
 
+def construire_embed_enchere(annonce, vendeur_nom: str, pokemon_nom: str, pc: int, shiny: bool, enchereur_nom: str | None) -> discord.Embed:
+    """Même principe que construire_embed_annonce, pour une enchère (type_annonce=
+    'enchere') — affiche la plus haute enchère en cours si elle existe, sinon juste la
+    mise à prix. enchereur_nom : None tant qu'aucune enchère n'a été placée."""
+    pokemon = obtenir_pokemon_par_nom(pokemon_nom)
+    shiny_txt = " ✨" if shiny else ""
+    if annonce["prix_actuel"]:
+        titre_prix = f"{annonce['prix_actuel']} {EMOJI_POKEDOLLAR} (enchère en cours)"
+        ligne_enchere = f"🔨 Plus offrant : **{enchereur_nom}** — {annonce['prix_actuel']} {EMOJI_POKEDOLLAR}"
+    else:
+        titre_prix = f"Mise à prix {annonce['prix']} {EMOJI_POKEDOLLAR}"
+        ligne_enchere = f"🔨 Aucune enchère pour l'instant — mise à prix {annonce['prix']} {EMOJI_POKEDOLLAR}"
+
+    embed = discord.Embed(
+        title=f"🔨 {pokemon_nom}{shiny_txt} — {titre_prix}",
+        description=(
+            f"Vendu par **{vendeur_nom}**\n"
+            f"**{pc} PC**\n\n"
+            f"{ligne_enchere}\n\n"
+            f"⏳ Se termine <t:{annonce['date_expiration']}:R>"
+        ),
+        color=discord.Color.dark_orange(),
+    )
+    if pokemon:
+        url_sprite = sprite_pokemon(pokemon, shiny=shiny)
+        if url_sprite:
+            embed.set_thumbnail(url=url_sprite)
+    embed.set_footer(text=f"Annonce #{annonce['id']}")
+    return embed
+
+
 class VueAnnonce(discord.ui.View):
     """Message d'annonce posté dans le channel marketplace — bouton d'achat pour tout le
     monde, bouton de retrait réservé au vendeur.
@@ -141,6 +172,126 @@ class VueAnnonce(discord.ui.View):
             "✅ Ton annonce a bien été retirée — ton Pokémon ne bouge pas, il est resté chez toi.", ephemeral=True
         )
         interaction.client.loop.create_task(_supprimer_message_apres_delai(interaction.message, DELAI_SUPPRESSION_MESSAGE))
+
+
+class VueAnnonceEnchere(discord.ui.View):
+    """Équivalent de VueAnnonce pour une enchère — même principe de lecture de l'ID
+    depuis le footer du message (voir VueAnnonce pour le raisonnement complet sur le
+    partage d'instance après redémarrage). Bouton "Placer une enchère" pour tout le
+    monde sauf le vendeur, "Retirer" réservé au vendeur ET bloqué dès qu'une enchère a
+    été placée (la rétracter léserait l'enchérisseur, qui a déjà ses fonds retenus)."""
+
+    def __init__(self, annonce_id: int | None = None):
+        super().__init__(timeout=None)
+        self.annonce_id = annonce_id
+
+    @staticmethod
+    def _annonce_id_depuis_message(message: discord.Message) -> int | None:
+        if not message.embeds or not message.embeds[0].footer or not message.embeds[0].footer.text:
+            return None
+        texte = message.embeds[0].footer.text
+        if not texte.startswith("Annonce #"):
+            return None
+        try:
+            return int(texte.removeprefix("Annonce #"))
+        except ValueError:
+            return None
+
+    @discord.ui.button(label="Placer une enchère", emoji="🔨", style=discord.ButtonStyle.success, custom_id="pokewild:marketplace_encherir")
+    async def encherir(self, interaction: discord.Interaction, button: discord.ui.Button):
+        annonce_id = self._annonce_id_depuis_message(interaction.message)
+        if annonce_id is None:
+            await interaction.response.send_message("❌ Impossible de retrouver cette enchère.", ephemeral=True)
+            return
+        annonce = database.obtenir_annonce_marketplace(annonce_id)
+        if annonce is None or annonce["statut"] != "active":
+            await interaction.response.send_message("❌ Cette enchère n'est plus disponible.", ephemeral=True)
+            return
+        if annonce["vendeur_id"] == interaction.user.id:
+            await interaction.response.send_message("❌ Tu ne peux pas enchérir sur ton propre Pokémon !", ephemeral=True)
+            return
+        montant_minimum = annonce["prix_actuel"] + 1 if annonce["prix_actuel"] else annonce["prix"]
+        await interaction.response.send_modal(_ModalPlacerEnchere(annonce_id, montant_minimum))
+
+    @discord.ui.button(label="Retirer mon annonce", emoji="❌", style=discord.ButtonStyle.secondary, custom_id="pokewild:marketplace_retirer_enchere")
+    async def retirer(self, interaction: discord.Interaction, button: discord.ui.Button):
+        annonce_id = self._annonce_id_depuis_message(interaction.message)
+        if annonce_id is None:
+            await interaction.response.send_message("❌ Impossible de retrouver cette enchère.", ephemeral=True)
+            return
+        annonce = database.obtenir_annonce_marketplace(annonce_id)
+        if annonce is None or annonce["statut"] != "active":
+            await interaction.response.send_message("Cette enchère n'est déjà plus active.", ephemeral=True)
+            return
+        if annonce["vendeur_id"] != interaction.user.id:
+            await interaction.response.send_message("Seul le vendeur peut retirer cette enchère !", ephemeral=True)
+            return
+        if annonce["enchereur_actuel_id"] is not None:
+            await interaction.response.send_message(
+                "❌ Impossible de retirer — une enchère a déjà été placée, elle doit aller à son terme "
+                "(l'enchérisseur a déjà ses fonds retenus).",
+                ephemeral=True,
+            )
+            return
+
+        database.marquer_annonce_marketplace(annonce_id, "annulee")
+        for item in self.children:
+            item.disabled = True
+        embed = interaction.message.embeds[0]
+        embed.color = discord.Color.dark_grey()
+        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.followup.send(
+            "✅ Ton enchère a bien été retirée — ton Pokémon ne bouge pas, il est resté chez toi.", ephemeral=True
+        )
+        interaction.client.loop.create_task(_supprimer_message_apres_delai(interaction.message, DELAI_SUPPRESSION_MESSAGE))
+
+
+class _ModalPlacerEnchere(discord.ui.Modal, title="Placer une enchère"):
+    montant = discord.ui.TextInput(label="Montant en Poké Dollars", placeholder="ex: 500", required=True, max_length=7)
+
+    def __init__(self, annonce_id: int, montant_minimum: int):
+        super().__init__()
+        self.annonce_id = annonce_id
+        self.montant.placeholder = f"Minimum {montant_minimum}"
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            montant_int = int(self.montant.value)
+        except ValueError:
+            await interaction.response.send_message("Montant invalide — indique un nombre entier.", ephemeral=True)
+            return
+
+        succes, erreur = database.placer_enchere(self.annonce_id, interaction.user.id, montant_int)
+        if not succes:
+            await interaction.response.send_message(f"❌ {erreur}", ephemeral=True)
+            return
+
+        annonce = database.obtenir_annonce_marketplace(self.annonce_id)
+        conn = database.get_connexion()
+        cur = conn.cursor()
+        cur.execute("SELECT pokemon_nom, pc, shiny FROM captures WHERE id = ?", (annonce["capture_id"],))
+        capture = cur.fetchone()
+        conn.close()
+
+        channel = interaction.client.get_channel(config.CHANNEL_MARKETPLACE_ID)
+        if channel and annonce["message_id"]:
+            try:
+                message = await channel.fetch_message(int(annonce["message_id"]))
+                vendeur = interaction.client.get_user(annonce["vendeur_id"]) or await interaction.client.fetch_user(annonce["vendeur_id"])
+                embed = construire_embed_enchere(
+                    annonce, vendeur.display_name if vendeur else "?",
+                    capture["pokemon_nom"], capture["pc"], bool(capture["shiny"]), interaction.user.display_name,
+                )
+                await message.edit(embed=embed)
+            except (discord.NotFound, discord.HTTPException):
+                pass
+
+        journal.logger(f"🔨 <@{interaction.user.id}> a enchéri {montant_int} PD sur l'annonce #{self.annonce_id}.")
+        await interaction.response.send_message(
+            f"✅ Enchère de **{montant_int} {EMOJI_POKEDOLLAR}** placée avec succès — tes fonds sont retenus tant "
+            f"que tu n'es pas surenchéri (remboursés automatiquement si quelqu'un enchérit plus haut).",
+            ephemeral=True,
+        )
 
 
 class VueConfirmationAchat(discord.ui.View):
@@ -306,8 +457,12 @@ class _VueChoixPokemonAVendre(discord.ui.View):
             await interaction.response.send_message("❌ Pokémon introuvable.", ephemeral=True)
             return
 
-        modal = _ModalPrixVente(capture_id, row["pokemon_nom"], row["pc"], row["shiny"], row["total_espece"], row["rang"])
-        await interaction.response.send_modal(modal)
+        vue = _VueChoixTypeVente(capture_id, row["pokemon_nom"], row["pc"], row["shiny"], row["total_espece"], row["rang"])
+        await interaction.response.send_message(
+            f"**{row['pokemon_nom']}** — comment veux-tu le mettre en vente ?",
+            view=vue,
+            ephemeral=True,
+        )
 
 
 class _ModalRechercheVente(discord.ui.Modal, title="Rechercher un Pokémon"):
@@ -327,16 +482,96 @@ class _ModalRechercheVente(discord.ui.Modal, title="Rechercher un Pokémon"):
 
 
 
-class _ModalPrixVente(discord.ui.Modal, title="Prix de vente"):
-    prix = discord.ui.TextInput(label="Prix en Poké Dollars", placeholder="ex: 500", required=True, max_length=7)
+class _VueChoixTypeVente(discord.ui.View):
+    """Choix intermédiaire vente directe / enchère, juste après avoir choisi QUEL
+    Pokémon vendre — ouvre le modal de prix adapté selon le choix."""
 
     def __init__(self, capture_id: int, pokemon_nom: str, pc: int, shiny: bool, total_espece: int, rang: int):
-        super().__init__()
+        super().__init__(timeout=120)
         self.capture_id = capture_id
         self.pokemon_nom = pokemon_nom
         self.pc = pc
         self.shiny = shiny
         self.dernier_exemplaire = total_espece == 1 and rang == 1
+
+    @discord.ui.button(label="Vente directe (prix fixe)", emoji="🛒", style=discord.ButtonStyle.primary)
+    async def vente_directe(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = _ModalPrixVente(self.capture_id, self.pokemon_nom, self.pc, self.shiny, self.dernier_exemplaire)
+        await interaction.response.send_modal(modal)
+
+    @discord.ui.button(label="Enchère", emoji="🔨", style=discord.ButtonStyle.primary)
+    async def enchere(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = _ModalPrixEnchere(self.capture_id, self.pokemon_nom, self.pc, self.shiny, self.dernier_exemplaire)
+        await interaction.response.send_modal(modal)
+
+
+class _ModalPrixEnchere(discord.ui.Modal, title="Mise à prix de l'enchère"):
+    prix = discord.ui.TextInput(label="Mise à prix en Poké Dollars", placeholder="ex: 100", required=True, max_length=7)
+
+    def __init__(self, capture_id: int, pokemon_nom: str, pc: int, shiny: bool, dernier_exemplaire: bool):
+        super().__init__()
+        self.capture_id = capture_id
+        self.pokemon_nom = pokemon_nom
+        self.pc = pc
+        self.shiny = shiny
+        self.dernier_exemplaire = dernier_exemplaire
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            prix_int = int(self.prix.value)
+        except ValueError:
+            await interaction.response.send_message("Prix invalide — indique un nombre entier.", ephemeral=True)
+            return
+        if not (config.MARKETPLACE_PRIX_MIN <= prix_int <= config.MARKETPLACE_PRIX_MAX):
+            await interaction.response.send_message(
+                f"La mise à prix doit être comprise entre {config.MARKETPLACE_PRIX_MIN} et {config.MARKETPLACE_PRIX_MAX} Poké Dollars.",
+                ephemeral=True,
+            )
+            return
+        if database.capture_deja_en_vente(self.capture_id):
+            await interaction.response.send_message("❌ Ce Pokémon vient d'être mis en vente ailleurs entre-temps.", ephemeral=True)
+            return
+
+        annonce_id = database.creer_annonce_enchere(
+            interaction.user.id, self.capture_id, prix_int, config.MARKETPLACE_DUREE_ANNONCE_SECONDES
+        )
+        annonce = database.obtenir_annonce_marketplace(annonce_id)
+
+        channel = interaction.client.get_channel(config.CHANNEL_MARKETPLACE_ID)
+        if channel is None:
+            await interaction.response.send_message(
+                "⚠️ Le channel marketplace est introuvable (config.CHANNEL_MARKETPLACE_ID) — enchère annulée.",
+                ephemeral=True,
+            )
+            database.marquer_annonce_marketplace(annonce_id, "annulee")
+            return
+
+        embed = construire_embed_enchere(annonce, interaction.user.display_name, self.pokemon_nom, self.pc, self.shiny, None)
+        message = await channel.send(embed=embed, view=VueAnnonceEnchere(annonce_id))
+        database.definir_message_annonce_marketplace(annonce_id, message.id)
+
+        avertissement = (
+            "\n⚠️ C'est ton dernier exemplaire de cette espèce — le vendre fera disparaître son entrée de ton Pokédex."
+            if self.dernier_exemplaire else ""
+        )
+        await interaction.response.send_message(
+            f"✅ **{self.pokemon_nom}** mis aux enchères, mise à prix **{prix_int} {EMOJI_POKEDOLLAR}**, dans {channel.mention} "
+            f"— se termine dans 7 jours.{avertissement}",
+            ephemeral=True,
+        )
+        journal.logger(f"🔨 <@{interaction.user.id}> a mis aux enchères **{self.pokemon_nom}** (mise à prix {prix_int} PD, annonce #{annonce_id}).")
+
+
+class _ModalPrixVente(discord.ui.Modal, title="Prix de vente"):
+    prix = discord.ui.TextInput(label="Prix en Poké Dollars", placeholder="ex: 500", required=True, max_length=7)
+
+    def __init__(self, capture_id: int, pokemon_nom: str, pc: int, shiny: bool, dernier_exemplaire: bool):
+        super().__init__()
+        self.capture_id = capture_id
+        self.pokemon_nom = pokemon_nom
+        self.pc = pc
+        self.shiny = shiny
+        self.dernier_exemplaire = dernier_exemplaire
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
@@ -394,15 +629,48 @@ async def lancer_vente(interaction: discord.Interaction):
 
 
 async def purger_annonces_expirees(bot):
-    """Marque expirées toutes les annonces dont la date est dépassée, édite leur message
-    (⌛ Expirée) et programme sa suppression — le Pokémon n'a jamais bougé, rien à faire
-    côté inventaire. Appelée périodiquement (voir config.MARKETPLACE_INTERVALLE_VERIFICATION_SECONDES)."""
+    """Marque expirées toutes les annonces dont la date est dépassée — pour une vente
+    directe, édite le message (⌛ Expirée) et programme sa suppression (le Pokémon n'a
+    jamais bougé, rien à faire côté inventaire). Pour une enchère (type_annonce=
+    'enchere'), résout la vente au plus offrant s'il y en a un (voir
+    database.resoudre_enchere_expiree) — message et couleur différents selon l'issue.
+    Appelée périodiquement (voir config.MARKETPLACE_INTERVALLE_VERIFICATION_SECONDES)."""
     expirees = database.obtenir_annonces_marketplace_expirees(int(time.time()))
     if not expirees:
         return 0
 
     channel = bot.get_channel(config.CHANNEL_MARKETPLACE_ID)
     for annonce in expirees:
+        if annonce["type_annonce"] == "enchere":
+            resultat = database.resoudre_enchere_expiree(annonce["id"])
+            if channel is None or not annonce["message_id"]:
+                continue
+            try:
+                message = await channel.fetch_message(int(annonce["message_id"]))
+                embed = message.embeds[0]
+                if resultat["vendu"]:
+                    embed.color = discord.Color.green()
+                    embed.add_field(
+                        name="🔨 Enchère terminée !",
+                        value=(
+                            f"Remportée par <@{resultat['enchereur_id']}> pour **{resultat['prix_final']} {EMOJI_POKEDOLLAR}** !\n"
+                            f"<@{annonce['vendeur_id']}>, les fonds ont été crédités."
+                        ),
+                        inline=False,
+                    )
+                else:
+                    embed.color = discord.Color.dark_grey()
+                    embed.add_field(
+                        name="⌛ Enchère terminée sans offre",
+                        value=f"<@{annonce['vendeur_id']}>, aucune enchère n'a été placée — ton Pokémon reste bien dans ta collection.",
+                        inline=False,
+                    )
+                await message.edit(embed=embed, view=discord.ui.View())
+                bot.loop.create_task(_supprimer_message_apres_delai(message, DELAI_SUPPRESSION_MESSAGE))
+            except (discord.NotFound, discord.HTTPException):
+                pass
+            continue
+
         database.marquer_annonce_marketplace(annonce["id"], "expiree")
         if channel is None or not annonce["message_id"]:
             continue
@@ -466,7 +734,11 @@ async def rechercher_annonces(interaction: discord.Interaction, nom: str):
     lignes = []
     for r in resultats:
         shiny_txt = " ✨" if r["shiny"] else ""
-        ligne = f"**{r['pokemon_nom']}{shiny_txt}** ({r['pc']} PC) — {r['prix']} {EMOJI_POKEDOLLAR} — vendu par <@{r['vendeur_id']}>"
+        if r["type_annonce"] == "enchere":
+            prix_affiche = f"{r['prix_actuel']} {EMOJI_POKEDOLLAR} (enchère en cours)" if r["prix_actuel"] else f"mise à prix {r['prix']} {EMOJI_POKEDOLLAR}"
+        else:
+            prix_affiche = f"{r['prix']} {EMOJI_POKEDOLLAR}"
+        ligne = f"**{r['pokemon_nom']}{shiny_txt}** ({r['pc']} PC) — {prix_affiche} — vendu par <@{r['vendeur_id']}>"
         if r["message_id"] and interaction.guild_id:
             lien = f"https://discord.com/channels/{interaction.guild_id}/{config.CHANNEL_MARKETPLACE_ID}/{r['message_id']}"
             ligne += f" — [Voir l'annonce]({lien})"

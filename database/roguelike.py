@@ -334,3 +334,18 @@ def classement_roguelike(limite: int = 10):
     conn.close()
     return rows
 
+
+def reinitialiser_classement_roguelike() -> int:
+    """Remet TOUT le classement Roguelike à zéro (vide roguelike_records entièrement) —
+    utilisé par la commande admin /reset-classement-roguelike. Retourne le nombre de
+    joueurs dont le record a été effacé. N'affecte JAMAIS la progression EN COURS d'une
+    run active (table roguelike_runs, séparée) — seulement les records déjà enregistrés."""
+    conn = get_connexion()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) AS nb FROM roguelike_records")
+    nb_effaces = cur.fetchone()["nb"]
+    cur.execute("DELETE FROM roguelike_records")
+    conn.commit()
+    conn.close()
+    return nb_effaces
+
