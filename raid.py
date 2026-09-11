@@ -93,17 +93,29 @@ class VueSalleAttente(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
 
         # Avertit si une partie de l'équipe est indisponible (partie en exploration, ou
-        # exploration terminée mais pas encore récupérée — les Pokémon restent "verrouillés"
-        # jusqu'à la récupération) : sinon le joueur participe pour 0 dégât sans le savoir.
+        # exploration terminée mais pas encore récupérée, OU déposée au Caisson de
+        # Croissance — les Pokémon restent "verrouillés" jusqu'à récupération/retrait) :
+        # sinon le joueur participe pour 0 dégât sans le savoir. Distingue précisément
+        # LEQUEL des deux mécanismes s'applique à CHAQUE Pokémon plutôt qu'un message
+        # générique qui suppose toujours l'exploration.
         equipe_complete = database.obtenir_equipe_combat(interaction.user.id)
         equipe_dispo = set(database.obtenir_equipe_combat_disponible(interaction.user.id))
         indisponibles = [nom for nom in equipe_complete if nom not in equipe_dispo]
         if indisponibles:
+            en_exploration = database.especes_en_exploration(interaction.user.id)
+            en_caisson = database.especes_en_caisson(interaction.user.id)
+            lignes_raison = []
+            for nom in indisponibles:
+                if nom in en_caisson:
+                    lignes_raison.append(f"**{nom}** (au Caisson de Croissance)")
+                elif nom in en_exploration:
+                    lignes_raison.append(f"**{nom}** (en exploration)")
+                else:
+                    lignes_raison.append(f"**{nom}**")
             await interaction.followup.send(
-                f"⚠️ {', '.join(indisponibles)} de ton équipe {'est' if len(indisponibles) == 1 else 'sont'} "
-                f"actuellement indisponible(s) (partie(s) en exploration, ou exploration terminée mais pas "
-                f"encore récupérée) — il(s) ne participera(ont) pas à ce raid tant que tu ne l'auras/les "
-                f"auras pas récupéré(s) (`/exploration`).",
+                f"⚠️ {', '.join(lignes_raison)} de ton équipe ne participera(ont) pas à ce raid tant que tu ne "
+                f"l'auras/les auras pas récupéré(s) ou retiré(s) — va au Centre des Explorations ou au Laboratoire "
+                f"pour ça, selon le cas.",
                 ephemeral=True,
             )
 

@@ -165,7 +165,6 @@ async def construire_embed_profil(user: discord.abc.User, autoriser_piece_jointe
     if divers:
         embed.add_field(name="Divers", value=_ligne(divers, NOM_OBJETS_DIVERS, EMOJI_OBJETS_DIVERS), inline=True)
 
-    embed.set_footer(text="💡 /pokedex • /exploration • /ma-race • /equipe-combat")
     return embed, fichier_avatar
 
 

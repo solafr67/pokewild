@@ -64,7 +64,7 @@ class AdminJoueurCog(commands.Cog):
             return
         await interaction.response.send_message(
             f"✅ Exploration de {membre.mention} (emplacement {emplacement}) terminée immédiatement — "
-            f"la récompense reste calculée sur la durée d'origine. Le joueur peut la récupérer via `/exploration`.",
+            f"la récompense reste calculée sur la durée d'origine. Le joueur peut la récupérer au Centre des Explorations.",
             ephemeral=True,
         )
 

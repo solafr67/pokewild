@@ -2010,6 +2010,7 @@ async def resoudre_tour(combat_id: int) -> list:
                 if boost_justicier:
                     stat_j, delta_j = boost_justicier
                     nouveau_stage_j = database.modifier_boost(combat_id, adversaire_id, nom_def, stat_j, delta_j)
+                    log.append(f"  ⚖️ **{nom_def}** active **Justicier** ! (+{delta_j} {NOMS_STATS[stat_j]}, stage {nouveau_stage_j:+d})")
 
                 # Phobique (Rattled, Mordudor) : +1 Vitesse quand touché par une attaque
                 # Ténèbres/Spectre/Insecte.
@@ -2029,7 +2030,6 @@ async def resoudre_tour(combat_id: int) -> list:
                             f"  🔨 **{nom_def}** active **Armure Fragile** ! ({delta_baisse} {NOMS_STATS[stat_baisse]}, "
                             f"+{delta_hausse} {NOMS_STATS[stat_hausse]}, stage Vitesse {nouveau_stage_v:+d})"
                         )
-                    log.append(f"  ⚖️ **{nom_def}** active **Justicier** ! (+{delta_j} {NOMS_STATS[stat_j]}, stage {nouveau_stage_j:+d})")
 
                 # Ossature (Berserk, Sulfura de Galar) : +1 Attaque Spéciale la première
                 # fois que les PV passent sous 50% suite à CE coup précis.

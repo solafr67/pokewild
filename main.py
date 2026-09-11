@@ -2105,7 +2105,7 @@ async def poster_message_centre_exploration_si_absent():
     ou le met à jour s'il existe déjà."""
     channel_id = getattr(config, "CHANNEL_EXPLORATION_ID", None)
     if not channel_id:
-        return  # channel non configuré : reste accessible via /exploration
+        return  # channel non configuré : aucun autre point d'accès de secours
 
     channel = bot.get_channel(channel_id)
     if channel is None:

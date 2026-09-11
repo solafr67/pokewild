@@ -582,6 +582,26 @@ CAPACITES = {
         "description": "Attaque et Attaque Spéciale divisées par 2 dès que les PV tombent à 50% ou moins.",
         "chochotte": True,
     },
+    "fleau_tablettes": {
+        "nom": "Tablettes de Ruine", "emoji": "📜",
+        "description": "-25% Attaque physique pour tout le monde SAUF son propre porteur.",
+        "fleau_stat": "atk",
+    },
+    "fleau_epee": {
+        "nom": "Épée de Ruine", "emoji": "⚔️",
+        "description": "-25% Défense pour tout le monde SAUF son propre porteur.",
+        "fleau_stat": "def",
+    },
+    "fleau_urne": {
+        "nom": "Urne de Ruine", "emoji": "🏺",
+        "description": "-25% Attaque Spéciale pour tout le monde SAUF son propre porteur.",
+        "fleau_stat": "atk_spe",
+    },
+    "fleau_perles": {
+        "nom": "Perles de Ruine", "emoji": "📿",
+        "description": "-25% Défense Spéciale pour tout le monde SAUF son propre porteur.",
+        "fleau_stat": "def_spe",
+    },
     "pure_puissance": {
         "nom": "Pure Puissance", "emoji": "💪",
         "description": "Double sa propre Attaque physique (jamais l'Attaque Spéciale).",
@@ -2712,6 +2732,18 @@ def piege_adversaire(capacite: str) -> bool:
     sur changer, l'action échoue avec un message)."""
     info = CAPACITES.get(capacite)
     return bool(info and info.get("piege_adversaire"))
+
+
+def multiplicateur_fleau(capacite: str, cle_stat: str) -> float:
+    """Fléau (Chongjian/Baojian/Dinglu/Yuyu, le Quatuor du Fléau) — -25% sur UNE stat
+    précise de TOUT LE MONDE SAUF son propre porteur (jamais chez lui-même, fidèle aux
+    vrais jeux). cle_stat vaut "atk"/"atk_spe"/"def"/"def_spe" selon l'appelant — cette
+    fonction est toujours interrogée avec la capacité DE L'AUTRE camp (jamais la
+    sienne), voir les 2 points d'appel dans combat.py pour le sens exact."""
+    info = CAPACITES.get(capacite)
+    if info and info.get("fleau_stat") == cle_stat:
+        return 0.75
+    return 1.0
 
 
 def multiplicateur_chochotte(capacite: str, pv_actuels: int, pv_max: int) -> float:
