@@ -2529,6 +2529,15 @@ async def resoudre_tour(combat_id: int) -> list:
                         log.append(f"  ❌ **{cible_ailment_nom}** n'est pas affecté(e) (immunisé à la confusion) !")
                 else:
                     compteur = random.randint(1, 3) if ailment == "sleep" else 0
+                    # capacite_atk n'est PAS forcément déjà en scope ici : ce bloc
+                    # "altération de statut pure" est aussi atteint par des attaques
+                    # 100% statut (Toxik, Hypnose, Poudre Dodo...) qui n'ont jamais
+                    # traversé le calcul de dégâts offensif plus haut (seul endroit où
+                    # capacite_atk était fixée jusqu'ici) — d'où le crash "cannot access
+                    # local variable" sur CES attaques précises, jamais sur une attaque
+                    # offensive avec effet secondaire. Récupérée ici pour couvrir les
+                    # deux cas uniformément.
+                    capacite_atk = database.obtenir_capacite_combat(combat_id, user_id, nom_atk)
                     ignore_immunite_poison2 = (
                         ailment == "poison" and cible_ailment_id == adversaire_id and capacites_module.a_corrosion(capacite_atk)
                     )
