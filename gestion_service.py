@@ -58,7 +58,7 @@ def _indisponibles(user_id: int) -> set:
     return database.especes_en_exploration(user_id) | database.especes_en_caisson(user_id)
 
 
-def _fiche_equipe(user_id: int, nom: str, contexte: str, indispos: set, favoris: dict) -> dict:
+def _fiche_equipe(user_id: int, nom: str, contexte: str, indispos: set, favoris: dict, possedes: dict | None = None) -> dict:
     stats = combat_module.stats_combattant_reel(user_id, nom)
     pokemon = obtenir_pokemon_par_nom(nom) or {}
     attaques = database.obtenir_attaques_equipees(user_id, nom)
@@ -69,6 +69,7 @@ def _fiche_equipe(user_id: int, nom: str, contexte: str, indispos: set, favoris:
         "indisponible": nom in indispos,
         "surnom": (favoris.get(nom) or {}).get("surnom"),
         "nb_attaques": len(attaques),
+        "shiny": bool((possedes or {}).get(nom, {}).get("shiny")),
     }
 
 
@@ -82,7 +83,7 @@ def etat_equipe(user_id: int) -> dict:
     favoris = database.obtenir_favori_surnom_par_espece(user_id)
     possedes = equipe_combat._stats_par_espece(user_id)
     equipe = [
-        _fiche_equipe(user_id, nom, contexte, indispos, favoris)
+        _fiche_equipe(user_id, nom, contexte, indispos, favoris, possedes)
         for nom in database.obtenir_equipe_combat(user_id) if nom in possedes
     ]
     return {

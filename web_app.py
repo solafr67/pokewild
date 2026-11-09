@@ -36,6 +36,7 @@ from starlette.middleware.sessions import SessionMiddleware  # noqa: E402
 
 import combat as combat_module  # noqa: E402
 import combat_service  # noqa: E402
+import equipe_combat  # noqa: E402
 import combat_visuel  # noqa: E402
 import database  # noqa: E402
 import exploration_service  # noqa: E402
@@ -199,13 +200,14 @@ async def auth_logout(request: Request):
 # Profil & équipe
 # ----------------------------------------------------------------------------
 
-def _sprites(nom: str) -> dict:
-    """URLs des sprites (face + dos) d'une espèce — mêmes sources que le bot Discord."""
+def _sprites(nom: str, shiny: bool = False) -> dict:
+    """URLs des sprites (face + dos) d'une espèce — mêmes sources que le bot Discord.
+    `shiny` : variante chromatique (si le joueur en possède un)."""
     pokemon = obtenir_pokemon_par_nom(nom)
     if not pokemon:
         return {"sprite": None, "sprite_dos": None}
     numero = pokemon.get("numero_sprite") or pokemon["numero"]
-    return {"sprite": sprite_pokemon(pokemon), "sprite_dos": combat_visuel._url_sprite_dos(numero)}
+    return {"sprite": sprite_pokemon(pokemon, shiny), "sprite_dos": combat_visuel._url_sprite_dos(numero, shiny)}
 
 
 def _combat_courant(user_id: int) -> dict:
@@ -234,7 +236,8 @@ async def api_moi(request: Request):
 async def api_equipe(request: Request):
     joueur = joueur_connecte(request)
     uid = joueur["id"]
-    possedes = {row["pokemon_nom"] for row in database.obtenir_pokedex_joueur(uid)}
+    stats_especes = equipe_combat._stats_par_espece(uid)
+    possedes = set(stats_especes)
     equipe = []
     for nom in database.obtenir_equipe_combat_disponible(uid):
         if nom not in possedes:
@@ -242,7 +245,8 @@ async def api_equipe(request: Request):
         stats = combat_module.stats_combattant_reel(uid, nom)
         equipe.append({
             "nom": nom, "niveau": stats["niveau"], "pv_max": stats["pv"],
-            "pv": database.obtenir_pv_actuels(uid, nom, stats["pv"]), **_sprites(nom),
+            "pv": database.obtenir_pv_actuels(uid, nom, stats["pv"]),
+            "shiny": stats_especes[nom]["shiny"], **_sprites(nom, stats_especes[nom]["shiny"]),
         })
     return {"equipe": equipe}
 
@@ -284,7 +288,7 @@ async def api_lancer_combat(demande: DemandeCombat, request: Request):
 def _enrichir(etat: dict) -> dict:
     for cote in ("moi", "adversaire"):
         for p in etat[cote]["equipe"]:
-            p.update(_sprites(p["nom"]))
+            p.update(_sprites(p["nom"], bool(p.get("shiny"))))
     return etat
 
 
@@ -355,7 +359,7 @@ class DemandeSuppression(BaseModel):
 def _equipe_enrichie(uid: int) -> dict:
     etat = gestion_service.etat_equipe(uid)
     for p in etat["equipe"]:
-        p.update(_sprites(p["nom"]))
+        p.update(_sprites(p["nom"], bool(p.get("shiny"))))
     return etat
 
 
@@ -369,7 +373,7 @@ async def api_gestion_especes(request: Request, tri: str = "alphabetique", q: st
     uid = joueur_connecte(request)["id"]
     especes = gestion_service.especes_possedees(uid, tri, q)
     for e in especes:
-        e.update(_sprites(e["nom"]))
+        e.update(_sprites(e["nom"], bool(e.get("shiny"))))
     return {"especes": especes}
 
 
@@ -490,7 +494,7 @@ async def api_pokedex(request: Request):
     uid = joueur_connecte(request)["id"]
     res = gestion_service.pokedex_joueur(uid)
     for e in res["entrees"]:
-        e.update(_sprites(e["nom"]))
+        e.update(_sprites(e["nom"], bool(e.get("shiny"))))
     return res
 
 
@@ -509,7 +513,7 @@ async def api_spawns(request: Request):
     uid = joueur_connecte(request)["id"]
     spawns = exploration_service.spawns_actifs(uid)
     for s in spawns:
-        s.update(_sprites(s["nom"]))
+        s.update(_sprites(s["nom"], bool(s.get("shiny"))))
     inv = database.obtenir_inventaire_balls(uid)
     balls = [
         {"cle": b, "nom": gestion_service.inventaire.NOMS_OBJETS.get(b, b), "quantite": inv.get(b, 0)}
@@ -522,7 +526,7 @@ async def api_spawns(request: Request):
 async def api_capturer(d: DemandeCapture, request: Request):
     uid = joueur_connecte(request)["id"]
     res = exploration_service.capturer(uid, d.spawn_id, d.ball)
-    res.update(_sprites(res["nom"]))
+    res.update(_sprites(res["nom"], bool(res.get("shiny"))))
     return res
 
 
@@ -556,7 +560,7 @@ class DemandeRecuperation(BaseModel):
 async def api_expeditions(request: Request):
     etat = expedition_service.etat(joueur_connecte(request)["id"])
     for e in etat["especes"]:
-        e.update(_sprites(e["nom"]))
+        e.update(_sprites(e["nom"], bool(e.get("shiny"))))
     return etat
 
 
@@ -653,7 +657,7 @@ async def api_labo_incuber(d: DemandePalier, request: Request):
 @app.post("/api/labo/incubateur/eclore")
 async def api_labo_eclore(request: Request):
     res = laboratoire_service.eclore(joueur_connecte(request)["id"])
-    res.update(_sprites(res["nom"]))
+    res.update(_sprites(res["nom"], bool(res.get("shiny"))))
     return res
 
 
@@ -837,7 +841,7 @@ async def api_collection(request: Request, tri: str = "alphabetique", q: str = "
     uid = joueur_connecte(request)["id"]
     res = collection_service.collection(uid, tri, q, filtre, page)
     for c in res["captures"]:
-        c.update(_sprites(c["nom"]))
+        c.update(_sprites(c["nom"], bool(c.get("shiny"))))
     return res
 
 
@@ -906,7 +910,7 @@ class DemandeEchangeId(BaseModel):
 async def api_marketplace(request: Request, q: str = "", type: str = "toutes", page: int = 0, tri: str = "recentes"):
     res = echanges_service.annonces(joueur_connecte(request)["id"], q, type, page, tri)
     for a in res["annonces"]:
-        a.update(_sprites(a["nom"]))
+        a.update(_sprites(a["nom"], bool(a.get("shiny"))))
     return res
 
 
@@ -914,7 +918,7 @@ async def api_marketplace(request: Request, q: str = "", type: str = "toutes", p
 async def api_marketplace_mes(request: Request):
     res = echanges_service.mes_annonces(joueur_connecte(request)["id"])
     for a in res["annonces"]:
-        a.update(_sprites(a["nom"]))
+        a.update(_sprites(a["nom"], bool(a.get("shiny"))))
     return res
 
 
@@ -922,7 +926,7 @@ async def api_marketplace_mes(request: Request):
 async def api_marketplace_vendable(request: Request, q: str = ""):
     res = echanges_service.vendable(joueur_connecte(request)["id"], q)
     for c in res["captures"]:
-        c.update(_sprites(c["nom"]))
+        c.update(_sprites(c["nom"], bool(c.get("shiny"))))
     return res
 
 
@@ -953,7 +957,7 @@ async def api_echanges(request: Request):
     if res["echange"]:
         for cote in ("moi", "autre"):
             for p in res["echange"][cote]["pokemon"]:
-                p.update(_sprites(p["nom"]))
+                p.update(_sprites(p["nom"], bool(p.get("shiny"))))
     return res
 
 

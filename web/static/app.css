@@ -260,3 +260,15 @@ button .ico{width:26px;height:26px;margin:-4px 0}
 .gain .ico.gros{width:44px;height:44px}
 .msg .gain:first-child{margin-top:0}
 .msg.col{flex-direction:column;align-items:stretch;gap:2px}.msg.col>br{display:none}.msg.col .gain{margin-top:4px}
+
+/* sprites : boîte fixe, jamais déformés ni débordants (les GIF ont des largeurs très variables) */
+.mon img:not(.ico):not(.ti){width:116px;height:84px;object-fit:contain;object-position:center bottom}
+.vit img{width:84px;height:74px;object-fit:contain;object-position:center bottom}
+.side img{width:auto;height:auto;max-width:220px;max-height:150px;object-fit:contain}
+.side.adv img{max-width:190px;max-height:120px}
+.ligne>img:not(.ico){object-fit:contain}
+.msg img{max-width:96px;object-fit:contain}
+/* Pokémon chromatique */
+.mon.chroma{border-color:rgba(255,200,61,.55);background:linear-gradient(160deg,rgba(255,200,61,.12),var(--surface-2) 55%);box-shadow:0 0 0 1px rgba(255,200,61,.25) inset,0 0 18px rgba(255,200,61,.10)}
+.mon.chroma b{color:var(--gold)}
+.rang .ico{width:22px;height:22px}

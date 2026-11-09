@@ -200,9 +200,9 @@ async function pageEquipe(msgInitial){
   if(!eq.equipe.length)h+=`<p>Ton équipe est vide : ajoute des Pokémon ci-dessous.</p>`;
   h+=`<div class="grid">${eq.equipe.map((p,i)=>{
     const blesse=p.pv<p.pv_max;
-    return `<div class="mon ${p.pv<=0?"ko":""}"><img src="${esc(p.sprite||"")}" alt=""><div><b>${esc(p.nom)}</b> · Nv.${p.niveau}</div>${typesHTML(p.types)}${p.indisponible?`<div><small class="err">⏳ indisponible (exploration/caisson)</small></div>`:""}${barre(p.pv,p.pv_max)}<small>${p.pv}/${p.pv_max} PV · ${p.nb_attaques}/4 attaques</small>
+    return `<div class="mon ${p.pv<=0?"ko":""} ${p.shiny?"chroma":""}"><img src="${esc(p.sprite||"")}" alt=""><div><b>${esc(p.nom)}</b>${p.shiny?" ✨":""} · Nv.${p.niveau}</div>${typesHTML(p.types)}${p.indisponible?`<div><small class="err">⏳ indisponible (exploration/caisson)</small></div>`:""}${barre(p.pv,p.pv_max)}<small>${p.pv}/${p.pv_max} PV · ${p.nb_attaques}/4 attaques</small>
     <div class="rang"><button ${i===0?"disabled":""} onclick="${cb(()=>bouger(p.nom,-1))}">◀</button><button ${i===eq.equipe.length-1?"disabled":""} onclick="${cb(()=>bouger(p.nom,1))}">▶</button><button onclick="${cb(()=>pageAttaques(p.nom))}">⚔️</button><button class="danger" onclick="${cb(()=>retirer(p.nom))}">✕</button></div>
-    ${blesse&&!eq.en_combat?`<div class="rang">${potions.map(o=>`<button title="${esc(o.nom)}" onclick="${cb(()=>soigner(p.nom,o.cle))}">❤️ ${esc(o.nom.replace("Potion","Pot."))} ×${o.quantite}</button>`).join("")||"<small>Aucune potion</small>"}</div>`:""}</div>`}).join("")}</div>`;
+    ${blesse&&!eq.en_combat?`<div class="rang">${potions.map(o=>`<button title="${esc(o.nom)}" onclick="${cb(()=>soigner(p.nom,o.cle))}">${ico(o.cle)||"❤️ "}${esc(o.nom.replace("Potion","Pot."))} ×${o.quantite}</button>`).join("")||"<small>Aucune potion</small>"}</div>`:""}</div>`}).join("")}</div>`;
   h+=`<div class="actions"><button class="primary" onclick="${cb(()=>auto())}">🏆 Meilleure équipe</button><button onclick="${cb(()=>soinAuto())}" ${eq.en_combat?"disabled":""}>🩹 Soin auto</button></div></div>`;
   h+=`<div class="card"><h2>Équipes sauvegardées (${pr.presets.length}/${eq.taille_max_presets})</h2>${pr.presets.map(p=>`<div class="ligne"><b>${esc(p.nom)}</b> <small>${esc(p.pokemon.join(", "))}</small><span class="sp"></span><button onclick="${cb(()=>chargerPreset(p.nom))}">Charger</button><button class="danger" onclick="${cb(()=>supprPreset(p.nom))}">🗑️</button></div>`).join("")||"<small>Aucune.</small>"}
     <div class="ligne"><input id="nomPreset" maxlength="30" placeholder="Nom de l'équipe actuelle"><button onclick="${cb(()=>sauverPreset())}">💾 Sauvegarder</button></div></div>`;
@@ -215,7 +215,7 @@ async function majEspeces(){
   const r=await api(`/api/gestion/especes?tri=${encodeURIComponent(tri)}&q=${encodeURIComponent(rech)}`).catch(()=>null);
   if(!r||!$("#especes"))return;
   const base=H.length; // callbacks propres à ce bloc
-  el.innerHTML=r.especes.slice(0,60).map(p=>`<div class="mon"><img src="${esc(p.sprite||"")}" alt="" loading="lazy"><div><b>${esc(p.nom)}</b>${p.shiny?" ✨":""}</div>${typesHTML(p.types)}<small>${p.pc} PC</small>${p.rarete?rarete(p.rarete):""}${p.indisponible?`<small class="err">⏳ indisponible</small>`:""}<div class="rang"><button onclick="${cb(()=>ajouter(p.nom))}">➕ Ajouter</button></div></div>`).join("")||"<small>Aucun résultat.</small>";
+  el.innerHTML=r.especes.slice(0,60).map(p=>`<div class="mon ${p.shiny?"chroma":""}"><img src="${esc(p.sprite||"")}" alt="" loading="lazy"><div><b>${esc(p.nom)}</b>${p.shiny?" ✨":""}</div>${typesHTML(p.types)}<small>${p.pc} PC</small>${p.rarete?rarete(p.rarete):""}${p.indisponible?`<small class="err">⏳ indisponible</small>`:""}<div class="rang"><button onclick="${cb(()=>ajouter(p.nom))}">➕ Ajouter</button></div></div>`).join("")||"<small>Aucun résultat.</small>";
   if(r.especes.length>60)el.insertAdjacentHTML("beforeend",`<small>… ${r.especes.length-60} de plus : affine la recherche.</small>`);
 }
 const rechargerEquipe=m=>pageEquipe(m);
@@ -288,7 +288,7 @@ function listeDex(){
   const ordre={legendaire:0,hyper_rare:1,rare:2,peu_commun:3,commun:4};
   const L=window._dex.entrees.filter(e=>!f||e.nom.toLowerCase().includes(f));
   L.sort({nom:(a,b)=>a.nom.localeCompare(b.nom,"fr"),pc:(a,b)=>b.meilleur_pc-a.meilleur_pc,rarete:(a,b)=>(ordre[a.rarete]??9)-(ordre[b.rarete]??9),quantite:(a,b)=>b.quantite-a.quantite,numero:(a,b)=>(a.numero??1e9)-(b.numero??1e9)}[triDex]);
-  el.innerHTML=L.map(e=>`<div class="mon"><img src="${esc(e.sprite||"")}" alt="" loading="lazy"><div><b>${esc(e.nom)}</b>${e.shiny?" ✨":""}${e.favori?" ⭐":""}</div>${e.surnom?`<small>« ${esc(e.surnom)} »</small>`:""}${typesHTML(e.types)}<small>Nv.${e.niveau} · ${e.meilleur_pc} PC · ×${e.quantite}</small>${rarete(e.rarete)}</div>`).join("")||"<small>Aucun résultat.</small>";
+  el.innerHTML=L.map(e=>`<div class="mon ${e.shiny?"chroma":""}"><img src="${esc(e.sprite||"")}" alt="" loading="lazy"><div><b>${esc(e.nom)}</b>${e.shiny?" ✨":""}${e.favori?" ⭐":""}</div>${e.surnom?`<small>« ${esc(e.surnom)} »</small>`:""}${typesHTML(e.types)}<small>Nv.${e.niveau} · ${e.meilleur_pc} PC · ×${e.quantite}</small>${rarete(e.rarete)}</div>`).join("")||"<small>Aucun résultat.</small>";
 }
 
 /* ===== Explorer : apparitions, capture, PokéStop ===== */

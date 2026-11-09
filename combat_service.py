@@ -298,6 +298,7 @@ def _pokemon_json(combat_id: int, user_id: int, row, actif_nom: str, detail: boo
     if out["actif"]:
         statut = database.obtenir_statut(combat_id, user_id, row["pokemon_nom"])
         out["statut"] = statut[0] if statut else None
+        out["shiny"] = any(r["shiny"] for r in database.obtenir_pokedex_joueur(user_id) if r["pokemon_nom"] == actif_nom)
         boosts = database.obtenir_boosts(combat_id, user_id, row["pokemon_nom"])
         out["boosts"] = {k: v for k, v in boosts.items() if v}
     if detail:
