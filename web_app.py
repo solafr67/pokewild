@@ -38,6 +38,7 @@ import combat_service  # noqa: E402
 import combat_visuel  # noqa: E402
 import database  # noqa: E402
 import exploration_service  # noqa: E402
+import expedition_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
@@ -499,6 +500,45 @@ async def api_pokestop_etat(request: Request):
 @app.post("/api/explorer/pokestop")
 async def api_pokestop(request: Request):
     return exploration_service.pokestop_tourner(joueur_connecte(request)["id"])
+
+
+
+# ----------------------------------------------------------------------------
+# Centre des Explorations
+# ----------------------------------------------------------------------------
+
+class DemandeExpedition(BaseModel):
+    slot: int
+    destination: str
+    pokemon: list[str]
+    duree: str
+
+
+class DemandeRecuperation(BaseModel):
+    slot: int | None = None
+
+
+@app.get("/api/expeditions")
+async def api_expeditions(request: Request):
+    etat = expedition_service.etat(joueur_connecte(request)["id"])
+    for e in etat["especes"]:
+        e.update(_sprites(e["nom"]))
+    return etat
+
+
+@app.post("/api/expeditions/demarrer")
+async def api_expedition_demarrer(d: DemandeExpedition, request: Request):
+    return expedition_service.demarrer(joueur_connecte(request)["id"], d.slot, d.destination, d.pokemon, d.duree)
+
+
+@app.post("/api/expeditions/recuperer")
+async def api_expedition_recuperer(d: DemandeRecuperation, request: Request):
+    return expedition_service.recuperer(joueur_connecte(request)["id"], d.slot)
+
+
+@app.post("/api/expeditions/acheter-slot")
+async def api_expedition_slot(request: Request):
+    return expedition_service.acheter_slot(joueur_connecte(request)["id"])
 
 
 # ----------------------------------------------------------------------------

@@ -135,7 +135,7 @@ function fin(r){
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
-const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["equipe","⚔️ Équipe"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,equipe:pageEquipe,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
+const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -277,7 +277,7 @@ async function lancer_ball(id){
       if(d.nouvelle_entree)t+=`<br>📖 Nouvelle entrée dans ton Pokédex !`;
       if(d.trouvaille)t+=`<br>🎁 Trouvaille : ${esc(d.trouvaille)}`;
       for(const p of d.paliers)t+=`<br>🆙 Palier ${p.palier} : +${p.dollars} ₽ et ${esc(p.ball)}`;
-      if(d.montees_niveau)t+=`<br>📈 ${esc(d.montees_niveau)}`;
+      if(d.montees_niveau)t+=`<br>📈 ${fmt(d.montees_niveau).replace(/\n/g,'<br>')}`;
       for(const q of d.quetes_completees)t+=`<br>✅ Quête : ${esc(q.nom||"")}`;
       r.innerHTML=t+"</div>";
     }
@@ -292,12 +292,62 @@ async function tournerStop(){
     for(const o of d.objets)t+=`<br>🎁 ${o.quantite}× ${esc(o.nom)}`;
     if(d.sac_plein)t+=`<br>🎒 Ton sac est plein : pas d'objets cette fois.`;
     for(const p of d.paliers)t+=`<br>🆙 Palier ${p.palier} : +${p.dollars} ₽ et ${esc(p.ball)}`;
-    if(d.montees_niveau)t+=`<br>📈 ${esc(d.montees_niveau)}`;
+    if(d.montees_niveau)t+=`<br>📈 ${fmt(d.montees_niveau).replace(/\n/g,'<br>')}`;
     for(const q of d.quetes_completees)t+=`<br>✅ Quête : ${esc(q.nom||"")}`;
     r.innerHTML=t+"</div>";
   }catch(e){if(e.code===401)return connexion();r.innerHTML=`<div class="msg err">${esc(e.message)}</div>`}
   majExplorer();majEntete();
 }
+
+/* ===== Explorations ===== */
+let expForm=null; // {slot,dest,duree,pokes:[]}
+const dureeTxt=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return h?`${h}h ${String(m).padStart(2,"0")}m`:m?`${m}m ${String(x).padStart(2,"0")}s`:`${x}s`};
+async function pageExplorations(msgInitial){
+  clearInterval(minuteur); H=[]; expForm=null;
+  app.innerHTML=nav("explorations")+`<div id="msg">${msgInitial?`<div class="msg">${msgInitial}</div>`:""}</div><div class="card"><h2>🗺️ Mes explorations</h2><div id="slots">Chargement…</div></div><div id="formExp"></div>`;
+  await majExplorations(); minuteur=setInterval(majExplorations,5000);
+}
+async function majExplorations(){
+  if(!$("#slots")){clearInterval(minuteur);return}
+  let d;try{d=await api("/api/expeditions")}catch(e){clearInterval(minuteur);return e.code===401?connexion():flash(e.message,true)}
+  if(!$("#slots"))return;
+  window._exp=d; const hb=H.length;
+  const carte=(s,faille)=>s.libre?`<div class="mon"><b>${faille?"🌀 Emplacement Faille":"Emplacement "+s.slot}</b><div><small>Libre${faille?" — la Faille est ouverte !":""}</small></div><div class="rang"><button class="primary" onclick="${cb(()=>ouvrirForm(s.slot,faille))}">Envoyer une équipe</button></div></div>`
+    :`<div class="mon ${s.prete?"choisi":""}"><b>${faille?"🌀 Faille":"Emplacement "+s.slot}</b><div>${s.destination_emoji||""} ${esc(s.destination_nom||"")} · ${esc(s.duree||"")}</div><small>${s.pokemon.map(esc).join(", ")}</small>${s.evenement?`<small>💬 ${esc(s.evenement)}</small>`:""}<div>${s.prete?"✅ Prête !":"⏳ "+dureeTxt(s.secondes_restantes)}</div>${s.prete?`<div class="rang"><button class="primary" onclick="${cb(()=>recupererExp(s.slot))}">🎁 Récupérer</button></div>`:""}</div>`;
+  let h=d.slots.map(s=>carte(s,false)).join("")+(d.faille?carte(d.faille,true):"");
+  $("#slots").innerHTML=`<div class="grid">${h}</div><div class="actions">${d.nb_prets>1?`<button class="primary" onclick="${cb(()=>recupererExp(null))}">🎁 Tout récupérer (${d.nb_prets})</button>`:""}${d.slot_supplementaire.achetable?`<button onclick="${cb(()=>acheterSlotExp())}" ${d.poke_dollars<d.slot_supplementaire.prix?"disabled":""}>➕ 2e emplacement — ${d.slot_supplementaire.prix} ₽</button>`:""}</div>`;
+}
+function ouvrirForm(slot,faille){
+  const d=window._exp; expForm={slot,dest:faille?"faille":null,duree:faille?"1h":"1h",pokes:[]}; if(faille)expForm.dest="faille";
+  rendreForm();$("#formExp").scrollIntoView({behavior:"smooth"});
+}
+function rendreForm(){
+  const d=window._exp,f=expForm;if(!f)return $("#formExp").innerHTML="";
+  H.length=Math.min(H.length,H.length); const base=H.length;
+  const dests=d.destinations.filter(x=>f.slot===99?x.cle==="faille":x.cle!=="faille");
+  let h=`<div class="card"><h2>Nouvelle exploration — emplacement ${f.slot===99?"Faille":f.slot}</h2><div class="grid">${dests.map(x=>`<button class="${f.dest===x.cle?"primary":""}" onclick="${cb(()=>{f.dest=x.cle;if(x.cle==="faille")f.duree="1h";f.pokes=f.pokes;rendreForm()})}">${x.emoji} ${esc(x.nom)}<br><small>${x.types?x.types.map(esc).join("/"):"Tous types"}</small></button>`).join("")}</div>`;
+  const dsel=d.destinations.find(x=>x.cle===f.dest);
+  if(dsel){
+    h+=`<p><small>${esc(dsel.description)}</small></p><div class="actions">${dsel.durees.map(x=>`<button class="${f.duree===x?"primary":""}" onclick="${cb(()=>{f.duree=x;rendreForm()})}">⏱️ ${x}</button>`).join("")}</div>`;
+    const aff=f.pokes.filter(n=>(d.especes.find(e=>e.nom===n)||{affinites:[]}).affinites.includes(f.dest)).length;
+    h+=`<h2 style="margin-top:12px">Choisis ${d.taille_equipe} Pokémon (${f.pokes.length}/${d.taille_equipe}) ${aff>=d.nb_affinite_requis?"✨ bonus d'affinité !":""}</h2><div class="grid">${d.especes.slice(0,80).map(e=>{const on=f.pokes.includes(e.nom),sp=e.affinites.includes(f.dest);return `<div class="mon ${on?"choisi":""}" onclick="${cb(()=>{if(on)f.pokes=f.pokes.filter(x=>x!==e.nom);else if(f.pokes.length<d.taille_equipe)f.pokes.push(e.nom);rendreForm()})}" style="cursor:pointer"><img src="${esc(e.sprite||"")}" alt="" loading="lazy"><div><b>${sp?"✨ ":""}${esc(e.nom)}</b></div><small>${e.pc} PC</small></div>`}).join("")}</div>`;
+    h+=`<div class="actions"><button class="primary" ${f.pokes.length===d.taille_equipe?"":"disabled"} onclick="${cb(()=>lancerExp())}">🚀 Partir en exploration</button><button onclick="${cb(()=>{expForm=null;rendreForm()})}">Annuler</button></div>`;
+  }
+  $("#formExp").innerHTML=h+"</div>";
+}
+const lancerExp=()=>act(async()=>{const f=expForm;const r=await api("/api/expeditions/demarrer",{slot:f.slot,destination:f.dest,pokemon:f.pokes,duree:f.duree});pageExplorations(`🚀 Ton équipe part explorer pour ${esc(r.duree)} !`)});
+const acheterSlotExp=()=>act(async()=>{await api("/api/expeditions/acheter-slot",{});await majEntete();pageExplorations("2e emplacement débloqué !")});
+const recupererExp=s=>act(async()=>{
+  const r=await api("/api/expeditions/recuperer",{slot:s});
+  let t=`🎁 ${r.nb} exploration(s) récupérée(s) ! +${r.dollars} ₽ · +${r.xp} XP`;
+  for(const x of r.details){t+=`<br>• ${x.emoji||""} ${esc(x.pokemon.join(", "))}${x.cristal?" + 🔮":""}${x.affinite?" ✨":""}${x.evenement?`<br>&nbsp;&nbsp;💬 En chemin, ton équipe ${esc(x.evenement)}`:""}`}
+  if(r.cristaux)t+=`<br>🔮 +${r.cristaux} Cristal(aux) de Mutation`;
+  for(const o of r.oeufs)t+=`<br>🥚 +1 ${esc(o)}`;
+  for(const o of r.objets_forme)t+=`<br>💎 +1 ${esc(o)} — objet rarissime !`;
+  if(r.montees_niveau)t+=`<br>📈 ${fmt(r.montees_niveau).replace(/\n/g,'<br>')}`;
+  for(const q of r.quetes_completees)t+=`<br>✅ Quête : ${esc(q.nom||"")}`;
+  await majEntete();pageExplorations(t);
+});
 
 accueil();
 </script>
