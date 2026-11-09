@@ -46,6 +46,7 @@ import modes_service  # noqa: E402
 import pvp_service  # noqa: E402
 import casino_service  # noqa: E402
 import collection_service  # noqa: E402
+import duo_service  # noqa: E402
 import echanges_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
@@ -71,12 +72,21 @@ def _lancer_boucle(combat_id: int):
     _boucles[combat_id] = asyncio.create_task(combat_service.boucle_combat(combat_id))
 
 
+def _lancer_boucle_duo(combat_id: int):
+    tache = _boucles.get(-combat_id)
+    if tache and not tache.done():
+        return
+    _boucles[-combat_id] = asyncio.create_task(duo_service.boucle(combat_id))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     combat_service._init_tables()
     exploration_service._init_tables()
     for combat_id in combat_service.combats_web_actifs():
         _lancer_boucle(combat_id)
+    for combat_id in duo_service.duos_web_actifs():
+        _lancer_boucle_duo(combat_id)
     boucle_spawns = asyncio.create_task(exploration_service.boucle_spawns())
     yield
     boucle_spawns.cancel()
@@ -189,7 +199,8 @@ def _combat_courant(user_id: int) -> dict:
     row = database.combat_en_cours_pour_joueur(user_id)
     if row is None:
         return {"combat_id": None, "source": None}
-    return {"combat_id": row["id"], "source": "web" if combat_service.est_combat_web(row["id"]) else "discord"}
+    source = "duo" if duo_service.est_duo(row["id"]) else "web" if combat_service.est_combat_web(row["id"]) else "discord"
+    return {"combat_id": row["id"], "source": source}
 
 
 @app.get("/api/moi")
@@ -1054,6 +1065,70 @@ async def api_raid_soigner(d: DemandeRaid, request: Request):
 @app.post("/api/raids/capturer")
 async def api_raid_capturer(d: DemandeRaid, request: Request):
     return raid_service.capturer(joueur_connecte(request)["id"], d.raid_id)
+
+
+class DemandeDuo(BaseModel):
+    archetype: str
+
+
+class DemandeActionDuo(BaseModel):
+    cle: str
+    type: str = ""
+    valeur: str = ""
+    cible: str = ""
+
+
+@app.get("/api/duo")
+async def api_duo(request: Request):
+    res = duo_service.liste(joueur_connecte(request)["id"])
+    return res
+
+
+@app.post("/api/duo/demarrer")
+async def api_duo_demarrer(d: DemandeDuo, request: Request):
+    j = joueur_connecte(request)
+    res = await duo_service.demarrer(j["id"], j["pseudo"], d.archetype)
+    _lancer_boucle_duo(res["combat_id"])
+    return res
+
+
+@app.get("/api/duo/est/{combat_id}")
+async def api_duo_est(combat_id: int, request: Request):
+    joueur_connecte(request)
+    return {"duo": duo_service.est_duo(combat_id)}
+
+
+def _duo_sprites(e: dict) -> dict:
+    for liste in (e.get("equipe") or [],):
+        for m in liste:
+            m["sprite"] = _sprites(m["nom"])["sprite"]
+    for s in e.get("sieges") or []:
+        if s.get("actif"):
+            s["actif"].update(_sprites(s["actif"]["nom"]))
+    for a in e.get("adverses") or []:
+        if a.get("actif"):
+            a["actif"].update(_sprites(a["actif"]["nom"]))
+    return e
+
+
+@app.get("/api/duo/{combat_id}")
+async def api_duo_etat(combat_id: int, request: Request):
+    return _duo_sprites(duo_service.etat(combat_id, joueur_connecte(request)["id"]))
+
+
+@app.post("/api/duo/{combat_id}/agir")
+async def api_duo_agir(combat_id: int, d: DemandeActionDuo, request: Request):
+    return duo_service.agir(combat_id, joueur_connecte(request)["id"], d.cle, d.type, d.valeur, d.cible)
+
+
+@app.post("/api/duo/{combat_id}/remplacant")
+async def api_duo_remplacant(combat_id: int, d: DemandeActionDuo, request: Request):
+    return duo_service.remplacant(combat_id, joueur_connecte(request)["id"], d.cle, d.valeur)
+
+
+@app.post("/api/duo/{combat_id}/abandonner")
+async def api_duo_abandonner(combat_id: int, request: Request):
+    return duo_service.abandonner(combat_id, joueur_connecte(request)["id"])
 
 
 # ----------------------------------------------------------------------------
