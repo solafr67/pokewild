@@ -272,3 +272,4 @@ button .ico{width:26px;height:26px;margin:-4px 0}
 .mon.chroma{border-color:rgba(255,200,61,.55);background:linear-gradient(160deg,rgba(255,200,61,.12),var(--surface-2) 55%);box-shadow:0 0 0 1px rgba(255,200,61,.25) inset,0 0 18px rgba(255,200,61,.10)}
 .mon.chroma b{color:var(--gold)}
 .rang .ico{width:22px;height:22px}
+.clan{display:inline-block;width:14px;height:14px;margin-right:6px;border-radius:50%;background:var(--tc);box-shadow:0 0 0 2px rgba(255,255,255,.18) inset,0 0 8px color-mix(in srgb,var(--tc) 45%,transparent);vertical-align:-2px}
