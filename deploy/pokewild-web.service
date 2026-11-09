@@ -1,0 +1,12 @@
+[Unit]
+Description=PokéWild — site web
+After=network.target
+
+[Service]
+WorkingDirectory=/root/pokewild
+EnvironmentFile=/root/pokewild/.env.web
+ExecStart=/root/venv-web/bin/uvicorn web_app:app --host 127.0.0.1 --port 8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -30,6 +30,11 @@ button.primary{background:var(--acc);border-color:var(--acc);color:#fff}button.d
 #log{font-size:13px;line-height:1.5;max-height:200px;overflow:auto;white-space:pre-wrap}
 .msg{padding:8px 12px;border-radius:8px;background:var(--bord);margin-top:8px;font-size:13px}.err{color:var(--bad)}
 .fin{text-align:center;padding:20px}.fin h2{font-size:22px}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.tag{display:inline-block;font-size:11px;padding:0 6px;margin:1px;border-radius:8px;background:var(--bord)}
+.rang{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:6px}.rang button{padding:3px 7px;font-size:12px}
+.ligne{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:5px 0;border-bottom:1px solid var(--bord)}.ligne:last-child{border-bottom:0}.sp{flex:1}
+input,select{font:inherit;padding:6px 8px;border:1px solid var(--bord);border-radius:8px;background:var(--card);color:var(--txt)}
+.liste{max-height:430px;overflow:auto}.mon.choisi{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}.mon small{display:block;color:var(--mut)}
 </style>
 </head>
 <body>
@@ -59,10 +64,10 @@ async function accueil(){
   $("#avatar").hidden=!moi.avatar; if(moi.avatar)$("#avatar").src=moi.avatar;
   $("#infos").textContent=`${moi.pseudo} · Nv.${moi.niveau} · ${moi.poke_dollars} ₽`; $("#sortie").hidden=false;
   const [eq,dr]=await Promise.all([api("/api/equipe"),api("/api/dresseurs")]);
-  let html=""; H=[];
+  H=[]; let html=nav("accueil");
   if(moi.combat.combat_id&&moi.combat.source==="web")html+=`<div class="card">Un combat est en cours. <button class="primary" onclick="combat(${moi.combat.combat_id})">Reprendre</button></div>`;
   else if(moi.combat.combat_id)html+=`<div class="card">Tu es déjà en combat sur Discord : termine-le avant d'en lancer un ici.</div>`;
-  html+=`<div class="card"><h2>Mon équipe de combat</h2>`+(eq.equipe.length?`<div class="grid">${eq.equipe.map(p=>`<div class="mon ${p.pv<=0?"ko":""}"><img src="${esc(p.sprite||"")}" alt=""><div><b>${esc(p.nom)}</b> · Nv.${p.niveau}</div>${barre(p.pv,p.pv_max)}<small>${p.pv}/${p.pv_max} PV</small></div>`).join("")}</div>`:`<p>Ton équipe de combat est vide. Compose-la depuis Discord (<code>/equipe-combat</code>).</p>`)+`</div>`;
+  html+=`<div class="card"><h2>Mon équipe de combat</h2>`+(eq.equipe.length?`<div class="grid">${eq.equipe.map(p=>`<div class="mon ${p.pv<=0?"ko":""}"><img src="${esc(p.sprite||"")}" alt=""><div><b>${esc(p.nom)}</b> · Nv.${p.niveau}</div>${barre(p.pv,p.pv_max)}<small>${p.pv}/${p.pv_max} PV</small></div>`).join("")}</div>`:`<p>Ton équipe de combat est vide. <button class="primary" onclick="pageEquipe()">Composer mon équipe</button></p>`)+`<div class="actions"><button onclick="pageEquipe()">⚔️ Gérer l'équipe</button></div></div>`;
   html+=`<div class="card"><h2>Défier un dresseur</h2><div class="grid">${dr.dresseurs.map(d=>`<button onclick="${cb(()=>lancer(d.nom))}">${d.emoji} ${esc(d.nom)}<br><small>Tier ${d.tier}</small></button>`).join("")}<button class="primary" onclick="${cb(()=>lancer(null))}">🎲 Au hasard</button></div><div id="msg"></div></div>`;
   app.innerHTML=html;
 }
@@ -127,6 +132,119 @@ function fin(r){
   for(const q of (g?g.quetes_completees:[]))t+=`<br>✅ Quête : ${esc(q.nom||"")}`;
   return `<div class="card fin"><h2>${ti}</h2><p>${t}</p><button class="primary" onclick="accueil()">Retour</button></div>`;
 }
+/* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
+const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
+const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
+const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["equipe","⚔️ Équipe"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,equipe:pageEquipe,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
+function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
+async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
+const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
+let tri="alphabetique", rech="";
+
+async function pageEquipe(msgInitial){
+  clearInterval(minuteur);
+  let eq,inv,pr;
+  try{[eq,inv,pr]=await Promise.all([api("/api/gestion/equipe"),api("/api/gestion/inventaire"),api("/api/gestion/presets")])}
+  catch(e){return e.code===401?connexion():app.innerHTML=`<p class="err">${esc(e.message)}</p>`}
+  H=[];
+  const potions=inv.objets.filter(o=>o.potion);
+  let h=nav("equipe")+`<div id="msg">${msgInitial?`<div class="msg">${esc(msgInitial)}</div>`:""}</div>`;
+  h+=`<div class="card"><h2>Mon équipe de combat (${eq.equipe.length}/${eq.taille_max})</h2>`;
+  if(eq.en_combat)h+=`<div class="msg">Un combat est en cours : les soins sont bloqués (utilise les potions dans le combat).</div>`;
+  if(!eq.equipe.length)h+=`<p>Ton équipe est vide : ajoute des Pokémon ci-dessous.</p>`;
+  h+=`<div class="grid">${eq.equipe.map((p,i)=>{
+    const blesse=p.pv<p.pv_max;
+    return `<div class="mon ${p.pv<=0?"ko":""}"><img src="${esc(p.sprite||"")}" alt=""><div><b>${esc(p.nom)}</b> · Nv.${p.niveau}</div>${typesHTML(p.types)}${p.indisponible?`<div><small class="err">⏳ indisponible (exploration/caisson)</small></div>`:""}${barre(p.pv,p.pv_max)}<small>${p.pv}/${p.pv_max} PV · ${p.nb_attaques}/4 attaques</small>
+    <div class="rang"><button ${i===0?"disabled":""} onclick="${cb(()=>bouger(p.nom,-1))}">◀</button><button ${i===eq.equipe.length-1?"disabled":""} onclick="${cb(()=>bouger(p.nom,1))}">▶</button><button onclick="${cb(()=>pageAttaques(p.nom))}">⚔️</button><button class="danger" onclick="${cb(()=>retirer(p.nom))}">✕</button></div>
+    ${blesse&&!eq.en_combat?`<div class="rang">${potions.map(o=>`<button title="${esc(o.nom)}" onclick="${cb(()=>soigner(p.nom,o.cle))}">❤️ ${esc(o.nom.replace("Potion","Pot."))} ×${o.quantite}</button>`).join("")||"<small>Aucune potion</small>"}</div>`:""}</div>`}).join("")}</div>`;
+  h+=`<div class="actions"><button class="primary" onclick="${cb(()=>auto())}">🏆 Meilleure équipe</button><button onclick="${cb(()=>soinAuto())}" ${eq.en_combat?"disabled":""}>🩹 Soin auto</button></div></div>`;
+  h+=`<div class="card"><h2>Équipes sauvegardées (${pr.presets.length}/${eq.taille_max_presets})</h2>${pr.presets.map(p=>`<div class="ligne"><b>${esc(p.nom)}</b> <small>${esc(p.pokemon.join(", "))}</small><span class="sp"></span><button onclick="${cb(()=>chargerPreset(p.nom))}">Charger</button><button class="danger" onclick="${cb(()=>supprPreset(p.nom))}">🗑️</button></div>`).join("")||"<small>Aucune.</small>"}
+    <div class="ligne"><input id="nomPreset" maxlength="30" placeholder="Nom de l'équipe actuelle"><button onclick="${cb(()=>sauverPreset())}">💾 Sauvegarder</button></div></div>`;
+  h+=`<div class="card"><h2>Ajouter un Pokémon</h2><div class="ligne"><input id="rech" placeholder="🔍 Rechercher" value="${esc(rech)}" oninput="rech=this.value;majEspeces()"><select id="tri" onchange="tri=this.value;majEspeces()">${[["alphabetique","Alphabétique"],["rarete","Rareté"],["pc_desc","PC : fort → faible"],["pc_asc","PC : faible → fort"]].map(([v,l])=>`<option value="${v}" ${v===tri?"selected":""}>${l}</option>`).join("")}</select></div><div id="especes" class="grid"></div></div>`;
+  app.innerHTML=h; majEspeces();
+  window._eqPleine=eq.equipe.length>=eq.taille_max;
+}
+async function majEspeces(){
+  const el=$("#especes");if(!el)return;
+  const r=await api(`/api/gestion/especes?tri=${encodeURIComponent(tri)}&q=${encodeURIComponent(rech)}`).catch(()=>null);
+  if(!r||!$("#especes"))return;
+  const base=H.length; // callbacks propres à ce bloc
+  el.innerHTML=r.especes.slice(0,60).map(p=>`<div class="mon"><img src="${esc(p.sprite||"")}" alt="" loading="lazy"><div><b>${esc(p.nom)}</b>${p.shiny?" ✨":""}</div>${typesHTML(p.types)}<small>${p.pc} PC${p.rarete?" · "+esc(RARETES[p.rarete]||p.rarete):""}</small>${p.indisponible?`<small class="err">⏳ indisponible</small>`:""}<div class="rang"><button onclick="${cb(()=>ajouter(p.nom))}">➕ Ajouter</button></div></div>`).join("")||"<small>Aucun résultat.</small>";
+  if(r.especes.length>60)el.insertAdjacentHTML("beforeend",`<small>… ${r.especes.length-60} de plus : affine la recherche.</small>`);
+}
+const rechargerEquipe=m=>pageEquipe(m);
+const ajouter=n=>act(async()=>{await api("/api/gestion/equipe/ajouter",{nom:n});rechargerEquipe()});
+const retirer=n=>act(async()=>{await api("/api/gestion/equipe/retirer",{nom:n});rechargerEquipe()});
+const bouger=(n,d)=>act(async()=>{await api("/api/gestion/equipe/deplacer",{nom:n,direction:d});rechargerEquipe()});
+const auto=()=>act(async()=>{await api("/api/gestion/equipe/auto",{});rechargerEquipe("Équipe composée avec tes meilleurs Pokémon disponibles.")});
+const soigner=(n,p)=>act(async()=>{await api("/api/gestion/soigner",{nom:n,potion:p});rechargerEquipe()});
+const soinAuto=()=>act(async()=>{const r=await api("/api/gestion/soin-auto",{});rechargerEquipe(`Soins : ${r.potions_utilisees} potion(s) utilisée(s).`)});
+const sauverPreset=()=>act(async()=>{await api("/api/gestion/presets/sauvegarder",{nom:sel("nomPreset")});rechargerEquipe("Équipe sauvegardée.")});
+const chargerPreset=n=>act(async()=>{const r=await api("/api/gestion/presets/charger",{nom:n});rechargerEquipe(r.manquants.length?`Chargée (introuvables : ${r.manquants.join(", ")}).`:"Équipe chargée.")});
+const supprPreset=n=>act(async()=>{await api("/api/gestion/presets/supprimer",{nom:n});rechargerEquipe()});
+
+/* --- Attaques d'un Pokémon --- */
+let slotSel=1, filtreAtt="", seulementEquipables=false;
+async function pageAttaques(nom,msgInitial){
+  let d;
+  try{d=await api("/api/gestion/attaques/"+encodeURIComponent(nom))}catch(e){return e.code===401?connexion():pageEquipe(e.message)}
+  H=[];
+  const eqp=d.equipees;
+  let h=nav("equipe")+`<div id="msg">${msgInitial?`<div class="msg">${esc(msgInitial)}</div>`:""}</div><div class="card"><h2>⚔️ Attaques de ${esc(d.nom)} · Nv.${d.niveau} ${typesHTML(d.types)}</h2><div class="grid">`;
+  for(let s=1;s<=4;s++){const a=eqp[s];h+=`<div class="mon ${s===slotSel?"choisi":""}" onclick="${cb(()=>{slotSel=s;pageAttaques(nom)})}"><b>Emplacement ${s}</b><div>${a?`${esc(a.nom)}<br><small>${esc(a.type||"")} · ${a.puissance?a.puissance+" pcs":"statut"}</small>`:"<small>vide</small>"}</div>${a?`<div class="rang"><button class="danger" onclick="event.stopPropagation();${cb(()=>viderAtt(nom,s))}">Vider</button></div>`:""}</div>`}
+  h+=`</div><div class="actions"><button onclick="${cb(()=>aleaAtt(nom))}">🎲 Attaques aléatoires</button><button onclick="${cb(()=>pageEquipe())}">↩️ Retour à l'équipe</button><span class="pill">Solde : ${d.poke_dollars} ₽</span></div>`;
+  if(d.a_venir.length)h+=`<p><small>🔒 À venir : ${d.a_venir.slice(0,4).map(a=>esc(a.nom)+" (niv. "+a.niveau+")").join(", ")}${d.a_venir.length>4?" …":""}</small></p>`;
+  h+=`</div><div class="card"><h2>Choisir l'attaque de l'emplacement ${slotSel}</h2><div class="ligne"><input placeholder="🔍 Filtrer" value="${esc(filtreAtt)}" oninput="filtreAtt=this.value;listeAtt()"><label><input type="checkbox" ${seulementEquipables?"checked":""} onchange="seulementEquipables=this.checked;listeAtt()"> Équipables seulement</label></div><div id="listeAtt" class="liste"></div></div>`;
+  app.innerHTML=h; window._att={nom,d}; listeAtt();
+}
+function listeAtt(){
+  const {nom,d}=window._att, el=$("#listeAtt");if(!el)return;
+  const dejaSlot={};for(const[s,a]of Object.entries(d.equipees))dejaSlot[a.nom]=s;
+  const f=filtreAtt.trim().toLowerCase();
+  el.innerHTML=d.disponibles.filter(a=>(!f||a.nom.toLowerCase().includes(f))&&(!seulementEquipables||a.equipable)).map(a=>{
+    let bouton;
+    if(dejaSlot[a.nom])bouton=`<small>Emplacement ${dejaSlot[a.nom]}</small>`;
+    else if(a.equipable)bouton=`<button onclick="${cb(()=>equiperAtt(nom,slotSel,a.nom))}">Équiper</button>`;
+    else bouton=`<button onclick="${cb(()=>acheterCT(nom,a.nom))}" ${d.poke_dollars<a.prix?"disabled":""}>🎟️ Acheter ${a.prix} ₽</button>`;
+    return `<div class="ligne"><b>${esc(a.nom)}</b><small>${esc(a.type||"")} · ${a.puissance?a.puissance+" pcs":"statut"} · ${a.precision?a.precision+"%":"infaillible"}${a.necessite_ct?(a.ct_possedee?" · 🎟️ CT possédée":" · 🔒 CT requise"):""}</small><span class="sp"></span>${bouton}</div>`}).join("")||"<small>Aucune attaque.</small>";
+}
+const equiperAtt=(n,s,a)=>act(async()=>{await api("/api/gestion/attaques/equiper",{nom:n,slot:s,attaque:a});pageAttaques(n)});
+const viderAtt=(n,s)=>act(async()=>{await api("/api/gestion/attaques/vider",{nom:n,slot:s});pageAttaques(n)});
+const aleaAtt=n=>act(async()=>{await api("/api/gestion/attaques/aleatoires",{nom:n});pageAttaques(n,"Attaques tirées au hasard.")});
+const acheterCT=(n,a)=>act(async()=>{const r=await api("/api/gestion/ct/acheter",{attaque:a});pageAttaques(n,`CT de ${a} achetée (${r.cout} ₽). Tu peux maintenant l'équiper.`)});
+
+/* --- Inventaire --- */
+async function pageInventaire(msgInitial){
+  clearInterval(minuteur);
+  let d;try{d=await api("/api/gestion/inventaire")}catch(e){return e.code===401?connexion():app.innerHTML=`<p class="err">${esc(e.message)}</p>`}
+  H=[];
+  const cats=[["soin","❤️ Soins"],["ball","⚪ Balls"],["objet","🎒 Objets"]];
+  let h=nav("inventaire")+`<div id="msg">${msgInitial?`<div class="msg">${esc(msgInitial)}</div>`:""}</div>`;
+  if(!d.objets.length)h+=`<div class="card"><p>Ton inventaire est vide.</p></div>`;
+  for(const[k,l]of cats){const o=d.objets.filter(x=>x.categorie===k);if(!o.length)continue;
+    h+=`<div class="card"><h2>${l}</h2>${o.map((x,i)=>`<div class="ligne"><b>${esc(x.nom)}</b> ×${x.quantite}<span class="sp"></span><input type="number" min="1" max="${x.quantite}" value="1" id="q_${esc(x.cle)}" style="width:70px"><button class="danger" onclick="${cb(()=>supprObjet(x.cle))}">🗑️ Jeter</button></div>`).join("")}</div>`}
+  h+=`<div class="card"><small>Solde : ${d.poke_dollars} ₽. Pour soigner un Pokémon, va dans l'onglet Équipe.</small></div>`;
+  app.innerHTML=h;
+}
+const supprObjet=c=>act(async()=>{const q=parseInt(sel("q_"+c))||1;await api("/api/gestion/inventaire/supprimer",{cle:c,quantite:q});pageInventaire(`${q} objet(s) jeté(s).`)});
+
+/* --- Pokédex --- */
+let rechDex="", triDex="numero";
+async function pagePokedex(){
+  clearInterval(minuteur);
+  let d;try{d=await api("/api/gestion/pokedex")}catch(e){return e.code===401?connexion():app.innerHTML=`<p class="err">${esc(e.message)}</p>`}
+  H=[];window._dex=d;
+  app.innerHTML=nav("pokedex")+`<div class="card"><h2>📖 Pokédex : ${d.possedees} / ${d.total_especes} espèces</h2><div class="bar"><i style="width:${d.possedees/d.total_especes*100}%"></i></div><div class="ligne" style="margin-top:10px"><input placeholder="🔍 Rechercher" value="${esc(rechDex)}" oninput="rechDex=this.value;listeDex()"><select onchange="triDex=this.value;listeDex()">${[["numero","N° Pokédex"],["nom","Nom"],["pc","PC max"],["rarete","Rareté"],["quantite","Quantité"]].map(([v,l])=>`<option value="${v}" ${v===triDex?"selected":""}>${l}</option>`).join("")}</select></div><div id="dex" class="grid" style="margin-top:10px"></div></div>`;
+  listeDex();
+}
+function listeDex(){
+  const el=$("#dex");if(!el)return;const f=rechDex.trim().toLowerCase();
+  const ordre={legendaire:0,hyper_rare:1,rare:2,peu_commun:3,commun:4};
+  const L=window._dex.entrees.filter(e=>!f||e.nom.toLowerCase().includes(f));
+  L.sort({nom:(a,b)=>a.nom.localeCompare(b.nom,"fr"),pc:(a,b)=>b.meilleur_pc-a.meilleur_pc,rarete:(a,b)=>(ordre[a.rarete]??9)-(ordre[b.rarete]??9),quantite:(a,b)=>b.quantite-a.quantite,numero:(a,b)=>(a.numero??1e9)-(b.numero??1e9)}[triDex]);
+  el.innerHTML=L.map(e=>`<div class="mon"><img src="${esc(e.sprite||"")}" alt="" loading="lazy"><div><b>${esc(e.nom)}</b>${e.shiny?" ✨":""}${e.favori?" ⭐":""}</div>${e.surnom?`<small>« ${esc(e.surnom)} »</small>`:""}${typesHTML(e.types)}<small>Nv.${e.niveau} · ${e.meilleur_pc} PC · ×${e.quantite}</small><small>${esc(RARETES[e.rarete]||"")}</small></div>`).join("")||"<small>Aucun résultat.</small>";
+}
+
 accueil();
 </script>
 </body>

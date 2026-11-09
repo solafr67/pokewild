@@ -37,6 +37,7 @@ import combat as combat_module  # noqa: E402
 import combat_service  # noqa: E402
 import combat_visuel  # noqa: E402
 import database  # noqa: E402
+import gestion_service  # noqa: E402
 import leveling  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
 from pokemon_data import obtenir_pokemon_par_nom, sprite_pokemon  # noqa: E402
@@ -276,6 +277,182 @@ async def api_remplacant(combat_id: int, demande: DemandeRemplacant, request: Re
 async def api_abandon(combat_id: int, request: Request):
     joueur = joueur_connecte(request)
     return combat_service.abandonner(combat_id, joueur["id"])
+
+
+
+# ----------------------------------------------------------------------------
+# Gestion du compte : équipe, soins, attaques, inventaire, Pokédex
+# ----------------------------------------------------------------------------
+
+class DemandeNom(BaseModel):
+    nom: str
+
+
+class DemandeDeplacer(BaseModel):
+    nom: str
+    direction: int
+
+
+class DemandeSoin(BaseModel):
+    nom: str
+    potion: str
+
+
+class DemandeAttaque(BaseModel):
+    nom: str
+    slot: int
+    attaque: str | None = None
+
+
+class DemandeCT(BaseModel):
+    attaque: str
+
+
+class DemandeSuppression(BaseModel):
+    cle: str
+    quantite: int
+
+
+def _equipe_enrichie(uid: int) -> dict:
+    etat = gestion_service.etat_equipe(uid)
+    for p in etat["equipe"]:
+        p.update(_sprites(p["nom"]))
+    return etat
+
+
+@app.get("/api/gestion/equipe")
+async def api_gestion_equipe(request: Request):
+    return _equipe_enrichie(joueur_connecte(request)["id"])
+
+
+@app.get("/api/gestion/especes")
+async def api_gestion_especes(request: Request, tri: str = "alphabetique", q: str = ""):
+    uid = joueur_connecte(request)["id"]
+    especes = gestion_service.especes_possedees(uid, tri, q)
+    for e in especes:
+        e.update(_sprites(e["nom"]))
+    return {"especes": especes}
+
+
+@app.post("/api/gestion/equipe/ajouter")
+async def api_equipe_ajouter(d: DemandeNom, request: Request):
+    uid = joueur_connecte(request)["id"]
+    gestion_service.ajouter_equipe(uid, d.nom)
+    return _equipe_enrichie(uid)
+
+
+@app.post("/api/gestion/equipe/retirer")
+async def api_equipe_retirer(d: DemandeNom, request: Request):
+    uid = joueur_connecte(request)["id"]
+    gestion_service.retirer_equipe(uid, d.nom)
+    return _equipe_enrichie(uid)
+
+
+@app.post("/api/gestion/equipe/deplacer")
+async def api_equipe_deplacer(d: DemandeDeplacer, request: Request):
+    uid = joueur_connecte(request)["id"]
+    gestion_service.deplacer_equipe(uid, d.nom, d.direction)
+    return _equipe_enrichie(uid)
+
+
+@app.post("/api/gestion/equipe/auto")
+async def api_equipe_auto(request: Request):
+    uid = joueur_connecte(request)["id"]
+    gestion_service.equipe_auto(uid)
+    return _equipe_enrichie(uid)
+
+
+@app.get("/api/gestion/presets")
+async def api_presets(request: Request):
+    return {"presets": gestion_service.apercu_presets(joueur_connecte(request)["id"])}
+
+
+@app.post("/api/gestion/presets/sauvegarder")
+async def api_preset_sauver(d: DemandeNom, request: Request):
+    gestion_service.sauvegarder_preset(joueur_connecte(request)["id"], d.nom)
+    return {"presets": gestion_service.apercu_presets(joueur_connecte(request)["id"])}
+
+
+@app.post("/api/gestion/presets/charger")
+async def api_preset_charger(d: DemandeNom, request: Request):
+    uid = joueur_connecte(request)["id"]
+    res = gestion_service.charger_preset(uid, d.nom)
+    return {**_equipe_enrichie(uid), **res}
+
+
+@app.post("/api/gestion/presets/supprimer")
+async def api_preset_supprimer(d: DemandeNom, request: Request):
+    uid = joueur_connecte(request)["id"]
+    gestion_service.supprimer_preset(uid, d.nom)
+    return {"presets": gestion_service.apercu_presets(uid)}
+
+
+@app.post("/api/gestion/soigner")
+async def api_soigner(d: DemandeSoin, request: Request):
+    uid = joueur_connecte(request)["id"]
+    gestion_service.soigner(uid, d.nom, d.potion)
+    return _equipe_enrichie(uid)
+
+
+@app.post("/api/gestion/soin-auto")
+async def api_soin_auto(request: Request):
+    uid = joueur_connecte(request)["id"]
+    res = gestion_service.soin_auto(uid)
+    return {**_equipe_enrichie(uid), **res}
+
+
+@app.get("/api/gestion/attaques/{nom}")
+async def api_attaques(nom: str, request: Request):
+    return gestion_service.attaques_pokemon(joueur_connecte(request)["id"], nom)
+
+
+@app.post("/api/gestion/attaques/equiper")
+async def api_attaque_equiper(d: DemandeAttaque, request: Request):
+    uid = joueur_connecte(request)["id"]
+    if not d.attaque:
+        raise ErreurCombatWeb("Choisis une attaque.")
+    gestion_service.equiper_attaque(uid, d.nom, d.slot, d.attaque)
+    return gestion_service.attaques_pokemon(uid, d.nom)
+
+
+@app.post("/api/gestion/attaques/vider")
+async def api_attaque_vider(d: DemandeAttaque, request: Request):
+    uid = joueur_connecte(request)["id"]
+    gestion_service.vider_attaque(uid, d.nom, d.slot)
+    return gestion_service.attaques_pokemon(uid, d.nom)
+
+
+@app.post("/api/gestion/attaques/aleatoires")
+async def api_attaque_alea(d: DemandeNom, request: Request):
+    uid = joueur_connecte(request)["id"]
+    gestion_service.attaques_aleatoires(uid, d.nom)
+    return gestion_service.attaques_pokemon(uid, d.nom)
+
+
+@app.post("/api/gestion/ct/acheter")
+async def api_ct_acheter(d: DemandeCT, request: Request):
+    return gestion_service.acheter_ct(joueur_connecte(request)["id"], d.attaque)
+
+
+@app.get("/api/gestion/inventaire")
+async def api_inventaire(request: Request):
+    return gestion_service.inventaire_joueur(joueur_connecte(request)["id"])
+
+
+@app.post("/api/gestion/inventaire/supprimer")
+async def api_inventaire_suppr(d: DemandeSuppression, request: Request):
+    uid = joueur_connecte(request)["id"]
+    gestion_service.supprimer_objet(uid, d.cle, d.quantite)
+    return gestion_service.inventaire_joueur(uid)
+
+
+@app.get("/api/gestion/pokedex")
+async def api_pokedex(request: Request):
+    uid = joueur_connecte(request)["id"]
+    res = gestion_service.pokedex_joueur(uid)
+    for e in res["entrees"]:
+        e.update(_sprites(e["nom"]))
+    return res
 
 
 # ----------------------------------------------------------------------------

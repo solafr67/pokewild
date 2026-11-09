@@ -11,6 +11,7 @@ import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import combat_service
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
@@ -1676,6 +1677,8 @@ async def nettoyer_etats_orphelins_au_demarrage():
     # programme la suppression du fil comme pour une fin de combat normale.
     combats_annules = 0
     for row in database.obtenir_combats_pvp_actifs():
+        if combat_service.est_combat_web(row["id"]):
+            continue  # combat du site : sa boucle est relancée par le service web
         database.terminer_combat_pvp(row["id"])
         combats_annules += 1
         # Les joueurs ne sont pour rien dans ce redémarrage — équipe soignée gratuitement
