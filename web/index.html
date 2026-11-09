@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PokéWild</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--txt:#1d2330;--mut:#6b7385;--bord:#dde1e8;--acc:#e5483b;--ok:#2e9e5b;--warn:#e0a21a;--bad:#d23c3c}
+@media (prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1e222b;--txt:#e8ebf1;--mut:#9aa3b5;--bord:#2e3441}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--bord)}
+header h1{font-size:18px;margin:0;flex:1}header img{width:28px;height:28px;border-radius:50%}
+.pill{font-size:13px;color:var(--mut)}main{max-width:900px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--bord);border-radius:12px;padding:14px;margin-bottom:14px}
+h2{font-size:15px;margin:0 0 10px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mon{border:1px solid var(--bord);border-radius:10px;padding:8px;text-align:center;font-size:13px}.mon img{height:64px;image-rendering:pixelated}
+button{font:inherit;border:1px solid var(--bord);background:var(--card);color:var(--txt);border-radius:8px;padding:8px 12px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--acc)}button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff}button.danger{color:var(--bad)}
+.bar{height:8px;background:var(--bord);border-radius:4px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--ok);transition:width .4s}
+.bar.mid>i{background:var(--warn)}.bar.low>i{background:var(--bad)}
+.arene{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;min-height:230px;padding:14px;border-radius:12px;border:1px solid var(--bord);background:linear-gradient(#cfe8ff,#e9f5df)}
+@media (prefers-color-scheme:dark){.arene{background:linear-gradient(#25364d,#2a3a2c)}}
+.side{display:flex;flex-direction:column;gap:6px}.side.adv{grid-column:2;grid-row:1;align-items:flex-end}.side.moi{grid-column:1;grid-row:2;align-items:flex-start}
+.side img{height:110px;image-rendering:pixelated}.hud{background:var(--card);border:1px solid var(--bord);border-radius:10px;padding:8px 10px;min-width:210px;font-size:13px}
+.hud b{font-size:14px}.badge{display:inline-block;font-size:11px;padding:1px 6px;border-radius:8px;background:var(--warn);color:#000;margin-left:4px}
+.boules{font-size:12px;letter-spacing:2px;color:var(--mut)}.ko{opacity:.35}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.moves{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.moves button{text-align:left}.moves small{display:block;color:var(--mut)}
+#log{font-size:13px;line-height:1.5;max-height:200px;overflow:auto;white-space:pre-wrap}
+.msg{padding:8px 12px;border-radius:8px;background:var(--bord);margin-top:8px;font-size:13px}.err{color:var(--bad)}
+.fin{text-align:center;padding:20px}.fin h2{font-size:22px}
+</style>
+</head>
+<body>
+<header><img id="avatar" hidden alt=""><h1>PokéWild</h1><span class="pill" id="infos"></span><a id="sortie" class="pill" href="/auth/logout" hidden>Déconnexion</a></header>
+<main id="app"></main>
+<script>
+const $=s=>document.querySelector(s), app=$("#app");
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const TYPES={water:"Eau",fire:"Feu",grass:"Plante",electric:"Électrik",ice:"Glace",fighting:"Combat",poison:"Poison",ground:"Sol",flying:"Vol",psychic:"Psy",bug:"Insecte",rock:"Roche",ghost:"Spectre",dragon:"Dragon",dark:"Ténèbres",steel:"Acier",fairy:"Fée",normal:"Normal"};
+const fmt=t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>").replace(/:(\w+?)type:/g,(m,x)=>`<small>[${TYPES[x]||x}]</small>`);
+async function api(url,corps){
+  const r=await fetch(url,corps===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corps)});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401)throw Object.assign(new Error("401"),{code:401});
+  if(!r.ok)throw new Error(d.detail||"Erreur");
+  return d;
+}
+const classePV=(pv,max)=>pv/max<.2?"low":pv/max<.5?"mid":"";
+const barre=(pv,max)=>`<div class="bar ${classePV(pv,max)}"><i style="width:${Math.max(0,pv/max*100)}%"></i></div>`;
+let moi=null, minuteur=null, signature="", H=[];
+// Les boutons appellent une fonction rangée dans H : aucun nom de Pokémon n'est jamais collé dans du JS (apostrophes sûres).
+const cb=f=>`H[${H.push(f)-1}]()`;
+
+async function accueil(){
+  clearInterval(minuteur);
+  try{moi=await api("/api/moi")}catch(e){return e.code===401?connexion():app.innerHTML=`<p class="err">${esc(e.message)}</p>`}
+  $("#avatar").hidden=!moi.avatar; if(moi.avatar)$("#avatar").src=moi.avatar;
+  $("#infos").textContent=`${moi.pseudo} · Nv.${moi.niveau} · ${moi.poke_dollars} ₽`; $("#sortie").hidden=false;
+  const [eq,dr]=await Promise.all([api("/api/equipe"),api("/api/dresseurs")]);
+  let html=""; H=[];
+  if(moi.combat.combat_id&&moi.combat.source==="web")html+=`<div class="card">Un combat est en cours. <button class="primary" onclick="combat(${moi.combat.combat_id})">Reprendre</button></div>`;
+  else if(moi.combat.combat_id)html+=`<div class="card">Tu es déjà en combat sur Discord : termine-le avant d'en lancer un ici.</div>`;
+  html+=`<div class="card"><h2>Mon équipe de combat</h2>`+(eq.equipe.length?`<div class="grid">${eq.equipe.map(p=>`<div class="mon ${p.pv<=0?"ko":""}"><img src="${esc(p.sprite||"")}" alt=""><div><b>${esc(p.nom)}</b> · Nv.${p.niveau}</div>${barre(p.pv,p.pv_max)}<small>${p.pv}/${p.pv_max} PV</small></div>`).join("")}</div>`:`<p>Ton équipe de combat est vide. Compose-la depuis Discord (<code>/equipe-combat</code>).</p>`)+`</div>`;
+  html+=`<div class="card"><h2>Défier un dresseur</h2><div class="grid">${dr.dresseurs.map(d=>`<button onclick="${cb(()=>lancer(d.nom))}">${d.emoji} ${esc(d.nom)}<br><small>Tier ${d.tier}</small></button>`).join("")}<button class="primary" onclick="${cb(()=>lancer(null))}">🎲 Au hasard</button></div><div id="msg"></div></div>`;
+  app.innerHTML=html;
+}
+function connexion(){app.innerHTML=`<div class="card fin"><h2>Bienvenue sur PokéWild</h2><p>Connecte-toi avec ton compte Discord pour retrouver tes Pokémon.</p><a href="/auth/login"><button class="primary">Se connecter avec Discord</button></a></div>`}
+async function lancer(nom){try{const r=await api("/api/combats/dresseur",{archetype:nom});combat(r.combat_id)}catch(e){$("#msg").innerHTML=`<div class="msg err">${esc(e.message)}</div>`}}
+
+async function combat(id){
+  clearInterval(minuteur); signature="";
+  const maj=async()=>{try{rendre(id,await api("/api/combats/"+id))}catch(e){if(e.code===401)connexion()}};
+  await maj(); minuteur=setInterval(maj,1500);
+}
+function hudHTML(p,adv){
+  const st=p.statut?`<span class="badge">${esc(p.statut)}</span>`:"";
+  const bo=Object.entries(p.boosts||{}).map(([k,v])=>`${k} ${v>0?"+":""}${v}`).join(" · ");
+  return `<div class="hud"><b>${esc(p.nom)}</b> Nv.${p.niveau}${st}${barre(p.pv,p.pv_max)}<small>${adv?Math.round(p.pv/p.pv_max*100)+" %":p.pv+"/"+p.pv_max+" PV"}</small>${bo?`<br><small>${esc(bo)}</small>`:""}</div>`;
+}
+const boules=eq=>`<div class="boules">${eq.map(p=>p.ko?"✖":"●").join(" ")}</div>`;
+function rendre(id,e){
+  const a=e.moi.equipe.find(p=>p.actif), d=e.adversaire.equipe.find(p=>p.actif);
+  const sig=[e.tour,e.action_choisie,e.remplacant_requis,e.actif,a&&a.nom,a&&a.pv,d&&d.pv,e.journal[0]&&e.journal[0].tour,!!e.resultat].join("|");
+  if(sig===signature){majTimer(e);return}
+  signature=sig; H=[];
+  const dos=a?esc(a.sprite_dos||a.sprite||""):"", face=a?esc(a.sprite||""):"";
+  let h=`<div class="arene"><div class="side adv">${boules(e.adversaire.equipe)}${d?hudHTML(d,true)+`<img src="${esc(d.sprite||"")}" alt="">`:""}</div><div class="side moi">${a?`<img src="${dos}" onerror="this.onerror=null;this.src='${face}'" alt="">`+hudHTML(a,false):""}${boules(e.moi.equipe)}</div></div>`;
+  h+=`<div class="card" style="margin-top:14px"><h2>Tour ${e.tour} <span class="pill" id="timer"></span></h2><div id="panneau">${panneau(id,e)}</div><div id="msg"></div></div>`;
+  const j=e.journal[0];
+  h+=`<div class="card"><h2>Dernier tour${j?` (n°${j.tour})`:""}</h2><div id="log">${j?j.lignes.map(fmt).join("\n"):"Le combat commence !"}</div></div>`;
+  if(e.resultat){clearInterval(minuteur);h+=fin(e.resultat)}
+  app.innerHTML=h; majTimer(e);
+}
+function majTimer(e){const t=$("#timer");if(t)t.textContent=e.actif?`· ${e.secondes_restantes} s`:""}
+function panneau(id,e){
+  if(!e.actif)return "<i>Combat terminé.</i>";
+  const ac=e.actions;
+  if(e.remplacant_requis)return `<p>Ton Pokémon est K.O. — choisis le suivant :</p><div class="actions">${ac.changements.map(n=>`<button onclick="${cb(()=>agir(id,'remplacant',{nom:n}))}">${esc(n)}</button>`).join("")}</div>`;
+  if(e.action_choisie)return "<i>Action enregistrée, en attente de l'adversaire…</i>";
+  if(e.verrouille)return "<i>Ton Pokémon est en pleine charge/recharge : rien à choisir ce tour.</i>";
+  let h="";
+  const at=ac.attaques;
+  if(at.mode==="normal")h+=`<div class="moves">${at.attaques.map(m=>`<button ${m.jouable?"":"disabled"} onclick="${cb(()=>agir(id,'action',{type:'attaque',valeur:m.nom,tour:e.tour}))}"><b>${esc(m.nom)}</b><small>${m.type?(TYPES[m.type]||m.type)+" · ":""}${m.puissance?m.puissance+" pui · ":""}${m.pp}/${m.pp_max} PP</small></button>`).join("")}</div>`;
+  else h+=`<div class="actions"><button class="primary" onclick="${cb(()=>agir(id,'action',{type:'attaque',tour:e.tour}))}">⚔️ ${esc(at.mode==="lutte"?at.lutte:at.attaques[0].nom)}</button></div>`;
+  h+=`<div class="actions">`;
+  if(ac.mega)h+=`<button class="primary" onclick="${cb(()=>agir(id,'mega',{}))}">🔷 Méga-Évoluer (${esc(ac.mega.forme)})</button>`;
+  for(const p of ac.potions.disponibles)h+=`<button onclick="${cb(()=>agir(id,'action',{type:'potion',valeur:p.type,tour:e.tour}))}">💊 ${esc(p.nom)} ×${p.quantite}</button>`;
+  for(const n of ac.changements)h+=`<button onclick="${cb(()=>agir(id,'action',{type:'changer',valeur:n,tour:e.tour}))}">🔄 ${esc(n)}</button>`;
+  h+=`<button class="danger" onclick="${cb(()=>{if(confirm('Abandonner ? La défaite sera enregistrée.'))agir(id,'abandon',{})})}">🏳️ Abandonner</button></div>`;
+  return h;
+}
+async function agir(id,route,corps){
+  let m="",erreur=false;
+  try{const r=await api(`/api/combats/${id}/${route}`,corps);m=r.message||""}
+  catch(e){m=e.message;erreur=true}
+  signature="";
+  try{rendre(id,await api("/api/combats/"+id))}catch(_){}
+  if(m){const z=$("#msg");if(z)z.innerHTML=`<div class="msg${erreur?" err":""}">${esc(m)}</div>`}
+}
+function fin(r){
+  const ti={victoire:"🏆 Victoire !",defaite:"💀 Défaite…",abandon:"🏳️ Combat abandonné",annule:"⚠️ Combat annulé (erreur)"}[r.issue]||"Fin";
+  const g=r.recompenses;
+  let t=g?`+${g.dollars} ₽ · +${g.xp} XP${g.reduite?" <small>(réduit : déjà beaucoup de dresseurs battus aujourd'hui)</small>":""}`:"Aucune récompense.";
+  if(g&&g.niveau_dresseur.apres>g.niveau_dresseur.avant)t+=`<br>⬆️ Niveau dresseur ${g.niveau_dresseur.apres} !`;
+  for(const q of (g?g.quetes_completees:[]))t+=`<br>✅ Quête : ${esc(q.nom||"")}`;
+  return `<div class="card fin"><h2>${ti}</h2><p>${t}</p><button class="primary" onclick="accueil()">Retour</button></div>`;
+}
+accueil();
+</script>
+</body>
+</html>
