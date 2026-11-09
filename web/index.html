@@ -139,7 +139,7 @@ function fin(r){
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
-const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["pvp","🥊 PvP"],["marche","🏪 Marché"],["echanges","🔄 Échanges"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["collection","🗃️ Collection"],["pokedex","📖 Pokédex"],["classements","🏆 Classements"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements}[k]()))}">${l}</button>`).join("")}</div>`;
+const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["pvp","🥊 PvP"],["marche","🏪 Marché"],["echanges","🔄 Échanges"],["casino","🎰 Casino"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["collection","🗃️ Collection"],["pokedex","📖 Pokédex"],["classements","🏆 Classements"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements}[k]()))}">${l}</button>`).join("")}</div>`;
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -646,6 +646,46 @@ async function majOffre(eid){
 async function enregistrerOffre(eid){
   try{await api("/api/echanges/offre",{echange_id:eid,capture_ids:[...ex.sel],pd:parseInt(sel("ex_pd"))||0,objets:ex.obj});ex.edit=false;pageEchanges("✅ Offre mise à jour : les validations sont remises à zéro.")}catch(e){if(e.code===401)return connexion();flash(e.message,true)}
 }
+
+/* ===== Casino & Plus ou Moins ===== */
+let cs={onglet:"blackjack",bj:null,pom:null,rl:null,solde:0,min:50,max:10000,msg:""};
+const carteHTML=c=>{const rouge=/♥|♦/.test(c);return `<span class="carte" style="display:inline-block;min-width:44px;padding:8px 6px;margin:2px;border:1px solid #888;border-radius:6px;background:#fff;color:${c==="🂠"?"#345":rouge?"#c22":"#111"};font-weight:bold;text-align:center">${esc(c)}</span>`};
+async function pageCasino(){
+  clearInterval(minuteur); H=[];
+  app.innerHTML=nav("casino")+`<div id="msg"></div><div class="card"><div class="nav">${[["blackjack","🃏 Blackjack"],["roulette","🎡 Roulette"],["pom","📊 Plus ou Moins"]].map(([k,l])=>`<button class="${k===cs.onglet?"primary":""}" onclick="${cb(()=>{cs.onglet=k;cs.msg="";dessCasino()})}">${l}</button>`).join("")}</div><div id="cz"></div></div>`;
+  try{const d=await api("/api/casino");cs.bj=d.blackjack;cs.pom=d.pom;cs.solde=d.solde;cs.min=d.mise_min;cs.max=d.mise_max}catch(e){return e.code===401?connexion():flash(e.message,true)}
+  dessCasino();
+}
+const casAct=async(f)=>{try{await f();await majEntete();dessCasino()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+function dessCasino(){
+  const z=$("#cz"); if(!z)return; let h=`<p><b>Solde : ${cs.solde} PD</b> <small>· mise ${cs.min}–${cs.max} PD</small></p>`;
+  const miseIn=`<label>Mise <input id="cs_mise" type="number" min="${cs.min}" max="${cs.max}" value="${cs.min}" style="width:100px"></label>`;
+  if(cs.onglet==="blackjack"){
+    const b=cs.bj;
+    if(!b)h+=`<div class="ligne">${miseIn}<button class="primary" onclick="${cb(()=>casAct(async()=>{cs.bj=await api("/api/casino/blackjack/demarrer",{mise:parseInt(sel("cs_mise"))||0});await rafraichirSolde()}))}">🃏 Distribuer</button></div><small>Blackjack naturel payé 3:2. Le croupier tire jusqu'à 17.</small>`;
+    else{
+      h+=`<div><b>Croupier</b> (${b.valeur_croupier}${b.fini?"":"+?"})<br>${b.croupier.map(carteHTML).join("")}</div><div><b>Toi</b> (${b.valeur_joueur})<br>${b.joueur.map(carteHTML).join("")}</div><p>Mise : ${b.mise} PD</p>`;
+      if(b.fini)h+=`<div class="msg ${b.gain>=b.mise?"":"err"}">${esc(b.message)}</div><div class="actions"><button class="primary" onclick="${cb(()=>{cs.bj=null;dessCasino()})}">Nouvelle partie</button></div>`;
+      else h+=`<div class="actions"><button class="primary" onclick="${cb(()=>casAct(async()=>{cs.bj=await api("/api/casino/blackjack/tirer",{});await rafraichirSolde()}))}">🎴 Tirer</button><button onclick="${cb(()=>casAct(async()=>{cs.bj=await api("/api/casino/blackjack/rester",{});await rafraichirSolde()}))}">✋ Rester</button></div>`;
+    }
+  }else if(cs.onglet==="roulette"){
+    const types=[["rouge","🔴 Rouge"],["noir","⚫ Noir"],["pair","Pair"],["impair","Impair"],["manque","1-18"],["passe","19-36"]];
+    h+=`<div class="ligne">${miseIn}</div><div class="actions">${types.map(([k,l])=>`<button onclick="${cb(()=>jouerRoulette(k))}">${l} (x2)</button>`).join("")}</div><div class="ligne"><label>Numéro plein (x36) <input id="cs_num" type="number" min="0" max="36" value="7" style="width:70px"></label><button onclick="${cb(()=>jouerRoulette("plein"))}">Miser</button></div>`;
+    if(cs.rl)h+=`<div class="msg ${cs.rl.gagne?"":"err"}">La bille s'arrête sur <b>${cs.rl.numero}</b> ${{rouge:"🔴",noir:"⚫",vert:"🟢"}[cs.rl.couleur]}<br>${esc(cs.rl.message)}</div>`;
+  }else{
+    const p=cs.pom&&cs.pom.partie;
+    h+=`<p><small>🏆 Ton record : ${cs.pom?cs.pom.record:0}</small></p>`;
+    if(cs.msg)h+=`<div class="msg ${cs.msgErr?"err":""}">${cs.msg}</div>`;
+    if(!p)h+=`<div class="actions"><button class="primary" onclick="${cb(()=>casAct(async()=>{cs.pom=await api("/api/casino/pom/demarrer",{});cs.msg=""}))}">▶️ Jouer</button></div><small>Le PC de base du prochain Pokémon est-il plus haut ou plus bas ? Enchaîne les bonnes réponses.</small>`;
+    else h+=`<p>Série : <b>${p.serie}</b></p><div class="grid" style="grid-template-columns:1fr 1fr"><div style="text-align:center"><img src="${esc(p.actuel.sprite||"")}" height="80" alt=""><br><b>${esc(p.actuel.nom)}</b><br>PC : ${p.actuel.pc}</div><div style="text-align:center"><img src="${esc(p.mystere.sprite||"")}" height="80" alt=""><br><b>${esc(p.mystere.nom)}</b><br>PC : ???</div></div><div class="actions"><button class="primary" onclick="${cb(()=>pomChoix(true))}">⬆️ Plus haut</button><button onclick="${cb(()=>pomChoix(false))}">⬇️ Plus bas</button></div>`;
+  }
+  z.innerHTML=h;
+}
+async function rafraichirSolde(){try{cs.solde=(await api("/api/casino")).solde}catch(e){}}
+async function jouerRoulette(t){casAct(async()=>{cs.rl=await api("/api/casino/roulette",{mise:parseInt(sel("cs_mise"))||0,type:t,numero:t==="plein"?parseInt(sel("cs_num")):null});await rafraichirSolde()})}
+async function pomChoix(plus){casAct(async()=>{const r=await api("/api/casino/pom/choisir",{plus});const txt=`${esc(r.revele.nom)} avait ${r.revele.pc} PC (contre ${r.contre.pc} pour ${esc(r.contre.nom)}).`;
+  cs.msgErr=!r.juste;cs.pom={record:r.record,partie:r.partie};
+  cs.msg=r.juste?"✅ Bonne pioche ! "+txt:`❌ Perdu ! ${txt} Série finale : ${r.serie}${r.nouveau_record?" — 🏆 Nouveau record !":""}`})}
 
 accueil();
 </script>
