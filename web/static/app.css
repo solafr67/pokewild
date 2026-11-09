@@ -247,3 +247,12 @@ button .ico{width:26px;height:26px;margin:-4px 0}
 .moves small .ti{width:14px;height:14px;margin-right:4px;vertical-align:-3px}
 .mon img.ti,.side img.ti,.vit img.ti,.tag img.ti,small img.ti,button img.ti{width:15px;height:15px;filter:none}
 .mon img.ico,.side img.ico{height:32px;width:32px;filter:none}
+
+/* raretés, statuts, barres */
+.rar{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:99px;font:700 11.5px var(--font-t);--rc:var(--mut);color:color-mix(in srgb,var(--rc) 60%,#fff);background:color-mix(in srgb,var(--rc) 16%,var(--bg-2));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--rc) 50%,transparent)}
+.rar::before{content:"";width:7px;height:7px;border-radius:2px;transform:rotate(45deg);background:var(--rc)}
+.r-commun{--rc:#8fa0bd}.r-peu_commun{--rc:#3ddc97}.r-rare{--rc:#4cb8ff}.r-hyper_rare{--rc:#b07bff}.r-legendaire{--rc:#ffc83d}
+.stat{display:inline-block;height:19px;line-height:19px;padding:0 7px;margin-left:6px;border-radius:6px;font:800 10.5px var(--font-t);letter-spacing:.04em;color:#10131b;background:var(--tc)}
+.bar.prog>i{background:linear-gradient(90deg,var(--sky),#7fd0ff)}
+.bar.boss{height:12px}.bar.boss>i{background:linear-gradient(90deg,#ff6b6b,var(--red))}
+.card.boss-card{border-color:var(--line-2)}
