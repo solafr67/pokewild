@@ -377,6 +377,7 @@ def etat_combat(combat_id: int, user_id: int) -> dict:
         "actif": bool(combat["actif"]),
         "tour": combat["tour"],
         "secondes_restantes": max(0, combat["date_limite_tour"] - int(time.time())),
+        "duree_tour": combat_module.DUREE_TOUR,
         "action_choisie": action_moi is not None,
         "verrouille": verrouille,  # attaque en charge/recharge : rien à choisir ce tour
         "remplacant_requis": choix_ko,
