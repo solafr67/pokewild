@@ -60,42 +60,56 @@ async function combat(id){
   const maj=async()=>{try{rendre(id,await api("/api/combats/"+id))}catch(e){if(e.code===401)connexion()}};
   await maj(); minuteur=setInterval(maj,1500);
 }
+const zoomImg=(k,max)=>`onload="this.style.width=Math.min(this.naturalWidth*${k},${max})+'px';this.style.opacity=1"`;
 function hudHTML(p,adv){
   const st=p.statut?statutHTML(p.statut):"";
-  const bo=Object.entries(p.boosts||{}).map(([k,v])=>`${k} ${v>0?"+":""}${v}`).join(" · ");
-  return `<div class="hud"><b>${esc(p.nom)}</b> Nv.${p.niveau}${st}${barre(p.pv,p.pv_max)}<small>${adv?Math.round(p.pv/p.pv_max*100)+" %":p.pv+"/"+p.pv_max+" PV"}</small>${bo?`<br><small>${esc(bo)}</small>`:""}</div>`;
+  const bo=Object.entries(p.boosts||{}).map(([k,v])=>`<span class="boost ${v>0?"up":"down"}">${esc(k)} ${v>0?"+":""}${v}</span>`).join("");
+  const pct=Math.max(0,Math.round(p.pv/p.pv_max*100));
+  return `<div class="hud ${p.shiny?"chroma":""}"><div class="hud-l"><b>${esc(p.nom)}</b>${p.shiny?" ✨":""}<span class="niv">Nv.${p.niveau}</span>${st}</div>${barre(p.pv,p.pv_max)}<div class="hud-b"><span>${adv?pct+" %":`${p.pv} / ${p.pv_max}`}</span>${bo?`<span class="boosts">${bo}</span>`:""}</div></div>`;
 }
-const boules=eq=>`<div class="boules">${eq.map(p=>`<i class="b ${p.ko?"ko":""}"></i>`).join("")}</div>`;
+const boules=eq=>`<div class="boules" title="${eq.filter(p=>!p.ko).length}/${eq.length} Pokémon en forme">${eq.map(p=>`<i class="b ${p.ko?"ko":""}"></i>`).join("")}</div>`;
 function rendre(id,e){
   if(hubActif!=="combat"){hubActif="combat";marquerHub()}
   const a=e.moi.equipe.find(p=>p.actif), d=e.adversaire.equipe.find(p=>p.actif);
   const sig=[e.tour,e.action_choisie,e.remplacant_requis,e.actif,a&&a.nom,a&&a.pv,d&&d.pv,e.journal[0]&&e.journal[0].tour,!!e.resultat].join("|");
   if(sig===signature){majTimer(e);return}
-  signature=sig; H=[];
+  signature=sig; H=[]; window._cb=e;
   const dos=a?esc(a.sprite_dos||a.sprite||""):"", face=a?esc(a.sprite||""):"";
-  let h=`<div class="arene"><div class="side adv">${boules(e.adversaire.equipe)}${d?hudHTML(d,true)+`<img src="${esc(d.sprite||"")}" alt="">`:""}</div><div class="side moi">${a?`<img src="${dos}" onerror="this.onerror=null;this.src='${face}'" alt="">`+hudHTML(a,false):""}${boules(e.moi.equipe)}</div></div>`;
-  h+=`<div class="card" style="margin-top:14px"><h2>Tour ${e.tour} <span class="pill" id="timer"></span></h2><div id="panneau">${panneau(id,e)}</div><div id="msg"></div></div>`;
+  let h=`<div class="arene"><div class="ar-haut">${boules(e.adversaire.equipe)}</div>
+    <div class="side adv">${d?hudHTML(d,true)+`<div class="pad"><img class="spr" src="${esc(d.sprite||"")}" alt="" ${zoomImg(2.1,230)}></div>`:""}</div>
+    <div class="side moi">${a?`<div class="pad"><img class="spr" src="${dos}" onerror="this.onerror=null;this.src='${face}'" alt="" ${zoomImg(2.6,270)}></div>`+hudHTML(a,false):""}</div>
+    <div class="ar-bas">${boules(e.moi.equipe)}</div></div>`;
   const j=e.journal[0];
-  h+=`<div class="card"><h2>Dernier tour${j?` (n°${j.tour})`:""}</h2><div id="log">${j?j.lignes.map(fmt).join("\n"):"Le combat commence !"}</div></div>`;
+  h+=`<div class="duel-bas"><div class="card cmd"><div class="cmd-tete"><h2>Tour ${e.tour}</h2><div class="chrono" id="chrono"><i id="chronoBar"></i><span id="timer"></span></div></div><div id="panneau">${panneau(id,e)}</div><div id="msg"></div></div>
+    <div class="card journal"><h2>Dernier tour${j?` <small>n°${j.tour}</small>`:""}</h2><div id="log">${j?j.lignes.map(fmt).join("\n"):"Le combat commence !"}</div></div></div>`;
   if(e.resultat){clearInterval(minuteur);h+=fin(e.resultat)}
   app.innerHTML=h; majTimer(e);
 }
-function majTimer(e){const t=$("#timer");if(t)t.textContent=e.actif?`· ${e.secondes_restantes} s`:""}
+function majTimer(e){
+  const t=$("#timer"),b=$("#chronoBar");if(!t)return;
+  t.textContent=e.actif?`${e.secondes_restantes} s`:"";
+  if(b){const tot=e.duree_tour||45;b.style.width=e.actif?Math.max(0,Math.min(100,e.secondes_restantes/tot*100))+"%":"0";b.parentElement.classList.toggle("urgent",e.actif&&e.secondes_restantes<=10)}
+}
+let ongletCmd="atk";
+const miniEq=(n)=>{const m=(window._cb&&window._cb.moi.equipe.find(p=>p.nom===n))||{};return m};
 function panneau(id,e){
-  if(!e.actif)return "<i>Combat terminé.</i>";
+  if(!e.actif)return `<p class="mut">Combat terminé.</p>`;
   const ac=e.actions;
-  if(e.remplacant_requis)return `<p>Ton Pokémon est K.O. — choisis le suivant :</p><div class="actions">${ac.changements.map(n=>`<button onclick="${cb(()=>agir(id,'remplacant',{nom:n}))}">${esc(n)}</button>`).join("")}</div>`;
-  if(e.action_choisie)return "<i>Action enregistrée, en attente de l'adversaire…</i>";
-  if(e.verrouille)return "<i>Ton Pokémon est en pleine charge/recharge : rien à choisir ce tour.</i>";
-  let h="";
-  const at=ac.attaques;
-  if(at.mode==="normal")h+=`<div class="moves">${at.attaques.map(m=>`<button style="--tc:${typeCol(m.type)}" ${m.jouable?"":"disabled"} onclick="${cb(()=>agir(id,'action',{type:'attaque',valeur:m.nom,tour:e.tour}))}"><b>${esc(m.nom)}</b><small>${m.type?icoType(m.type)+(TYPES[m.type]||m.type)+" · ":""}${m.puissance?m.puissance+" pui · ":""}${m.pp}/${m.pp_max} PP</small></button>`).join("")}</div>`;
-  else h+=`<div class="actions"><button class="primary" onclick="${cb(()=>agir(id,'action',{type:'attaque',tour:e.tour}))}">⚔️ ${esc(at.mode==="lutte"?at.lutte:at.attaques[0].nom)}</button></div>`;
-  h+=`<div class="actions">`;
-  if(ac.mega)h+=`<button class="primary" onclick="${cb(()=>agir(id,'mega',{}))}">🔷 Méga-Évoluer (${esc(ac.mega.forme)})</button>`;
-  for(const p of ac.potions.disponibles)h+=`<button onclick="${cb(()=>agir(id,'action',{type:'potion',valeur:p.type,tour:e.tour}))}">${ico(p.type)||"💊 "}${esc(p.nom)} ×${p.quantite}</button>`;
-  for(const n of ac.changements)h+=`<button onclick="${cb(()=>agir(id,'action',{type:'changer',valeur:n,tour:e.tour}))}">🔄 ${esc(n)}</button>`;
-  h+=`<button class="danger" onclick="${cb(()=>{if(confirm('Abandonner ? La défaite sera enregistrée.'))agir(id,'abandon',{})})}">🏳️ Abandonner</button></div>`;
+  const bench=n=>{const m=miniEq(n);return `<button class="bench" onclick="${cb(()=>agir(id,e.remplacant_requis?'remplacant':'action',e.remplacant_requis?{nom:n}:{type:'changer',valeur:n,tour:e.tour}))}"><img src="${esc(m.sprite||"")}" alt="">${m.pv!==undefined?`<span class="bn"><b>${esc(n)}</b><small>${m.pv}/${m.pv_max} PV</small>${barre(m.pv,m.pv_max)}</span>`:`<b>${esc(n)}</b>`}</button>`};
+  if(e.remplacant_requis)return `<p class="cmd-info">Ton Pokémon est K.O. — choisis le suivant :</p><div class="benchs">${ac.changements.map(bench).join("")}</div>`;
+  if(e.action_choisie)return `<p class="cmd-info attente"><span class="pulse"></span>Action enregistrée, en attente de l'adversaire…</p>`;
+  if(e.verrouille)return `<p class="cmd-info">Ton Pokémon est en pleine charge ou recharge : rien à choisir ce tour.</p>`;
+  const at=ac.attaques, tabs=[["atk","Attaques"]];
+  if(ac.changements.length)tabs.push(["eq","Équipe"]);
+  if(ac.potions.disponibles.length)tabs.push(["sac","Sac"]);
+  if(!tabs.find(t=>t[0]===ongletCmd))ongletCmd="atk";
+  let h=`<div class="cmd-tabs">${tabs.map(([k,l])=>`<button class="${k===ongletCmd?"on":""}" onclick="${cb(()=>{ongletCmd=k;signature="";rendre(id,window._cb)})}">${l}</button>`).join("")}${ac.mega?`<button class="mega" onclick="${cb(()=>agir(id,'mega',{}))}">Méga-Évoluer · ${esc(ac.mega.forme)}</button>`:""}</div>`;
+  if(ongletCmd==="atk"){
+    if(at.mode==="normal")h+=`<div class="moves">${at.attaques.map(m=>`<button style="--tc:${typeCol(m.type)}" ${m.jouable?"":"disabled"} onclick="${cb(()=>agir(id,'action',{type:'attaque',valeur:m.nom,tour:e.tour}))}"><span class="mv-t">${m.type?icoType(m.type):""}<b>${esc(m.nom)}</b></span><span class="mv-i">${m.puissance?`<i>${m.puissance} pui.</i>`:"<i>statut</i>"}<i>${m.pp}/${m.pp_max} PP</i></span></button>`).join("")}</div>`;
+    else h+=`<div class="moves un"><button class="primary" style="--tc:var(--red)" onclick="${cb(()=>agir(id,'action',{type:'attaque',tour:e.tour}))}"><span class="mv-t"><b>${esc(at.mode==="lutte"?at.lutte:at.attaques[0].nom)}</b></span></button></div>`;
+  }else if(ongletCmd==="eq")h+=`<div class="benchs">${ac.changements.map(bench).join("")}</div>`;
+  else h+=`<div class="sac">${ac.potions.disponibles.map(p=>`<button onclick="${cb(()=>agir(id,'action',{type:'potion',valeur:p.type,tour:e.tour}))}">${ico(p.type,"gros")}<span><b>${esc(p.nom)}</b><small>×${p.quantite}</small></span></button>`).join("")}</div>`;
+  h+=`<div class="cmd-pied"><button class="lien danger" onclick="${cb(()=>{if(confirm('Abandonner ? La défaite sera enregistrée.'))agir(id,'abandon',{})})}">Abandonner le combat</button></div>`;
   return h;
 }
 async function agir(id,route,corps){
@@ -107,16 +121,18 @@ async function agir(id,route,corps){
   if(m){const z=$("#msg");if(z)z.innerHTML=`<div class="msg${erreur?" err":""}">${esc(m)}</div>`}
 }
 function fin(r){
-  const ti={victoire:"🏆 Victoire !",defaite:"💀 Défaite…",abandon:"🏳️ Combat abandonné",annule:"⚠️ Combat annulé (erreur)"}[r.issue]||"Fin";
-  const g=r.recompenses;
-  let t=g?`+${g.dollars} ₽ · +${g.xp} XP${g.reduite?" <small>(réduit : déjà beaucoup de dresseurs battus aujourd'hui)</small>":""}`:"Aucune récompense.";
-  if(g&&g.mise)t+=`<br>💰 +${g.mise} PD de mise remportée !`;
-  if(r.forfait)t+=`<br><small>(victoire/défaite par forfait)</small>`;
-  if(g&&g.niveau_dresseur.apres>g.niveau_dresseur.avant)t+=`<br>⬆️ Niveau dresseur ${g.niveau_dresseur.apres} !`;
-  for(const q of (g?g.quetes_completees:[]))t+=`<br>✅ Quête : ${esc(q.nom||"")}`;
+  const T={victoire:["Victoire !","win"],defaite:["Défaite…","lose"],abandon:["Combat abandonné","lose"],annule:["Combat annulé","lose"]}[r.issue]||["Fin du combat","lose"];
+  const g=r.recompenses; let chips="";
+  if(g){chips+=`<span class="gainc"><b>+${g.dollars}</b> ₽</span><span class="gainc"><b>+${g.xp}</b> XP</span>`;
+    if(g.mise)chips+=`<span class="gainc"><b>+${g.mise}</b> PD de mise</span>`;
+    if(g.niveau_dresseur.apres>g.niveau_dresseur.avant)chips+=`<span class="gainc lvl">Niveau ${g.niveau_dresseur.apres} !</span>`}
+  let t=g?"":`<p class="mut">Aucune récompense.</p>`;
+  if(g&&g.reduite)t+=`<p class="mut"><small>Récompenses réduites : tu as déjà battu beaucoup de dresseurs aujourd'hui.</small></p>`;
+  if(r.forfait)t+=`<p class="mut"><small>Issue par forfait.</small></p>`;
+  for(const q of (g?g.quetes_completees:[]))t+=`<p>✅ Mission accomplie : <b>${esc(q.nom||"")}</b></p>`;
   t+=suiteHTML(r.suite);
-  const retour=r.suite?`<button class="primary" onclick="pageModes()">Retour aux Combats</button>`:`<button class="primary" onclick="accueil()">Retour</button>`;
-  return `<div class="card fin"><h2>${ti}</h2><p>${t}</p>${retour}</div>`;
+  const retour=r.suite?`<button class="primary gros" onclick="pageModes()">Retour aux combats</button>`:`<button class="primary gros" onclick="accueil()">Retour à l'accueil</button>`;
+  return `<div class="card fin ${T[1]}"><h2>${T[0]}</h2><div class="gains">${chips}</div>${t}<div class="actions">${retour}</div></div>`;
 }
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const rarete=r=>RARETES[r]?`<span class="rar r-${esc(r)}">${RARETES[r]}</span>`:"";
@@ -139,7 +155,7 @@ const typeCol=x=>TCOL[typeKey(x)]||"var(--line-2)";
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag type" style="--tc:${typeCol(x)}">${icoType(x)}${esc(x)}</span>`).join("");
 const PAGES={accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,raids:pageRaids,duo:pageDuo,rogue:pageRogue,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements};
 const go=k=>PAGES[k]();
-const IC={
+const IC={trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
  home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/>',
  compass:'<circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2 5.6-5.6 2 2-5.6z"/>',
  swords:'<path d="m14 5 6-2 1 1-2 6-9.5 9.5L7 17.5 4.5 20 3 18.5 5.5 16 4 14.5 13.5 5z" transform="translate(0 0)"/><path d="m9 5-5-2-1 1 2 6 3 3"/>',
@@ -155,28 +171,30 @@ const svg=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 const BALL='<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#f4f7fc"/><path d="M2 16a14 14 0 0 1 28 0z" fill="#ff5446"/><path d="M2 16h28" stroke="#0a1220" stroke-width="2.4"/><circle cx="16" cy="16" r="5" fill="#f4f7fc" stroke="#0a1220" stroke-width="2.4"/><circle cx="16" cy="16" r="14" fill="none" stroke="#0a1220" stroke-width="2"/></svg>';
 // 6 grandes sections ; chaque section regroupe plusieurs écrans (onglets).
 const HUBS=[
- {k:"accueil",l:"Accueil",ic:"home",p:[["accueil","Tableau de bord"],["quetes","Missions"],["classements","Classements"]]},
- {k:"explorer",l:"Explorer",ic:"compass",p:[["explorer","Rencontres"],["explorations","Expéditions"]]},
- {k:"combat",l:"Combattre",ic:"swords",p:[["modes","Dresseurs & Arènes"],["pvp","Duels"],["duo","Double combat"],["raids","Raids"]]},
- {k:"collection",l:"Collection",ic:"grid",p:[["equipe","Équipe"],["collection","Pokémon"],["pokedex","Pokédex"],["inventaire","Sac"],["labo","Laboratoire"]]},
- {k:"marche",l:"Marché",ic:"bag",p:[["boutique","Boutique"],["marche","Marketplace"],["echanges","Échanges"]]},
- {k:"jeux",l:"Jeux",ic:"dice",p:[["casino","Casino"],["rogue","Roguelike"]]}
+ {k:"accueil",l:"Accueil",ic:"home",c:"#4cb8ff",t:"",p:[["accueil","Tableau de bord"],["quetes","Missions"],["classements","Classements"]]},
+ {k:"explorer",l:"Explorer",ic:"compass",c:"#3ddc97",t:"Pokémon sauvages, PokéStop et expéditions.",p:[["explorer","Rencontres"],["explorations","Expéditions"]]},
+ {k:"combat",l:"Combattre",ic:"swords",c:"#ff5446",t:"Dresseurs, arènes, duels et raids.",p:[["modes","Dresseurs & Arènes"],["pvp","Duels"],["duo","Double combat"],["raids","Raids"]]},
+ {k:"collection",l:"Collection",ic:"grid",c:"#b07bff",t:"Ton équipe, tes Pokémon, ton sac et le laboratoire.",p:[["equipe","Équipe"],["collection","Pokémon"],["pokedex","Pokédex"],["inventaire","Sac"],["labo","Laboratoire"]]},
+ {k:"marche",l:"Marché",ic:"bag",c:"#ffc83d",t:"Boutique, annonces et échanges entre dresseurs.",p:[["boutique","Boutique"],["marche","Marketplace"],["echanges","Échanges"]]},
+ {k:"jeux",l:"Jeux",ic:"dice",c:"#ff7ab6",t:"Casino et roguelike : tente ta chance.",p:[["casino","Casino"],["rogue","Roguelike"]]}
 ];
 let hubActif="accueil";
 const hubDe=k=>HUBS.find(h=>h.p.some(x=>x[0]===k))||HUBS[0];
 function marquerHub(){
+  const hh=HUBS.find(h=>h.k===hubActif);if(hh)document.documentElement.style.setProperty("--hc",hh.c);
   document.querySelectorAll("[data-hub]").forEach(b=>b.getAttribute("aria-current")!==null&&b.removeAttribute("aria-current"));
   document.querySelectorAll(`[data-hub="${hubActif}"]`).forEach(b=>b.setAttribute("aria-current","page"));
 }
 // Renvoie la barre d'onglets de la section ; met aussi à jour la barre du haut.
 const nav=a=>{
   const h=hubDe(a); hubActif=h.k; marquerHub(); window.scrollTo(0,0);
-  return h.p.length<2?"":`<div class="soustitre" role="tablist">${h.p.map(([k,l])=>`<button role="tab" ${k===a?'aria-current="page"':""} onclick="go('${k}')">${l}</button>`).join("")}</div>`;
+  const tete=h.k==="accueil"?"":`<div class="page-h"><span class="ph-ic">${svg(h.ic)}</span><div><h1>${h.l}</h1><p>${h.t}</p></div></div>`;
+  return tete+(h.p.length<2?"":`<div class="soustitre" role="tablist">${h.p.map(([k,l])=>`<button role="tab" ${k===a?'aria-current="page"':""} onclick="go('${k}')">${l}</button>`).join("")}</div>`);
 };
 function cadre(){
   const m=moi, pct=m?Math.min(100,Math.round(m.xp/Math.max(1,m.xp_requise)*100)):0;
   $("#topbar").innerHTML=`<button class="marque" onclick="go('accueil')" aria-label="PokéWild — accueil">${BALL}PokéWild</button>`
-   +(m?`<div class="hubs">${HUBS.map(h=>`<button class="hub" data-hub="${h.k}" onclick="go('${h.p[0][0]}')">${svg(h.ic)}<span>${h.l}</span></button>`).join("")}</div><div class="sp"></div>
+   +(m?`<div class="hubs">${HUBS.map(h=>`<button class="hub" data-hub="${h.k}" style="--hc:${h.c}" onclick="go('${h.p[0][0]}')">${svg(h.ic)}<span>${h.l}</span></button>`).join("")}</div><div class="sp"></div>
    <div class="puces"><button class="puce or" onclick="go('quetes')" title="Missions">${svg("scroll")}<span class="lib">Missions</span></button>
    <div class="puce or" style="cursor:default" title="Poké Dollars">${svg("coin")}<b>${Number(m.poke_dollars).toLocaleString("fr-FR")}</b></div>
    <div class="niveau" title="${m.xp} / ${m.xp_requise} XP"><div class="anneau" style="--p:${pct}"><span>${m.niveau}</span></div><small>Niveau ${m.niveau}</small></div>
@@ -202,18 +220,21 @@ async function pageEquipe(msgInitial){
   H=[];
   const potions=inv.objets.filter(o=>o.potion);
   let h=nav("equipe")+`<div id="msg">${msgInitial?`<div class="msg">${esc(msgInitial)}</div>`:""}</div>`;
-  h+=`<div class="card"><h2>Mon équipe de combat (${eq.equipe.length}/${eq.taille_max})</h2>`;
+  h+=`<div class="card"><div class="sect-h"><h2>Mon équipe de combat</h2><small>${eq.equipe.length} / ${eq.taille_max} Pokémon</small><span class="sp"></span><button class="primary" onclick="${cb(()=>auto())}">Meilleure équipe</button><button onclick="${cb(()=>soinAuto())}" ${eq.en_combat?"disabled":""}>Soin auto</button></div>`;
   if(eq.en_combat)h+=`<div class="msg">Un combat est en cours : les soins sont bloqués (utilise les potions dans le combat).</div>`;
-  if(!eq.equipe.length)h+=`<p>Ton équipe est vide : ajoute des Pokémon ci-dessous.</p>`;
-  h+=`<div class="grid">${eq.equipe.map((p,i)=>{
+  h+=`<div class="roster">${eq.equipe.map((p,i)=>{
     const blesse=p.pv<p.pv_max;
-    return `<div class="mon ${p.pv<=0?"ko":""} ${p.shiny?"chroma":""}"><img src="${esc(p.sprite||"")}" alt=""><div><b>${esc(p.nom)}</b>${p.shiny?" ✨":""} · Nv.${p.niveau}</div>${typesHTML(p.types)}${p.indisponible?`<div><small class="err">⏳ indisponible (exploration/caisson)</small></div>`:""}${barre(p.pv,p.pv_max)}<small>${p.pv}/${p.pv_max} PV · ${p.nb_attaques}/4 attaques</small>
-    <div class="rang"><button ${i===0?"disabled":""} onclick="${cb(()=>bouger(p.nom,-1))}">◀</button><button ${i===eq.equipe.length-1?"disabled":""} onclick="${cb(()=>bouger(p.nom,1))}">▶</button><button onclick="${cb(()=>pageAttaques(p.nom))}">⚔️</button><button class="danger" onclick="${cb(()=>retirer(p.nom))}">✕</button></div>
-    ${blesse&&!eq.en_combat?`<div class="rang">${potions.map(o=>`<button title="${esc(o.nom)}" onclick="${cb(()=>soigner(p.nom,o.cle))}">${ico(o.cle)||"❤️ "}${esc(o.nom.replace("Potion","Pot."))} ×${o.quantite}</button>`).join("")||"<small>Aucune potion</small>"}</div>`:""}</div>`}).join("")}</div>`;
-  h+=`<div class="actions"><button class="primary" onclick="${cb(()=>auto())}">🏆 Meilleure équipe</button><button onclick="${cb(()=>soinAuto())}" ${eq.en_combat?"disabled":""}>🩹 Soin auto</button></div></div>`;
-  h+=`<div class="card"><h2>Équipes sauvegardées (${pr.presets.length}/${eq.taille_max_presets})</h2>${pr.presets.map(p=>`<div class="ligne"><b>${esc(p.nom)}</b> <small>${esc(p.pokemon.join(", "))}</small><span class="sp"></span><button onclick="${cb(()=>chargerPreset(p.nom))}">Charger</button><button class="danger" onclick="${cb(()=>supprPreset(p.nom))}">🗑️</button></div>`).join("")||"<small>Aucune.</small>"}
-    <div class="ligne"><input id="nomPreset" maxlength="30" placeholder="Nom de l'équipe actuelle"><button onclick="${cb(()=>sauverPreset())}">💾 Sauvegarder</button></div></div>`;
-  h+=`<div class="card"><h2>Ajouter un Pokémon</h2><div class="ligne"><input id="rech" placeholder="🔍 Rechercher" value="${esc(rech)}" oninput="rech=this.value;majEspeces()"><select id="tri" onchange="tri=this.value;majEspeces()">${[["alphabetique","Alphabétique"],["rarete","Rareté"],["pc_desc","PC : fort → faible"],["pc_asc","PC : faible → fort"]].map(([v,l])=>`<option value="${v}" ${v===tri?"selected":""}>${l}</option>`).join("")}</select></div><div id="especes" class="grid"></div></div>`;
+    return `<article class="slot ${p.pv<=0?"ko":""} ${p.shiny?"chroma":""}"><span class="slot-n">${i+1}</span>
+    <div class="pad"><img class="spr" src="${esc(p.sprite||"")}" alt="" ${zoomImg(1.5,110)}></div>
+    <h3>${esc(p.nom)}${p.shiny?" ✨":""} <small>Nv.${p.niveau}</small></h3><div class="rc-types">${typesHTML(p.types)}</div>
+    ${p.indisponible?`<small class="err">Indisponible (exploration ou caisson)</small>`:""}
+    ${barre(p.pv,p.pv_max)}<div class="slot-pv"><span>${p.pv} / ${p.pv_max} PV</span><span class="chip ${p.nb_attaques<4?"warn":""}" title="Attaques équipées">${p.nb_attaques}/4 attaques</span></div>
+    <div class="slot-act"><button title="Monter" ${i===0?"disabled":""} onclick="${cb(()=>bouger(p.nom,-1))}">◀</button><button title="Descendre" ${i===eq.equipe.length-1?"disabled":""} onclick="${cb(()=>bouger(p.nom,1))}">▶</button><button class="gr" onclick="${cb(()=>pageAttaques(p.nom))}">Attaques</button><button class="danger" title="Retirer de l'équipe" onclick="${cb(()=>retirer(p.nom))}">✕</button></div>
+    ${blesse&&!eq.en_combat?`<div class="slot-soin">${potions.map(o=>`<button title="Soigner avec ${esc(o.nom)} (×${o.quantite})" onclick="${cb(()=>soigner(p.nom,o.cle))}">${ico(o.cle)||""}<small>×${o.quantite}</small></button>`).join("")||"<small>Aucune potion</small>"}</div>`:""}</article>`}).join("")}
+    ${Array.from({length:Math.max(0,eq.taille_max-eq.equipe.length)},()=>`<div class="slot vide"><span>Emplacement libre</span><small>Ajoute un Pokémon ci-dessous</small></div>`).join("")}</div></div>`;
+  h+=`<div class="card"><div class="sect-h"><h2>Équipes sauvegardées</h2><small>${pr.presets.length} / ${eq.taille_max_presets}</small></div>${pr.presets.map(p=>`<div class="ligne"><b>${esc(p.nom)}</b> <small>${esc(p.pokemon.join(", "))}</small><span class="sp"></span><button onclick="${cb(()=>chargerPreset(p.nom))}">Charger</button><button class="danger" title="Supprimer" onclick="${cb(()=>supprPreset(p.nom))}">✕</button></div>`).join("")||"<small>Aucune.</small>"}
+    <div class="ligne"><input id="nomPreset" maxlength="30" placeholder="Nom de l'équipe actuelle"><button onclick="${cb(()=>sauverPreset())}">Sauvegarder l'équipe</button></div></div>`;
+  h+=`<div class="card"><div class="sect-h"><h2>Ajouter un Pokémon</h2></div><div class="ligne"><input id="rech" placeholder="Rechercher un Pokémon" value="${esc(rech)}" oninput="rech=this.value;majEspeces()"><select id="tri" onchange="tri=this.value;majEspeces()">${[["alphabetique","Alphabétique"],["rarete","Rareté"],["pc_desc","PC : fort → faible"],["pc_asc","PC : faible → fort"]].map(([v,l])=>`<option value="${v}" ${v===tri?"selected":""}>${l}</option>`).join("")}</select></div><div id="especes" class="grid"></div></div>`;
   app.innerHTML=h; majEspeces();
   window._eqPleine=eq.equipe.length>=eq.taille_max;
 }
@@ -222,7 +243,7 @@ async function majEspeces(){
   const r=await api(`/api/gestion/especes?tri=${encodeURIComponent(tri)}&q=${encodeURIComponent(rech)}`).catch(()=>null);
   if(!r||!$("#especes"))return;
   const base=H.length; // callbacks propres à ce bloc
-  el.innerHTML=r.especes.slice(0,60).map(p=>`<div class="mon ${p.shiny?"chroma":""}"><img src="${esc(p.sprite||"")}" alt="" loading="lazy"><div><b>${esc(p.nom)}</b>${p.shiny?" ✨":""}</div>${typesHTML(p.types)}<small>${p.pc} PC</small>${p.rarete?rarete(p.rarete):""}${p.indisponible?`<small class="err">⏳ indisponible</small>`:""}<div class="rang"><button onclick="${cb(()=>ajouter(p.nom))}">➕ Ajouter</button></div></div>`).join("")||"<small>Aucun résultat.</small>";
+  el.innerHTML=r.especes.slice(0,60).map(p=>`<div class="mon ${p.shiny?"chroma":""}"><img src="${esc(p.sprite||"")}" alt="" loading="lazy"><div><b>${esc(p.nom)}</b>${p.shiny?" ✨":""}</div>${typesHTML(p.types)}<small>${p.pc} PC</small>${p.rarete?rarete(p.rarete):""}${p.indisponible?`<small class="err">Indisponible</small>`:""}<div class="rang"><button class="gr" onclick="${cb(()=>ajouter(p.nom))}">Ajouter à l'équipe</button></div></div>`).join("")||"<small>Aucun résultat.</small>";
   if(r.especes.length>60)el.insertAdjacentHTML("beforeend",`<small>… ${r.especes.length-60} de plus : affine la recherche.</small>`);
 }
 const rechargerEquipe=m=>pageEquipe(m);
@@ -273,9 +294,9 @@ async function pageInventaire(msgInitial){
   H=[];
   const cats=[["soin","Soins"],["ball","Balls"],["objet","Objets"]];
   let h=nav("inventaire")+`<div id="msg">${msgInitial?`<div class="msg">${esc(msgInitial)}</div>`:""}</div>`;
-  if(!d.objets.length)h+=`<div class="card"><p>Ton inventaire est vide.</p></div>`;
+  if(!d.objets.length)h+=`<div class="card vide-ill"><p><b>Ton sac est vide</b></p><small>Va à la boutique ou explore pour trouver des objets.</small></div>`;
   for(const[k,l]of cats){const o=d.objets.filter(x=>x.categorie===k);if(!o.length)continue;
-    h+=`<div class="card"><h2>${l}</h2>${o.map((x,i)=>`<div class="ligne">${ico(x.cle)}<b>${esc(x.nom)}</b> ×${x.quantite}<span class="sp"></span><input type="number" min="1" max="${x.quantite}" value="1" id="q_${esc(x.cle)}" style="width:70px"><button class="danger" onclick="${cb(()=>supprObjet(x.cle))}">🗑️ Jeter</button></div>`).join("")}</div>`}
+    h+=`<div class="card"><h2>${l} <span class="chip">${o.reduce((t,x)=>t+x.quantite,0)}</span></h2><div class="sacgrid">${o.map(x=>`<div class="sacit">${ico(x.cle,"xl")}<span class="qte">×${x.quantite}</span><b>${esc(x.nom)}</b><div class="prod-a"><input type="number" min="1" max="${x.quantite}" value="1" id="q_${esc(x.cle)}" aria-label="Quantité"><button class="danger" onclick="${cb(()=>supprObjet(x.cle))}" title="Jeter">${svg("trash")}</button></div></div>`).join("")}</div></div>`}
   h+=`<div class="card"><small>Solde : ${d.poke_dollars} ₽. Pour soigner un Pokémon, va dans l'onglet Équipe.</small></div>`;
   app.innerHTML=h;
 }
@@ -304,7 +325,8 @@ async function majEntete(){try{moi=await api("/api/moi");cadre()}catch(e){}}
 async function pageExplorer(){
   clearInterval(minuteur);
   H=[];
-  app.innerHTML=nav("explorer")+`<div id="msg"></div><div class="card"><h2>PokéStop</h2><div id="stop">Chargement…</div><div id="resStop"></div></div><div class="card"><h2>Pokémon sauvages</h2><div id="balls" class="actions"></div><div id="resCapture"></div><div id="spawns" class="grid"></div></div>`;
+  app.innerHTML=nav("explorer")+`<div id="msg"></div><div class="explo"><div class="explo-main"><div class="sect-h"><h2>Pokémon sauvages</h2><small>Un nouveau Pokémon apparaît chaque minute, chacun reste quelques minutes.</small></div><div id="resCapture"></div><div id="spawns" class="rencontres"></div></div>
+  <aside class="explo-side"><div class="card stop"><div id="stop">Chargement…</div><div id="resStop"></div></div><div class="card"><h2>Ta sacoche</h2><div id="balls" class="ballbar"></div></div></aside></div>`;
   await majExplorer(); minuteur=setInterval(majExplorer,3000);
 }
 async function majExplorer(){
@@ -314,10 +336,10 @@ async function majExplorer(){
   if(!$("#spawns"))return;
   const dispo=sp.balls.filter(b=>b.quantite>0);
   if(!dispo.find(b=>b.cle===ballChoisie)&&dispo.length)ballChoisie=dispo[0].cle;
-  $("#balls").innerHTML=sp.balls.map(b=>`<button class="${b.cle===ballChoisie?"primary":""}" ${b.quantite?"":"disabled"} onclick="${cb(()=>{ballChoisie=b.cle;majExplorer()})}">${ico(b.cle)}${esc(b.nom)} ×${b.quantite}</button>`).join("")+(dispo.length?"":`<small>Plus de balls : fais tourner le PokéStop ou passe par la boutique Discord.</small>`);
+  $("#balls").innerHTML=sp.balls.map(b=>`<button class="ballc ${b.cle===ballChoisie?"on":""}" ${b.quantite?"":"disabled"} onclick="${cb(()=>{ballChoisie=b.cle;majExplorer()})}">${ico(b.cle,"gros")}<span><b>${esc(b.nom)}</b><small>×${b.quantite}</small></span></button>`).join("")+(dispo.length?"":`<p class="mut"><small>Plus de balls : fais tourner le PokéStop ou passe par la boutique.</small></p>`);
   const mm=Math.floor(st.secondes_restantes/60),ss=st.secondes_restantes%60;
-  $("#stop").innerHTML=`${st.heure_de_pointe?`<div class="msg">🔥 Heure de pointe : récompenses ×2 !</div>`:""}<button class="primary" ${st.disponible?"":"disabled"} onclick="${cb(()=>tournerStop())}">${st.disponible?"Faire tourner le disque":`Recharge : ${mm}m ${String(ss).padStart(2,"0")}s`}</button>`;
-  $("#spawns").innerHTML=sp.spawns.map(s=>`<div class="mon"><img src="${esc(s.sprite||"")}" alt=""><div><b>${esc(s.nom)}</b> · Nv.${s.niveau}</div>${typesHTML(s.types)}<small>${s.pc} PC</small>${rarete(s.rarete)}<small>${s.possedes?`📖 ×${s.possedes}`:"🆕 jamais capturé"}</small><small>⏱ ${s.secondes_restantes}s</small><div class="rang"><button class="primary" ${s.deja_tente||!dispo.length?"disabled":""} onclick="${cb(()=>lancer_ball(s.id))}">${s.deja_tente?"Déjà tenté":"🎯 Capturer"}</button></div></div>`).join("")||"<small>Aucun Pokémon pour l'instant : un nouveau apparaît toutes les minutes.</small>";
+  $("#stop").innerHTML=`<div class="stop-h"><div class="disque ${st.disponible?"pret":""}"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="24" r="9" fill="currentColor" opacity=".35"/><circle cx="24" cy="24" r="3.4" fill="currentColor"/><path d="M24 5v8M24 35v8M5 24h8M35 24h8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></div><div><h2>PokéStop</h2><p class="mut">${st.disponible?"Le disque est prêt : des balls, des potions et de l'XP t'attendent.":`Le disque recharge : encore ${mm} min ${String(ss).padStart(2,"0")} s.`}</p></div></div>${st.heure_de_pointe?`<div class="msg">🔥 Heure de pointe : récompenses ×2 !</div>`:""}<button class="primary gros" style="width:100%" ${st.disponible?"":"disabled"} onclick="${cb(()=>tournerStop())}">${st.disponible?"Faire tourner le disque":"Recharge en cours"}</button>`;
+  $("#spawns").innerHTML=sp.spawns.map(s=>`<article class="rc r-${esc(s.rarete||"commun")}"><div class="rc-top">${rarete(s.rarete)}${s.possedes?`<span class="deja">Déjà ×${s.possedes}</span>`:`<span class="new">Nouveau</span>`}</div><div class="pad"><img class="spr" src="${esc(s.sprite||"")}" alt="" ${zoomImg(1.7,150)}></div><h3>${esc(s.nom)} <small>Nv.${s.niveau}</small></h3><div class="rc-types">${typesHTML(s.types)}</div><div class="rc-meta"><span>${s.pc} PC</span><span class="tm" title="Temps restant"><i style="width:${Math.max(4,Math.min(100,s.secondes_restantes/180*100))}%"></i></span><span>${s.secondes_restantes}s</span></div><button class="primary" ${s.deja_tente||!dispo.length?"disabled":""} onclick="${cb(()=>lancer_ball(s.id))}">${s.deja_tente?"Déjà tenté":`${ico(ballChoisie)}Capturer`}</button></article>`).join("")||`<div class="vide-ill"><b>Aucun Pokémon à l'horizon</b><p>Un nouveau Pokémon apparaît toutes les minutes. Profites-en pour tourner le PokéStop.</p></div>`;
 }
 async function lancer_ball(id){
   const r=$("#resCapture");
@@ -409,16 +431,16 @@ async function pageBoutique(msgInitial,erreur){
   clearInterval(minuteur); H=[];
   let d;try{d=await api("/api/boutique")}catch(e){return e.code===401?connexion():app.innerHTML=`<p class="err">${esc(e.message)}</p>`}
   window._bout=d;
-  let h=nav("boutique")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${esc(msgInitial)}</div>`:""}</div><div class="card"><div class="ligne"><b>💰 ${d.poke_dollars} ₽</b><span class="sp"></span><small>🎒 Sac ${d.sac.utilises}/${d.sac.limite} · 📦 Pokémon ${d.stockage_pokemon.utilises}/${d.stockage_pokemon.limite}</small></div><div class="nav">${RAYONS.map(([k,l])=>`<button class="${k===rayon?"primary":""}" onclick="${cb(()=>{rayon=k;pageBoutique()})}">${l}</button>`).join("")}</div>`;
+  let h=nav("boutique")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${esc(msgInitial)}</div>`:""}</div><div class="wallet"><div class="w-solde"><span class="w-ic">${svg("coin")}</span><div><small>Ton solde</small><b>${Number(d.poke_dollars).toLocaleString("fr-FR")} <i>PD</i></b></div></div><div class="w-jauges"><div><div class="w-l"><span>Sac</span><span>${d.sac.utilises} / ${d.sac.limite}</span></div><div class="bar ${d.sac.utilises/d.sac.limite>.9?"low":""}"><i style="width:${Math.min(100,d.sac.utilises/d.sac.limite*100)}%"></i></div></div><div><div class="w-l"><span>Stockage Pokémon</span><span>${d.stockage_pokemon.utilises} / ${d.stockage_pokemon.limite}</span></div><div class="bar ${d.stockage_pokemon.utilises/d.stockage_pokemon.limite>.9?"low":""}"><i style="width:${Math.min(100,d.stockage_pokemon.utilises/d.stockage_pokemon.limite*100)}%"></i></div></div></div></div><div class="card"><div class="cmd-tabs rayons">${RAYONS.map(([k,l])=>`<button class="${k===rayon?"on":""}" onclick="${cb(()=>{rayon=k;pageBoutique()})}">${l}</button>`).join("")}</div>`;
   h+=rendreRayon(d)+`</div>`; app.innerHTML=h;
 }
-const ligneArticle=(a,categorie,extra)=>`<div class="ligne">${ico(a.cle)}<b>${esc(a.nom)}</b>${extra?`<small>${esc(extra)}</small>`:""}<small>${a.prix} ₽${a.possede!==undefined?` · tu en as ${a.possede}`:""}</small><span class="sp"></span><input type="number" min="1" max="999" value="1" id="q_${esc(a.cle)}" style="width:64px"><button onclick="${cb(()=>acheterArticle(categorie,a.cle))}">Acheter</button></div>`;
+const ligneArticle=(a,categorie,extra)=>`<div class="prod">${ico(a.cle,"xl")}<b>${esc(a.nom)}</b>${extra?`<small class="mut">${esc(extra)}</small>`:""}<div class="prod-p"><span class="prix">${svg("coin")}${Number(a.prix).toLocaleString("fr-FR")}</span>${a.possede!==undefined?`<span class="chip">Tu en as ${a.possede}</span>`:""}</div><div class="prod-a"><input type="number" min="1" max="999" value="1" id="q_${esc(a.cle)}" aria-label="Quantité"><button class="primary" onclick="${cb(()=>acheterArticle(categorie,a.cle))}">Acheter</button></div></div>`;
 function rendreRayon(d){
-  if(rayon==="balls")return d.balls.map(a=>ligneArticle(a,"balls")).join("");
-  if(rayon==="soins")return d.soins.map(a=>ligneArticle(a,"soins",a.description)).join("");
-  if(rayon==="objets_tenus")return `<p><small>S'équipent sur un Pokémon depuis Discord (Maître des Capacités).</small></p>`+d.objets_tenus.map(a=>ligneArticle(a,"objets_tenus",a.description)).join("");
+  if(rayon==="balls")return `<div class="prods">${d.balls.map(a=>ligneArticle(a,"balls")).join("")}</div>`;
+  if(rayon==="soins")return `<div class="prods">${d.soins.map(a=>ligneArticle(a,"soins",a.description)).join("")}</div>`;
+  if(rayon==="objets_tenus")return `<p><small>S'équipent sur un Pokémon depuis Discord (Maître des Capacités).</small></p>`+`<div class="prods">${d.objets_tenus.map(a=>ligneArticle(a,"objets_tenus",a.description)).join("")}</div>`;
   if(rayon==="gemmes_mega"){const f=rechBout.trim().toLowerCase();
-    return `<p><small>Une gemme ne fonctionne que sur son espèce. Prix unique.</small></p><input placeholder="🔍 Rechercher" value="${esc(rechBout)}" oninput="rechBout=this.value;majGemmes()" style="margin-bottom:8px"><div id="gemmes">${gemmesHTML(d,f)}</div>`}
+    return `<p><small>Une gemme ne fonctionne que sur son espèce. Prix unique.</small></p><input placeholder="🔍 Rechercher" value="${esc(rechBout)}" oninput="rechBout=this.value;majGemmes()" style="margin-bottom:8px"><div id="gemmes" class="prods">${gemmesHTML(d,f)}</div>`}
   if(rayon==="ameliorations"){const a=d.ameliorations;return `
     <div class="ligne"><b>📦 Stockage Pokémon</b><small>+${a.pokemon.gain} places · ${a.pokemon.prix} ₽ / palier</small><span class="sp"></span><input type="number" min="1" max="999" value="1" id="p_pokemon" style="width:64px"><button onclick="${cb(()=>extension("pokemon"))}">Acheter</button></div>
     <div class="ligne"><b>🎒 Stockage objets</b><small>+${a.objets.gain} places · ${a.objets.prix} ₽ / palier</small><span class="sp"></span><input type="number" min="1" max="999" value="1" id="p_objets" style="width:64px"><button onclick="${cb(()=>extension("objets"))}">Acheter</button></div>
@@ -491,12 +513,12 @@ async function pageQuetes(msgInitial,erreur){
     ?`<p>✅ Déjà réclamée. Prochaine dans <b>${dureeTxt(cx.secondes_avant_prochain)}</b>.</p><small>Demain (jour ${cx.jour_recompense}) : ${recTxt(cx.recompense)}</small>`
     :`<div class="ligne"><span>Jour ${cx.jour_recompense} : ${recTxt(cx.recompense)}</span><span class="sp"></span><button class="primary" onclick="${cb(()=>reclamerConnexion())}">🎁 Réclamer</button></div>`);
   const barre=(a,b)=>`<div class="bar prog"><i style="width:${Math.min(100,100*a/b)}%"></i></div>`;
-  const ligneQ=q=>`<div class="ligne" style="flex-wrap:wrap"><b>${emo(q.emoji)} ${esc(q.nom)}</b><span class="sp"></span>${q.reclamee?"<small>✅ Réclamée</small>":q.complete?"<b>✅ Complète !</b>":`<small>${q.compteur}/${q.cible}</small>`}<div style="flex-basis:100%">${barre(q.compteur,q.cible)}</div></div>`;
+  const ligneQ=q=>`<div class="qcard ${q.reclamee?"done":q.complete?"pret":""}"><span class="q-e">${emo(q.emoji)}</span><div class="q-c"><b>${esc(q.nom)}</b>${barre(q.compteur,q.cible)}</div><span class="q-s">${q.reclamee?'<span class="chip ok">Réclamée</span>':q.complete?'<span class="chip gold">À réclamer</span>':`<b>${q.compteur}</b><small>/${q.cible}</small>`}</span></div>`;
   let h="";
   if(ongletQuetes==="quetes"){
-    h=`<div class="ligne"><small>Reset chaque jour à minuit (UTC) et chaque semaine.</small><span class="sp"></span><button class="primary" onclick="${cb(()=>reclamerQuetes())}" ${d.pretes?"":"disabled"}>🎁 Tout réclamer${d.pretes?` (${d.pretes})`:""}</button></div><h2>Journalières</h2>${d.jour.map(ligneQ).join("")}<h2 style="margin-top:12px">Hebdomadaires</h2>${d.semaine.map(ligneQ).join("")}`;
+    h=`<div class="ligne"><small>Reset chaque jour à minuit (UTC) et chaque semaine.</small><span class="sp"></span><button class="primary" onclick="${cb(()=>reclamerQuetes())}" ${d.pretes?"":"disabled"}>🎁 Tout réclamer${d.pretes?` (${d.pretes})`:""}</button></div><h2>Journalières</h2><div class="qgrid">${d.jour.map(ligneQ).join("")}</div><h2 style="margin-top:18px">Hebdomadaires</h2><div class="qgrid">${d.semaine.map(ligneQ).join("")}</div>`;
   }else if(ongletQuetes==="contrats"){
-    h=`<p><small>3 contrats tirés au sort chaque jour, payés automatiquement dès qu'ils sont remplis.</small></p>`+d.contrats.map(c=>`<div class="ligne" style="flex-wrap:wrap"><b>${emo(c.emoji)} ${esc(c.nom)}</b><span class="sp"></span>${c.complete?"<b>✅ Remplie</b>":`<small>${c.compteur}/${c.cible}</small>`}<div style="flex-basis:100%">${barre(c.compteur,c.cible)}</div><small>💰 ${c.dollars} PD · ${c.xp} XP${c.objet?" · "+esc(c.objet):""}</small></div>`).join("");
+    h=`<p><small>3 contrats tirés au sort chaque jour, payés automatiquement dès qu'ils sont remplis.</small></p>`+`<div class="qgrid">`+d.contrats.map(c=>`<div class="qcard ${c.complete?"pret":""}"><div class="q-c"><b>${emo(c.emoji)} ${esc(c.nom)}</b>${barre(c.compteur,c.cible)}<small class="mut">${c.dollars} PD · ${c.xp} XP${c.objet?" · "+esc(c.objet):""}</small></div><span class="q-s">${c.complete?'<span class="chip ok">Remplie</span>':`<b>${c.compteur}</b><small>/${c.cible}</small>`}</span></div>`).join("")+`</div>`;
   }else if(ongletQuetes==="principale"){
     const p=d.principale;
     h=p.termine?`<h2>Quête principale terminée !</h2><p>Tu as vécu tous les chapitres de ton histoire de dresseur.</p>`:`<h2>Chapitre ${p.chapitre}/${p.total} : ${esc(p.titre)}</h2><p>${fmt(p.intro).replace(/\n/g,"<br>")}</p>${barre(p.compteur,p.cible)}<small>${p.compteur}/${p.cible}</small><p><small>🎁 ${p.recompense.dollars} PD · ${p.recompense.xp} XP${p.recompense.objet?" · "+esc(p.recompense.objet):""}</small></p><small>Cette quête suit ce que tu fais déjà dans le jeu.</small>`;
@@ -588,12 +610,12 @@ async function majCollection(){
   try{d=await api(`/api/collection?tri=${e.tri}&q=${encodeURIComponent(e.q)}&filtre=${e.filtre}&page=${e.page}`)}catch(x){return x.code===401?connexion():flash(x.message,true)}
   const z=$("#co"); if(!z)return; e.page=d.page;
   const opt=(v,l,cur)=>`<option value="${v}" ${v===cur?"selected":""}>${l}</option>`;
-  let h=`<h2>Ma collection <small>(${d.total} Pokémon · 🔒 ${d.verrous} · ⭐ ${d.favoris})</small></h2>
-  <div class="ligne"><input id="co_q" placeholder="🔍 Nom ou surnom" value="${esc(e.q)}" oninput="collEtat.q=this.value;collEtat.page=0;clearTimeout(window._tc);window._tc=setTimeout(majCollection,300)">
+  let h=`<div class="sect-h"><h2>Ma collection</h2><small>${d.total} Pokémon · ${d.verrous} verrouillés · ${d.favoris} favoris</small></div>
+  <div class="ligne"><input id="co_q" placeholder="Nom ou surnom" value="${esc(e.q)}" oninput="collEtat.q=this.value;collEtat.page=0;clearTimeout(window._tc);window._tc=setTimeout(majCollection,300)">
   <select onchange="collEtat.tri=this.value;majCollection()">${[["alphabetique","Alphabétique"],["pc_desc","PC décroissant"],["favoris_dabord","Favoris d'abord"],["verrouilles_dabord","Verrouillés d'abord"]].map(([v,l])=>opt(v,l,e.tri)).join("")}</select>
   <select onchange="collEtat.filtre=this.value;collEtat.page=0;majCollection()">${[["tous","Tous"],["doublons","Doublons"],["favoris","Favoris"],["verrouilles","Verrouillés"],["shiny","Shiny"]].map(([v,l])=>opt(v,l,e.filtre)).join("")}</select></div>
-  <div class="actions"><button onclick="${cb(()=>apercuRelacher())}">👋 Relâcher les doublons</button>${e.sel.size?`<button class="danger" onclick="${cb(()=>supprimerSel())}">🗑️ Supprimer la sélection (${e.sel.size})</button><button onclick="${cb(()=>{e.sel.clear();majCollection()})}">Désélectionner</button>`:""}</div><div id="co_zone"></div>`;
-  h+=`<div class="liste">`+d.captures.map(c=>`<div class="ligne"><input type="checkbox" ${e.sel.has(c.id)?"checked":""} onchange="${cb(()=>{e.sel.has(c.id)?e.sel.delete(c.id):e.sel.add(c.id);majCollection()})}"><img src="${esc(c.sprite||"")}" width="36" height="36" loading="lazy" alt=""><b>${c.shiny?"✨ ":""}${esc(c.surnom?c.surnom+" ("+c.nom+")":c.nom)}</b><small>${c.pc} PC${c.doublon?" · doublon":""}${c.dernier?" · ⚠️ unique":""}</small><span class="sp"></span><button title="Favori" onclick="${cb(()=>basc(c.id,'favori',!c.favori))}">${c.favori?"⭐":"☆"}</button><button title="Verrouiller" onclick="${cb(()=>basc(c.id,'verrouille',!c.verrouille))}">${c.verrouille?"🔒":"🔓"}</button><button title="Surnom" onclick="${cb(()=>surnom(c.id,c.surnom||''))}">✏️</button></div>`).join("")+`</div>`;
+  <div class="actions"><button onclick="${cb(()=>apercuRelacher())}">Relâcher les doublons</button>${e.sel.size?`<button class="danger" onclick="${cb(()=>supprimerSel())}">Supprimer la sélection (${e.sel.size})</button><button onclick="${cb(()=>{e.sel.clear();majCollection()})}">Désélectionner</button>`:""}</div><div id="co_zone"></div>`;
+  h+=`<div class="boxgrid">`+d.captures.map(c=>`<article class="pk ${c.shiny?"chroma":""} ${e.sel.has(c.id)?"sel":""}"><label class="pk-ck"><input type="checkbox" ${e.sel.has(c.id)?"checked":""} onchange="${cb(()=>{e.sel.has(c.id)?e.sel.delete(c.id):e.sel.add(c.id);majCollection()})}"></label>${c.favori?`<span class="pk-fav" title="Favori">★</span>`:""}<div class="pad"><img class="spr" src="${esc(c.sprite||"")}" alt="" loading="lazy" ${zoomImg(1.3,96)}></div><h3>${c.shiny?"✨ ":""}${esc(c.nom)}</h3>${c.surnom?`<small class="mut">« ${esc(c.surnom)} »</small>`:""}<div class="pk-pc">${c.pc} PC</div><div class="pk-chips">${c.verrouille?`<span class="chip">Verrouillé</span>`:""}${c.doublon?`<span class="chip">Doublon</span>`:""}${c.dernier?`<span class="chip warn">Exemplaire unique</span>`:""}</div><div class="pk-act"><button title="${c.favori?"Retirer des favoris":"Ajouter aux favoris"}" class="${c.favori?"on":""}" onclick="${cb(()=>basc(c.id,'favori',!c.favori))}">★</button><button title="${c.verrouille?"Déverrouiller":"Verrouiller"}" class="${c.verrouille?"on":""}" onclick="${cb(()=>basc(c.id,'verrouille',!c.verrouille))}">${c.verrouille?"Verrouillé":"Verrouiller"}</button><button title="Donner un surnom" onclick="${cb(()=>surnom(c.id,c.surnom||''))}">Surnom</button></div></article>`).join("")+`</div>`;
   if(d.nb_pages>1)h+=`<div class="actions"><button ${d.page?"":"disabled"} onclick="${cb(()=>{e.page--;majCollection()})}">◀</button><span>Page ${d.page+1}/${d.nb_pages}</span><button ${d.page<d.nb_pages-1?"":"disabled"} onclick="${cb(()=>{e.page++;majCollection()})}">▶</button></div>`;
   const foc=document.activeElement&&document.activeElement.id==="co_q"; z.innerHTML=h;
   if(foc){const i=$("#co_q");i.focus();i.setSelectionRange(i.value.length,i.value.length)}
@@ -617,7 +639,7 @@ async function pageClassements(){
   app.innerHTML=nav("classements")+`<div id="msg"></div><div id="cl">Chargement…</div>`;
   let d; try{d=await api("/api/classements")}catch(e){return e.code===401?connexion():flash(e.message,true)}
   const med=["🥇","🥈","🥉"];
-  $("#cl").innerHTML=`<div class="card"><h2>Clans</h2>${d.clans.map((c,i)=>`<div class="ligne"><b>${med[i]||(i+1)+"."} ${emo(c.emoji)} ${esc(c.nom)}</b><span class="sp"></span><small>${c.captures} captures · ${c.pc} PC cumulés</small></div>`).join("")}</div>`+d.categories.map(c=>`<div class="card"><h2>${emo(c.emoji)} ${esc(c.titre)}</h2>${c.lignes.map(l=>`<div class="ligne" ${l.moi?'style="font-weight:700"':""}><span>${med[l.rang-1]||l.rang+"."} ${esc(l.pseudo)}${l.moi?" (toi)":""}</span><span class="sp"></span><small>${esc(l.valeur)}</small></div>`).join("")||"<small>Personne pour l'instant.</small>"}</div>`).join("");
+  $("#cl").innerHTML=`<div class="card"><h2>Clans</h2>${d.clans.map((c,i)=>`<div class="rk ${i<3?"top"+(i+1):""}"><span class="rk-n">${i<3?med[i]:i+1}</span><b>${emo(c.emoji)} ${esc(c.nom)}</b><span class="sp"></span><span class="rk-v">${c.captures} captures · ${c.pc} PC</span></div>`).join("")}</div>`+d.categories.map(c=>`<div class="card"><h2>${emo(c.emoji)} ${esc(c.titre)}</h2>${c.lignes.map(l=>`<div class="rk ${l.rang<=3?"top"+l.rang:""} ${l.moi?"moi":""}"><span class="rk-n">${l.rang<=3?med[l.rang-1]:l.rang}</span><b>${esc(l.pseudo)}${l.moi?" <span class='chip'>toi</span>":""}</b><span class="sp"></span><span class="rk-v">${esc(l.valeur)}</span></div>`).join("")||"<div class='vide-ill'><small>Personne pour l'instant.</small></div>"}</div>`).join("");
 }
 
 /* ===== Marketplace & Échanges ===== */
@@ -760,7 +782,7 @@ async function majRaids(){
     const cl=r.classement.length?`<details><summary>🏆 Participants</summary>${r.classement.map(c=>`<div class="ligne"><span>${c.moi?"👉 ":""}${esc(c.pseudo)}</span><span class="sp"></span><b>${c.degats}</b></div>`).join("")}</details>`:"";
     return `<div class="card"><div class="ligne"><img src="${esc(r.sprite||"")}" width="64" height="64" alt=""><div><b>${esc(r.boss)}</b> ${et}</div></div>${corps}${cl}</div>`;
   }).join("");
-  h+=`</div><div class="card"><h2>Mon équipe ${d.equipe_en_raid?"(PV du raid)":""}</h2>`+(d.equipe.map(m=>`<div class="ligne"><img src="${esc(m.sprite||"")}" width="32" height="32" alt=""><b>${esc(m.nom)}</b>${m.dispo?"":" <small>(indisponible)</small>"}<span class="sp"></span>${m.pv<=0?"☠️ K.O.":m.pv+"/"+m.pv_max+" PV"}</div>`).join("")||"<small>Équipe vide.</small>")+`<div class="actions"><button onclick="${cb(()=>actR(()=>api("/api/raids/equipe-auto",{})))}">🛡️ Équipe la plus forte</button></div><small>Potions : ${Object.entries(d.potions).map(([k,v])=>v+"× "+k).join(", ")||"aucune"}</small></div>`;
+  h+=`</div><div class="card"><h2>Mon équipe ${d.equipe_en_raid?"(PV du raid)":""}</h2>`+(d.equipe.map(m=>`<div class="ligne"><span class="pad s"><img class="spr" src="${esc(m.sprite||"")}" alt=""></span><b>${esc(m.nom)}</b>${m.dispo?"":" <small>(indisponible)</small>"}<span class="sp"></span>${m.pv<=0?"☠️ K.O.":m.pv+"/"+m.pv_max+" PV"}</div>`).join("")||"<small>Équipe vide.</small>")+`<div class="actions"><button onclick="${cb(()=>actR(()=>api("/api/raids/equipe-auto",{})))}">🛡️ Équipe la plus forte</button></div><div class="potrow"><small class="mut">Potions disponibles</small>${Object.entries(d.potions).map(([k,v])=>`<span class="chip">${ico(k)} ${v}</span>`).join("")||"<small>aucune</small>"}</div></div>`;
   z.innerHTML=h;
 }
 
