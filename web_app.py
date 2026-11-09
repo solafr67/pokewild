@@ -44,6 +44,7 @@ import laboratoire_service  # noqa: E402
 import quetes_service  # noqa: E402
 import modes_service  # noqa: E402
 import pvp_service  # noqa: E402
+import collection_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
@@ -778,6 +779,69 @@ async def api_pvp_accepter(d: DemandeIdDefi, request: Request):
 @app.post("/api/pvp/annuler")
 async def api_pvp_annuler(d: DemandeIdDefi, request: Request):
     return pvp_service.annuler(joueur_connecte(request)["id"], d.defi_id)
+
+
+
+# ----------------------------------------------------------------------------
+# Collection (verrous, favoris, surnoms, relâcher) et classements
+# ----------------------------------------------------------------------------
+
+class DemandeBascule(BaseModel):
+    capture_id: int
+    champ: str
+    valeur: bool
+
+
+class DemandeSurnom(BaseModel):
+    capture_id: int
+    surnom: str = ""
+
+
+class DemandeRelacher(BaseModel):
+    raretes: list[str] | None = None
+
+
+class DemandeSuppression(BaseModel):
+    ids: list[int]
+
+
+@app.get("/api/collection")
+async def api_collection(request: Request, tri: str = "alphabetique", q: str = "", filtre: str = "tous", page: int = 0):
+    uid = joueur_connecte(request)["id"]
+    res = collection_service.collection(uid, tri, q, filtre, page)
+    for c in res["captures"]:
+        c.update(_sprites(c["nom"]))
+    return res
+
+
+@app.post("/api/collection/basculer")
+async def api_collection_basculer(d: DemandeBascule, request: Request):
+    return collection_service.basculer(joueur_connecte(request)["id"], d.capture_id, d.champ, d.valeur)
+
+
+@app.post("/api/collection/surnom")
+async def api_collection_surnom(d: DemandeSurnom, request: Request):
+    return collection_service.surnommer(joueur_connecte(request)["id"], d.capture_id, d.surnom)
+
+
+@app.post("/api/collection/relacher/apercu")
+async def api_collection_apercu(d: DemandeRelacher, request: Request):
+    return collection_service.apercu_relacher(joueur_connecte(request)["id"], d.raretes)
+
+
+@app.post("/api/collection/relacher")
+async def api_collection_relacher(d: DemandeRelacher, request: Request):
+    return collection_service.relacher_doublons(joueur_connecte(request)["id"], d.raretes)
+
+
+@app.post("/api/collection/supprimer")
+async def api_collection_supprimer(d: DemandeSuppression, request: Request):
+    return collection_service.supprimer(joueur_connecte(request)["id"], d.ids)
+
+
+@app.get("/api/classements")
+async def api_classements(request: Request):
+    return collection_service.classements(joueur_connecte(request)["id"])
 
 
 # ----------------------------------------------------------------------------
