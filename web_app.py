@@ -29,6 +29,7 @@ os.environ.setdefault("DISCORD_TOKEN", "web-only-no-discord-connection")
 
 import httpx  # noqa: E402
 from fastapi import FastAPI, HTTPException, Request  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 from starlette.middleware.sessions import SessionMiddleware  # noqa: E402
@@ -1179,6 +1180,9 @@ async def api_rogue_abandonner(request: Request):
 # ----------------------------------------------------------------------------
 # Site (page unique)
 # ----------------------------------------------------------------------------
+
+app.mount("/static", StaticFiles(directory=DOSSIER_STATIC / "static"), name="static")
+
 
 @app.get("/")
 async def accueil():

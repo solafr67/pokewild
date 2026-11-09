@@ -4,42 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PokéWild</title>
-<style>
-:root{--bg:#f4f5f7;--card:#fff;--txt:#1d2330;--mut:#6b7385;--bord:#dde1e8;--acc:#e5483b;--ok:#2e9e5b;--warn:#e0a21a;--bad:#d23c3c}
-@media (prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1e222b;--txt:#e8ebf1;--mut:#9aa3b5;--bord:#2e3441}}
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
-header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--bord)}
-header h1{font-size:18px;margin:0;flex:1}header img{width:28px;height:28px;border-radius:50%}
-.pill{font-size:13px;color:var(--mut)}main{max-width:900px;margin:0 auto;padding:16px}
-.card{background:var(--card);border:1px solid var(--bord);border-radius:12px;padding:14px;margin-bottom:14px}
-h2{font-size:15px;margin:0 0 10px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.mon{border:1px solid var(--bord);border-radius:10px;padding:8px;text-align:center;font-size:13px}.mon img{height:64px;image-rendering:pixelated}
-button{font:inherit;border:1px solid var(--bord);background:var(--card);color:var(--txt);border-radius:8px;padding:8px 12px;cursor:pointer}
-button:hover:not(:disabled){border-color:var(--acc)}button:disabled{opacity:.45;cursor:not-allowed}
-button.primary{background:var(--acc);border-color:var(--acc);color:#fff}button.danger{color:var(--bad)}
-.bar{height:8px;background:var(--bord);border-radius:4px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--ok);transition:width .4s}
-.bar.mid>i{background:var(--warn)}.bar.low>i{background:var(--bad)}
-.arene{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;min-height:230px;padding:14px;border-radius:12px;border:1px solid var(--bord);background:linear-gradient(#cfe8ff,#e9f5df)}
-@media (prefers-color-scheme:dark){.arene{background:linear-gradient(#25364d,#2a3a2c)}}
-.side{display:flex;flex-direction:column;gap:6px}.side.adv{grid-column:2;grid-row:1;align-items:flex-end}.side.moi{grid-column:1;grid-row:2;align-items:flex-start}
-.side img{height:110px;image-rendering:pixelated}.hud{background:var(--card);border:1px solid var(--bord);border-radius:10px;padding:8px 10px;min-width:210px;font-size:13px}
-.hud b{font-size:14px}.badge{display:inline-block;font-size:11px;padding:1px 6px;border-radius:8px;background:var(--warn);color:#000;margin-left:4px}
-.boules{font-size:12px;letter-spacing:2px;color:var(--mut)}.ko{opacity:.35}
-.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.moves{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-.moves button{text-align:left}.moves small{display:block;color:var(--mut)}
-#log{font-size:13px;line-height:1.5;max-height:200px;overflow:auto;white-space:pre-wrap}
-.msg{padding:8px 12px;border-radius:8px;background:var(--bord);margin-top:8px;font-size:13px}.err{color:var(--bad)}
-.fin{text-align:center;padding:20px}.fin h2{font-size:22px}
-.nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.tag{display:inline-block;font-size:11px;padding:0 6px;margin:1px;border-radius:8px;background:var(--bord)}
-.rang{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:6px}.rang button{padding:3px 7px;font-size:12px}
-.ligne{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:5px 0;border-bottom:1px solid var(--bord)}.ligne:last-child{border-bottom:0}.sp{flex:1}
-input,select{font:inherit;padding:6px 8px;border:1px solid var(--bord);border-radius:8px;background:var(--card);color:var(--txt)}
-.liste{max-height:430px;overflow:auto}.mon.choisi{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}.mon small{display:block;color:var(--mut)}
-.msg.shiny{background:#f6e27a;color:#000}</style>
+<meta name="theme-color" content="#0a1220">
+<link rel="preload" href="/static/fonts/text-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
-<header><img id="avatar" hidden alt=""><h1>PokéWild</h1><span class="pill" id="infos"></span><a id="sortie" class="pill" href="/auth/logout" hidden>Déconnexion</a></header>
+<div class="topbar" id="topbar"></div>
 <main id="app"></main>
+<nav class="dock" id="dock" aria-label="Navigation"></nav>
 <script>
 const $=s=>document.querySelector(s), app=$("#app");
 const esc=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -61,14 +33,23 @@ const cb=f=>`H[${H.push(f)-1}]()`;
 async function accueil(){
   clearInterval(minuteur);
   try{moi=await api("/api/moi")}catch(e){return e.code===401?connexion():app.innerHTML=`<p class="err">${esc(e.message)}</p>`}
-  $("#avatar").hidden=!moi.avatar; if(moi.avatar)$("#avatar").src=moi.avatar;
-  $("#infos").textContent=`${moi.pseudo} · Nv.${moi.niveau} · ${moi.poke_dollars} ₽`; $("#sortie").hidden=false;
-  const [eq,dr]=await Promise.all([api("/api/equipe"),api("/api/dresseurs")]);
+  cadre();
+  const eq=(await api("/api/equipe")).equipe;
   H=[]; let html=nav("accueil");
-  if(moi.combat.combat_id&&moi.combat.source==="web")html+=`<div class="card">Un combat est en cours. <button class="primary" onclick="combat(${moi.combat.combat_id})">Reprendre</button></div>`;
-  else if(moi.combat.combat_id)html+=`<div class="card">Tu es déjà en combat sur Discord : termine-le avant d'en lancer un ici.</div>`;
-  html+=`<div class="card"><h2>Mon équipe de combat</h2>`+(eq.equipe.length?`<div class="grid">${eq.equipe.map(p=>`<div class="mon ${p.pv<=0?"ko":""}"><img src="${esc(p.sprite||"")}" alt=""><div><b>${esc(p.nom)}</b> · Nv.${p.niveau}</div>${barre(p.pv,p.pv_max)}<small>${p.pv}/${p.pv_max} PV</small></div>`).join("")}</div>`:`<p>Ton équipe de combat est vide. <button class="primary" onclick="pageEquipe()">Composer mon équipe</button></p>`)+`<div class="actions"><button onclick="pageEquipe()">⚔️ Gérer l'équipe</button></div></div>`;
-  html+=`<div class="card"><h2>Défier un dresseur</h2><div class="grid">${dr.dresseurs.map(d=>`<button onclick="${cb(()=>lancer(d.nom))}">${d.emoji} ${esc(d.nom)}<br><small>Tier ${d.tier}</small></button>`).join("")}<button class="primary" onclick="${cb(()=>lancer(null))}">🎲 Au hasard</button></div><div id="msg"></div></div>`;
+  const web=moi.combat.combat_id&&moi.combat.source==="web", discord=moi.combat.combat_id&&!web;
+  const blesses=eq.filter(p=>p.pv<p.pv_max).length, ko=eq.filter(p=>p.pv<=0).length;
+  let titre,texte,cta;
+  if(web){titre="Un combat t'attend";texte="Tu as laissé un combat en cours. Reprends-le là où tu en étais.";cta=`<button class="primary gros" onclick="combat(${moi.combat.combat_id})">Reprendre le combat</button>`}
+  else if(discord){titre="Combat en cours sur Discord";texte="Termine-le sur Discord avant d'en lancer un ici.";cta=""}
+  else if(!eq.length){titre="Compose ton équipe";texte="Choisis jusqu'à 6 Pokémon pour partir au combat.";cta=`<button class="primary gros" onclick="go('equipe')">Composer mon équipe</button>`}
+  else if(ko){titre="Ton équipe a besoin de soins";texte=`${ko} Pokémon K.O. — soigne-les avant de repartir.`;cta=`<button class="primary gros" onclick="go('equipe')">Soigner l'équipe</button><button class="gros" onclick="go('explorer')">Explorer quand même</button>`}
+  else{titre="Prêt pour l'aventure";texte=blesses?`${blesses} Pokémon blessé${blesses>1?"s":""} : un soin avant le prochain combat ne fait pas de mal.`:"Ton équipe est en pleine forme.";cta=`<button class="primary gros" onclick="go('explorer')">Partir en exploration</button><button class="gros" onclick="go('modes')">Défier un dresseur</button>`}
+  const pct=Math.min(100,Math.round(moi.xp/Math.max(1,moi.xp_requise)*100));
+  html+=`<section class="hero"><div class="hero-txt"><small>Bon retour, ${esc(moi.pseudo)}</small><h1>${titre}</h1><p>${texte}</p><div class="actions">${cta}</div>
+   <div class="xp"><div class="xp-l"><span>Niveau ${moi.niveau}</span><span>${moi.xp} / ${moi.xp_requise} XP</span></div><div class="bar xpb"><i style="width:${pct}%"></i></div></div></div>
+   <div class="vitrine" aria-label="Mon équipe">${eq.length?eq.map((p,i)=>`<button class="vit ${p.pv<=0?"ko":""}" style="--i:${i}" onclick="go('equipe')" title="${esc(p.nom)} — Nv.${p.niveau}"><img src="${esc(p.sprite||"")}" alt="${esc(p.nom)}"><span>${esc(p.nom)}</span><em>Nv.${p.niveau}</em>${barre(p.pv,p.pv_max)}</button>`).join(""):`<div class="vide">Aucun Pokémon dans l'équipe</div>`}</div></section>`;
+  const T=[["explorer","compass","Explorer","Rencontre et capture des Pokémon sauvages, lance des expéditions."],["modes","swords","Combattre","Dresseurs, arènes, duels, double combat et raids."],["collection","grid","Collection","Ton équipe, tes Pokémon, le Pokédex, ton sac et le laboratoire."],["boutique","bag","Marché","Boutique, marketplace et échanges entre dresseurs."],["casino","dice","Jeux","Casino et roguelike pour tenter ta chance."],["quetes","scroll","Missions","Objectifs du jour et récompenses à récupérer."]];
+  html+=`<div class="tuiles">${T.map(([k,i,t,d])=>`<button class="tuile" onclick="go('${k}')"><span class="ic">${svg(i)}</span><b>${t}</b><small>${d}</small></button>`).join("")}</div><div id="msg"></div>`;
   app.innerHTML=html;
 }
 function connexion(){app.innerHTML=`<div class="card fin"><h2>Bienvenue sur PokéWild</h2><p>Connecte-toi avec ton compte Discord pour retrouver tes Pokémon.</p><a href="/auth/login"><button class="primary">Se connecter avec Discord</button></a></div>`}
@@ -84,8 +65,9 @@ function hudHTML(p,adv){
   const bo=Object.entries(p.boosts||{}).map(([k,v])=>`${k} ${v>0?"+":""}${v}`).join(" · ");
   return `<div class="hud"><b>${esc(p.nom)}</b> Nv.${p.niveau}${st}${barre(p.pv,p.pv_max)}<small>${adv?Math.round(p.pv/p.pv_max*100)+" %":p.pv+"/"+p.pv_max+" PV"}</small>${bo?`<br><small>${esc(bo)}</small>`:""}</div>`;
 }
-const boules=eq=>`<div class="boules">${eq.map(p=>p.ko?"✖":"●").join(" ")}</div>`;
+const boules=eq=>`<div class="boules">${eq.map(p=>`<i class="b ${p.ko?"ko":""}"></i>`).join("")}</div>`;
 function rendre(id,e){
+  if(hubActif!=="combat"){hubActif="combat";marquerHub()}
   const a=e.moi.equipe.find(p=>p.actif), d=e.adversaire.equipe.find(p=>p.actif);
   const sig=[e.tour,e.action_choisie,e.remplacant_requis,e.actif,a&&a.nom,a&&a.pv,d&&d.pv,e.journal[0]&&e.journal[0].tour,!!e.resultat].join("|");
   if(sig===signature){majTimer(e);return}
@@ -107,7 +89,7 @@ function panneau(id,e){
   if(e.verrouille)return "<i>Ton Pokémon est en pleine charge/recharge : rien à choisir ce tour.</i>";
   let h="";
   const at=ac.attaques;
-  if(at.mode==="normal")h+=`<div class="moves">${at.attaques.map(m=>`<button ${m.jouable?"":"disabled"} onclick="${cb(()=>agir(id,'action',{type:'attaque',valeur:m.nom,tour:e.tour}))}"><b>${esc(m.nom)}</b><small>${m.type?(TYPES[m.type]||m.type)+" · ":""}${m.puissance?m.puissance+" pui · ":""}${m.pp}/${m.pp_max} PP</small></button>`).join("")}</div>`;
+  if(at.mode==="normal")h+=`<div class="moves">${at.attaques.map(m=>`<button style="--tc:${typeCol(m.type)}" ${m.jouable?"":"disabled"} onclick="${cb(()=>agir(id,'action',{type:'attaque',valeur:m.nom,tour:e.tour}))}"><b>${esc(m.nom)}</b><small>${m.type?(TYPES[m.type]||m.type)+" · ":""}${m.puissance?m.puissance+" pui · ":""}${m.pp}/${m.pp_max} PP</small></button>`).join("")}</div>`;
   else h+=`<div class="actions"><button class="primary" onclick="${cb(()=>agir(id,'action',{type:'attaque',tour:e.tour}))}">⚔️ ${esc(at.mode==="lutte"?at.lutte:at.attaques[0].nom)}</button></div>`;
   h+=`<div class="actions">`;
   if(ac.mega)h+=`<button class="primary" onclick="${cb(()=>agir(id,'mega',{}))}">🔷 Méga-Évoluer (${esc(ac.mega.forme)})</button>`;
@@ -138,8 +120,63 @@ function fin(r){
 }
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
-const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
-const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["pvp","🥊 PvP"],["marche","🏪 Marché"],["echanges","🔄 Échanges"],["casino","🎰 Casino"],["raids","⚔️ Raids"],["duo","🤝 Duo"],["rogue","🗺️ Roguelike"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["collection","🗃️ Collection"],["pokedex","📖 Pokédex"],["classements","🏆 Classements"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,raids:pageRaids,duo:pageDuo,rogue:pageRogue,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements}[k]()))}">${l}</button>`).join("")}</div>`;
+const TCOL={normal:"#a8a77a",fire:"#ee8130",water:"#6390f0",grass:"#7ac74c",electric:"#f7d02c",ice:"#96d9d6",fighting:"#c22e28",poison:"#a33ea1",ground:"#e2bf65",flying:"#a98ff3",psychic:"#f95587",bug:"#a6b91a",rock:"#b6a136",ghost:"#735797",dragon:"#6f35fc",dark:"#705746",steel:"#b7b7ce",fairy:"#d685ad"};
+const FR_EN={feu:"fire",eau:"water",plante:"grass",electrik:"electric",glace:"ice",combat:"fighting",sol:"ground",vol:"flying",psy:"psychic",insecte:"bug",roche:"rock",spectre:"ghost",tenebres:"dark",acier:"steel",fee:"fairy"};
+const typeKey=x=>{const k=String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();return TCOL[k]?k:(FR_EN[k]||k)};
+const typeCol=x=>TCOL[typeKey(x)]||"var(--line-2)";
+const typesHTML=t=>(t||[]).map(x=>`<span class="tag type" style="--tc:${typeCol(x)}">${esc(x)}</span>`).join("");
+const PAGES={accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,raids:pageRaids,duo:pageDuo,rogue:pageRogue,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements};
+const go=k=>PAGES[k]();
+const IC={
+ home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/>',
+ compass:'<circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2 5.6-5.6 2 2-5.6z"/>',
+ swords:'<path d="m14 5 6-2 1 1-2 6-9.5 9.5L7 17.5 4.5 20 3 18.5 5.5 16 4 14.5 13.5 5z" transform="translate(0 0)"/><path d="m9 5-5-2-1 1 2 6 3 3"/>',
+ grid:'<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+ bag:'<path d="M5.5 8h13l1 12.5h-15z"/><path d="M9 8V7a3 3 0 0 1 6 0v1"/>',
+ dice:'<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/>',
+ coin:'<circle cx="12" cy="12" r="9"/><path d="M9.5 16.5v-9h3.2a2.6 2.6 0 0 1 0 5.2H9.5"/>',
+ scroll:'<path d="M6 3.5h12v14a3 3 0 0 0 3 3H9a3 3 0 0 1-3-3z"/><path d="M9.5 8h5M9.5 12h5"/>',
+ trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H4.5v1.5A3.5 3.5 0 0 0 8 11M16 6h3.5v1.5A3.5 3.5 0 0 1 16 11"/><path d="M12 13v4M8.5 20.5h7M10 17h4"/>',
+ out:'<path d="M9 4.5H5.5v15H9"/><path d="m15 8 4 4-4 4M19 12H9.5"/>'
+};
+const svg=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+const BALL='<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#f4f7fc"/><path d="M2 16a14 14 0 0 1 28 0z" fill="#ff5446"/><path d="M2 16h28" stroke="#0a1220" stroke-width="2.4"/><circle cx="16" cy="16" r="5" fill="#f4f7fc" stroke="#0a1220" stroke-width="2.4"/><circle cx="16" cy="16" r="14" fill="none" stroke="#0a1220" stroke-width="2"/></svg>';
+// 6 grandes sections ; chaque section regroupe plusieurs écrans (onglets).
+const HUBS=[
+ {k:"accueil",l:"Accueil",ic:"home",p:[["accueil","Tableau de bord"],["quetes","Missions"],["classements","Classements"]]},
+ {k:"explorer",l:"Explorer",ic:"compass",p:[["explorer","Rencontres"],["explorations","Expéditions"]]},
+ {k:"combat",l:"Combattre",ic:"swords",p:[["modes","Dresseurs & Arènes"],["pvp","Duels"],["duo","Double combat"],["raids","Raids"]]},
+ {k:"collection",l:"Collection",ic:"grid",p:[["equipe","Équipe"],["collection","Pokémon"],["pokedex","Pokédex"],["inventaire","Sac"],["labo","Laboratoire"]]},
+ {k:"marche",l:"Marché",ic:"bag",p:[["boutique","Boutique"],["marche","Marketplace"],["echanges","Échanges"]]},
+ {k:"jeux",l:"Jeux",ic:"dice",p:[["casino","Casino"],["rogue","Roguelike"]]}
+];
+let hubActif="accueil";
+const hubDe=k=>HUBS.find(h=>h.p.some(x=>x[0]===k))||HUBS[0];
+function marquerHub(){
+  document.querySelectorAll("[data-hub]").forEach(b=>b.getAttribute("aria-current")!==null&&b.removeAttribute("aria-current"));
+  document.querySelectorAll(`[data-hub="${hubActif}"]`).forEach(b=>b.setAttribute("aria-current","page"));
+}
+// Renvoie la barre d'onglets de la section ; met aussi à jour la barre du haut.
+const nav=a=>{
+  const h=hubDe(a); hubActif=h.k; marquerHub(); window.scrollTo(0,0);
+  return h.p.length<2?"":`<div class="soustitre" role="tablist">${h.p.map(([k,l])=>`<button role="tab" ${k===a?'aria-current="page"':""} onclick="go('${k}')">${l}</button>`).join("")}</div>`;
+};
+function cadre(){
+  const m=moi, pct=m?Math.min(100,Math.round(m.xp/Math.max(1,m.xp_requise)*100)):0;
+  $("#topbar").innerHTML=`<button class="marque" onclick="go('accueil')" aria-label="PokéWild — accueil">${BALL}PokéWild</button>`
+   +(m?`<div class="hubs">${HUBS.map(h=>`<button class="hub" data-hub="${h.k}" onclick="go('${h.p[0][0]}')">${svg(h.ic)}<span>${h.l}</span></button>`).join("")}</div><div class="sp"></div>
+   <div class="puces"><button class="puce or" onclick="go('quetes')" title="Missions">${svg("scroll")}<span class="lib">Missions</span></button>
+   <div class="puce or" style="cursor:default" title="Poké Dollars">${svg("coin")}<b>${Number(m.poke_dollars).toLocaleString("fr-FR")}</b></div>
+   <div class="niveau" title="${m.xp} / ${m.xp_requise} XP"><div class="anneau" style="--p:${pct}"><span>${m.niveau}</span></div><small>Niveau ${m.niveau}</small></div>
+   <div class="profil"><button id="profilBtn" aria-haspopup="menu" aria-expanded="false">${m.avatar?`<img src="${esc(m.avatar)}" alt="">`:`<i class="ini">${esc(m.pseudo.slice(0,1).toUpperCase())}</i>`}<span>${esc(m.pseudo)}</span></button>
+    <div class="menu" id="menuProfil" hidden role="menu"><div class="nom">Connecté en tant que <b>${esc(m.pseudo)}</b></div>
+    <button onclick="go('classements')">${svg("trophy")}Classements</button><button onclick="go('quetes')">${svg("scroll")}Missions</button>
+    <a href="/auth/logout">${svg("out")}Déconnexion</a></div></div></div>`:"");
+  $("#dock").innerHTML=m?HUBS.map(h=>`<button data-hub="${h.k}" onclick="go('${h.p[0][0]}')">${svg(h.ic)}${h.l}</button>`).join(""):"";
+  const bp=$("#profilBtn"); if(bp)bp.onclick=e=>{e.stopPropagation();const mn=$("#menuProfil");mn.hidden=!mn.hidden;bp.setAttribute("aria-expanded",String(!mn.hidden))};
+  marquerHub();
+}
+document.addEventListener("click",e=>{const mn=$("#menuProfil");if(mn&&!mn.hidden&&!e.target.closest(".profil")){mn.hidden=true}});
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -251,7 +288,7 @@ function listeDex(){
 
 /* ===== Explorer : apparitions, capture, PokéStop ===== */
 let ballChoisie="pokeball";
-async function majEntete(){try{moi=await api("/api/moi");$("#infos").textContent=`${moi.pseudo} · Nv.${moi.niveau} · ${moi.poke_dollars} ₽`}catch(e){}}
+async function majEntete(){try{moi=await api("/api/moi");cadre()}catch(e){}}
 async function pageExplorer(){
   clearInterval(minuteur);
   H=[];
@@ -479,6 +516,8 @@ async function pageModes(msgInitial,erreur){
     else if(r.prochaine)act=`<button class="primary" onclick="${cb(()=>continuerRun(kind,s.id,false))}">⚔️ Continuer (combat ${r.prochaine}/3)</button><button onclick="${cb(()=>continuerRun(kind,s.id,true))}">🧪 Soin auto + continuer</button>`;
     else act=`<small>${r.statut==="victoire"?"✅ Terminé : badge gagné !":"💀 Tentative terminée"}</small>`;
     return `<div class="ligne" style="flex-wrap:wrap"><b>${s.emoji} ${esc(s.nom)}</b><small>Chef : ${esc(s.chef)} · ferme dans ${dureeTxt(s.secondes_restantes)}</small><span class="sp"></span>${act}</div>`}).join(""):`<p><small>${vide}</small></p>`)+`</div>`;
+  const dr=(await api("/api/dresseurs")).dresseurs;
+  h+=`<div class="card"><h2>Combat libre</h2><p><small>Affronte un dresseur de ton choix, sans enjeu particulier.</small></p><div class="grid">${dr.map(x=>`<button onclick="${cb(()=>lancer(x.nom))}">${x.emoji} ${esc(x.nom)}<small>Tier ${x.tier}</small></button>`).join("")}<button class="primary" onclick="${cb(()=>lancer(null))}">🎲 Au hasard</button></div></div>`;
   h+=carte("arene","🏟️ Arènes","Aucune arène ouverte pour l'instant (une nouvelle s'ouvre régulièrement).",d.arenes,d.badges_arene);
   h+=carte("repaire","🕵️ Repaires de méchants","Aucun repaire ouvert pour l'instant.",d.repaires,d.badges_repaire);
   h+=`<div class="card"><small>2 combats préliminaires puis le chef. Une défaite met fin à ta tentative ; une seule chance par ouverture. Les badges donnent des bonus permanents.</small></div>`;
@@ -818,6 +857,7 @@ function dessRogue(d){
 async function rgDemarrer(){try{dessRogue(await api("/api/rogue/demarrer",{}))}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 async function rgAbandon(){try{dessRogue(await api("/api/rogue/abandonner",{}))}catch(e){flash(e.message,true)}}
 
+cadre();
 accueil();
 </script>
 </body>
