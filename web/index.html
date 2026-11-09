@@ -135,7 +135,7 @@ function fin(r){
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
-const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["boutique","🛒 Boutique"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,boutique:pageBoutique,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
+const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,boutique:pageBoutique,labo:pageLabo,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -381,6 +381,50 @@ const acheterArticle=(c,k)=>achatOk(()=>api("/api/boutique/acheter",{categorie:c
 const extension=t=>achatOk(()=>api("/api/boutique/extension",{type:t,paliers:parseInt(sel("p_"+t))||1}));
 const slotExploration=()=>achatOk(async()=>{await api("/api/boutique/slot-exploration",{});return {message:"2e emplacement d'exploration débloqué !"}});
 const marcheNoir=(t,k)=>achatOk(()=>api("/api/boutique/marche-noir",{type:t,cle:k,quantite:parseInt(sel("m_"+k))||1}));
+
+/* ===== Laboratoire ===== */
+let ongletLabo="incubateur", triCaisson="alphabetique", rechCaisson="";
+const ONGLETS_LABO=[["incubateur","🥚 Incubateur"],["transformateur","🔬 Transformateur"],["caisson","🧫 Caisson"],["mutation","🧬 Mutation"]];
+async function pageLabo(msgInitial,erreur){
+  clearInterval(minuteur); H=[];
+  app.innerHTML=nav("labo")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${msgInitial}</div>`:""}</div><div class="card"><div class="nav">${ONGLETS_LABO.map(([k,l])=>`<button class="${k===ongletLabo?"primary":""}" onclick="${cb(()=>{ongletLabo=k;pageLabo()})}">${l}</button>`).join("")}</div><div id="labo">Chargement…</div></div>`;
+  try{await majLabo()}catch(e){return e.code===401?connexion():flash(e.message,true)}
+  if(ongletLabo==="incubateur")minuteur=setInterval(()=>majLabo().catch(()=>{}),10000);
+}
+async function majLabo(){
+  const el=$("#labo");if(!el){clearInterval(minuteur);return}
+  const base=H.length;
+  if(ongletLabo==="incubateur"){
+    const d=await api("/api/labo/incubateur");if(!$("#labo"))return;
+    let h="";
+    if(d.slot)h+=`<div class="ligne"><b>🥚 ${esc(d.slot.nom)}</b><span class="sp"></span>${d.slot.prete?`<button class="primary" onclick="${cb(()=>eclore())}">🎉 Faire éclore</button>`:`<span>⏳ ${dureeTxt(d.slot.secondes_restantes)}</span>`}</div>`;
+    else h+=`<p>Emplacement libre.</p>`;
+    h+=`<h2 style="margin-top:12px">🎒 Œufs en stock</h2>`+(d.oeufs.map(o=>`<div class="ligne"><b>${esc(o.nom)}</b> ×${o.quantite}<small>éclosion en ${dureeTxt(o.duree)}</small><span class="sp"></span><button onclick="${cb(()=>incuber(o.palier))}" ${d.slot?"disabled":""}>Incuber</button></div>`).join("")||"<small>Aucun œuf : on en trouve au PokéStop, en exploration ou en capture.</small>");
+    el.innerHTML=h;
+  }else if(ongletLabo==="transformateur"){
+    const d=await api("/api/labo/transformateur");if(!$("#labo"))return;
+    el.innerHTML=`<p><small>Convertis des lots d'objets d'un palier en 1 du palier supérieur. La Master Ball et le Total Soin ne peuvent pas être obtenus ainsi.</small></p>`+d.chaines.map(c=>`<div class="ligne"><b>${esc(c.source_nom)}</b> ×${c.possede}<small>${c.requis} → 1 ${esc(c.cible_nom)}</small><span class="sp"></span><input type="number" min="1" max="${Math.max(1,c.lots_possibles)}" value="${Math.max(1,c.lots_possibles)}" id="t_${esc(c.source)}" style="width:64px"><button onclick="${cb(()=>transformer(c.source))}" ${c.lots_possibles?"":"disabled"}>Transformer</button></div>`).join("");
+  }else if(ongletLabo==="caisson"){
+    const d=await api(`/api/labo/caisson?tri=${encodeURIComponent(triCaisson)}&q=${encodeURIComponent(rechCaisson)}`);if(!$("#labo"))return;
+    const libre=d.slots.some(s=>s.libre);
+    let h=`<p><small>${d.xp_par_heure} XP par heure et par Pokémon ; l'XP est créditée quand tu le retires. Un Pokémon au Caisson n'est pas disponible en combat.</small></p>`+d.slots.map(s=>s.libre?`<div class="ligne"><b>Emplacement ${s.slot}</b><small>vide</small></div>`:`<div class="ligne"><b>Emplacement ${s.slot} — ${esc(s.nom)}</b><small>depuis ${dureeTxt(s.secondes)} · ${s.xp_en_attente} XP en attente</small><span class="sp"></span><button class="primary" onclick="${cb(()=>retirerCaisson(s.slot))}">📤 Retirer</button></div>`).join("");
+    if(libre){
+      h+=`<h2 style="margin-top:12px">Déposer un Pokémon</h2><div class="ligne"><input placeholder="🔍 Rechercher" value="${esc(rechCaisson)}" oninput="rechCaisson=this.value;majLabo()"><select onchange="triCaisson=this.value;majLabo()">${[["alphabetique","Alphabétique"],["rarete","Rareté"],["niveau_asc","Niveau croissant"]].map(([v,l])=>`<option value="${v}" ${v===triCaisson?"selected":""}>${l}</option>`).join("")}</select></div><div class="liste">${d.especes.map(e=>`<div class="ligne"><b>${esc(e.nom)}</b><small>Nv.${e.niveau} · ${e.pc} PC${e.en_exploration?" · en exploration":""}</small><span class="sp"></span><button onclick="${cb(()=>deposerCaisson(e.nom))}" ${e.en_exploration?"disabled":""}>Déposer</button></div>`).join("")||"<small>Aucun résultat.</small>"}</div>${d.nb_especes>d.especes.length?`<small>… ${d.nb_especes-d.especes.length} de plus : affine la recherche.</small>`:""}`;
+    }
+    const foc=document.activeElement&&document.activeElement.tagName==="INPUT"; el.innerHTML=h;
+    if(foc){const i=el.querySelector("input");if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}
+  }else{
+    const d=await api("/api/labo/mutation");if(!$("#labo"))return;
+    el.innerHTML=(d.race?`<h2>🧬 ${esc(d.race.nom)} <small>(${esc(d.race.palier)})</small></h2><p><i>${esc(d.race.description)}</i></p><p>${esc(d.race.bonus)}</p>`:`<p>Tu n'as pas encore de Mutation : utilise un 🔮 Cristal de Mutation pour en tirer une au hasard (on en gagne en exploration).</p>`)+`<div class="ligne"><span>🔮 Cristaux : <b>${d.cristaux}</b></span><small>Pity : ${d.pity}/${d.pity_seuil}</small><span class="sp"></span><button class="primary" onclick="${cb(()=>muter())}" ${d.cristaux?"":"disabled"}>Utiliser un Cristal</button></div><small>Chaque tirage remplace ta Mutation actuelle.</small>`;
+  }
+}
+const actLabo=async(f)=>{try{const m=await f();await majEntete();pageLabo(m)}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+const incuber=p=>actLabo(async()=>{await api("/api/labo/incubateur/incuber",{palier:p});return "🥚 Œuf mis à incuber !"});
+const eclore=()=>actLabo(async()=>{const r=await api("/api/labo/incubateur/eclore",{});return `${r.shiny?"✨ <b>ÉCLOSION SHINY !</b> ":"🐣 "}Ton ${esc(r.oeuf)} a éclos : <b>${esc(r.nom)}</b> (${r.pc} PC) ! +${r.xp} XP${r.nouvelle_entree?"<br>📖 Nouvelle entrée dans ton Pokédex !":""}${r.quetes_completees.map(q=>`<br>✅ Quête : ${esc(q.nom||"")}`).join("")}`});
+const transformer=s=>actLabo(async()=>{const r=await api("/api/labo/transformateur",{source:s,lots:parseInt(sel("t_"+s))||1});return "✅ "+esc(r.message)});
+const deposerCaisson=n=>actLabo(async()=>{const r=await api("/api/labo/caisson/deposer",{nom:n});return "✅ "+esc(r.message)});
+const retirerCaisson=s=>actLabo(async()=>{const r=await api("/api/labo/caisson/retirer",{slot:s});return `✅ ${esc(r.nom)} retiré : +${r.xp} XP${r.montees_niveau?"<br>📈 "+fmt(r.montees_niveau).replace(/\n/g,"<br>"):""}`});
+const muter=()=>actLabo(async()=>{const r=await api("/api/labo/mutation",{});return `🔮 Nouvelle Mutation : <b>${esc(r.race.nom)}</b> (${esc(r.race.palier)})`});
 
 accueil();
 </script>
