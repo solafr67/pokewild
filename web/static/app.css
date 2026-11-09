@@ -256,3 +256,7 @@ button .ico{width:26px;height:26px;margin:-4px 0}
 .bar.prog>i{background:linear-gradient(90deg,var(--sky),#7fd0ff)}
 .bar.boss{height:12px}.bar.boss>i{background:linear-gradient(90deg,#ff6b6b,var(--red))}
 .card.boss-card{border-color:var(--line-2)}
+.gain{display:flex;align-items:center;gap:10px;margin-top:6px}
+.gain .ico.gros{width:44px;height:44px}
+.msg .gain:first-child{margin-top:0}
+.msg.col{flex-direction:column;align-items:stretch;gap:2px}.msg.col>br{display:none}.msg.col .gain{margin-top:4px}
