@@ -101,6 +101,11 @@ def _init_tables():
         )
         """
     )
+    for colonne in ("mode TEXT DEFAULT 'dresseur'", "contexte TEXT"):
+        try:
+            cur.execute(f"ALTER TABLE combat_web_meta ADD COLUMN {colonne}")
+        except Exception:
+            pass  # colonne déjà présente
     conn.commit()
     conn.close()
     _tables_pretes = True
@@ -174,7 +179,8 @@ def archetypes_disponibles() -> list:
 
 
 async def demarrer_combat_dresseur(
-    user_id: int, nom_joueur: str = "Dresseur", archetype_nom: str | None = None, multiplicateur_pc: float = 1.0
+    user_id: int, nom_joueur: str = "Dresseur", archetype_nom: str | None = None, multiplicateur_pc: float = 1.0,
+    archetype_direct: dict | None = None, mode: str = "dresseur", contexte: dict | None = None,
 ) -> dict:
     """Lance un combat contre un dresseur (solo) pour un joueur du web. Même mise en
     place que dresseurs.demarrer_combat_dresseur, sans fil ni message Discord."""
@@ -182,7 +188,7 @@ async def demarrer_combat_dresseur(
     if database.combat_en_cours_pour_joueur(user_id):
         raise ErreurCombatWeb("Tu es déjà en combat !")
 
-    archetype = _archetype_par_nom(archetype_nom)
+    archetype = archetype_direct or _archetype_par_nom(archetype_nom)
 
     pc_cible = round(dresseurs_module._pc_cumule_equipe(user_id) * multiplicateur_pc)
     if pc_cible <= 0:
@@ -238,9 +244,10 @@ async def demarrer_combat_dresseur(
             ),
         )
     cur.execute(
-        "INSERT INTO combat_web_meta (combat_id, joueur_id, id_adversaire, archetype_nom, pc_cible, nom_joueur) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (combat_id, user_id, id_adversaire, archetype["nom"], pc_cible, nom_joueur),
+        "INSERT INTO combat_web_meta (combat_id, joueur_id, id_adversaire, archetype_nom, pc_cible, nom_joueur, mode, contexte) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (combat_id, user_id, id_adversaire, archetype["nom"], pc_cible, nom_joueur, mode,
+         json.dumps(contexte or {}, ensure_ascii=False)),
     )
     conn.commit()
     conn.close()
@@ -258,7 +265,7 @@ async def demarrer_combat_dresseur(
 
     return {
         "combat_id": combat_id,
-        "adversaire": {"nom": archetype["nom"], "emoji": archetype["emoji"], "sprite": archetype.get("sprite")},
+        "adversaire": {"nom": archetype["nom"], "emoji": archetype.get("emoji", "⚔️"), "sprite": archetype.get("sprite")},
     }
 
 
@@ -365,6 +372,7 @@ def etat_combat(combat_id: int, user_id: int) -> dict:
 
     etat = {
         "combat_id": combat_id,
+        "mode": (meta["mode"] if meta else None) or "dresseur",
         "actif": bool(combat["actif"]),
         "tour": combat["tour"],
         "secondes_restantes": max(0, combat["date_limite_tour"] - int(time.time())),
@@ -549,7 +557,8 @@ def abandonner(combat_id: int, user_id: int) -> dict:
         raise ErreurCombatWeb("Ce combat est déjà terminé.")
     database.terminer_combat_pvp(combat_id)
     database.synchroniser_pv_persistant_depuis_combat(combat_id, user_id)
-    _enregistrer_resultat(combat_id, {"issue": "abandon", "recompenses": None})
+    suite = _suite_mode(_meta(combat_id), False)
+    _enregistrer_resultat(combat_id, {"issue": "abandon", "recompenses": None, "suite": suite})
     return {"ok": True, "message": "Tu as abandonné. Défaite enregistrée."}
 
 
@@ -567,11 +576,30 @@ def _quetes_json(quetes) -> list:
     return sortie
 
 
+def _suite_mode(meta, victoire: bool) -> dict | None:
+    """Étape suivante d'un run (Arène, Repaire) : gérée par modes_service (import tardif)."""
+    if meta is None or (meta["mode"] or "dresseur") in ("dresseur", "gladio"):
+        return None
+    import modes_service
+    return modes_service.resoudre_etape(meta, victoire)
+
+
 def _appliquer_victoire(meta) -> dict:
     joueur_id = meta["joueur_id"]
     pc_cible = meta["pc_cible"]
-    mult = database.enregistrer_victoire_dresseur_repetition(joueur_id)
-    dollars = round(pc_cible * config.DRESSEUR_FACTEUR_DOLLARS * mult * database.multiplicateur_boost(joueur_id, "argent"))
+    mode = meta["mode"] or "dresseur"
+    # Gladio / Arène / Repaire : récompense indépendante, sans dégression anti-farm.
+    independant = mode != "dresseur"
+    mult = 1.0 if independant else database.enregistrer_victoire_dresseur_repetition(joueur_id)
+    if mode == "gladio":
+        dollars = round(
+            random.randint(config.GLADIO_RECOMPENSE_MIN, config.GLADIO_RECOMPENSE_MAX)
+            * database.multiplicateur_boost(joueur_id, "argent")
+        )
+    elif mode in ("arene", "repaire"):
+        dollars = 0  # les Poké Dollars sont crédités par le run lui-même (modes_service)
+    else:
+        dollars = round(pc_cible * config.DRESSEUR_FACTEUR_DOLLARS * mult * database.multiplicateur_boost(joueur_id, "argent"))
     xp = round(pc_cible * config.DRESSEUR_FACTEUR_XP * mult)
     xp_affichee = round(xp * database.multiplicateur_boost(joueur_id, "xp"))
     if dollars > 0:
@@ -579,6 +607,8 @@ def _appliquer_victoire(meta) -> dict:
     niveau_avant, niveau_apres, paliers = leveling.gagner_xp(joueur_id, xp)
     database.incrementer_victoires_pve(joueur_id)
     quetes = database.incrementer_progression_quete(joueur_id, "pve_victoire")
+    if mode == "gladio":
+        database.avancer_quete_principale(joueur_id, "gladio_victoire")
     return {
         "dollars": dollars,
         "xp": xp_affichee,
@@ -626,8 +656,9 @@ async def tick(combat_id: int) -> dict:
         database.synchroniser_pv_persistant_depuis_combat(combat_id, joueur_id)
         victoire = vainqueur_id == joueur_id
         recompenses = _appliquer_victoire(meta) if victoire else None
+        suite = _suite_mode(meta, victoire)
         _enregistrer_resultat(
-            combat_id, {"issue": "victoire" if victoire else "defaite", "recompenses": recompenses}
+            combat_id, {"issue": "victoire" if victoire else "defaite", "recompenses": recompenses, "suite": suite}
         )
         return {
             "statut": "termine",
@@ -663,5 +694,5 @@ async def boucle_combat(combat_id: int, intervalle: float = 2.0) -> dict | None:
                 database.terminer_combat_pvp(combat_id)
                 if meta:
                     database.synchroniser_pv_persistant_depuis_combat(combat_id, meta["joueur_id"])
-                _enregistrer_resultat(combat_id, {"issue": "annule", "recompenses": None})
+                _enregistrer_resultat(combat_id, {"issue": "annule", "recompenses": None, "suite": _suite_mode(meta, False)})
                 return {"statut": "annule"}

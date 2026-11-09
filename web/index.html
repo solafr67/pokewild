@@ -130,12 +130,14 @@ function fin(r){
   let t=g?`+${g.dollars} ₽ · +${g.xp} XP${g.reduite?" <small>(réduit : déjà beaucoup de dresseurs battus aujourd'hui)</small>":""}`:"Aucune récompense.";
   if(g&&g.niveau_dresseur.apres>g.niveau_dresseur.avant)t+=`<br>⬆️ Niveau dresseur ${g.niveau_dresseur.apres} !`;
   for(const q of (g?g.quetes_completees:[]))t+=`<br>✅ Quête : ${esc(q.nom||"")}`;
-  return `<div class="card fin"><h2>${ti}</h2><p>${t}</p><button class="primary" onclick="accueil()">Retour</button></div>`;
+  t+=suiteHTML(r.suite);
+  const retour=r.suite?`<button class="primary" onclick="pageModes()">Retour aux Combats</button>`:`<button class="primary" onclick="accueil()">Retour</button>`;
+  return `<div class="card fin"><h2>${ti}</h2><p>${t}</p>${retour}</div>`;
 }
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
-const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
+const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -458,6 +460,46 @@ const actQ=async f=>{try{const m=await f();await majEntete();pageQuetes(m)}catch
 const reclamerConnexion=()=>actQ(async()=>{const r=await api("/api/quetes/connexion",{});return `🎁 Jour ${r.streak} : ${recTxt(r.recompense)}${r.serie_cassee?`<br>⚠️ Série précédente (${r.streak_precedente} j) interrompue : repartie à 1.`:""}`});
 const reclamerQuetes=()=>actQ(async()=>{const r=await api("/api/quetes/reclamer",{});return `🎁 ${r.quetes.length} quête(s) réclamée(s) : +${r.dollars} PD, +${r.xp} XP${r.objets.map(o=>"<br>+ "+esc(o)+" (bonus)").join("")}${r.cristaux?`<br>🔮 +${r.cristaux} Cristal(aux) de Mutation !`:""}`});
 const choisirTitre=c=>actQ(async()=>{await api("/api/quetes/titre",{categorie:c});return "🏆 Titre mis à jour."});
+
+/* ===== Modes de combat : Gladio, Arènes, Repaires ===== */
+async function pageModes(msgInitial,erreur){
+  clearInterval(minuteur); H=[];
+  app.innerHTML=nav("modes")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${msgInitial}</div>`:""}</div><div id="md">Chargement…</div>`;
+  let d; try{d=await api("/api/modes")}catch(e){return e.code===401?connexion():flash(e.message,true)}
+  let h="";
+  if(d.combat_en_cours)h+=`<div class="card"><p>⚔️ Tu as un combat en cours.</p><button class="primary" onclick="${cb(()=>combat(d.combat_en_cours))}">Reprendre le combat</button></div>`;
+  const g=d.gladio;
+  h+=`<div class="card"><h2>🧑‍🎤 Gladio, le rival</h2><p><small>Un défi par jour. Équipe un peu plus forte que la tienne. Récompense : ${g.recompense[0]}–${g.recompense[1]} PD.</small></p>`+(g.secondes_cooldown>0?`<p>⏳ Disponible dans <b>${dureeTxt(g.secondes_cooldown)}</b></p>`:`<button class="primary" onclick="${cb(()=>gladio())}">⚔️ Défier Gladio</button>`)+`</div>`;
+  const carte=(kind,titre,vide,liste,badges)=>`<div class="card"><h2>${titre}</h2><small>Badges : ${badges.length?badges.map(esc).join(", "):"aucun"}</small>`+(liste.length?liste.map(s=>{
+    const r=s.run; let act="";
+    if(!r)act=`<button class="primary" onclick="${cb(()=>entrerRun(kind,s.id))}">Entrer</button>`;
+    else if(r.combat_id)act=`<button class="primary" onclick="${cb(()=>combat(r.combat_id))}">Reprendre le combat</button>`;
+    else if(r.prochaine)act=`<button class="primary" onclick="${cb(()=>continuerRun(kind,s.id,false))}">⚔️ Continuer (combat ${r.prochaine}/3)</button><button onclick="${cb(()=>continuerRun(kind,s.id,true))}">🧪 Soin auto + continuer</button>`;
+    else act=`<small>${r.statut==="victoire"?"✅ Terminé : badge gagné !":"💀 Tentative terminée"}</small>`;
+    return `<div class="ligne" style="flex-wrap:wrap"><b>${s.emoji} ${esc(s.nom)}</b><small>Chef : ${esc(s.chef)} · ferme dans ${dureeTxt(s.secondes_restantes)}</small><span class="sp"></span>${act}</div>`}).join(""):`<p><small>${vide}</small></p>`)+`</div>`;
+  h+=carte("arene","🏟️ Arènes","Aucune arène ouverte pour l'instant (une nouvelle s'ouvre régulièrement).",d.arenes,d.badges_arene);
+  h+=carte("repaire","🕵️ Repaires de méchants","Aucun repaire ouvert pour l'instant.",d.repaires,d.badges_repaire);
+  h+=`<div class="card"><small>2 combats préliminaires puis le chef. Une défaite met fin à ta tentative ; une seule chance par ouverture. Les badges donnent des bonus permanents.</small></div>`;
+  $("#md").innerHTML=h;
+  minuteur=setInterval(()=>{if(!$("#md")){clearInterval(minuteur);return}},5000);
+}
+const gladio=async()=>{try{const r=await api("/api/modes/gladio",{});combat(r.combat_id)}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+const entrerRun=async(k,id)=>{try{const r=await api("/api/modes/entrer",{kind:k,spawn_id:id});combat(r.combat_id)}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+const continuerRun=async(k,id,soin)=>{try{const r=await api("/api/modes/continuer",{kind:k,spawn_id:id,soin_auto:soin});combat(r.combat_id)}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+function suiteHTML(s){
+  if(!s)return "";
+  let t="";
+  if(s.gagne){
+    t+=`<br>💰 +${s.dollars} PD${s.reduite?" <small>(réduit : plusieurs runs déjà faits aujourd'hui)</small>":""}`;
+    if(s.fin){
+      t+=`<br>🏆 <b>${s.kind==="arene"?"Champion":"Boss"} vaincu !</b>`;
+      if(s.badge_nouveau)t+=`<br>🎖️ <b>Nouveau badge !</b> ${esc(s.bonus||"")}`;
+      if(s.ct)t+=`<br>📀 CT <b>${esc(s.ct)}</b> offerte`;
+      for(const o of (s.objets||[]))t+=`<br>✨ Butin rarissime : <b>${esc(o)}</b>`;
+    }else t+=`<br>➡️ Combat ${s.etape}/3 réussi — soigne ton équipe si besoin, puis continue.`;
+  }else t+=`<br>💀 Ta tentative s'arrête là. Retente à la prochaine ouverture.`;
+  return t;
+}
 
 accueil();
 </script>

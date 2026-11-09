@@ -42,6 +42,7 @@ import expedition_service  # noqa: E402
 import boutique_service  # noqa: E402
 import laboratoire_service  # noqa: E402
 import quetes_service  # noqa: E402
+import modes_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
@@ -688,6 +689,53 @@ async def api_quetes_titre(d: DemandeTitre, request: Request):
 @app.post("/api/quetes/connexion")
 async def api_quetes_connexion(request: Request):
     return quetes_service.reclamer_connexion(joueur_connecte(request)["id"])
+
+
+
+# ----------------------------------------------------------------------------
+# Modes de combat : Gladio, Arènes, Repaires
+# ----------------------------------------------------------------------------
+
+class DemandeRun(BaseModel):
+    kind: str
+    spawn_id: int
+    soin_auto: bool = False
+
+
+def _verifier_kind(kind: str):
+    if kind not in ("arene", "repaire"):
+        raise combat_service.ErreurCombatWeb("Mode inconnu.")
+
+
+@app.get("/api/modes")
+async def api_modes(request: Request):
+    return modes_service.etat(joueur_connecte(request)["id"])
+
+
+@app.post("/api/modes/gladio")
+async def api_modes_gladio(request: Request):
+    joueur = joueur_connecte(request)
+    res = await modes_service.defier_gladio(joueur["id"], joueur["pseudo"])
+    _lancer_boucle(res["combat_id"])
+    return res
+
+
+@app.post("/api/modes/entrer")
+async def api_modes_entrer(d: DemandeRun, request: Request):
+    joueur = joueur_connecte(request)
+    _verifier_kind(d.kind)
+    res = await modes_service.entrer(joueur["id"], joueur["pseudo"], d.kind, d.spawn_id)
+    _lancer_boucle(res["combat_id"])
+    return res
+
+
+@app.post("/api/modes/continuer")
+async def api_modes_continuer(d: DemandeRun, request: Request):
+    joueur = joueur_connecte(request)
+    _verifier_kind(d.kind)
+    res = await modes_service.continuer(joueur["id"], joueur["pseudo"], d.kind, d.spawn_id, d.soin_auto)
+    _lancer_boucle(res["combat_id"])
+    return res
 
 
 # ----------------------------------------------------------------------------
