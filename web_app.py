@@ -96,7 +96,18 @@ async def lifespan(app: FastAPI):
         tache.cancel()
 
 
-app = FastAPI(title="PokéWild", lifespan=lifespan)
+# En production, pas de documentation d'API publique (elle n'est utile qu'aux tests).
+_doc = {} if WEB_DEV_LOGIN else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+app = FastAPI(title="PokéWild", lifespan=lifespan, **_doc)
+
+
+@app.middleware("http")
+async def _en_tetes_securite(request: Request, call_next):
+    rep = await call_next(request)
+    rep.headers.setdefault("X-Content-Type-Options", "nosniff")
+    rep.headers.setdefault("X-Frame-Options", "DENY")
+    rep.headers.setdefault("Referrer-Policy", "same-origin")
+    return rep
 app.add_middleware(
     SessionMiddleware,
     secret_key=WEB_SECRET,
