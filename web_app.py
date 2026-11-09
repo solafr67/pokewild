@@ -49,6 +49,7 @@ import collection_service  # noqa: E402
 import echanges_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
+import raid_service  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
 from pokemon_data import obtenir_pokemon_par_nom, sprite_pokemon  # noqa: E402
 
@@ -1014,6 +1015,45 @@ async def api_pom_demarrer(request: Request):
 @app.post("/api/casino/pom/choisir")
 async def api_pom_choisir(d: DemandePom, request: Request):
     return _pom_sprites(casino_service.pom_choisir(joueur_connecte(request)["id"], d.plus))
+
+
+class DemandeRaid(BaseModel):
+    raid_id: int
+
+
+@app.get("/api/raids")
+async def api_raids(request: Request):
+    res = raid_service.etat(joueur_connecte(request)["id"])
+    for r in res["raids"]:
+        r.update(_sprites(r["boss"]))
+    for m in res["equipe"]:
+        m["sprite"] = _sprites(m["nom"])["sprite"]
+    return res
+
+
+@app.post("/api/raids/rejoindre")
+async def api_raid_rejoindre(d: DemandeRaid, request: Request):
+    return raid_service.rejoindre(joueur_connecte(request)["id"], d.raid_id)
+
+
+@app.post("/api/raids/quitter")
+async def api_raid_quitter(d: DemandeRaid, request: Request):
+    return raid_service.quitter(joueur_connecte(request)["id"], d.raid_id)
+
+
+@app.post("/api/raids/equipe-auto")
+async def api_raid_equipe_auto(request: Request):
+    return raid_service.equipe_auto(joueur_connecte(request)["id"])
+
+
+@app.post("/api/raids/soigner")
+async def api_raid_soigner(d: DemandeRaid, request: Request):
+    return raid_service.soigner(joueur_connecte(request)["id"], d.raid_id)
+
+
+@app.post("/api/raids/capturer")
+async def api_raid_capturer(d: DemandeRaid, request: Request):
+    return raid_service.capturer(joueur_connecte(request)["id"], d.raid_id)
 
 
 # ----------------------------------------------------------------------------
