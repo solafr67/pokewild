@@ -43,6 +43,7 @@ import boutique_service  # noqa: E402
 import laboratoire_service  # noqa: E402
 import quetes_service  # noqa: E402
 import modes_service  # noqa: E402
+import pvp_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
@@ -190,6 +191,7 @@ def _combat_courant(user_id: int) -> dict:
 @app.get("/api/moi")
 async def api_moi(request: Request):
     joueur = joueur_connecte(request)
+    pvp_service.noter_joueur(joueur["id"], joueur["pseudo"])
     xp = database.obtenir_xp(joueur["id"])
     niveau, xp_dans_niveau, xp_requise = leveling.progression_niveau(xp)
     return {
@@ -736,6 +738,46 @@ async def api_modes_continuer(d: DemandeRun, request: Request):
     res = await modes_service.continuer(joueur["id"], joueur["pseudo"], d.kind, d.spawn_id, d.soin_auto)
     _lancer_boucle(res["combat_id"])
     return res
+
+
+
+# ----------------------------------------------------------------------------
+# PvP : défis entre joueurs du site
+# ----------------------------------------------------------------------------
+
+class DemandeDefiPvp(BaseModel):
+    cible_id: int
+    mise: int = 0
+
+
+class DemandeIdDefi(BaseModel):
+    defi_id: int
+
+
+@app.get("/api/pvp")
+async def api_pvp(request: Request, q: str = ""):
+    joueur = joueur_connecte(request)
+    pvp_service.noter_joueur(joueur["id"], joueur["pseudo"])
+    return pvp_service.etat(joueur["id"], q)
+
+
+@app.post("/api/pvp/defier")
+async def api_pvp_defier(d: DemandeDefiPvp, request: Request):
+    joueur = joueur_connecte(request)
+    return pvp_service.defier(joueur["id"], joueur["pseudo"], d.cible_id, d.mise)
+
+
+@app.post("/api/pvp/accepter")
+async def api_pvp_accepter(d: DemandeIdDefi, request: Request):
+    joueur = joueur_connecte(request)
+    res = pvp_service.accepter(joueur["id"], d.defi_id)
+    _lancer_boucle(res["combat_id"])
+    return res
+
+
+@app.post("/api/pvp/annuler")
+async def api_pvp_annuler(d: DemandeIdDefi, request: Request):
+    return pvp_service.annuler(joueur_connecte(request)["id"], d.defi_id)
 
 
 # ----------------------------------------------------------------------------
