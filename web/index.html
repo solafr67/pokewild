@@ -139,7 +139,7 @@ function fin(r){
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
-const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["pvp","🥊 PvP"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
+const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["pvp","🥊 PvP"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["collection","🗃️ Collection"],["pokedex","📖 Pokédex"],["classements","🏆 Classements"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements}[k]()))}">${l}</button>`).join("")}</div>`;
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -513,7 +513,6 @@ async function pageDefis(msgInitial,erreur){
     let d; try{d=await api("/api/pvp?q="+encodeURIComponent(rechPvp))}catch(e){if(e.code===401){clearInterval(minuteur);connexion()}return}
     if(d.combat_en_cours){clearInterval(minuteur);return combat(d.combat_en_cours)}
     if(document.activeElement&&document.activeElement.id==="pv_q"&&$("#pv_liste")){majListe(d);return}
-    H=[];
     let h=`<div class="card"><h2>📨 Défis reçus</h2>`+(d.recus.map(x=>`<div class="ligne"><b>${esc(x.de_pseudo)}</b>${x.mise?`<small>mise ${x.mise} PD</small>`:""}<small>${x.secondes_restantes}s</small><span class="sp"></span><button class="primary" onclick="${cb(()=>repondrePvp(x.id,true))}">✅ Accepter</button><button onclick="${cb(()=>repondrePvp(x.id,false))}">Refuser</button></div>`).join("")||"<small>Aucun défi reçu.</small>")+`</div>`;
     h+=`<div class="card"><h2>📤 Défis envoyés</h2>`+(d.envoyes.map(x=>`<div class="ligne"><b>${esc(x.a_pseudo)}</b>${x.mise?`<small>mise ${x.mise} PD</small>`:""}<small>${x.secondes_restantes}s</small><span class="sp"></span><button onclick="${cb(()=>repondrePvp(x.id,false))}">Annuler</button></div>`).join("")||"<small>Aucun défi en attente.</small>")+`</div>`;
     h+=`<div class="card"><h2>👥 Joueurs</h2><div class="ligne"><input id="pv_q" placeholder="🔍 Rechercher un joueur" value="${esc(rechPvp)}" oninput="rechPvp=this.value;majPvpListe()"><label><small>Mise (PD)</small> <input id="pv_mise" type="number" min="0" value="0" style="width:80px"></label><small>Solde : ${d.solde}</small></div><div id="pv_liste"></div></div>`;
@@ -525,6 +524,50 @@ async function pageDefis(msgInitial,erreur){
 }
 const defierPvp=async id=>{try{const r=await api("/api/pvp/defier",{cible_id:id,mise:parseInt(sel("pv_mise"))||0});pageDefis(esc(r.message))}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
 const repondrePvp=async(id,ok)=>{try{if(ok){const r=await api("/api/pvp/accepter",{defi_id:id});combat(r.combat_id)}else{await api("/api/pvp/annuler",{defi_id:id});pageDefis()}}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+
+/* ===== Collection & Classements ===== */
+let collEtat={tri:"alphabetique",q:"",filtre:"tous",page:0,sel:new Set(),mode:"liste"};
+async function pageCollection(msgInitial,erreur){
+  clearInterval(minuteur); H=[];
+  app.innerHTML=nav("collection")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${msgInitial}</div>`:""}</div><div class="card" id="co">Chargement…</div>`;
+  await majCollection();
+}
+async function majCollection(){
+  const e=collEtat; let d;
+  try{d=await api(`/api/collection?tri=${e.tri}&q=${encodeURIComponent(e.q)}&filtre=${e.filtre}&page=${e.page}`)}catch(x){return x.code===401?connexion():flash(x.message,true)}
+  const z=$("#co"); if(!z)return; e.page=d.page;
+  const opt=(v,l,cur)=>`<option value="${v}" ${v===cur?"selected":""}>${l}</option>`;
+  let h=`<h2>🗃️ Ma collection <small>(${d.total} Pokémon · 🔒 ${d.verrous} · ⭐ ${d.favoris})</small></h2>
+  <div class="ligne"><input id="co_q" placeholder="🔍 Nom ou surnom" value="${esc(e.q)}" oninput="collEtat.q=this.value;collEtat.page=0;clearTimeout(window._tc);window._tc=setTimeout(majCollection,300)">
+  <select onchange="collEtat.tri=this.value;majCollection()">${[["alphabetique","Alphabétique"],["pc_desc","PC décroissant"],["favoris_dabord","Favoris d'abord"],["verrouilles_dabord","Verrouillés d'abord"]].map(([v,l])=>opt(v,l,e.tri)).join("")}</select>
+  <select onchange="collEtat.filtre=this.value;collEtat.page=0;majCollection()">${[["tous","Tous"],["doublons","Doublons"],["favoris","Favoris"],["verrouilles","Verrouillés"],["shiny","Shiny"]].map(([v,l])=>opt(v,l,e.filtre)).join("")}</select></div>
+  <div class="actions"><button onclick="${cb(()=>apercuRelacher())}">👋 Relâcher les doublons</button>${e.sel.size?`<button class="danger" onclick="${cb(()=>supprimerSel())}">🗑️ Supprimer la sélection (${e.sel.size})</button><button onclick="${cb(()=>{e.sel.clear();majCollection()})}">Désélectionner</button>`:""}</div><div id="co_zone"></div>`;
+  h+=`<div class="liste">`+d.captures.map(c=>`<div class="ligne"><input type="checkbox" ${e.sel.has(c.id)?"checked":""} onchange="${cb(()=>{e.sel.has(c.id)?e.sel.delete(c.id):e.sel.add(c.id);majCollection()})}"><img src="${esc(c.sprite||"")}" width="36" height="36" loading="lazy" alt=""><b>${c.shiny?"✨ ":""}${esc(c.surnom?c.surnom+" ("+c.nom+")":c.nom)}</b><small>${c.pc} PC${c.doublon?" · doublon":""}${c.dernier?" · ⚠️ unique":""}</small><span class="sp"></span><button title="Favori" onclick="${cb(()=>basc(c.id,'favori',!c.favori))}">${c.favori?"⭐":"☆"}</button><button title="Verrouiller" onclick="${cb(()=>basc(c.id,'verrouille',!c.verrouille))}">${c.verrouille?"🔒":"🔓"}</button><button title="Surnom" onclick="${cb(()=>surnom(c.id,c.surnom||''))}">✏️</button></div>`).join("")+`</div>`;
+  if(d.nb_pages>1)h+=`<div class="actions"><button ${d.page?"":"disabled"} onclick="${cb(()=>{e.page--;majCollection()})}">◀</button><span>Page ${d.page+1}/${d.nb_pages}</span><button ${d.page<d.nb_pages-1?"":"disabled"} onclick="${cb(()=>{e.page++;majCollection()})}">▶</button></div>`;
+  const foc=document.activeElement&&document.activeElement.id==="co_q"; z.innerHTML=h;
+  if(foc){const i=$("#co_q");i.focus();i.setSelectionRange(i.value.length,i.value.length)}
+}
+const basc=async(id,champ,valeur)=>{try{await api("/api/collection/basculer",{capture_id:id,champ,valeur});majCollection()}catch(e){flash(e.message,true)}};
+const surnom=async(id,actuel)=>{const s=prompt("Surnom (vide pour effacer, 32 caractères max) :",actuel);if(s===null)return;try{await api("/api/collection/surnom",{capture_id:id,surnom:s});majCollection()}catch(e){flash(e.message,true)}};
+async function apercuRelacher(){
+  try{
+    const d=await api("/api/collection/relacher/apercu",{});
+    if(!d.nb){$("#co_zone").innerHTML=`<div class="msg">Aucun doublon à relâcher (le meilleur exemplaire de chaque espèce et les 🔒 sont gardés).</div>`;return}
+    $("#co_zone").innerHTML=`<div class="card"><h2>⚠️ Relâcher ${d.nb} doublon(s) ?</h2><small>On garde toujours le meilleur PC de chaque espèce et tout exemplaire verrouillé. Irréversible.</small><div class="liste">${d.lignes.map(l=>`<div class="ligne"><b>${esc(l.nom)}</b> ×${l.quantite}<span class="sp"></span><small>+${l.dollars} PD</small></div>`).join("")}</div><div class="actions"><button class="danger" onclick="${cb(()=>relacherTout())}">Relâcher (+${d.total} PD)</button><button onclick="${cb(()=>{$("#co_zone").innerHTML=""})}">Annuler</button></div></div>`;
+  }catch(e){flash(e.message,true)}
+}
+const relacherTout=async()=>{try{const r=await api("/api/collection/relacher",{});await majEntete();pageCollection(`👋 ${r.nb} Pokémon relâché(s) : +${r.total} PD`)}catch(e){flash(e.message,true)}};
+const supprimerSel=async()=>{
+  if(!confirm(`Supprimer définitivement ${collEtat.sel.size} Pokémon ? (les uniques feront perdre l'entrée Pokédex)`))return;
+  try{const r=await api("/api/collection/supprimer",{ids:[...collEtat.sel]});collEtat.sel.clear();await majEntete();pageCollection(`🗑️ ${r.nb} supprimé(s) : +${r.dollars} PD${r.perdus_pokedex.length?"<br>⚠️ Entrée(s) Pokédex perdue(s) : "+r.perdus_pokedex.map(esc).join(", "):""}`)}catch(e){flash(e.message,true)}
+};
+async function pageClassements(){
+  clearInterval(minuteur); H=[];
+  app.innerHTML=nav("classements")+`<div id="msg"></div><div id="cl">Chargement…</div>`;
+  let d; try{d=await api("/api/classements")}catch(e){return e.code===401?connexion():flash(e.message,true)}
+  const med=["🥇","🥈","🥉"];
+  $("#cl").innerHTML=`<div class="card"><h2>🏰 Clans</h2>${d.clans.map((c,i)=>`<div class="ligne"><b>${med[i]||(i+1)+"."} ${c.emoji} ${esc(c.nom)}</b><span class="sp"></span><small>${c.captures} captures · ${c.pc} PC cumulés</small></div>`).join("")}</div>`+d.categories.map(c=>`<div class="card"><h2>${c.emoji} ${esc(c.titre)}</h2>${c.lignes.map(l=>`<div class="ligne" ${l.moi?'style="font-weight:700"':""}><span>${med[l.rang-1]||l.rang+"."} ${esc(l.pseudo)}${l.moi?" (toi)":""}</span><span class="sp"></span><small>${esc(l.valeur)}</small></div>`).join("")||"<small>Personne pour l'instant.</small>"}</div>`).join("");
+}
 
 accueil();
 </script>
