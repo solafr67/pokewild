@@ -51,6 +51,7 @@ import echanges_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
 import raid_service  # noqa: E402
+import rogue_service  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
 from pokemon_data import obtenir_pokemon_par_nom, sprite_pokemon  # noqa: E402
 
@@ -1129,6 +1130,50 @@ async def api_duo_remplacant(combat_id: int, d: DemandeActionDuo, request: Reque
 @app.post("/api/duo/{combat_id}/abandonner")
 async def api_duo_abandonner(combat_id: int, request: Request):
     return duo_service.abandonner(combat_id, joueur_connecte(request)["id"])
+
+
+class DemandeRogue(BaseModel):
+    action: str
+    valeur: str = ""
+
+
+def _rogue_sprites(res: dict) -> dict:
+    noms = set()
+    e = res.get("ecran") or {}
+    noms.update(e.get("candidats", []) if e.get("type") == "starter" else [])
+    noms.update(e.get("options", []) if e.get("type") == "recrutement" else [])
+    noms.update(x for x in (e.get("a"), e.get("b")) if x)
+    if e.get("ennemi"):
+        noms.add(e["ennemi"]["nom"])
+    for m in (res.get("run") or {}).get("equipe", []):
+        noms.add(m["nom"])
+    res["sprites"] = {n: _sprites(n)["sprite"] for n in noms}
+    return res
+
+
+@app.get("/api/rogue")
+async def api_rogue(request: Request):
+    return _rogue_sprites(rogue_service.etat(joueur_connecte(request)["id"]))
+
+
+@app.get("/api/rogue/classement")
+async def api_rogue_classement(request: Request):
+    return rogue_service.classement(joueur_connecte(request)["id"])
+
+
+@app.post("/api/rogue/demarrer")
+async def api_rogue_demarrer(request: Request):
+    return _rogue_sprites(rogue_service.demarrer(joueur_connecte(request)["id"]))
+
+
+@app.post("/api/rogue/agir")
+async def api_rogue_agir(d: DemandeRogue, request: Request):
+    return _rogue_sprites(rogue_service.agir(joueur_connecte(request)["id"], d.action, d.valeur))
+
+
+@app.post("/api/rogue/abandonner")
+async def api_rogue_abandonner(request: Request):
+    return _rogue_sprites(rogue_service.abandonner(joueur_connecte(request)["id"]))
 
 
 # ----------------------------------------------------------------------------

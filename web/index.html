@@ -139,7 +139,7 @@ function fin(r){
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
-const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["pvp","🥊 PvP"],["marche","🏪 Marché"],["echanges","🔄 Échanges"],["casino","🎰 Casino"],["raids","⚔️ Raids"],["duo","🤝 Duo"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["collection","🗃️ Collection"],["pokedex","📖 Pokédex"],["classements","🏆 Classements"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,raids:pageRaids,duo:pageDuo,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements}[k]()))}">${l}</button>`).join("")}</div>`;
+const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["pvp","🥊 PvP"],["marche","🏪 Marché"],["echanges","🔄 Échanges"],["casino","🎰 Casino"],["raids","⚔️ Raids"],["duo","🤝 Duo"],["rogue","🗺️ Roguelike"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["collection","🗃️ Collection"],["pokedex","📖 Pokédex"],["classements","🏆 Classements"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,raids:pageRaids,duo:pageDuo,rogue:pageRogue,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements}[k]()))}">${l}</button>`).join("")}</div>`;
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -765,6 +765,58 @@ function dessDuo(id,e){
 async function duoAgir(id,route,corps){
   try{await api("/api/duo/"+id+"/"+route,corps);dd={attaque:null,cle:null};await majEntete();const e=await api("/api/duo/"+id);dessDuo(id,e)}catch(e){if(e.code===401)return connexion();flash(e.message,true)}
 }
+
+/* ===== Roguelike ===== */
+let rg={sous:"jeu"};
+async function pageRogue(msgInitial,erreur){
+  clearInterval(minuteur); H=[];
+  app.innerHTML=nav("rogue")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${msgInitial}</div>`:""}</div><div class="card"><div class="nav"><button class="${rg.sous==="jeu"?"primary":""}" onclick="${cb(()=>{rg.sous="jeu";pageRogue()})}">🗺️ Run</button><button class="${rg.sous==="top"?"primary":""}" onclick="${cb(()=>{rg.sous="top";pageRogue()})}">🏆 Classement</button></div><div id="rz">Chargement…</div></div>`;
+  try{
+    if(rg.sous==="top"){const d=await api("/api/rogue/classement");$("#rz").innerHTML=d.classement.map(c=>`<div class="ligne"><b>${c.rang}.</b> <span>${c.moi?"👉 ":""}${esc(c.pseudo)}</span><span class="sp"></span>salle ${c.etage}</div>`).join("")||"<small>Aucune run terminée.</small>";return}
+    dessRogue(await api("/api/rogue"));
+  }catch(e){if(e.code===401)return connexion();flash(e.message,true)}
+}
+const rgAct=async(a,v="")=>{try{dessRogue(await api("/api/rogue/agir",{action:a,valeur:String(v)}))}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+const rgBar=(a,b)=>`<div style="background:#ddd;border-radius:6px;height:10px;overflow:hidden"><div style="width:${b?Math.max(0,Math.round(a/b*100)):0}%;background:${a/b>.5?"#3a3":a/b>.2?"#ea3":"#d33"};height:100%"></div></div>`;
+function dessRogue(d){
+  const z=$("#rz"); if(!z)return;
+  const sp=n=>d.sprites&&d.sprites[n]?`<img src="${esc(d.sprites[n])}" height="56" alt="">`:"";
+  let h="";
+  if(d.discord)h=`<p>Une run est en cours <b>sur Discord</b> (salle ${d.run.salle}). Continue-la là-bas, ou abandonne-la ici pour jouer sur le site.</p><div class="actions"><button class="danger" onclick="${cb(()=>{if(confirm("Abandonner la run ?"))rgAbandon()})}">🏳️ Abandonner</button></div>`;
+  else if(!d.run){
+    const e=d.ecran;
+    h=(e?`<div class="msg ${e.type==="fin"?"err":""}">${esc(e.titre)} — ${esc(e.texte)}${e.nouveau_record?" 🏆 Nouveau record !":""}</div>`:"")+`<p>Mini-jeu indépendant : équipe de génériques, permadeath, sans fin, aucune récompense liée à ton profil — juste un classement du meilleur étage.${d.record?` Ton record : salle ${d.record}.`:""}</p><div class="actions"><button class="primary" onclick="${cb(()=>rgDemarrer())}">▶️ Nouvelle run</button></div>`;
+  }else{
+    const e=d.ecran, r=d.run;
+    h=`<p><b>Salle ${r.salle}</b>${r.reliques.length?" · "+r.reliques.map(x=>`<span title="${esc(x.description)}">${x.emoji} ${esc(x.nom)}</span>`).join(" · "):""}</p>`;
+    h+=`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${r.equipe.map(m=>`<div class="hud" style="text-align:center;${e.actif===m.position?"outline:2px solid #38f":""}">${sp(m.nom)}<br><b>${esc(m.nom)}</b> Nv.${m.niveau}${m.mute?" 🔮":""}${m.pv<=0?" 💀":""}${rgBar(m.pv,m.pv_max)}<small>${m.pv}/${m.pv_max} PV</small></div>`).join("")}</div><hr>`;
+    h+=`<h3>${esc(e.titre)}</h3>`+((e.annonces||[]).length?`<small>${e.annonces.map(esc).join("<br>")}</small>`:"")+(e.texte?`<p>${esc(e.texte).replace(/\n/g,"<br>")}</p>`:"");
+    const btn=(l,a,v,c)=>`<button class="${c||""}" onclick="${cb(()=>rgAct(a,v))}">${l}</button>`;
+    const pos=lst=>lst.map(p=>{const m=r.equipe.find(x=>x.position===p);return btn(`${esc(m.nom)} (Nv.${m.niveau})`,e.type==="mutation"?"muter":"evoluer",p,"primary")}).join("");
+    switch(e.type){
+      case"starter":h+=`<div class="actions">${e.candidats.map(n=>`<button class="primary" onclick="${cb(()=>rgAct("starter",n))}">${sp(n)}<br>${esc(n)}</button>`).join("")}</div>`;break;
+      case"continuer":h+=`<div class="actions">${btn("➡️ Continuer","continuer","","primary")}</div>`;break;
+      case"evenement":h+=`<div class="actions">${e.choix.map((c,i)=>btn(esc(c),"evenement",i)).join("")}</div>`;break;
+      case"tresor":h+=e.reliques.map(x=>`<div class="ligne">${x.emoji} <b>${esc(x.nom)}</b> <small>${esc(x.description)}</small><span class="sp"></span>${btn("Prendre","relique",x.id,"primary")}</div>`).join("");break;
+      case"recrutement":h+=`<div class="actions">${e.options.map(n=>`<button class="primary" onclick="${cb(()=>rgAct("recruter",n))}">${sp(n)}<br>${esc(n)}</button>`).join("")}${btn("Passer","recruter","passer")}</div>`;break;
+      case"marchand":h+=`<div class="actions">${btn("💊 Soin (+40 % PV)","marchand","soin","primary")}${btn("💎 Relique aléatoire","marchand","relique")}</div>`;break;
+      case"mutation":case"evolution":h+=`<div class="actions">${pos(e.candidats)}</div>`;break;
+      case"scintillante":h+=`<div class="actions">${btn("⚔️ Combattre","combattre","","danger")}${btn("🏃 Fuir","fuir")}</div>`;break;
+      case"carrefour":h+=`<div class="actions">${e.options.map(t=>btn(esc(e.noms[t]),"carrefour",t,"primary")).join("")}</div>`;break;
+      case"arene":h+=`<div class="actions">${[e.a,e.b].map(n=>`<button class="primary" onclick="${cb(()=>rgAct("parier",n))}">${sp(n)}<br>🎲 ${esc(n)}</button>`).join("")}</div>`;break;
+      case"combat":{
+        const en=e.ennemi;
+        h+=en?`<div class="hud" style="text-align:center">${sp(en.nom)}<br><b>${esc(en.nom)}</b> Nv.${en.niveau}${e.restants?` <small>(+${e.restants} à suivre)</small>`:""}${rgBar(en.pv,en.pv_max)}<small>${en.pv}/${en.pv_max} PV</small></div>`:"";
+        h+=`<div class="actions">${e.attaques.map((a,i)=>btn(`${esc(a.nom)} <small>${a.puissance} pcs</small>`,"attaquer",i,"danger")).join("")}</div>`;
+        if(e.log&&e.log.length)h+=`<div class="card">${e.log.map(l=>`<div>${esc(l)}</div>`).join("")}</div>`;
+        break}
+    }
+    h+=`<div class="actions"><button onclick="${cb(()=>{if(confirm("Abandonner la run ? Toute la progression est perdue."))rgAbandon()})}">🏳️ Abandonner</button></div>`;
+  }
+  z.innerHTML=h;
+}
+async function rgDemarrer(){try{dessRogue(await api("/api/rogue/demarrer",{}))}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
+async function rgAbandon(){try{dessRogue(await api("/api/rogue/abandonner",{}))}catch(e){flash(e.message,true)}}
 
 accueil();
 </script>
