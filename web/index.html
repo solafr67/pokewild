@@ -139,7 +139,7 @@ function fin(r){
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
-const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["pvp","🥊 PvP"],["marche","🏪 Marché"],["echanges","🔄 Échanges"],["casino","🎰 Casino"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["collection","🗃️ Collection"],["pokedex","📖 Pokédex"],["classements","🏆 Classements"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements}[k]()))}">${l}</button>`).join("")}</div>`;
+const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["pvp","🥊 PvP"],["marche","🏪 Marché"],["echanges","🔄 Échanges"],["casino","🎰 Casino"],["raids","⚔️ Raids"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["collection","🗃️ Collection"],["pokedex","📖 Pokédex"],["classements","🏆 Classements"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,raids:pageRaids,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements}[k]()))}">${l}</button>`).join("")}</div>`;
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -686,6 +686,32 @@ async function jouerRoulette(t){casAct(async()=>{cs.rl=await api("/api/casino/ro
 async function pomChoix(plus){casAct(async()=>{const r=await api("/api/casino/pom/choisir",{plus});const txt=`${esc(r.revele.nom)} avait ${r.revele.pc} PC (contre ${r.contre.pc} pour ${esc(r.contre.nom)}).`;
   cs.msgErr=!r.juste;cs.pom={record:r.record,partie:r.partie};
   cs.msg=r.juste?"✅ Bonne pioche ! "+txt:`❌ Perdu ! ${txt} Série finale : ${r.serie}${r.nouveau_record?" — 🏆 Nouveau record !":""}`})}
+
+/* ===== Raids ===== */
+async function pageRaids(msgInitial,erreur){
+  clearInterval(minuteur); H=[];
+  app.innerHTML=nav("raids")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${msgInitial}</div>`:""}</div><div id="rz">Chargement…</div>`;
+  await majRaids();
+  minuteur=setInterval(()=>{if(!$("#rz")){clearInterval(minuteur);return}majRaids().catch(()=>{})},3000);
+}
+const actR=async(f)=>{try{const r=await f();await majEntete();await majRaids();if(r&&r.message)flash(r.message,r.reussite===false)}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+async function majRaids(){
+  const z=$("#rz"); if(!z)return; let d;
+  try{d=await api("/api/raids")}catch(e){return e.code===401?connexion():flash(e.message,true)}
+  const barre=(a,b,c)=>`<div style="background:#ddd;border-radius:6px;height:12px;overflow:hidden"><div style="width:${b?Math.max(0,Math.round(a/b*100)):0}%;background:${c};height:100%"></div></div>`;
+  let h=`<div class="card"><h2>⚔️ Raids en cours</h2><small>Les raids sont lancés par le bot sur Discord (un toutes les ~15 min). Rejoins-les ici pendant la salle d'attente : ton équipe attaque automatiquement.</small>`;
+  if(!d.raids.length)h+="<p>Aucun raid pour l'instant… patience !</p>";
+  h+=d.raids.map(r=>{
+    const et="⭐".repeat(r.etoiles); let corps="";
+    if(r.phase==="attente")corps=`<p>🕒 Salle d'attente : combat dans <b>${dureeTxt(r.secondes)}</b> · ${r.participants} joueur(s)</p><div class="actions">${r.rejoint?`<button disabled>✅ Inscrit</button><button onclick="${cb(()=>actR(()=>api("/api/raids/quitter",{raid_id:r.id})))}">🚪 Quitter</button>`:`<button class="primary" onclick="${cb(()=>actR(()=>api("/api/raids/rejoindre",{raid_id:r.id})))}">🙋 Rejoindre</button>`}</div>`;
+    else if(r.phase==="combat")corps=`<div>PV : ${r.pv.toLocaleString("fr")}/${r.pv_max.toLocaleString("fr")}</div>${barre(r.pv,r.pv_max,"#d33")}<p>⏱️ ${dureeTxt(r.secondes)} restantes · ${r.participants} participant(s)${r.rejoint?` · tes dégâts : <b>${r.mes_degats}</b>`:" · combat lancé : impossible de rejoindre"}</p>${r.rejoint?`<div class="actions"><button onclick="${cb(()=>actR(()=>api("/api/raids/soigner",{raid_id:r.id})))}">💊 Soin auto (potions)</button><button onclick="${cb(()=>actR(()=>api("/api/raids/quitter",{raid_id:r.id})))}">🚪 Quitter</button></div>`:""}`;
+    else corps=`<p>🎉 <b>Victoire !</b> Récompenses reçues (${r.recompense.pd} PD, ${r.recompense.xp} XP).</p>`+(r.capture_reussie?"<p>✅ Capturé !</p>":r.tentatives>0?`<div class="actions"><button class="primary" onclick="${cb(()=>actR(()=>api("/api/raids/capturer",{raid_id:r.id})))}">⚾ Capturer (${Math.round((r.taux_capture||0)*100)}% de base) — ${r.tentatives} tentative(s)</button></div>`:"<p>Plus de tentatives.</p>");
+    const cl=r.classement.length?`<details><summary>🏆 Participants</summary>${r.classement.map(c=>`<div class="ligne"><span>${c.moi?"👉 ":""}${esc(c.pseudo)}</span><span class="sp"></span><b>${c.degats}</b></div>`).join("")}</details>`:"";
+    return `<div class="card" style="border:1px solid #888"><div class="ligne"><img src="${esc(r.sprite||"")}" width="64" height="64" alt=""><div><b>${esc(r.boss)}</b> ${et}</div></div>${corps}${cl}</div>`;
+  }).join("");
+  h+=`</div><div class="card"><h2>🛡️ Mon équipe ${d.equipe_en_raid?"(PV du raid)":""}</h2>`+(d.equipe.map(m=>`<div class="ligne"><img src="${esc(m.sprite||"")}" width="32" height="32" alt=""><b>${esc(m.nom)}</b>${m.dispo?"":" <small>(indisponible)</small>"}<span class="sp"></span>${m.pv<=0?"☠️ K.O.":m.pv+"/"+m.pv_max+" PV"}</div>`).join("")||"<small>Équipe vide.</small>")+`<div class="actions"><button onclick="${cb(()=>actR(()=>api("/api/raids/equipe-auto",{})))}">🛡️ Équipe la plus forte</button></div><small>Potions : ${Object.entries(d.potions).map(([k,v])=>v+"× "+k).join(", ")||"aucune"}</small></div>`;
+  z.innerHTML=h;
+}
 
 accueil();
 </script>
