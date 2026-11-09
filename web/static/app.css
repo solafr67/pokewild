@@ -552,3 +552,31 @@ button.gr{background:var(--surface-3)}
   .q-s{font-size:16px}
 }
 @media (max-width:760px){.slot-act button{min-width:max-content;white-space:nowrap}}
+
+/* ===== Saison ===== */
+.paliers{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.palier{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:34px 12px 12px;border-radius:var(--r-l);background:var(--surface-2);border:1px solid var(--line);opacity:.7}
+.palier.ok{opacity:1;border-color:rgba(61,220,151,.5)}
+.palier.next{opacity:1;border-color:var(--gold);box-shadow:0 0 0 1px rgba(255,200,61,.3)}
+.palier .pn{position:absolute;top:8px;left:12px;font:800 15px var(--font-d)}
+.palier .pv{position:absolute;top:8px;right:12px;color:#3ddc97;font-weight:800}
+.palier .chip{display:inline-flex;align-items:center;gap:4px}.palier .chip .ico{width:18px;height:18px}.palier .chip svg{width:14px;height:14px}
+
+/* ===== Double combat ===== */
+.duel-t{display:flex;align-items:center;gap:10px;margin-bottom:12px}.duel-t b{font:800 22px var(--font-d)}
+.duo-terrain{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;padding:20px;margin-bottom:14px;border-radius:var(--r-xl);border:1px solid var(--line-2);background:radial-gradient(700px 240px at 50% 0%,rgba(76,184,255,.12),transparent 70%),var(--surface)}
+.duo-cote{display:grid;gap:10px}
+.duo-vs{font:800 20px var(--font-d);color:var(--mut)}
+.dpk{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-m);background:var(--surface-2);border:1px solid var(--line)}
+.dpk.ko{opacity:.5}.dpk-i{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}.dpk-i b{font-size:14.5px}
+.dpk .pad.s{width:64px;height:64px}
+.duo-cmds{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.duo-cmds .moves{grid-template-columns:1fr}
+.actions.sec{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.mega-btn{width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(90deg,#7b4dff,#d04dff);color:#fff;border:0;font-weight:800}
+.mega-btn svg{width:18px;height:18px}
+@media (max-width:760px){.duo-terrain{grid-template-columns:1fr;padding:14px}.duo-vs{text-align:center}.duo-cmds{grid-template-columns:1fr}}
+.pad.s{padding:0 2px 4px;flex:none}.pad.s::after{height:12px}
+.pad.s .spr{max-width:100%;max-height:100%;object-fit:contain}
+.pad.s .spr{opacity:1;animation:none;width:auto;height:auto;max-width:56px;max-height:56px;filter:drop-shadow(0 4px 3px rgba(0,0,0,.5))}
+.dpk .pad.s .spr{max-width:60px;max-height:60px}

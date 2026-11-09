@@ -153,9 +153,9 @@ const FR_EN={feu:"fire",eau:"water",plante:"grass",electrik:"electric",glace:"ic
 const typeKey=x=>{const k=String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();return TCOL[k]?k:(FR_EN[k]||k)};
 const typeCol=x=>TCOL[typeKey(x)]||"var(--line-2)";
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag type" style="--tc:${typeCol(x)}">${icoType(x)}${esc(x)}</span>`).join("");
-const PAGES={accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,raids:pageRaids,duo:pageDuo,rogue:pageRogue,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements};
+const PAGES={accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,raids:pageRaids,duo:pageDuo,rogue:pageRogue,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,saison:pageSaison,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements};
 const go=k=>PAGES[k]();
-const IC={trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+const IC={star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
  home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/>',
  compass:'<circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2 5.6-5.6 2 2-5.6z"/>',
  swords:'<path d="m14 5 6-2 1 1-2 6-9.5 9.5L7 17.5 4.5 20 3 18.5 5.5 16 4 14.5 13.5 5z" transform="translate(0 0)"/><path d="m9 5-5-2-1 1 2 6 3 3"/>',
@@ -171,7 +171,7 @@ const svg=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 const BALL='<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#f4f7fc"/><path d="M2 16a14 14 0 0 1 28 0z" fill="#ff5446"/><path d="M2 16h28" stroke="#0a1220" stroke-width="2.4"/><circle cx="16" cy="16" r="5" fill="#f4f7fc" stroke="#0a1220" stroke-width="2.4"/><circle cx="16" cy="16" r="14" fill="none" stroke="#0a1220" stroke-width="2"/></svg>';
 // 6 grandes sections ; chaque section regroupe plusieurs écrans (onglets).
 const HUBS=[
- {k:"accueil",l:"Accueil",ic:"home",c:"#4cb8ff",t:"",p:[["accueil","Tableau de bord"],["quetes","Missions"],["classements","Classements"]]},
+ {k:"accueil",l:"Accueil",ic:"home",c:"#4cb8ff",t:"",p:[["accueil","Tableau de bord"],["quetes","Missions"],["saison","Saison"],["classements","Classements"]]},
  {k:"explorer",l:"Explorer",ic:"compass",c:"#3ddc97",t:"Pokémon sauvages, PokéStop et expéditions.",p:[["explorer","Rencontres"],["explorations","Expéditions"]]},
  {k:"combat",l:"Combattre",ic:"swords",c:"#ff5446",t:"Dresseurs, arènes, duels et raids.",p:[["modes","Dresseurs & Arènes"],["pvp","Duels"],["duo","Double combat"],["raids","Raids"]]},
  {k:"collection",l:"Collection",ic:"grid",c:"#b07bff",t:"Ton équipe, tes Pokémon, ton sac et le laboratoire.",p:[["equipe","Équipe"],["collection","Pokémon"],["pokedex","Pokédex"],["inventaire","Sac"],["labo","Laboratoire"]]},
@@ -504,6 +504,16 @@ const muter=()=>actLabo(async()=>{const r=await api("/api/labo/mutation",{});ret
 /* ===== Quêtes ===== */
 let ongletQuetes="quetes";
 const ONGLETS_Q=[["quetes","Quêtes"],["contrats","Contrats"],["principale","Histoire"],["succes","Accomplissements"]];
+async function pageSaison(){
+  clearInterval(minuteur); H=[];
+  app.innerHTML=nav("saison")+`<div id="msg"></div><div id="sz">Chargement…</div>`;
+  let d; try{d=await api("/api/saison")}catch(e){return e.code===401?connexion():flash(e.message,true)}
+  const s=d.saison,pa=d.parrainage,pc=Math.min(100,100*s.points_dans_palier/s.points_requis_palier);
+  const objs=l=>l.map(o=>`<span class="chip">${ico(o.cle)} ${o.quantite}</span>`).join("");
+  $("#sz").innerHTML=`<div class="wallet"><div class="w-solde"><span class="w-ic">${svg("star")}</span><div><small>Saison ${s.saison}</small><b>Palier ${s.palier} <i>/ ${s.palier_max}</i></b></div></div><div><div class="w-l"><span>Palier suivant</span><span>${s.points_dans_palier} / ${s.points_requis_palier} pts</span></div><div class="bar"><i style="width:${pc}%"></i></div><small class="mut">Fin de saison dans ${tpsTxt(s.temps_restant)}. Chaque point d'XP gagné rapporte un point.</small></div></div>
+  <div class="card"><h2>Récompenses</h2><div class="paliers">${d.paliers.map(p=>`<div class="palier ${p.atteint?"ok":""} ${p.palier===s.palier+1?"next":""}"><span class="pn">${p.palier}</span><span class="chip gold">${svg("coin")} ${p.dollars}</span>${objs(p.objets)}${p.atteint?`<span class="pv">✓</span>`:""}</div>`).join("")}</div></div>
+  <div class="card"><h2>Parrainage</h2><p>Invite des amis sur le serveur Discord : tous les <b>${pa.palier}</b> amis restés au moins ${pa.delai_jours} jours, tu gagnes ${pa.recompense_dollars} PD et ${objs(pa.recompense_objets)}.</p><div class="ligne"><b>${pa.confirmes}</b> invitation(s) confirmée(s)<span class="sp"></span><span class="chip">Encore ${pa.avant_prochain} avant la prochaine récompense</span></div></div>`;
+}
 async function pageQuetes(msgInitial,erreur){
   clearInterval(minuteur); H=[];
   app.innerHTML=nav("quetes")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${msgInitial}</div>`:""}</div><div class="card" id="cx"></div><div class="card"><div class="nav">${ONGLETS_Q.map(([k,l])=>`<button class="${k===ongletQuetes?"primary":""}" onclick="${cb(()=>{ongletQuetes=k;pageQuetes()})}">${l}</button>`).join("")}</div><div id="qt">Chargement…</div></div>`;
@@ -580,22 +590,24 @@ function suiteHTML(s){
 let rechPvp="";
 async function pageDefis(msgInitial,erreur){
   clearInterval(minuteur); H=[];
-  app.innerHTML=nav("pvp")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${msgInitial}</div>`:""}</div><div class="card"><small>Défie un autre joueur connecté au site. Équipes complètes, 45 s par tour. Mise optionnelle (max 20 % du solde du plus pauvre) : le vainqueur remporte le pot.</small></div><div id="pv">Chargement…</div>`;
+  app.innerHTML=nav("pvp")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${msgInitial}</div>`:""}</div><div class="card"><small>Défie un autre joueur connecté au site. Équipes complètes, 45 s par tour. En 2v2, chacun contrôle 2 Pokémon à la fois. Mise optionnelle en 1v1 (max 20 % du solde du plus pauvre) : le vainqueur remporte le pot.</small></div><div id="pv">Chargement…</div>`;
   const maj=async()=>{
     if(!$("#pv")){clearInterval(minuteur);return}
-    let d; try{d=await api("/api/pvp?q="+encodeURIComponent(rechPvp))}catch(e){if(e.code===401){clearInterval(minuteur);connexion()}return}
+    let d,d2={recus:[],envoyes:[]}; try{d=await api("/api/pvp?q="+encodeURIComponent(rechPvp));d2=await api("/api/duopvp")}catch(e){if(e.code===401){clearInterval(minuteur);connexion()}return}
     if(d.combat_en_cours){clearInterval(minuteur);return combat(d.combat_en_cours)}
     if(document.activeElement&&document.activeElement.id==="pv_q"&&$("#pv_liste")){majListe(d);return}
-    let h=`<div class="card"><h2>Défis reçus</h2>`+(d.recus.map(x=>`<div class="ligne"><b>${esc(x.de_pseudo)}</b>${x.mise?`<small>mise ${x.mise} PD</small>`:""}<small>${x.secondes_restantes}s</small><span class="sp"></span><button class="primary" onclick="${cb(()=>repondrePvp(x.id,true))}">✅ Accepter</button><button onclick="${cb(()=>repondrePvp(x.id,false))}">Refuser</button></div>`).join("")||"<small>Aucun défi reçu.</small>")+`</div>`;
-    h+=`<div class="card"><h2>Défis envoyés</h2>`+(d.envoyes.map(x=>`<div class="ligne"><b>${esc(x.a_pseudo)}</b>${x.mise?`<small>mise ${x.mise} PD</small>`:""}<small>${x.secondes_restantes}s</small><span class="sp"></span><button onclick="${cb(()=>repondrePvp(x.id,false))}">Annuler</button></div>`).join("")||"<small>Aucun défi en attente.</small>")+`</div>`;
+    let h=`<div class="card"><h2>Défis reçus</h2>`+(d.recus.map(x=>`<div class="ligne"><b>${esc(x.de_pseudo)}</b>${x.mise?`<small>mise ${x.mise} PD</small>`:""}<small>${x.secondes_restantes}s</small><span class="sp"></span><button class="primary" onclick="${cb(()=>repondrePvp(x.id,true))}">✅ Accepter</button><button onclick="${cb(()=>repondrePvp(x.id,false))}">Refuser</button></div>`).join("")+d2.recus.map(x=>`<div class="ligne"><b>${esc(x.de_pseudo)}</b><span class="chip">2v2</span><small>${x.secondes_restantes}s</small><span class="sp"></span><button class="primary" onclick="${cb(()=>repondreDuoPvp(x.id,true))}">Accepter</button><button onclick="${cb(()=>repondreDuoPvp(x.id,false))}">Refuser</button></div>`).join("")||"<small>Aucun défi reçu.</small>")+`</div>`;
+    h+=`<div class="card"><h2>Défis envoyés</h2>`+(d.envoyes.map(x=>`<div class="ligne"><b>${esc(x.a_pseudo)}</b>${x.mise?`<small>mise ${x.mise} PD</small>`:""}<small>${x.secondes_restantes}s</small><span class="sp"></span><button onclick="${cb(()=>repondrePvp(x.id,false))}">Annuler</button></div>`).join("")+d2.envoyes.map(x=>`<div class="ligne"><b>${esc(x.a_pseudo)}</b><span class="chip">2v2</span><small>${x.secondes_restantes}s</small><span class="sp"></span><button onclick="${cb(()=>repondreDuoPvp(x.id,false))}">Annuler</button></div>`).join("")||"<small>Aucun défi en attente.</small>")+`</div>`;
     h+=`<div class="card"><h2>Joueurs</h2><div class="ligne"><input id="pv_q" placeholder="🔍 Rechercher un joueur" value="${esc(rechPvp)}" oninput="rechPvp=this.value;majPvpListe()"><label><small>Mise (PD)</small> <input id="pv_mise" type="number" min="0" value="0" style="width:80px"></label><small>Solde : ${d.solde}</small></div><div id="pv_liste"></div></div>`;
     $("#pv").innerHTML=h; majListe(d);
   };
-  const majListe=d=>{const z=$("#pv_liste");if(z)z.innerHTML=d.joueurs.map(j=>`<div class="ligne"><b>${j.en_ligne?"🟢":"⚪"} ${esc(j.pseudo)}</b><span class="sp"></span><button onclick="${cb(()=>defierPvp(j.id))}">⚔️ Défier</button></div>`).join("")||"<small>Aucun joueur trouvé (il doit s'être connecté au site au moins une fois).</small>"};
+  const majListe=d=>{const z=$("#pv_liste");if(z)z.innerHTML=d.joueurs.map(j=>`<div class="ligne"><b>${j.en_ligne?"🟢":"⚪"} ${esc(j.pseudo)}</b><span class="sp"></span><button onclick="${cb(()=>defierPvp(j.id))}">Défier 1v1</button><button title="Chacun contrôle 2 Pokémon" onclick="${cb(()=>defierDuoPvp(j.id))}">Défier 2v2</button></div>`).join("")||"<small>Aucun joueur trouvé (il doit s'être connecté au site au moins une fois).</small>"};
   window.majPvpListe=()=>{clearTimeout(window._tPvp);window._tPvp=setTimeout(maj,250)};
   await maj(); minuteur=setInterval(maj,3000);
 }
 const defierPvp=async id=>{try{const r=await api("/api/pvp/defier",{cible_id:id,mise:parseInt(sel("pv_mise"))||0});pageDefis(esc(r.message))}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+const defierDuoPvp=async id=>{try{const r=await api("/api/duopvp/defier",{cible_id:id});pageDefis(esc(r.message))}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+const repondreDuoPvp=async(id,ok)=>{try{if(ok){const r=await api("/api/duopvp/accepter",{defi_id:id});combatDuo(r.combat_id)}else{await api("/api/duopvp/annuler",{defi_id:id});pageDefis()}}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
 const repondrePvp=async(id,ok)=>{try{if(ok){const r=await api("/api/pvp/accepter",{defi_id:id});combat(r.combat_id)}else{await api("/api/pvp/annuler",{defi_id:id});pageDefis()}}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
 
 /* ===== Collection & Classements ===== */
@@ -808,31 +820,31 @@ async function combatDuo(id){
   await maj(); minuteur=setInterval(maj,1500);
 }
 const pvBarre=(a,b)=>`<div class="bar ${classePV(a,b)}"><i style="width:${b?Math.round(a/b*100):0}%"></i></div>`;
-const hudDuo=(p,adv)=>p?`<div class="hud" style="text-align:center"><img src="${esc(p.sprite||"")}" height="64" alt=""><br><b>${esc(p.nom)}</b> Nv.${p.niveau}${p.statut?` <span class="badge">${esc(p.statut)}</span>`:""}${pvBarre(p.pv,p.pv_max)}<small>${adv?Math.round(p.pv/p.pv_max*100)+" %":p.pv+"/"+p.pv_max+" PV"}</small></div>`:`<div class="hud"><small>—</small></div>`;
+const hudDuo=(p,adv)=>p?`<div class="dpk ${p.pv<=0?"ko":""}"><span class="pad s"><img class="spr" src="${esc(p.sprite||"")}" alt=""></span><div class="dpk-i"><b>${esc(p.nom)} <small>Nv.${p.niveau}</small></b>${p.statut?statutHTML(p.statut):""}${barre(p.pv,p.pv_max)}<small class="mut">${adv?Math.round(p.pv/p.pv_max*100)+" %":p.pv+" / "+p.pv_max+" PV"}</small></div></div>`:`<div class="dpk vide"><small class="mut">Hors combat</small></div>`;
 function dessDuo(id,e){
   const z=$("#dc"); if(!z)return;
-  let h=`<div class="card"><h2>${esc(e.archetype)}${e.actif?` · tour ${e.tour} · ${e.secondes}s`:""}</h2>`;
+  let h=`<div class="duel-t"><b>${esc(e.archetype)}</b>${e.actif?`<span class="chip">Tour ${e.tour}</span><span class="chip ${e.secondes<=10?"warn":""}">${e.secondes}s</span>`:""}</div>`;
   if(e.actif){
-    h+=`<div class="grid" style="grid-template-columns:1fr 1fr">${e.adverses.map(a=>`<div><small>${esc(a.nom)} (${a.restants}/${a.total})</small>${hudDuo(a.actif,true)}</div>`).join("")}</div><hr><div class="grid" style="grid-template-columns:1fr 1fr">${e.sieges.map(s=>`<div>${hudDuo(s.actif,false)}</div>`).join("")}</div>`;
+    h+=`<div class="duo-terrain"><div class="duo-cote adv">${e.adverses.map(a=>`<div><small class="mut">${esc(a.nom)} · ${a.restants}/${a.total}</small>${hudDuo(a.actif,true)}</div>`).join("")}</div><div class="duo-vs">VS</div><div class="duo-cote moi">${e.sieges.map(s=>hudDuo(s.actif,false)).join("")}</div></div><div class="duo-cmds">`;
     for(const s of e.sieges){
       let act="";
-      if(s.hors_combat||s.abandonne)act="<small>Hors combat.</small>";
-      else if(s.remplacant_requis)act=`<b>🔁 ${esc(s.actif.nom)} est K.O. — envoie :</b><div class="actions">${s.changements.map(n=>`<button class="primary" onclick="${cb(()=>duoAgir(id,"remplacant",{cle:s.cle,valeur:n}))}">${esc(n)}</button>`).join("")}</div>`;
-      else if(s.action_choisie)act="<small>✅ Action choisie — en attente…</small>";
-      else if(s.verrouille)act="<small>⚡ Charge / récupération automatique.</small>";
+      if(s.hors_combat||s.abandonne)act="<small class='mut'>Hors combat.</small>";
+      else if(s.remplacant_requis)act=`<b>${esc(s.actif.nom)} est K.O. — envoie :</b><div class="actions">${s.changements.map(n=>`<button class="primary" onclick="${cb(()=>duoAgir(id,"remplacant",{cle:s.cle,valeur:n}))}">${esc(n)}</button>`).join("")}</div>`;
+      else if(s.action_choisie)act="<small class='mut'>Action choisie, en attente de l'adversaire…</small>";
+      else if(s.verrouille)act="<small class='mut'>Charge ou récupération automatique.</small>";
       else if(dd.cle===s.cle&&dd.attaque){
         const vivants=e.adverses.filter(a=>a.actif&&a.actif.pv>0);
-        act=`<b>🎯 ${esc(dd.attaque)} — sur quel Pokémon ?</b><div class="actions">${vivants.map(a=>`<button class="danger" onclick="${cb(()=>duoAgir(id,"agir",{cle:s.cle,type:"attaque",valeur:dd.attaque,cible:a.id}))}">${esc(a.actif.nom)}</button>`).join("")}<button onclick="${cb(()=>{dd.attaque=null;dd.cle=null;dessDuo(id,e)})}">↩️</button></div>`;
-      }else act=`<div class="actions">${s.attaques.map(a=>`<button class="danger" title="${a.puissance||"—"} pcs" onclick="${cb(()=>{const vivants=e.adverses.filter(x=>x.actif&&x.actif.pv>0);if(vivants.length<=1)duoAgir(id,"agir",{cle:s.cle,type:"attaque",valeur:a.nom,cible:vivants[0]?vivants[0].id:""});else{dd.attaque=a.nom;dd.cle=s.cle;dessDuo(id,e)}})}">${esc(a.nom)}${a.pp!=null?` <small>${a.pp}/${a.pp_max}</small>`:""}</button>`).join("")}${e.potions.disponibles.map(p=>`<button class="success" onclick="${cb(()=>duoAgir(id,"agir",{cle:s.cle,type:"potion",valeur:p.type}))}">🧪 ${esc(p.nom)} ×${p.quantite}</button>`).join("")}${s.changements.map(n=>`<button onclick="${cb(()=>duoAgir(id,"agir",{cle:s.cle,type:"changer",valeur:n}))}">🔄 ${esc(n)}</button>`).join("")}</div>`;
-      h+=`<div class="card"><b>${esc(s.actif?s.actif.nom:"—")}</b>${act}</div>`;
+        act=`<b>${esc(dd.attaque)} : sur quel Pokémon ?</b><div class="actions">${vivants.map(a=>`<button class="danger" onclick="${cb(()=>duoAgir(id,"agir",{cle:s.cle,type:"attaque",valeur:dd.attaque,cible:a.id}))}">${esc(a.actif.nom)}</button>`).join("")}<button onclick="${cb(()=>{dd.attaque=null;dd.cle=null;dessDuo(id,e)})}">Retour</button></div>`;
+      }else act=(s.mega?`<button class="mega-btn" onclick="${cb(()=>duoAgir(id,"mega",{cle:s.cle}))}">${svg("star")} Méga-Évolution : ${esc(s.mega.forme)}</button>`:"")+`<div class="moves">${s.attaques.map(a=>`<button style="--tc:${typeCol(a.type)}" onclick="${cb(()=>{const vivants=e.adverses.filter(x=>x.actif&&x.actif.pv>0);if(vivants.length<=1)duoAgir(id,"agir",{cle:s.cle,type:"attaque",valeur:a.nom,cible:vivants[0]?vivants[0].id:""});else{dd.attaque=a.nom;dd.cle=s.cle;dessDuo(id,e)}})}"><span class="mv-t">${a.type?icoType(a.type):""}<b>${esc(a.nom)}</b></span><span class="mv-i">${a.puissance?`<i>${a.puissance} pui.</i>`:"<i>statut</i>"}${a.pp!=null?`<i>${a.pp}/${a.pp_max} PP</i>`:""}</span></button>`).join("")}</div><div class="actions sec">${e.potions.disponibles.map(p=>`<button onclick="${cb(()=>duoAgir(id,"agir",{cle:s.cle,type:"potion",valeur:p.type}))}">${ico(p.type)} ${esc(p.nom)} ×${p.quantite}</button>`).join("")}${s.changements.map(n=>`<button onclick="${cb(()=>duoAgir(id,"agir",{cle:s.cle,type:"changer",valeur:n}))}">Changer : ${esc(n)}</button>`).join("")}</div>`;
+      h+=`<div class="card"><h2>${esc(s.actif?s.actif.nom:"—")}</h2>${act}</div>`;
     }
-    h+=`<div class="actions"><button class="danger" onclick="${cb(()=>{if(confirm("Abandonner le combat ? Ça concerne toute ton équipe."))duoAgir(id,"abandonner",{})})}">🏳️ Abandonner</button></div>`;
+    h+=`</div><div class="actions"><button class="danger" onclick="${cb(()=>{if(confirm("Abandonner le combat ? Ça concerne toute ton équipe."))duoAgir(id,"abandonner",{})})}">Abandonner le combat</button></div>`;
   }else if(e.resultat){
-    const r=e.resultat;
-    h+=`<div class="msg ${r.issue==="victoire"?"":"err"}">${{victoire:"🏆 Victoire !",defaite:"💀 Défaite…",abandon:"🏳️ Abandon",annule:"⚠️ Combat annulé"}[r.issue]||r.issue}${r.recompenses?` — +${r.recompenses.dollars} PD, +${r.recompenses.xp} XP`:""}</div><div class="actions"><button class="primary" onclick="${cb(()=>pageDuo())}">Retour</button></div>`;
+    const r=e.resultat,win=r.issue==="victoire";
+    h+=`<div class="fin ${win?"win":"lose"}"><h2>${{victoire:"Victoire !",defaite:"Défaite…",abandon:"Abandon",annule:"Combat annulé"}[r.issue]||r.issue}</h2>${r.recompenses?`<div class="gains"><span class="gainc">+${r.recompenses.dollars} PD</span><span class="gainc">+${r.recompenses.xp} XP</span></div>`:""}<div class="actions"><button class="primary" onclick="${cb(()=>pageDuo())}">Retour</button></div></div>`;
   }
   const dern=e.journal.slice(-3).reverse();
-  h+=`</div>`+(dern.length?`<div class="card"><h3>📜 Journal</h3>${dern.map(t=>`<details ${t===dern[0]?"open":""}><summary>Tour ${t.tour}</summary>${t.lignes.map(l=>`<div>${esc(l).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>")}</div>`).join("")}</details>`).join("")}</div>`:"");
+  h+=(dern.length?`<div class="card"><h2>Journal</h2>${dern.map(t=>`<details ${t===dern[0]?"open":""}><summary>Tour ${t.tour}</summary>${t.lignes.map(l=>`<div>${esc(l).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>")}</div>`).join("")}</details>`).join("")}</div>`:"");
   z.innerHTML=h;
 }
 async function duoAgir(id,route,corps){

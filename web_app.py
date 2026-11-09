@@ -44,11 +44,13 @@ import expedition_service  # noqa: E402
 import boutique_service  # noqa: E402
 import laboratoire_service  # noqa: E402
 import quetes_service  # noqa: E402
+import saison_service  # noqa: E402
 import modes_service  # noqa: E402
 import pvp_service  # noqa: E402
 import casino_service  # noqa: E402
 import collection_service  # noqa: E402
 import duo_service  # noqa: E402
+import duopvp_service  # noqa: E402
 import echanges_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
@@ -705,6 +707,11 @@ class DemandeTitre(BaseModel):
     categorie: str
 
 
+@app.get("/api/saison")
+async def api_saison(request: Request):
+    return saison_service.etat(joueur_connecte(request)["id"])
+
+
 @app.get("/api/quetes")
 async def api_quetes(request: Request):
     return quetes_service.etat(joueur_connecte(request)["id"])
@@ -1141,6 +1148,34 @@ async def api_duo_agir(combat_id: int, d: DemandeActionDuo, request: Request):
 @app.post("/api/duo/{combat_id}/remplacant")
 async def api_duo_remplacant(combat_id: int, d: DemandeActionDuo, request: Request):
     return duo_service.remplacant(combat_id, joueur_connecte(request)["id"], d.cle, d.valeur)
+
+
+@app.get("/api/duopvp")
+async def api_duopvp(request: Request):
+    return duopvp_service.etat(joueur_connecte(request)["id"])
+
+
+@app.post("/api/duopvp/defier")
+async def api_duopvp_defier(d: DemandeDefiPvp, request: Request):
+    j = joueur_connecte(request)
+    return duopvp_service.defier(j["id"], j["pseudo"], d.cible_id)
+
+
+@app.post("/api/duopvp/accepter")
+async def api_duopvp_accepter(d: DemandeIdDefi, request: Request):
+    res = duopvp_service.accepter(joueur_connecte(request)["id"], d.defi_id)
+    _lancer_boucle_duo(res["combat_id"])
+    return res
+
+
+@app.post("/api/duopvp/annuler")
+async def api_duopvp_annuler(d: DemandeIdDefi, request: Request):
+    return duopvp_service.annuler(joueur_connecte(request)["id"], d.defi_id)
+
+
+@app.post("/api/duo/{combat_id}/mega")
+async def api_duo_mega(combat_id: int, d: DemandeActionDuo, request: Request):
+    return duo_service.mega_evoluer(combat_id, joueur_connecte(request)["id"], d.cle)
 
 
 @app.post("/api/duo/{combat_id}/abandonner")
