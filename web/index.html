@@ -16,7 +16,7 @@
 const $=s=>document.querySelector(s), app=$("#app");
 const esc=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const TYPES={water:"Eau",fire:"Feu",grass:"Plante",electric:"Électrik",ice:"Glace",fighting:"Combat",poison:"Poison",ground:"Sol",flying:"Vol",psychic:"Psy",bug:"Insecte",rock:"Roche",ghost:"Spectre",dragon:"Dragon",dark:"Ténèbres",steel:"Acier",fairy:"Fée",normal:"Normal"};
-const fmt=t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>").replace(/:(\w+?)type:/g,(m,x)=>`<small>[${TYPES[x]||x}]</small>`);
+const fmt=t=>esc(t).replace(/&lt;a?:(\w+):\d+&gt;/g,(m,x)=>emoDiscord(x)).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>").replace(/:(\w+?)type:/g,(m,x)=>`<small>[${TYPES[x]||x}]</small>`);
 async function api(url,corps){
   const r=await fetch(url,corps===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(corps)});
   const d=await r.json().catch(()=>({}));
@@ -125,6 +125,13 @@ const statutHTML=x=>{const t=STATUTS[String(x).toLowerCase()]||[String(x).slice(
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
 const ico=(cle,c="")=>cle?`<img class="ico ${c}" src="/static/img/items/${esc(cle)}.png" alt="" loading="lazy" onerror="this.remove()">`:"";
 const icoType=x=>`<img class="ti" src="/static/img/types/${typeKey(x)}.png" alt="" onerror="this.remove()">`;
+// Emojis personnalisés Discord (<:nom:id>) : convertis en icônes de type / pastilles de clan, jamais affichés bruts.
+const CLANS={instinct:["#f7d02c","Jaune"],valor:["#ff5446","Rouge"],mystic:["#4cb8ff","Bleu"]};
+const emoDiscord=(nom)=>{const n=String(nom).replace(/^\d+/,"");
+  if(/type$/.test(n))return icoType(n.slice(0,-4));
+  const c=n.match(/^team(\w+)$/);if(c&&CLANS[c[1]])return `<span class="clan" style="--tc:${CLANS[c[1]][0]}" title="Équipe ${CLANS[c[1]][1]}"></span>`;
+  return ""};
+const emo=e=>{if(!e)return "";const m=String(e).match(/^<a?:(\w+):\d+>$/);return m?emoDiscord(m[1]):esc(e)};
 const TCOL={normal:"#a8a77a",fire:"#ee8130",water:"#6390f0",grass:"#7ac74c",electric:"#f7d02c",ice:"#96d9d6",fighting:"#c22e28",poison:"#a33ea1",ground:"#e2bf65",flying:"#a98ff3",psychic:"#f95587",bug:"#a6b91a",rock:"#b6a136",ghost:"#735797",dragon:"#6f35fc",dark:"#705746",steel:"#b7b7ce",fairy:"#d685ad"};
 const FR_EN={feu:"fire",eau:"water",plante:"grass",electrik:"electric",glace:"ice",combat:"fighting",sol:"ground",vol:"flying",psy:"psychic",insecte:"bug",roche:"rock",spectre:"ghost",tenebres:"dark",acier:"steel",fee:"fairy"};
 const typeKey=x=>{const k=String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();return TCOL[k]?k:(FR_EN[k]||k)};
@@ -359,7 +366,7 @@ async function majExplorations(){
   if(!$("#slots"))return;
   window._exp=d; const hb=H.length;
   const carte=(s,faille)=>s.libre?`<div class="mon"><b>${faille?"🌀 Emplacement Faille":"Emplacement "+s.slot}</b><div><small>Libre${faille?" — la Faille est ouverte !":""}</small></div><div class="rang"><button class="primary" onclick="${cb(()=>ouvrirForm(s.slot,faille))}">Envoyer une équipe</button></div></div>`
-    :`<div class="mon ${s.prete?"choisi":""}"><b>${faille?"🌀 Faille":"Emplacement "+s.slot}</b><div>${s.destination_emoji||""} ${esc(s.destination_nom||"")} · ${esc(s.duree||"")}</div><small>${s.pokemon.map(esc).join(", ")}</small>${s.evenement?`<small>💬 ${esc(s.evenement)}</small>`:""}<div>${s.prete?"✅ Prête !":"⏳ "+dureeTxt(s.secondes_restantes)}</div>${s.prete?`<div class="rang"><button class="primary" onclick="${cb(()=>recupererExp(s.slot))}">🎁 Récupérer</button></div>`:""}</div>`;
+    :`<div class="mon ${s.prete?"choisi":""}"><b>${faille?"🌀 Faille":"Emplacement "+s.slot}</b><div>${emo(s.destination_emoji)} ${esc(s.destination_nom||"")} · ${esc(s.duree||"")}</div><small>${s.pokemon.map(esc).join(", ")}</small>${s.evenement?`<small>💬 ${esc(s.evenement)}</small>`:""}<div>${s.prete?"✅ Prête !":"⏳ "+dureeTxt(s.secondes_restantes)}</div>${s.prete?`<div class="rang"><button class="primary" onclick="${cb(()=>recupererExp(s.slot))}">🎁 Récupérer</button></div>`:""}</div>`;
   let h=d.slots.map(s=>carte(s,false)).join("")+(d.faille?carte(d.faille,true):"");
   $("#slots").innerHTML=`<div class="grid">${h}</div><div class="actions">${d.nb_prets>1?`<button class="primary" onclick="${cb(()=>recupererExp(null))}">🎁 Tout récupérer (${d.nb_prets})</button>`:""}${d.slot_supplementaire.achetable?`<button onclick="${cb(()=>acheterSlotExp())}" ${d.poke_dollars<d.slot_supplementaire.prix?"disabled":""}>➕ 2e emplacement — ${d.slot_supplementaire.prix} ₽</button>`:""}</div>`;
 }
@@ -371,7 +378,7 @@ function rendreForm(){
   const d=window._exp,f=expForm;if(!f)return $("#formExp").innerHTML="";
   H.length=Math.min(H.length,H.length); const base=H.length;
   const dests=d.destinations.filter(x=>f.slot===99?x.cle==="faille":x.cle!=="faille");
-  let h=`<div class="card"><h2>Nouvelle exploration — emplacement ${f.slot===99?"Faille":f.slot}</h2><div class="grid">${dests.map(x=>`<button class="${f.dest===x.cle?"primary":""}" onclick="${cb(()=>{f.dest=x.cle;if(x.cle==="faille")f.duree="1h";f.pokes=f.pokes;rendreForm()})}">${x.emoji} ${esc(x.nom)}<br><small>${x.types?x.types.map(esc).join("/"):"Tous types"}</small></button>`).join("")}</div>`;
+  let h=`<div class="card"><h2>Nouvelle exploration — emplacement ${f.slot===99?"Faille":f.slot}</h2><div class="grid">${dests.map(x=>`<button class="${f.dest===x.cle?"primary":""}" onclick="${cb(()=>{f.dest=x.cle;if(x.cle==="faille")f.duree="1h";f.pokes=f.pokes;rendreForm()})}">${emo(x.emoji)} ${esc(x.nom)}<br><small>${x.types?x.types.map(esc).join("/"):"Tous types"}</small></button>`).join("")}</div>`;
   const dsel=d.destinations.find(x=>x.cle===f.dest);
   if(dsel){
     h+=`<p><small>${esc(dsel.description)}</small></p><div class="actions">${dsel.durees.map(x=>`<button class="${f.duree===x?"primary":""}" onclick="${cb(()=>{f.duree=x;rendreForm()})}">⏱️ ${x}</button>`).join("")}</div>`;
@@ -386,7 +393,7 @@ const acheterSlotExp=()=>act(async()=>{await api("/api/expeditions/acheter-slot"
 const recupererExp=s=>act(async()=>{
   const r=await api("/api/expeditions/recuperer",{slot:s});
   let t=`🎁 ${r.nb} exploration(s) récupérée(s) ! +${r.dollars} ₽ · +${r.xp} XP`;
-  for(const x of r.details){t+=`<br>• ${x.emoji||""} ${esc(x.pokemon.join(", "))}${x.cristal?" + 🔮":""}${x.affinite?" ✨":""}${x.evenement?`<br>&nbsp;&nbsp;💬 En chemin, ton équipe ${esc(x.evenement)}`:""}`}
+  for(const x of r.details){t+=`<br>• ${emo(x.emoji)} ${esc(x.pokemon.join(", "))}${x.cristal?" + 🔮":""}${x.affinite?" ✨":""}${x.evenement?`<br>&nbsp;&nbsp;💬 En chemin, ton équipe ${esc(x.evenement)}`:""}`}
   if(r.cristaux)t+=`<br>🔮 +${r.cristaux} Cristal(aux) de Mutation`;
   for(const o of r.oeufs)t+=`<br>🥚 +1 ${esc(o)}`;
   for(const o of r.objets_forme)t+=`<br>💎 +1 ${esc(o)} — objet rarissime !`;
@@ -484,18 +491,18 @@ async function pageQuetes(msgInitial,erreur){
     ?`<p>✅ Déjà réclamée. Prochaine dans <b>${dureeTxt(cx.secondes_avant_prochain)}</b>.</p><small>Demain (jour ${cx.jour_recompense}) : ${recTxt(cx.recompense)}</small>`
     :`<div class="ligne"><span>Jour ${cx.jour_recompense} : ${recTxt(cx.recompense)}</span><span class="sp"></span><button class="primary" onclick="${cb(()=>reclamerConnexion())}">🎁 Réclamer</button></div>`);
   const barre=(a,b)=>`<div class="bar prog"><i style="width:${Math.min(100,100*a/b)}%"></i></div>`;
-  const ligneQ=q=>`<div class="ligne" style="flex-wrap:wrap"><b>${q.emoji} ${esc(q.nom)}</b><span class="sp"></span>${q.reclamee?"<small>✅ Réclamée</small>":q.complete?"<b>✅ Complète !</b>":`<small>${q.compteur}/${q.cible}</small>`}<div style="flex-basis:100%">${barre(q.compteur,q.cible)}</div></div>`;
+  const ligneQ=q=>`<div class="ligne" style="flex-wrap:wrap"><b>${emo(q.emoji)} ${esc(q.nom)}</b><span class="sp"></span>${q.reclamee?"<small>✅ Réclamée</small>":q.complete?"<b>✅ Complète !</b>":`<small>${q.compteur}/${q.cible}</small>`}<div style="flex-basis:100%">${barre(q.compteur,q.cible)}</div></div>`;
   let h="";
   if(ongletQuetes==="quetes"){
     h=`<div class="ligne"><small>Reset chaque jour à minuit (UTC) et chaque semaine.</small><span class="sp"></span><button class="primary" onclick="${cb(()=>reclamerQuetes())}" ${d.pretes?"":"disabled"}>🎁 Tout réclamer${d.pretes?` (${d.pretes})`:""}</button></div><h2>Journalières</h2>${d.jour.map(ligneQ).join("")}<h2 style="margin-top:12px">Hebdomadaires</h2>${d.semaine.map(ligneQ).join("")}`;
   }else if(ongletQuetes==="contrats"){
-    h=`<p><small>3 contrats tirés au sort chaque jour, payés automatiquement dès qu'ils sont remplis.</small></p>`+d.contrats.map(c=>`<div class="ligne" style="flex-wrap:wrap"><b>${c.emoji} ${esc(c.nom)}</b><span class="sp"></span>${c.complete?"<b>✅ Remplie</b>":`<small>${c.compteur}/${c.cible}</small>`}<div style="flex-basis:100%">${barre(c.compteur,c.cible)}</div><small>💰 ${c.dollars} PD · ${c.xp} XP${c.objet?" · "+esc(c.objet):""}</small></div>`).join("");
+    h=`<p><small>3 contrats tirés au sort chaque jour, payés automatiquement dès qu'ils sont remplis.</small></p>`+d.contrats.map(c=>`<div class="ligne" style="flex-wrap:wrap"><b>${emo(c.emoji)} ${esc(c.nom)}</b><span class="sp"></span>${c.complete?"<b>✅ Remplie</b>":`<small>${c.compteur}/${c.cible}</small>`}<div style="flex-basis:100%">${barre(c.compteur,c.cible)}</div><small>💰 ${c.dollars} PD · ${c.xp} XP${c.objet?" · "+esc(c.objet):""}</small></div>`).join("");
   }else if(ongletQuetes==="principale"){
     const p=d.principale;
     h=p.termine?`<h2>Quête principale terminée !</h2><p>Tu as vécu tous les chapitres de ton histoire de dresseur.</p>`:`<h2>Chapitre ${p.chapitre}/${p.total} : ${esc(p.titre)}</h2><p>${fmt(p.intro).replace(/\n/g,"<br>")}</p>${barre(p.compteur,p.cible)}<small>${p.compteur}/${p.cible}</small><p><small>🎁 ${p.recompense.dollars} PD · ${p.recompense.xp} XP${p.recompense.objet?" · "+esc(p.recompense.objet):""}</small></p><small>Cette quête suit ce que tu fais déjà dans le jeu.</small>`;
   }else{
     const a=d.accomplissements;
-    h=`<p>${a.titre_actif?`Titre affiché : <b>${esc(a.titre_actif)}</b>`:"Aucun titre affiché."}</p>`+a.categories.map(c=>`<div class="ligne" style="flex-wrap:wrap"><b>${c.emoji} ${esc(c.nom)}</b><small>${c.titre?esc(c.titre):"aucun palier"} · ${c.prochain?`${c.valeur}/${c.prochain}`:`maximum (${c.maximum})`}</small><span class="sp"></span>${c.palier?(c.actif?"<small>✅ affiché</small>":`<button onclick="${cb(()=>choisirTitre(c.cle))}">Afficher</button>`):""}<div style="flex-basis:100%">${barre(c.valeur,c.prochain||c.maximum)}</div></div>`).join("");
+    h=`<p>${a.titre_actif?`Titre affiché : <b>${esc(a.titre_actif)}</b>`:"Aucun titre affiché."}</p>`+a.categories.map(c=>`<div class="ligne" style="flex-wrap:wrap"><b>${emo(c.emoji)} ${esc(c.nom)}</b><small>${c.titre?esc(c.titre):"aucun palier"} · ${c.prochain?`${c.valeur}/${c.prochain}`:`maximum (${c.maximum})`}</small><span class="sp"></span>${c.palier?(c.actif?"<small>✅ affiché</small>":`<button onclick="${cb(()=>choisirTitre(c.cle))}">Afficher</button>`):""}<div style="flex-basis:100%">${barre(c.valeur,c.prochain||c.maximum)}</div></div>`).join("");
   }
   $("#qt").innerHTML=h;
 }
@@ -520,9 +527,9 @@ async function pageModes(msgInitial,erreur){
     else if(r.combat_id)act=`<button class="primary" onclick="${cb(()=>combat(r.combat_id))}">Reprendre le combat</button>`;
     else if(r.prochaine)act=`<button class="primary" onclick="${cb(()=>continuerRun(kind,s.id,false))}">⚔️ Continuer (combat ${r.prochaine}/3)</button><button onclick="${cb(()=>continuerRun(kind,s.id,true))}">🧪 Soin auto + continuer</button>`;
     else act=`<small>${r.statut==="victoire"?"✅ Terminé : badge gagné !":"💀 Tentative terminée"}</small>`;
-    return `<div class="ligne" style="flex-wrap:wrap"><b>${s.emoji} ${esc(s.nom)}</b><small>Chef : ${esc(s.chef)} · ferme dans ${dureeTxt(s.secondes_restantes)}</small><span class="sp"></span>${act}</div>`}).join(""):`<p><small>${vide}</small></p>`)+`</div>`;
+    return `<div class="ligne" style="flex-wrap:wrap"><b>${emo(s.emoji)} ${esc(s.nom)}</b><small>Chef : ${esc(s.chef)} · ferme dans ${dureeTxt(s.secondes_restantes)}</small><span class="sp"></span>${act}</div>`}).join(""):`<p><small>${vide}</small></p>`)+`</div>`;
   const dr=(await api("/api/dresseurs")).dresseurs;
-  h+=`<div class="card"><h2>Combat libre</h2><p><small>Affronte un dresseur de ton choix, sans enjeu particulier.</small></p><div class="grid">${dr.map(x=>`<button onclick="${cb(()=>lancer(x.nom))}">${x.emoji} ${esc(x.nom)}<small>Tier ${x.tier}</small></button>`).join("")}<button class="primary" onclick="${cb(()=>lancer(null))}">🎲 Au hasard</button></div></div>`;
+  h+=`<div class="card"><h2>Combat libre</h2><p><small>Affronte un dresseur de ton choix, sans enjeu particulier.</small></p><div class="grid">${dr.map(x=>`<button onclick="${cb(()=>lancer(x.nom))}">${emo(x.emoji)} ${esc(x.nom)}<small>Tier ${x.tier}</small></button>`).join("")}<button class="primary" onclick="${cb(()=>lancer(null))}">🎲 Au hasard</button></div></div>`;
   h+=carte("arene","🏟️ Arènes","Aucune arène ouverte pour l'instant (une nouvelle s'ouvre régulièrement).",d.arenes,d.badges_arene);
   h+=carte("repaire","🕵️ Repaires de méchants","Aucun repaire ouvert pour l'instant.",d.repaires,d.badges_repaire);
   h+=`<div class="card"><small>2 combats préliminaires puis le chef. Une défaite met fin à ta tentative ; une seule chance par ouverture. Les badges donnent des bonus permanents.</small></div>`;
@@ -610,7 +617,7 @@ async function pageClassements(){
   app.innerHTML=nav("classements")+`<div id="msg"></div><div id="cl">Chargement…</div>`;
   let d; try{d=await api("/api/classements")}catch(e){return e.code===401?connexion():flash(e.message,true)}
   const med=["🥇","🥈","🥉"];
-  $("#cl").innerHTML=`<div class="card"><h2>Clans</h2>${d.clans.map((c,i)=>`<div class="ligne"><b>${med[i]||(i+1)+"."} ${c.emoji} ${esc(c.nom)}</b><span class="sp"></span><small>${c.captures} captures · ${c.pc} PC cumulés</small></div>`).join("")}</div>`+d.categories.map(c=>`<div class="card"><h2>${c.emoji} ${esc(c.titre)}</h2>${c.lignes.map(l=>`<div class="ligne" ${l.moi?'style="font-weight:700"':""}><span>${med[l.rang-1]||l.rang+"."} ${esc(l.pseudo)}${l.moi?" (toi)":""}</span><span class="sp"></span><small>${esc(l.valeur)}</small></div>`).join("")||"<small>Personne pour l'instant.</small>"}</div>`).join("");
+  $("#cl").innerHTML=`<div class="card"><h2>Clans</h2>${d.clans.map((c,i)=>`<div class="ligne"><b>${med[i]||(i+1)+"."} ${emo(c.emoji)} ${esc(c.nom)}</b><span class="sp"></span><small>${c.captures} captures · ${c.pc} PC cumulés</small></div>`).join("")}</div>`+d.categories.map(c=>`<div class="card"><h2>${emo(c.emoji)} ${esc(c.titre)}</h2>${c.lignes.map(l=>`<div class="ligne" ${l.moi?'style="font-weight:700"':""}><span>${med[l.rang-1]||l.rang+"."} ${esc(l.pseudo)}${l.moi?" (toi)":""}</span><span class="sp"></span><small>${esc(l.valeur)}</small></div>`).join("")||"<small>Personne pour l'instant.</small>"}</div>`).join("");
 }
 
 /* ===== Marketplace & Échanges ===== */
@@ -832,7 +839,7 @@ function dessRogue(d){
     h=(e?`<div class="msg ${e.type==="fin"?"err":""}">${esc(e.titre)} — ${esc(e.texte)}${e.nouveau_record?" 🏆 Nouveau record !":""}</div>`:"")+`<p>Mini-jeu indépendant : équipe de génériques, permadeath, sans fin, aucune récompense liée à ton profil — juste un classement du meilleur étage.${d.record?` Ton record : salle ${d.record}.`:""}</p><div class="actions"><button class="primary" onclick="${cb(()=>rgDemarrer())}">▶️ Nouvelle run</button></div>`;
   }else{
     const e=d.ecran, r=d.run;
-    h=`<p><b>Salle ${r.salle}</b>${r.reliques.length?" · "+r.reliques.map(x=>`<span title="${esc(x.description)}">${x.emoji} ${esc(x.nom)}</span>`).join(" · "):""}</p>`;
+    h=`<p><b>Salle ${r.salle}</b>${r.reliques.length?" · "+r.reliques.map(x=>`<span title="${esc(x.description)}">${emo(x.emoji)} ${esc(x.nom)}</span>`).join(" · "):""}</p>`;
     h+=`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${r.equipe.map(m=>`<div class="hud" style="text-align:center;${e.actif===m.position?"outline:2px solid #38f":""}">${sp(m.nom)}<br><b>${esc(m.nom)}</b> Nv.${m.niveau}${m.mute?" 🔮":""}${m.pv<=0?" 💀":""}${rgBar(m.pv,m.pv_max)}<small>${m.pv}/${m.pv_max} PV</small></div>`).join("")}</div><hr>`;
     h+=`<h3>${esc(e.titre)}</h3>`+((e.annonces||[]).length?`<small>${e.annonces.map(esc).join("<br>")}</small>`:"")+(e.texte?`<p>${esc(e.texte).replace(/\n/g,"<br>")}</p>`:"");
     const btn=(l,a,v,c)=>`<button class="${c||""}" onclick="${cb(()=>rgAct(a,v))}">${l}</button>`;
@@ -841,7 +848,7 @@ function dessRogue(d){
       case"starter":h+=`<div class="actions">${e.candidats.map(n=>`<button class="primary" onclick="${cb(()=>rgAct("starter",n))}">${sp(n)}<br>${esc(n)}</button>`).join("")}</div>`;break;
       case"continuer":h+=`<div class="actions">${btn("➡️ Continuer","continuer","","primary")}</div>`;break;
       case"evenement":h+=`<div class="actions">${e.choix.map((c,i)=>btn(esc(c),"evenement",i)).join("")}</div>`;break;
-      case"tresor":h+=e.reliques.map(x=>`<div class="ligne">${x.emoji} <b>${esc(x.nom)}</b> <small>${esc(x.description)}</small><span class="sp"></span>${btn("Prendre","relique",x.id,"primary")}</div>`).join("");break;
+      case"tresor":h+=e.reliques.map(x=>`<div class="ligne">${emo(x.emoji)} <b>${esc(x.nom)}</b> <small>${esc(x.description)}</small><span class="sp"></span>${btn("Prendre","relique",x.id,"primary")}</div>`).join("");break;
       case"recrutement":h+=`<div class="actions">${e.options.map(n=>`<button class="primary" onclick="${cb(()=>rgAct("recruter",n))}">${sp(n)}<br>${esc(n)}</button>`).join("")}${btn("Passer","recruter","passer")}</div>`;break;
       case"marchand":h+=`<div class="actions">${btn("💊 Soin (+40 % PV)","marchand","soin","primary")}${btn("💎 Relique aléatoire","marchand","relique")}</div>`;break;
       case"mutation":case"evolution":h+=`<div class="actions">${pos(e.candidats)}</div>`;break;
