@@ -44,6 +44,7 @@ import laboratoire_service  # noqa: E402
 import quetes_service  # noqa: E402
 import modes_service  # noqa: E402
 import pvp_service  # noqa: E402
+import casino_service  # noqa: E402
 import collection_service  # noqa: E402
 import echanges_service  # noqa: E402
 import gestion_service  # noqa: E402
@@ -954,6 +955,65 @@ async def api_echanges_valider(d: DemandeEchangeId, request: Request):
 @app.post("/api/echanges/annuler")
 async def api_echanges_annuler(d: DemandeEchangeId, request: Request):
     return echanges_service.annuler_echange(joueur_connecte(request)["id"], d.echange_id)
+
+
+def _pom_sprites(res: dict) -> dict:
+    partie = res.get("pom", res).get("partie") if isinstance(res.get("pom", res), dict) else None
+    if partie:
+        for k in ("actuel", "mystere"):
+            partie[k]["sprite"] = _sprites(partie[k]["nom"])["sprite"]
+    if res.get("revele"):
+        res["revele"]["sprite"] = _sprites(res["revele"]["nom"])["sprite"]
+    return res
+
+
+class DemandeMise(BaseModel):
+    mise: int
+
+
+class DemandeRoulette(BaseModel):
+    mise: int
+    type: str
+    numero: int | None = None
+
+
+class DemandePom(BaseModel):
+    plus: bool
+
+
+@app.get("/api/casino")
+async def api_casino(request: Request):
+    return _pom_sprites(casino_service.etat(joueur_connecte(request)["id"]))
+
+
+@app.post("/api/casino/blackjack/demarrer")
+async def api_bj_demarrer(d: DemandeMise, request: Request):
+    return casino_service.blackjack_demarrer(joueur_connecte(request)["id"], d.mise)
+
+
+@app.post("/api/casino/blackjack/tirer")
+async def api_bj_tirer(request: Request):
+    return casino_service.blackjack_tirer(joueur_connecte(request)["id"])
+
+
+@app.post("/api/casino/blackjack/rester")
+async def api_bj_rester(request: Request):
+    return casino_service.blackjack_rester(joueur_connecte(request)["id"])
+
+
+@app.post("/api/casino/roulette")
+async def api_roulette(d: DemandeRoulette, request: Request):
+    return casino_service.roulette(joueur_connecte(request)["id"], d.type, d.numero, d.mise)
+
+
+@app.post("/api/casino/pom/demarrer")
+async def api_pom_demarrer(request: Request):
+    return _pom_sprites(casino_service.pom_demarrer(joueur_connecte(request)["id"]))
+
+
+@app.post("/api/casino/pom/choisir")
+async def api_pom_choisir(d: DemandePom, request: Request):
+    return _pom_sprites(casino_service.pom_choisir(joueur_connecte(request)["id"], d.plus))
 
 
 # ----------------------------------------------------------------------------
