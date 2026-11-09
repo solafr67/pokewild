@@ -41,6 +41,7 @@ import exploration_service  # noqa: E402
 import expedition_service  # noqa: E402
 import boutique_service  # noqa: E402
 import laboratoire_service  # noqa: E402
+import quetes_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
@@ -658,6 +659,35 @@ async def api_labo_mutation(request: Request):
 @app.post("/api/labo/mutation")
 async def api_labo_muter(request: Request):
     return laboratoire_service.muter(joueur_connecte(request)["id"])
+
+
+
+# ----------------------------------------------------------------------------
+# Quêtes, contrats, accomplissements, récompense quotidienne
+# ----------------------------------------------------------------------------
+
+class DemandeTitre(BaseModel):
+    categorie: str
+
+
+@app.get("/api/quetes")
+async def api_quetes(request: Request):
+    return quetes_service.etat(joueur_connecte(request)["id"])
+
+
+@app.post("/api/quetes/reclamer")
+async def api_quetes_reclamer(request: Request):
+    return quetes_service.reclamer_tout(joueur_connecte(request)["id"])
+
+
+@app.post("/api/quetes/titre")
+async def api_quetes_titre(d: DemandeTitre, request: Request):
+    return quetes_service.choisir_titre(joueur_connecte(request)["id"], d.categorie)
+
+
+@app.post("/api/quetes/connexion")
+async def api_quetes_connexion(request: Request):
+    return quetes_service.reclamer_connexion(joueur_connecte(request)["id"])
 
 
 # ----------------------------------------------------------------------------

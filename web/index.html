@@ -135,7 +135,7 @@ function fin(r){
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
-const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,boutique:pageBoutique,labo:pageLabo,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
+const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -425,6 +425,39 @@ const transformer=s=>actLabo(async()=>{const r=await api("/api/labo/transformate
 const deposerCaisson=n=>actLabo(async()=>{const r=await api("/api/labo/caisson/deposer",{nom:n});return "✅ "+esc(r.message)});
 const retirerCaisson=s=>actLabo(async()=>{const r=await api("/api/labo/caisson/retirer",{slot:s});return `✅ ${esc(r.nom)} retiré : +${r.xp} XP${r.montees_niveau?"<br>📈 "+fmt(r.montees_niveau).replace(/\n/g,"<br>"):""}`});
 const muter=()=>actLabo(async()=>{const r=await api("/api/labo/mutation",{});return `🔮 Nouvelle Mutation : <b>${esc(r.race.nom)}</b> (${esc(r.race.palier)})`});
+
+/* ===== Quêtes ===== */
+let ongletQuetes="quetes";
+const ONGLETS_Q=[["quetes","📜 Quêtes"],["contrats","📃 Contrats"],["principale","📖 Histoire"],["succes","🏆 Accomplissements"]];
+async function pageQuetes(msgInitial,erreur){
+  clearInterval(minuteur); H=[];
+  app.innerHTML=nav("quetes")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${msgInitial}</div>`:""}</div><div class="card" id="cx"></div><div class="card"><div class="nav">${ONGLETS_Q.map(([k,l])=>`<button class="${k===ongletQuetes?"primary":""}" onclick="${cb(()=>{ongletQuetes=k;pageQuetes()})}">${l}</button>`).join("")}</div><div id="qt">Chargement…</div></div>`;
+  let d; try{d=await api("/api/quetes")}catch(e){return e.code===401?connexion():flash(e.message,true)}
+  const cx=d.connexion;
+  $("#cx").innerHTML=`<h2>🎁 Récompense quotidienne <small>— série : ${cx.streak} jour(s)</small></h2>`+(cx.deja_reclame
+    ?`<p>✅ Déjà réclamée. Prochaine dans <b>${dureeTxt(cx.secondes_avant_prochain)}</b>.</p><small>Demain (jour ${cx.jour_recompense}) : ${recTxt(cx.recompense)}</small>`
+    :`<div class="ligne"><span>Jour ${cx.jour_recompense} : ${recTxt(cx.recompense)}</span><span class="sp"></span><button class="primary" onclick="${cb(()=>reclamerConnexion())}">🎁 Réclamer</button></div>`);
+  const barre=(a,b)=>`<div style="background:#0003;border-radius:6px;height:8px;width:100%"><div style="background:#4c8;height:8px;border-radius:6px;width:${Math.min(100,100*a/b)}%"></div></div>`;
+  const ligneQ=q=>`<div class="ligne" style="flex-wrap:wrap"><b>${q.emoji} ${esc(q.nom)}</b><span class="sp"></span>${q.reclamee?"<small>✅ Réclamée</small>":q.complete?"<b>✅ Complète !</b>":`<small>${q.compteur}/${q.cible}</small>`}<div style="flex-basis:100%">${barre(q.compteur,q.cible)}</div></div>`;
+  let h="";
+  if(ongletQuetes==="quetes"){
+    h=`<div class="ligne"><small>Reset chaque jour à minuit (UTC) et chaque semaine.</small><span class="sp"></span><button class="primary" onclick="${cb(()=>reclamerQuetes())}" ${d.pretes?"":"disabled"}>🎁 Tout réclamer${d.pretes?` (${d.pretes})`:""}</button></div><h2>🔄 Journalières</h2>${d.jour.map(ligneQ).join("")}<h2 style="margin-top:12px">📅 Hebdomadaires</h2>${d.semaine.map(ligneQ).join("")}`;
+  }else if(ongletQuetes==="contrats"){
+    h=`<p><small>3 contrats tirés au sort chaque jour, payés automatiquement dès qu'ils sont remplis.</small></p>`+d.contrats.map(c=>`<div class="ligne" style="flex-wrap:wrap"><b>${c.emoji} ${esc(c.nom)}</b><span class="sp"></span>${c.complete?"<b>✅ Remplie</b>":`<small>${c.compteur}/${c.cible}</small>`}<div style="flex-basis:100%">${barre(c.compteur,c.cible)}</div><small>💰 ${c.dollars} PD · ${c.xp} XP${c.objet?" · "+esc(c.objet):""}</small></div>`).join("");
+  }else if(ongletQuetes==="principale"){
+    const p=d.principale;
+    h=p.termine?`<h2>🏅 Quête principale terminée !</h2><p>Tu as vécu tous les chapitres de ton histoire de dresseur.</p>`:`<h2>📖 Chapitre ${p.chapitre}/${p.total} : ${esc(p.titre)}</h2><p>${fmt(p.intro).replace(/\n/g,"<br>")}</p>${barre(p.compteur,p.cible)}<small>${p.compteur}/${p.cible}</small><p><small>🎁 ${p.recompense.dollars} PD · ${p.recompense.xp} XP${p.recompense.objet?" · "+esc(p.recompense.objet):""}</small></p><small>Cette quête suit ce que tu fais déjà dans le jeu.</small>`;
+  }else{
+    const a=d.accomplissements;
+    h=`<p>${a.titre_actif?`Titre affiché : <b>${esc(a.titre_actif)}</b>`:"Aucun titre affiché."}</p>`+a.categories.map(c=>`<div class="ligne" style="flex-wrap:wrap"><b>${c.emoji} ${esc(c.nom)}</b><small>${c.titre?esc(c.titre):"aucun palier"} · ${c.prochain?`${c.valeur}/${c.prochain}`:`maximum (${c.maximum})`}</small><span class="sp"></span>${c.palier?(c.actif?"<small>✅ affiché</small>":`<button onclick="${cb(()=>choisirTitre(c.cle))}">Afficher</button>`):""}<div style="flex-basis:100%">${barre(c.valeur,c.prochain||c.maximum)}</div></div>`).join("");
+  }
+  $("#qt").innerHTML=h;
+}
+const recTxt=r=>[`${r.dollars} PD`,`${r.xp} XP`,...r.objets].map(esc).join(", ");
+const actQ=async f=>{try{const m=await f();await majEntete();pageQuetes(m)}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+const reclamerConnexion=()=>actQ(async()=>{const r=await api("/api/quetes/connexion",{});return `🎁 Jour ${r.streak} : ${recTxt(r.recompense)}${r.serie_cassee?`<br>⚠️ Série précédente (${r.streak_precedente} j) interrompue : repartie à 1.`:""}`});
+const reclamerQuetes=()=>actQ(async()=>{const r=await api("/api/quetes/reclamer",{});return `🎁 ${r.quetes.length} quête(s) réclamée(s) : +${r.dollars} PD, +${r.xp} XP${r.objets.map(o=>"<br>+ "+esc(o)+" (bonus)").join("")}${r.cristaux?`<br>🔮 +${r.cristaux} Cristal(aux) de Mutation !`:""}`});
+const choisirTitre=c=>actQ(async()=>{await api("/api/quetes/titre",{categorie:c});return "🏆 Titre mis à jour."});
 
 accueil();
 </script>
