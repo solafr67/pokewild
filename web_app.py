@@ -39,6 +39,7 @@ import combat_visuel  # noqa: E402
 import database  # noqa: E402
 import exploration_service  # noqa: E402
 import expedition_service  # noqa: E402
+import boutique_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
@@ -539,6 +540,53 @@ async def api_expedition_recuperer(d: DemandeRecuperation, request: Request):
 @app.post("/api/expeditions/acheter-slot")
 async def api_expedition_slot(request: Request):
     return expedition_service.acheter_slot(joueur_connecte(request)["id"])
+
+
+
+# ----------------------------------------------------------------------------
+# Boutique & Marché Noir
+# ----------------------------------------------------------------------------
+
+class DemandeAchat(BaseModel):
+    categorie: str
+    cle: str
+    quantite: int = 1
+
+
+class DemandeExtension(BaseModel):
+    type: str
+    paliers: int = 1
+
+
+class DemandeMarcheNoir(BaseModel):
+    type: str
+    cle: str
+    quantite: int = 1
+
+
+@app.get("/api/boutique")
+async def api_boutique(request: Request):
+    return boutique_service.catalogue(joueur_connecte(request)["id"])
+
+
+@app.post("/api/boutique/acheter")
+async def api_boutique_acheter(d: DemandeAchat, request: Request):
+    return boutique_service.acheter(joueur_connecte(request)["id"], d.categorie, d.cle, d.quantite)
+
+
+@app.post("/api/boutique/extension")
+async def api_boutique_extension(d: DemandeExtension, request: Request):
+    return boutique_service.acheter_extension(joueur_connecte(request)["id"], d.type, d.paliers)
+
+
+@app.post("/api/boutique/slot-exploration")
+async def api_boutique_slot(request: Request):
+    return expedition_service.acheter_slot(joueur_connecte(request)["id"])
+
+
+@app.post("/api/boutique/marche-noir")
+async def api_boutique_marche_noir(d: DemandeMarcheNoir, request: Request):
+    return boutique_service.acheter_marche_noir(joueur_connecte(request)["id"], d.type, d.cle, d.quantite)
 
 
 # ----------------------------------------------------------------------------

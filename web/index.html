@@ -135,7 +135,7 @@ function fin(r){
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
-const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
+const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["boutique","🛒 Boutique"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,boutique:pageBoutique,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -348,6 +348,39 @@ const recupererExp=s=>act(async()=>{
   for(const q of r.quetes_completees)t+=`<br>✅ Quête : ${esc(q.nom||"")}`;
   await majEntete();pageExplorations(t);
 });
+
+/* ===== Boutique ===== */
+let rayon="balls", rechBout="";
+const RAYONS=[["balls","🎯 Balls"],["soins","💊 Potions"],["ameliorations","📈 Améliorations"],["objets_tenus","🎒 Objets tenus"],["gemmes_mega","💠 Gemmes Méga"],["marche_noir","🏴‍☠️ Marché Noir"]];
+async function pageBoutique(msgInitial,erreur){
+  clearInterval(minuteur); H=[];
+  let d;try{d=await api("/api/boutique")}catch(e){return e.code===401?connexion():app.innerHTML=`<p class="err">${esc(e.message)}</p>`}
+  window._bout=d;
+  let h=nav("boutique")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${esc(msgInitial)}</div>`:""}</div><div class="card"><div class="ligne"><b>💰 ${d.poke_dollars} ₽</b><span class="sp"></span><small>🎒 Sac ${d.sac.utilises}/${d.sac.limite} · 📦 Pokémon ${d.stockage_pokemon.utilises}/${d.stockage_pokemon.limite}</small></div><div class="nav">${RAYONS.map(([k,l])=>`<button class="${k===rayon?"primary":""}" onclick="${cb(()=>{rayon=k;pageBoutique()})}">${l}</button>`).join("")}</div>`;
+  h+=rendreRayon(d)+`</div>`; app.innerHTML=h;
+}
+const ligneArticle=(a,categorie,extra)=>`<div class="ligne"><b>${esc(a.nom)}</b>${extra?`<small>${esc(extra)}</small>`:""}<small>${a.prix} ₽${a.possede!==undefined?` · tu en as ${a.possede}`:""}</small><span class="sp"></span><input type="number" min="1" max="999" value="1" id="q_${esc(a.cle)}" style="width:64px"><button onclick="${cb(()=>acheterArticle(categorie,a.cle))}">Acheter</button></div>`;
+function rendreRayon(d){
+  if(rayon==="balls")return d.balls.map(a=>ligneArticle(a,"balls")).join("");
+  if(rayon==="soins")return d.soins.map(a=>ligneArticle(a,"soins",a.description)).join("");
+  if(rayon==="objets_tenus")return `<p><small>S'équipent sur un Pokémon depuis Discord (Maître des Capacités).</small></p>`+d.objets_tenus.map(a=>ligneArticle(a,"objets_tenus",a.description)).join("");
+  if(rayon==="gemmes_mega"){const f=rechBout.trim().toLowerCase();
+    return `<p><small>Une gemme ne fonctionne que sur son espèce. Prix unique.</small></p><input placeholder="🔍 Rechercher" value="${esc(rechBout)}" oninput="rechBout=this.value;majGemmes()" style="margin-bottom:8px"><div id="gemmes">${gemmesHTML(d,f)}</div>`}
+  if(rayon==="ameliorations"){const a=d.ameliorations;return `
+    <div class="ligne"><b>📦 Stockage Pokémon</b><small>+${a.pokemon.gain} places · ${a.pokemon.prix} ₽ / palier</small><span class="sp"></span><input type="number" min="1" max="999" value="1" id="p_pokemon" style="width:64px"><button onclick="${cb(()=>extension("pokemon"))}">Acheter</button></div>
+    <div class="ligne"><b>🎒 Stockage objets</b><small>+${a.objets.gain} places · ${a.objets.prix} ₽ / palier</small><span class="sp"></span><input type="number" min="1" max="999" value="1" id="p_objets" style="width:64px"><button onclick="${cb(()=>extension("objets"))}">Acheter</button></div>
+    <div class="ligne"><b>🗺️ 2e emplacement d'exploration</b><small>Achat unique · ${a.slot_exploration.prix} ₽</small><span class="sp"></span><button onclick="${cb(()=>slotExploration())}" ${a.slot_exploration.achetable?"":"disabled"}>${a.slot_exploration.achetable?"Acheter":"Déjà acheté"}</button></div>`}
+  const m=d.marche_noir;
+  if(!m.ouvert)return `<p>🏴‍☠️ Le Marché Noir est fermé. Il ouvre une heure par jour, à un horaire aléatoire entre 9h et 23h.</p>`;
+  return `<p>🏴‍☠️ Ouvert encore <b>${Math.ceil(m.secondes_restantes/60)} min</b> — chaque joueur a son propre plafond d'achat.</p><h2>💎 Objets rares du jour</h2>`+m.objets.map(o=>`<div class="ligne"><b>${esc(o.nom)}</b><small>${o.prix} ₽ · ${o.achete}/${o.plafond} aujourd'hui</small><span class="sp"></span><input type="number" min="1" max="${o.plafond}" value="1" id="m_${esc(o.cle)}" style="width:64px"><button onclick="${cb(()=>marcheNoir("objet",o.cle))}" ${o.achete>=o.plafond?"disabled":""}>Acheter</button></div>`).join("")+`<h2 style="margin-top:12px">📘 CT à prix réduit</h2>`+m.cts.map(c=>`<div class="ligne"><b>CT ${esc(c.nom)}</b><small><s>${c.prix_normal}</s> <b>${c.prix}</b> ₽${c.possedee?" · déjà possédée":""}</small><span class="sp"></span><button onclick="${cb(()=>marcheNoir("ct",c.nom))}" ${c.achete||c.possedee?"disabled":""}>${c.achete?"Acheté":"Acheter"}</button></div>`).join("");
+}
+function gemmesHTML(d,f){return d.gemmes_mega.filter(g=>!f||g.nom.toLowerCase().includes(f)||g.espece.toLowerCase().includes(f)).slice(0,40).map(g=>ligneArticle(g,"gemmes_mega",g.espece)).join("")||"<small>Aucun résultat.</small>"}
+function majGemmes(){const e=$("#gemmes");if(!e)return;H=H.slice(0,H.length);e.innerHTML=gemmesHTML(window._bout,rechBout.trim().toLowerCase())}
+const achatOk=async(f)=>{try{const r=await f();await majEntete();pageBoutique(r.message)}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+const acheterArticle=(c,k)=>achatOk(()=>api("/api/boutique/acheter",{categorie:c,cle:k,quantite:parseInt(sel("q_"+k))||1}));
+const extension=t=>achatOk(()=>api("/api/boutique/extension",{type:t,paliers:parseInt(sel("p_"+t))||1}));
+const slotExploration=()=>achatOk(async()=>{await api("/api/boutique/slot-exploration",{});return {message:"2e emplacement d'exploration débloqué !"}});
+const marcheNoir=(t,k)=>achatOk(()=>api("/api/boutique/marche-noir",{type:t,cle:k,quantite:parseInt(sel("m_"+k))||1}));
 
 accueil();
 </script>
