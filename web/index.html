@@ -309,7 +309,7 @@ async function majExplorer(){
   if(!dispo.find(b=>b.cle===ballChoisie)&&dispo.length)ballChoisie=dispo[0].cle;
   $("#balls").innerHTML=sp.balls.map(b=>`<button class="${b.cle===ballChoisie?"primary":""}" ${b.quantite?"":"disabled"} onclick="${cb(()=>{ballChoisie=b.cle;majExplorer()})}">${ico(b.cle)}${esc(b.nom)} ×${b.quantite}</button>`).join("")+(dispo.length?"":`<small>Plus de balls : fais tourner le PokéStop ou passe par la boutique Discord.</small>`);
   const mm=Math.floor(st.secondes_restantes/60),ss=st.secondes_restantes%60;
-  $("#stop").innerHTML=`${st.heure_de_pointe?`<div class="msg">🔥 Heure de pointe : récompenses ×2 !</div>`:""}<button class="primary" ${st.disponible?"":"disabled"} onclick="${cb(()=>tournerStop())}">${st.disponible?"🔵 Faire tourner le disque":`⏳ Recharge : ${mm}m ${String(ss).padStart(2,"0")}s`}</button>`;
+  $("#stop").innerHTML=`${st.heure_de_pointe?`<div class="msg">🔥 Heure de pointe : récompenses ×2 !</div>`:""}<button class="primary" ${st.disponible?"":"disabled"} onclick="${cb(()=>tournerStop())}">${st.disponible?"Faire tourner le disque":`Recharge : ${mm}m ${String(ss).padStart(2,"0")}s`}</button>`;
   $("#spawns").innerHTML=sp.spawns.map(s=>`<div class="mon"><img src="${esc(s.sprite||"")}" alt=""><div><b>${esc(s.nom)}</b> · Nv.${s.niveau}</div>${typesHTML(s.types)}<small>${s.pc} PC</small>${rarete(s.rarete)}<small>${s.possedes?`📖 ×${s.possedes}`:"🆕 jamais capturé"}</small><small>⏱ ${s.secondes_restantes}s</small><div class="rang"><button class="primary" ${s.deja_tente||!dispo.length?"disabled":""} onclick="${cb(()=>lancer_ball(s.id))}">${s.deja_tente?"Déjà tenté":"🎯 Capturer"}</button></div></div>`).join("")||"<small>Aucun Pokémon pour l'instant : un nouveau apparaît toutes les minutes.</small>";
 }
 async function lancer_ball(id){
@@ -334,8 +334,8 @@ async function tournerStop(){
   const r=$("#resStop");
   try{
     const d=await api("/api/explorer/pokestop",{});
-    let t=`<div class="msg">${d.heure_de_pointe?"🔥 ×2 · ":""}+${d.dollars} ₽ · +${d.xp} XP`;
-    for(const o of d.objets)t+=`<br>🎁 ${o.quantite}× ${esc(o.nom)}`;
+    let t=`<div class="msg col">${d.heure_de_pointe?"🔥 ×2 · ":""}+${d.dollars} ₽ · +${d.xp} XP`;
+    for(const o of d.objets)t+=`<div class="gain">${ico(o.cle,"gros")||"🎁 "}<span><b>${o.quantite}×</b> ${esc(o.nom)}</span></div>`;
     if(d.sac_plein)t+=`<br>🎒 Ton sac est plein : pas d'objets cette fois.`;
     for(const p of d.paliers)t+=`<br>🆙 Palier ${p.palier} : +${p.dollars} ₽ et ${esc(p.ball)}`;
     if(d.montees_niveau)t+=`<br>📈 ${fmt(d.montees_niveau).replace(/\n/g,'<br>')}`;
