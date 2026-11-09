@@ -383,7 +383,7 @@ def etat_combat(combat_id: int, user_id: int) -> dict:
             "equipe": [_pokemon_json(combat_id, user_id, r, actif_moi, True) for r in eq_moi],
         },
         "adversaire": {
-            "nom": meta["archetype_nom"] if meta else None,
+            "nom": ((meta["nom_joueur"] if user_id == meta["id_adversaire"] else meta["archetype_nom"]) if meta else None),
             "equipe": [_pokemon_json(combat_id, adv_id, r, actif_adv, False) for r in eq_adv],
         },
     }
@@ -396,6 +396,9 @@ def etat_combat(combat_id: int, user_id: int) -> dict:
         }
     etat["journal"] = journal_combat(combat_id)
     etat["resultat"] = resultat_combat(combat_id)
+    if etat["resultat"] and etat["resultat"].get("pvp"):
+        import pvp_service
+        etat["resultat"] = pvp_service.resultat_pour(etat["resultat"], user_id)
     return etat
 
 
@@ -555,6 +558,10 @@ def abandonner(combat_id: int, user_id: int) -> dict:
     combat, _, _, _, _ = _ctx(combat_id, user_id)
     if not combat["actif"]:
         raise ErreurCombatWeb("Ce combat est déjà terminé.")
+    meta_abandon = _meta(combat_id)
+    if meta_abandon is not None and meta_abandon["mode"] == "pvp":
+        import pvp_service
+        return pvp_service.abandonner(combat_id, user_id)
     database.terminer_combat_pvp(combat_id)
     database.synchroniser_pv_persistant_depuis_combat(combat_id, user_id)
     suite = _suite_mode(_meta(combat_id), False)
@@ -578,7 +585,7 @@ def _quetes_json(quetes) -> list:
 
 def _suite_mode(meta, victoire: bool) -> dict | None:
     """Étape suivante d'un run (Arène, Repaire) : gérée par modes_service (import tardif)."""
-    if meta is None or (meta["mode"] or "dresseur") in ("dresseur", "gladio"):
+    if meta is None or (meta["mode"] or "dresseur") in ("dresseur", "gladio", "pvp"):
         return None
     import modes_service
     return modes_service.resoudre_etape(meta, victoire)
@@ -626,6 +633,9 @@ async def tick(combat_id: int) -> dict:
     meta = _meta(combat_id)
     if meta is None:
         raise ErreurCombatWeb("Ce combat n'a pas été lancé par le web.")
+    if meta["mode"] == "pvp":
+        import pvp_service
+        return await pvp_service.tick(combat_id, meta)
     combat = database.obtenir_combat(combat_id)
     if not combat or not combat["actif"]:
         return {"statut": "inactif"}
@@ -692,7 +702,13 @@ async def boucle_combat(combat_id: int, intervalle: float = 2.0) -> dict | None:
             if echecs >= 3:
                 meta = _meta(combat_id)
                 database.terminer_combat_pvp(combat_id)
-                if meta:
+                if meta and meta["mode"] == "pvp":
+                    mise = database.obtenir_mise_combat(combat_id)  # remboursement des deux joueurs
+                    if mise:
+                        database.ajouter_poke_dollars(meta["joueur_id"], mise // 2)
+                        database.ajouter_poke_dollars(meta["id_adversaire"], mise // 2)
+                        database.retirer_mise_combat(combat_id)
+                elif meta:
                     database.synchroniser_pv_persistant_depuis_combat(combat_id, meta["joueur_id"])
                 _enregistrer_resultat(combat_id, {"issue": "annule", "recompenses": None, "suite": _suite_mode(meta, False)})
                 return {"statut": "annule"}

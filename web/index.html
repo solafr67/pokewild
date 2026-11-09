@@ -128,6 +128,8 @@ function fin(r){
   const ti={victoire:"🏆 Victoire !",defaite:"💀 Défaite…",abandon:"🏳️ Combat abandonné",annule:"⚠️ Combat annulé (erreur)"}[r.issue]||"Fin";
   const g=r.recompenses;
   let t=g?`+${g.dollars} ₽ · +${g.xp} XP${g.reduite?" <small>(réduit : déjà beaucoup de dresseurs battus aujourd'hui)</small>":""}`:"Aucune récompense.";
+  if(g&&g.mise)t+=`<br>💰 +${g.mise} PD de mise remportée !`;
+  if(r.forfait)t+=`<br><small>(victoire/défaite par forfait)</small>`;
   if(g&&g.niveau_dresseur.apres>g.niveau_dresseur.avant)t+=`<br>⬆️ Niveau dresseur ${g.niveau_dresseur.apres} !`;
   for(const q of (g?g.quetes_completees:[]))t+=`<br>✅ Quête : ${esc(q.nom||"")}`;
   t+=suiteHTML(r.suite);
@@ -137,7 +139,7 @@ function fin(r){
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("");
-const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
+const nav=a=>`<div class="nav">${[["accueil","🏠 Accueil"],["explorer","🌿 Explorer"],["explorations","🗺️ Explorations"],["equipe","⚔️ Équipe"],["modes","🏟️ Combats"],["pvp","🥊 PvP"],["boutique","🛒 Boutique"],["labo","🧪 Laboratoire"],["quetes","📜 Quêtes"],["inventaire","🎒 Inventaire"],["pokedex","📖 Pokédex"]].map(([k,l])=>`<button class="${k===a?"primary":""}" onclick="${cb(()=>({accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex}[k]()))}">${l}</button>`).join("")}</div>`;
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -500,6 +502,29 @@ function suiteHTML(s){
   }else t+=`<br>💀 Ta tentative s'arrête là. Retente à la prochaine ouverture.`;
   return t;
 }
+
+/* ===== PvP : défis entre joueurs ===== */
+let rechPvp="";
+async function pageDefis(msgInitial,erreur){
+  clearInterval(minuteur); H=[];
+  app.innerHTML=nav("pvp")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${msgInitial}</div>`:""}</div><div class="card"><small>Défie un autre joueur connecté au site. Équipes complètes, 45 s par tour. Mise optionnelle (max 20 % du solde du plus pauvre) : le vainqueur remporte le pot.</small></div><div id="pv">Chargement…</div>`;
+  const maj=async()=>{
+    if(!$("#pv")){clearInterval(minuteur);return}
+    let d; try{d=await api("/api/pvp?q="+encodeURIComponent(rechPvp))}catch(e){if(e.code===401){clearInterval(minuteur);connexion()}return}
+    if(d.combat_en_cours){clearInterval(minuteur);return combat(d.combat_en_cours)}
+    if(document.activeElement&&document.activeElement.id==="pv_q"&&$("#pv_liste")){majListe(d);return}
+    H=[];
+    let h=`<div class="card"><h2>📨 Défis reçus</h2>`+(d.recus.map(x=>`<div class="ligne"><b>${esc(x.de_pseudo)}</b>${x.mise?`<small>mise ${x.mise} PD</small>`:""}<small>${x.secondes_restantes}s</small><span class="sp"></span><button class="primary" onclick="${cb(()=>repondrePvp(x.id,true))}">✅ Accepter</button><button onclick="${cb(()=>repondrePvp(x.id,false))}">Refuser</button></div>`).join("")||"<small>Aucun défi reçu.</small>")+`</div>`;
+    h+=`<div class="card"><h2>📤 Défis envoyés</h2>`+(d.envoyes.map(x=>`<div class="ligne"><b>${esc(x.a_pseudo)}</b>${x.mise?`<small>mise ${x.mise} PD</small>`:""}<small>${x.secondes_restantes}s</small><span class="sp"></span><button onclick="${cb(()=>repondrePvp(x.id,false))}">Annuler</button></div>`).join("")||"<small>Aucun défi en attente.</small>")+`</div>`;
+    h+=`<div class="card"><h2>👥 Joueurs</h2><div class="ligne"><input id="pv_q" placeholder="🔍 Rechercher un joueur" value="${esc(rechPvp)}" oninput="rechPvp=this.value;majPvpListe()"><label><small>Mise (PD)</small> <input id="pv_mise" type="number" min="0" value="0" style="width:80px"></label><small>Solde : ${d.solde}</small></div><div id="pv_liste"></div></div>`;
+    $("#pv").innerHTML=h; majListe(d);
+  };
+  const majListe=d=>{const z=$("#pv_liste");if(z)z.innerHTML=d.joueurs.map(j=>`<div class="ligne"><b>${j.en_ligne?"🟢":"⚪"} ${esc(j.pseudo)}</b><span class="sp"></span><button onclick="${cb(()=>defierPvp(j.id))}">⚔️ Défier</button></div>`).join("")||"<small>Aucun joueur trouvé (il doit s'être connecté au site au moins une fois).</small>"};
+  window.majPvpListe=()=>{clearTimeout(window._tPvp);window._tPvp=setTimeout(maj,250)};
+  await maj(); minuteur=setInterval(maj,3000);
+}
+const defierPvp=async id=>{try{const r=await api("/api/pvp/defier",{cible_id:id,mise:parseInt(sel("pv_mise"))||0});pageDefis(esc(r.message))}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
+const repondrePvp=async(id,ok)=>{try{if(ok){const r=await api("/api/pvp/accepter",{defi_id:id});combat(r.combat_id)}else{await api("/api/pvp/annuler",{defi_id:id});pageDefis()}}catch(e){if(e.code===401)return connexion();flash(e.message,true)}};
 
 accueil();
 </script>
