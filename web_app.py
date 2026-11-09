@@ -37,6 +37,7 @@ import combat as combat_module  # noqa: E402
 import combat_service  # noqa: E402
 import combat_visuel  # noqa: E402
 import database  # noqa: E402
+import exploration_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
@@ -63,9 +64,12 @@ def _lancer_boucle(combat_id: int):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     combat_service._init_tables()
+    exploration_service._init_tables()
     for combat_id in combat_service.combats_web_actifs():
         _lancer_boucle(combat_id)
+    boucle_spawns = asyncio.create_task(exploration_service.boucle_spawns())
     yield
+    boucle_spawns.cancel()
     for tache in _boucles.values():
         tache.cancel()
 
@@ -453,6 +457,48 @@ async def api_pokedex(request: Request):
     for e in res["entrees"]:
         e.update(_sprites(e["nom"]))
     return res
+
+
+
+# ----------------------------------------------------------------------------
+# Explorer : apparitions, capture, PokéStop
+# ----------------------------------------------------------------------------
+
+class DemandeCapture(BaseModel):
+    spawn_id: int
+    ball: str
+
+
+@app.get("/api/explorer/spawns")
+async def api_spawns(request: Request):
+    uid = joueur_connecte(request)["id"]
+    spawns = exploration_service.spawns_actifs(uid)
+    for s in spawns:
+        s.update(_sprites(s["nom"]))
+    inv = database.obtenir_inventaire_balls(uid)
+    balls = [
+        {"cle": b, "nom": gestion_service.inventaire.NOMS_OBJETS.get(b, b), "quantite": inv.get(b, 0)}
+        for b in exploration_service.BALLS_CAPTURE
+    ]
+    return {"spawns": spawns, "balls": balls}
+
+
+@app.post("/api/explorer/capturer")
+async def api_capturer(d: DemandeCapture, request: Request):
+    uid = joueur_connecte(request)["id"]
+    res = exploration_service.capturer(uid, d.spawn_id, d.ball)
+    res.update(_sprites(res["nom"]))
+    return res
+
+
+@app.get("/api/explorer/pokestop")
+async def api_pokestop_etat(request: Request):
+    return exploration_service.pokestop_etat(joueur_connecte(request)["id"])
+
+
+@app.post("/api/explorer/pokestop")
+async def api_pokestop(request: Request):
+    return exploration_service.pokestop_tourner(joueur_connecte(request)["id"])
 
 
 # ----------------------------------------------------------------------------
