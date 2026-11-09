@@ -40,6 +40,7 @@ import database  # noqa: E402
 import exploration_service  # noqa: E402
 import expedition_service  # noqa: E402
 import boutique_service  # noqa: E402
+import laboratoire_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
@@ -587,6 +588,76 @@ async def api_boutique_slot(request: Request):
 @app.post("/api/boutique/marche-noir")
 async def api_boutique_marche_noir(d: DemandeMarcheNoir, request: Request):
     return boutique_service.acheter_marche_noir(joueur_connecte(request)["id"], d.type, d.cle, d.quantite)
+
+
+
+# ----------------------------------------------------------------------------
+# Laboratoire : incubateur, transformateur, caisson, mutation
+# ----------------------------------------------------------------------------
+
+class DemandePalier(BaseModel):
+    palier: str
+
+
+class DemandeTransformation(BaseModel):
+    source: str
+    lots: int
+
+
+class DemandeSlot(BaseModel):
+    slot: int
+
+
+@app.get("/api/labo/incubateur")
+async def api_labo_incubateur(request: Request):
+    return laboratoire_service.etat_incubateur(joueur_connecte(request)["id"])
+
+
+@app.post("/api/labo/incubateur/incuber")
+async def api_labo_incuber(d: DemandePalier, request: Request):
+    return laboratoire_service.incuber(joueur_connecte(request)["id"], d.palier)
+
+
+@app.post("/api/labo/incubateur/eclore")
+async def api_labo_eclore(request: Request):
+    res = laboratoire_service.eclore(joueur_connecte(request)["id"])
+    res.update(_sprites(res["nom"]))
+    return res
+
+
+@app.get("/api/labo/transformateur")
+async def api_labo_transformateur(request: Request):
+    return laboratoire_service.etat_transformateur(joueur_connecte(request)["id"])
+
+
+@app.post("/api/labo/transformateur")
+async def api_labo_transformer(d: DemandeTransformation, request: Request):
+    return laboratoire_service.transformer(joueur_connecte(request)["id"], d.source, d.lots)
+
+
+@app.get("/api/labo/caisson")
+async def api_labo_caisson(request: Request, tri: str = "alphabetique", q: str = ""):
+    return laboratoire_service.etat_caisson(joueur_connecte(request)["id"], tri, q)
+
+
+@app.post("/api/labo/caisson/deposer")
+async def api_labo_deposer(d: DemandeNom, request: Request):
+    return laboratoire_service.deposer_caisson(joueur_connecte(request)["id"], d.nom)
+
+
+@app.post("/api/labo/caisson/retirer")
+async def api_labo_retirer(d: DemandeSlot, request: Request):
+    return laboratoire_service.retirer_caisson(joueur_connecte(request)["id"], d.slot)
+
+
+@app.get("/api/labo/mutation")
+async def api_labo_mutation(request: Request):
+    return laboratoire_service.etat_mutation(joueur_connecte(request)["id"])
+
+
+@app.post("/api/labo/mutation")
+async def api_labo_muter(request: Request):
+    return laboratoire_service.muter(joueur_connecte(request)["id"])
 
 
 # ----------------------------------------------------------------------------
