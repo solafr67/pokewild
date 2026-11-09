@@ -45,6 +45,7 @@ import quetes_service  # noqa: E402
 import modes_service  # noqa: E402
 import pvp_service  # noqa: E402
 import collection_service  # noqa: E402
+import echanges_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
 from combat_service import ErreurCombatWeb  # noqa: E402
@@ -842,6 +843,117 @@ async def api_collection_supprimer(d: DemandeSuppression, request: Request):
 @app.get("/api/classements")
 async def api_classements(request: Request):
     return collection_service.classements(joueur_connecte(request)["id"])
+
+
+
+# ----------------------------------------------------------------------------
+# Marketplace et échanges entre joueurs
+# ----------------------------------------------------------------------------
+
+class DemandeVente(BaseModel):
+    capture_id: int
+    prix: int
+    type: str
+
+
+class DemandeAnnonce(BaseModel):
+    annonce_id: int
+    montant: int = 0
+
+
+class DemandeProposerEchange(BaseModel):
+    cible_id: int
+
+
+class DemandeOffreEchange(BaseModel):
+    echange_id: int
+    capture_ids: list[int] = []
+    pd: int = 0
+    objets: dict[str, int] = {}
+
+
+class DemandeEchangeId(BaseModel):
+    echange_id: int
+
+
+@app.get("/api/marketplace")
+async def api_marketplace(request: Request, q: str = "", type: str = "toutes", page: int = 0, tri: str = "recentes"):
+    res = echanges_service.annonces(joueur_connecte(request)["id"], q, type, page, tri)
+    for a in res["annonces"]:
+        a.update(_sprites(a["nom"]))
+    return res
+
+
+@app.get("/api/marketplace/mes-annonces")
+async def api_marketplace_mes(request: Request):
+    res = echanges_service.mes_annonces(joueur_connecte(request)["id"])
+    for a in res["annonces"]:
+        a.update(_sprites(a["nom"]))
+    return res
+
+
+@app.get("/api/marketplace/vendable")
+async def api_marketplace_vendable(request: Request, q: str = ""):
+    res = echanges_service.vendable(joueur_connecte(request)["id"], q)
+    for c in res["captures"]:
+        c.update(_sprites(c["nom"]))
+    return res
+
+
+@app.post("/api/marketplace/vendre")
+async def api_marketplace_vendre(d: DemandeVente, request: Request):
+    return echanges_service.vendre(joueur_connecte(request)["id"], d.capture_id, d.prix, d.type)
+
+
+@app.post("/api/marketplace/acheter")
+async def api_marketplace_acheter(d: DemandeAnnonce, request: Request):
+    return echanges_service.acheter(joueur_connecte(request)["id"], d.annonce_id)
+
+
+@app.post("/api/marketplace/encherir")
+async def api_marketplace_encherir(d: DemandeAnnonce, request: Request):
+    return echanges_service.encherir(joueur_connecte(request)["id"], d.annonce_id, d.montant)
+
+
+@app.post("/api/marketplace/retirer")
+async def api_marketplace_retirer(d: DemandeAnnonce, request: Request):
+    return echanges_service.retirer(joueur_connecte(request)["id"], d.annonce_id)
+
+
+@app.get("/api/echanges")
+async def api_echanges(request: Request):
+    joueur = joueur_connecte(request)
+    res = echanges_service.etat_echange(joueur["id"])
+    if res["echange"]:
+        for cote in ("moi", "autre"):
+            for p in res["echange"][cote]["pokemon"]:
+                p.update(_sprites(p["nom"]))
+    return res
+
+
+@app.get("/api/echanges/objets")
+async def api_echanges_objets(request: Request):
+    return echanges_service.objets_proposables(joueur_connecte(request)["id"])
+
+
+@app.post("/api/echanges/proposer")
+async def api_echanges_proposer(d: DemandeProposerEchange, request: Request):
+    return echanges_service.proposer_echange(joueur_connecte(request)["id"], d.cible_id)
+
+
+@app.post("/api/echanges/offre")
+async def api_echanges_offre(d: DemandeOffreEchange, request: Request):
+    return echanges_service.definir_offre(joueur_connecte(request)["id"], d.echange_id, d.capture_ids, d.pd, d.objets)
+
+
+@app.post("/api/echanges/valider")
+async def api_echanges_valider(d: DemandeEchangeId, request: Request):
+    return echanges_service.valider_echange(joueur_connecte(request)["id"], d.echange_id)
+
+
+@app.post("/api/echanges/annuler")
+async def api_echanges_annuler(d: DemandeEchangeId, request: Request):
+    return echanges_service.annuler_echange(joueur_connecte(request)["id"], d.echange_id)
 
 
 # ----------------------------------------------------------------------------
