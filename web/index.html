@@ -89,11 +89,11 @@ function panneau(id,e){
   if(e.verrouille)return "<i>Ton Pokémon est en pleine charge/recharge : rien à choisir ce tour.</i>";
   let h="";
   const at=ac.attaques;
-  if(at.mode==="normal")h+=`<div class="moves">${at.attaques.map(m=>`<button style="--tc:${typeCol(m.type)}" ${m.jouable?"":"disabled"} onclick="${cb(()=>agir(id,'action',{type:'attaque',valeur:m.nom,tour:e.tour}))}"><b>${esc(m.nom)}</b><small>${m.type?(TYPES[m.type]||m.type)+" · ":""}${m.puissance?m.puissance+" pui · ":""}${m.pp}/${m.pp_max} PP</small></button>`).join("")}</div>`;
+  if(at.mode==="normal")h+=`<div class="moves">${at.attaques.map(m=>`<button style="--tc:${typeCol(m.type)}" ${m.jouable?"":"disabled"} onclick="${cb(()=>agir(id,'action',{type:'attaque',valeur:m.nom,tour:e.tour}))}"><b>${esc(m.nom)}</b><small>${m.type?icoType(m.type)+(TYPES[m.type]||m.type)+" · ":""}${m.puissance?m.puissance+" pui · ":""}${m.pp}/${m.pp_max} PP</small></button>`).join("")}</div>`;
   else h+=`<div class="actions"><button class="primary" onclick="${cb(()=>agir(id,'action',{type:'attaque',tour:e.tour}))}">⚔️ ${esc(at.mode==="lutte"?at.lutte:at.attaques[0].nom)}</button></div>`;
   h+=`<div class="actions">`;
   if(ac.mega)h+=`<button class="primary" onclick="${cb(()=>agir(id,'mega',{}))}">🔷 Méga-Évoluer (${esc(ac.mega.forme)})</button>`;
-  for(const p of ac.potions.disponibles)h+=`<button onclick="${cb(()=>agir(id,'action',{type:'potion',valeur:p.type,tour:e.tour}))}">💊 ${esc(p.nom)} ×${p.quantite}</button>`;
+  for(const p of ac.potions.disponibles)h+=`<button onclick="${cb(()=>agir(id,'action',{type:'potion',valeur:p.type,tour:e.tour}))}">${ico(p.type)||"💊 "}${esc(p.nom)} ×${p.quantite}</button>`;
   for(const n of ac.changements)h+=`<button onclick="${cb(()=>agir(id,'action',{type:'changer',valeur:n,tour:e.tour}))}">🔄 ${esc(n)}</button>`;
   h+=`<button class="danger" onclick="${cb(()=>{if(confirm('Abandonner ? La défaite sera enregistrée.'))agir(id,'abandon',{})})}">🏳️ Abandonner</button></div>`;
   return h;
@@ -120,11 +120,13 @@ function fin(r){
 }
 /* ===== Gestion du compte : équipe, attaques, inventaire, Pokédex ===== */
 const RARETES={legendaire:"Légendaire",hyper_rare:"Hyper rare",rare:"Rare",peu_commun:"Peu commun",commun:"Commun"};
+const ico=(cle,c="")=>cle?`<img class="ico ${c}" src="/static/img/items/${esc(cle)}.png" alt="" loading="lazy" onerror="this.remove()">`:"";
+const icoType=x=>`<img class="ti" src="/static/img/types/${typeKey(x)}.png" alt="" onerror="this.remove()">`;
 const TCOL={normal:"#a8a77a",fire:"#ee8130",water:"#6390f0",grass:"#7ac74c",electric:"#f7d02c",ice:"#96d9d6",fighting:"#c22e28",poison:"#a33ea1",ground:"#e2bf65",flying:"#a98ff3",psychic:"#f95587",bug:"#a6b91a",rock:"#b6a136",ghost:"#735797",dragon:"#6f35fc",dark:"#705746",steel:"#b7b7ce",fairy:"#d685ad"};
 const FR_EN={feu:"fire",eau:"water",plante:"grass",electrik:"electric",glace:"ice",combat:"fighting",sol:"ground",vol:"flying",psy:"psychic",insecte:"bug",roche:"rock",spectre:"ghost",tenebres:"dark",acier:"steel",fee:"fairy"};
 const typeKey=x=>{const k=String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();return TCOL[k]?k:(FR_EN[k]||k)};
 const typeCol=x=>TCOL[typeKey(x)]||"var(--line-2)";
-const typesHTML=t=>(t||[]).map(x=>`<span class="tag type" style="--tc:${typeCol(x)}">${esc(x)}</span>`).join("");
+const typesHTML=t=>(t||[]).map(x=>`<span class="tag type" style="--tc:${typeCol(x)}">${icoType(x)}${esc(x)}</span>`).join("");
 const PAGES={accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,raids:pageRaids,duo:pageDuo,rogue:pageRogue,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements};
 const go=k=>PAGES[k]();
 const IC={
@@ -263,7 +265,7 @@ async function pageInventaire(msgInitial){
   let h=nav("inventaire")+`<div id="msg">${msgInitial?`<div class="msg">${esc(msgInitial)}</div>`:""}</div>`;
   if(!d.objets.length)h+=`<div class="card"><p>Ton inventaire est vide.</p></div>`;
   for(const[k,l]of cats){const o=d.objets.filter(x=>x.categorie===k);if(!o.length)continue;
-    h+=`<div class="card"><h2>${l}</h2>${o.map((x,i)=>`<div class="ligne"><b>${esc(x.nom)}</b> ×${x.quantite}<span class="sp"></span><input type="number" min="1" max="${x.quantite}" value="1" id="q_${esc(x.cle)}" style="width:70px"><button class="danger" onclick="${cb(()=>supprObjet(x.cle))}">🗑️ Jeter</button></div>`).join("")}</div>`}
+    h+=`<div class="card"><h2>${l}</h2>${o.map((x,i)=>`<div class="ligne">${ico(x.cle)}<b>${esc(x.nom)}</b> ×${x.quantite}<span class="sp"></span><input type="number" min="1" max="${x.quantite}" value="1" id="q_${esc(x.cle)}" style="width:70px"><button class="danger" onclick="${cb(()=>supprObjet(x.cle))}">🗑️ Jeter</button></div>`).join("")}</div>`}
   h+=`<div class="card"><small>Solde : ${d.poke_dollars} ₽. Pour soigner un Pokémon, va dans l'onglet Équipe.</small></div>`;
   app.innerHTML=h;
 }
@@ -302,7 +304,7 @@ async function majExplorer(){
   if(!$("#spawns"))return;
   const dispo=sp.balls.filter(b=>b.quantite>0);
   if(!dispo.find(b=>b.cle===ballChoisie)&&dispo.length)ballChoisie=dispo[0].cle;
-  $("#balls").innerHTML=sp.balls.map(b=>`<button class="${b.cle===ballChoisie?"primary":""}" ${b.quantite?"":"disabled"} onclick="${cb(()=>{ballChoisie=b.cle;majExplorer()})}">${esc(b.nom)} ×${b.quantite}</button>`).join("")+(dispo.length?"":`<small>Plus de balls : fais tourner le PokéStop ou passe par la boutique Discord.</small>`);
+  $("#balls").innerHTML=sp.balls.map(b=>`<button class="${b.cle===ballChoisie?"primary":""}" ${b.quantite?"":"disabled"} onclick="${cb(()=>{ballChoisie=b.cle;majExplorer()})}">${ico(b.cle)}${esc(b.nom)} ×${b.quantite}</button>`).join("")+(dispo.length?"":`<small>Plus de balls : fais tourner le PokéStop ou passe par la boutique Discord.</small>`);
   const mm=Math.floor(st.secondes_restantes/60),ss=st.secondes_restantes%60;
   $("#stop").innerHTML=`${st.heure_de_pointe?`<div class="msg">🔥 Heure de pointe : récompenses ×2 !</div>`:""}<button class="primary" ${st.disponible?"":"disabled"} onclick="${cb(()=>tournerStop())}">${st.disponible?"🔵 Faire tourner le disque":`⏳ Recharge : ${mm}m ${String(ss).padStart(2,"0")}s`}</button>`;
   $("#spawns").innerHTML=sp.spawns.map(s=>`<div class="mon"><img src="${esc(s.sprite||"")}" alt=""><div><b>${esc(s.nom)}</b> · Nv.${s.niveau}</div>${typesHTML(s.types)}<small>${s.pc} PC · ${esc(RARETES[s.rarete]||"")}</small><small>${s.possedes?`📖 ×${s.possedes}`:"🆕 jamais capturé"}</small><small>⏱ ${s.secondes_restantes}s</small><div class="rang"><button class="primary" ${s.deja_tente||!dispo.length?"disabled":""} onclick="${cb(()=>lancer_ball(s.id))}">${s.deja_tente?"Déjà tenté":"🎯 Capturer"}</button></div></div>`).join("")||"<small>Aucun Pokémon pour l'instant : un nouveau apparaît toutes les minutes.</small>";
@@ -400,7 +402,7 @@ async function pageBoutique(msgInitial,erreur){
   let h=nav("boutique")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${esc(msgInitial)}</div>`:""}</div><div class="card"><div class="ligne"><b>💰 ${d.poke_dollars} ₽</b><span class="sp"></span><small>🎒 Sac ${d.sac.utilises}/${d.sac.limite} · 📦 Pokémon ${d.stockage_pokemon.utilises}/${d.stockage_pokemon.limite}</small></div><div class="nav">${RAYONS.map(([k,l])=>`<button class="${k===rayon?"primary":""}" onclick="${cb(()=>{rayon=k;pageBoutique()})}">${l}</button>`).join("")}</div>`;
   h+=rendreRayon(d)+`</div>`; app.innerHTML=h;
 }
-const ligneArticle=(a,categorie,extra)=>`<div class="ligne"><b>${esc(a.nom)}</b>${extra?`<small>${esc(extra)}</small>`:""}<small>${a.prix} ₽${a.possede!==undefined?` · tu en as ${a.possede}`:""}</small><span class="sp"></span><input type="number" min="1" max="999" value="1" id="q_${esc(a.cle)}" style="width:64px"><button onclick="${cb(()=>acheterArticle(categorie,a.cle))}">Acheter</button></div>`;
+const ligneArticle=(a,categorie,extra)=>`<div class="ligne">${ico(a.cle)}<b>${esc(a.nom)}</b>${extra?`<small>${esc(extra)}</small>`:""}<small>${a.prix} ₽${a.possede!==undefined?` · tu en as ${a.possede}`:""}</small><span class="sp"></span><input type="number" min="1" max="999" value="1" id="q_${esc(a.cle)}" style="width:64px"><button onclick="${cb(()=>acheterArticle(categorie,a.cle))}">Acheter</button></div>`;
 function rendreRayon(d){
   if(rayon==="balls")return d.balls.map(a=>ligneArticle(a,"balls")).join("");
   if(rayon==="soins")return d.soins.map(a=>ligneArticle(a,"soins",a.description)).join("");
@@ -413,7 +415,7 @@ function rendreRayon(d){
     <div class="ligne"><b>🗺️ 2e emplacement d'exploration</b><small>Achat unique · ${a.slot_exploration.prix} ₽</small><span class="sp"></span><button onclick="${cb(()=>slotExploration())}" ${a.slot_exploration.achetable?"":"disabled"}>${a.slot_exploration.achetable?"Acheter":"Déjà acheté"}</button></div>`}
   const m=d.marche_noir;
   if(!m.ouvert)return `<p>🏴‍☠️ Le Marché Noir est fermé. Il ouvre une heure par jour, à un horaire aléatoire entre 9h et 23h.</p>`;
-  return `<p>🏴‍☠️ Ouvert encore <b>${Math.ceil(m.secondes_restantes/60)} min</b> — chaque joueur a son propre plafond d'achat.</p><h2>💎 Objets rares du jour</h2>`+m.objets.map(o=>`<div class="ligne"><b>${esc(o.nom)}</b><small>${o.prix} ₽ · ${o.achete}/${o.plafond} aujourd'hui</small><span class="sp"></span><input type="number" min="1" max="${o.plafond}" value="1" id="m_${esc(o.cle)}" style="width:64px"><button onclick="${cb(()=>marcheNoir("objet",o.cle))}" ${o.achete>=o.plafond?"disabled":""}>Acheter</button></div>`).join("")+`<h2 style="margin-top:12px">📘 CT à prix réduit</h2>`+m.cts.map(c=>`<div class="ligne"><b>CT ${esc(c.nom)}</b><small><s>${c.prix_normal}</s> <b>${c.prix}</b> ₽${c.possedee?" · déjà possédée":""}</small><span class="sp"></span><button onclick="${cb(()=>marcheNoir("ct",c.nom))}" ${c.achete||c.possedee?"disabled":""}>${c.achete?"Acheté":"Acheter"}</button></div>`).join("");
+  return `<p>🏴‍☠️ Ouvert encore <b>${Math.ceil(m.secondes_restantes/60)} min</b> — chaque joueur a son propre plafond d'achat.</p><h2>💎 Objets rares du jour</h2>`+m.objets.map(o=>`<div class="ligne">${ico(o.cle)}<b>${esc(o.nom)}</b><small>${o.prix} ₽ · ${o.achete}/${o.plafond} aujourd'hui</small><span class="sp"></span><input type="number" min="1" max="${o.plafond}" value="1" id="m_${esc(o.cle)}" style="width:64px"><button onclick="${cb(()=>marcheNoir("objet",o.cle))}" ${o.achete>=o.plafond?"disabled":""}>Acheter</button></div>`).join("")+`<h2 style="margin-top:12px">📘 CT à prix réduit</h2>`+m.cts.map(c=>`<div class="ligne"><b>CT ${esc(c.nom)}</b><small><s>${c.prix_normal}</s> <b>${c.prix}</b> ₽${c.possedee?" · déjà possédée":""}</small><span class="sp"></span><button onclick="${cb(()=>marcheNoir("ct",c.nom))}" ${c.achete||c.possedee?"disabled":""}>${c.achete?"Acheté":"Acheter"}</button></div>`).join("");
 }
 function gemmesHTML(d,f){return d.gemmes_mega.filter(g=>!f||g.nom.toLowerCase().includes(f)||g.espece.toLowerCase().includes(f)).slice(0,40).map(g=>ligneArticle(g,"gemmes_mega",g.espece)).join("")||"<small>Aucun résultat.</small>"}
 function majGemmes(){const e=$("#gemmes");if(!e)return;H=H.slice(0,H.length);e.innerHTML=gemmesHTML(window._bout,rechBout.trim().toLowerCase())}

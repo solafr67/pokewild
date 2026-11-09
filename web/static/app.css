@@ -237,3 +237,13 @@ button.gros{min-height:46px;padding:0 22px;font-size:15.5px;border-radius:var(--
 .arene .side.moi::before{width:230px;height:40px;left:-8px;bottom:60px}
 .hud .bar{height:9px}
 @media (max-width:760px){.side img{height:104px}.side.adv img{height:84px}.arene .side.moi::before{bottom:78px;width:170px}.arene .side.adv::after{width:140px}}
+
+/* icônes d'objets et de types */
+.ico{width:32px;height:32px;flex:none;image-rendering:pixelated;object-fit:contain}
+.ligne>.ico{width:36px;height:36px;margin-right:2px}
+button .ico{width:26px;height:26px;margin:-4px 0}
+.ti{width:15px;height:15px;margin-right:5px;border-radius:50%;vertical-align:-3px}
+.tag.type{padding-left:4px}
+.moves small .ti{width:14px;height:14px;margin-right:4px;vertical-align:-3px}
+.mon img.ti,.side img.ti,.vit img.ti,.tag img.ti,small img.ti,button img.ti{width:15px;height:15px;filter:none}
+.mon img.ico,.side img.ico{height:32px;width:32px;filter:none}
