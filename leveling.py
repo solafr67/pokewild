@@ -53,7 +53,7 @@ def gagner_xp(user_id: int, montant: int):
     xp_apres = database.ajouter_xp(user_id, montant)
     niveau_apres, _, _ = progression_niveau(xp_apres)
 
-    saison.gagner_points(user_id, montant)
+    paliers_saison = saison.gagner_points(user_id, montant)
 
     recompenses_paliers = []
     for niveau in range(niveau_avant + 1, niveau_apres + 1):
@@ -64,5 +64,11 @@ def gagner_xp(user_id: int, montant: int):
             database.ajouter_poke_dollars(user_id, dollars)
             database.ajouter_balls(user_id, ball_type, 1)
             recompenses_paliers.append((palier, dollars, ball_type))
+
+    if niveau_apres > niveau_avant:
+        database.notifier(user_id, "niveau", f"Niveau {niveau_apres} atteint", "Bravo, dresseur !", "accueil")
+    if paliers_saison:
+        database.notifier(user_id, "saison", f"Palier {max(paliers_saison)} de la saison",
+                          "Les récompenses sont déjà dans ton sac." if len(paliers_saison) > 1 else "La récompense est déjà dans ton sac.", "saison")
 
     return niveau_avant, niveau_apres, recompenses_paliers

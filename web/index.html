@@ -153,9 +153,9 @@ const FR_EN={feu:"fire",eau:"water",plante:"grass",electrik:"electric",glace:"ic
 const typeKey=x=>{const k=String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();return TCOL[k]?k:(FR_EN[k]||k)};
 const typeCol=x=>TCOL[typeKey(x)]||"var(--line-2)";
 const typesHTML=t=>(t||[]).map(x=>`<span class="tag type" style="--tc:${typeCol(x)}">${icoType(x)}${esc(x)}</span>`).join("");
-const PAGES={accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,raids:pageRaids,duo:pageDuo,rogue:pageRogue,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,saison:pageSaison,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements};
+const PAGES={accueil,explorer:pageExplorer,explorations:pageExplorations,equipe:pageEquipe,modes:pageModes,pvp:pageDefis,marche:pageMarche,echanges:pageEchanges,casino:pageCasino,raids:pageRaids,duo:pageDuo,rogue:pageRogue,boutique:pageBoutique,labo:pageLabo,quetes:pageQuetes,profil:()=>pageProfil(),maitre:pageMaitre,saison:pageSaison,inventaire:pageInventaire,pokedex:pagePokedex,collection:pageCollection,classements:pageClassements};
 const go=k=>PAGES[k]();
-const IC={star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+const IC={bell:'<path d="M6 9a6 6 0 0 1 12 0c0 6 2 7.5 2 7.5H4S6 15 6 9zM10 20a2 2 0 0 0 4 0"/>',star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
  home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/>',
  compass:'<circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2 5.6-5.6 2 2-5.6z"/>',
  swords:'<path d="m14 5 6-2 1 1-2 6-9.5 9.5L7 17.5 4.5 20 3 18.5 5.5 16 4 14.5 13.5 5z" transform="translate(0 0)"/><path d="m9 5-5-2-1 1 2 6 3 3"/>',
@@ -171,10 +171,10 @@ const svg=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 const BALL='<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#f4f7fc"/><path d="M2 16a14 14 0 0 1 28 0z" fill="#ff5446"/><path d="M2 16h28" stroke="#0a1220" stroke-width="2.4"/><circle cx="16" cy="16" r="5" fill="#f4f7fc" stroke="#0a1220" stroke-width="2.4"/><circle cx="16" cy="16" r="14" fill="none" stroke="#0a1220" stroke-width="2"/></svg>';
 // 6 grandes sections ; chaque section regroupe plusieurs écrans (onglets).
 const HUBS=[
- {k:"accueil",l:"Accueil",ic:"home",c:"#4cb8ff",t:"",p:[["accueil","Tableau de bord"],["quetes","Missions"],["saison","Saison"],["classements","Classements"]]},
+ {k:"accueil",l:"Accueil",ic:"home",c:"#4cb8ff",t:"",p:[["accueil","Tableau de bord"],["profil","Profil"],["quetes","Missions"],["saison","Saison"],["classements","Classements"]]},
  {k:"explorer",l:"Explorer",ic:"compass",c:"#3ddc97",t:"Pokémon sauvages, PokéStop et expéditions.",p:[["explorer","Rencontres"],["explorations","Expéditions"]]},
  {k:"combat",l:"Combattre",ic:"swords",c:"#ff5446",t:"Dresseurs, arènes, duels et raids.",p:[["modes","Dresseurs & Arènes"],["pvp","Duels"],["duo","Double combat"],["raids","Raids"]]},
- {k:"collection",l:"Collection",ic:"grid",c:"#b07bff",t:"Ton équipe, tes Pokémon, ton sac et le laboratoire.",p:[["equipe","Équipe"],["collection","Pokémon"],["pokedex","Pokédex"],["inventaire","Sac"],["labo","Laboratoire"]]},
+ {k:"collection",l:"Collection",ic:"grid",c:"#b07bff",t:"Ton équipe, tes Pokémon, ton sac et le laboratoire.",p:[["equipe","Équipe"],["collection","Pokémon"],["pokedex","Pokédex"],["inventaire","Sac"],["maitre","Maître des Types"],["labo","Laboratoire"]]},
  {k:"marche",l:"Marché",ic:"bag",c:"#ffc83d",t:"Boutique, annonces et échanges entre dresseurs.",p:[["boutique","Boutique"],["marche","Marketplace"],["echanges","Échanges"]]},
  {k:"jeux",l:"Jeux",ic:"dice",c:"#ff7ab6",t:"Casino et roguelike : tente ta chance.",p:[["casino","Casino"],["rogue","Roguelike"]]}
 ];
@@ -191,22 +191,39 @@ const nav=a=>{
   const tete=h.k==="accueil"?"":`<div class="page-h"><span class="ph-ic">${svg(h.ic)}</span><div><h1>${h.l}</h1><p>${h.t}</p></div></div>`;
   return tete+(h.p.length<2?"":`<div class="soustitre" role="tablist">${h.p.map(([k,l])=>`<button role="tab" ${k===a?'aria-current="page"':""} onclick="go('${k}')">${l}</button>`).join("")}</div>`);
 };
+let notif={n:0,l:[]}, notifOuvert=false;
+const NOTIF_IC={marche:"bag",defi:"swords",echange:"grid",niveau:"star",saison:"star",quete:"scroll",expedition:"compass"};
+function cloche(){
+  const l=notif.l;
+  return `<div class="cloche"><button class="puce ${notif.n?"actif":""}" id="clocheBtn" aria-label="Notifications${notif.n?` (${notif.n} non lues)`:""}" aria-expanded="${notifOuvert}">${svg("bell")}${notif.n?`<b class="badge">${notif.n>9?"9+":notif.n}</b>`:""}</button>
+  <div class="notifs" id="panneauNotifs" ${notifOuvert?"":"hidden"}><div class="notifs-h"><b>Notifications</b>${l.length?`<button class="lien" onclick="${cb(()=>viderNotifs())}">Tout effacer</button>`:""}</div>
+  <div class="notifs-l">${l.length?l.map(x=>`<button class="nt ${x.lu?"":"nouv"}" onclick="${cb(()=>ouvrirNotif(x.id,x.lien))}"><span class="nt-i">${svg(NOTIF_IC[x.type]||"bell")}</span><span class="nt-t"><b>${esc(x.titre)}</b>${x.texte?`<small>${esc(x.texte)}</small>`:""}<small class="mut">${esc(x.depuis)}</small></span></button>`).join(""):`<div class="vide-ill"><b>Rien de nouveau</b><small>Les ventes, défis, échanges et rappels apparaîtront ici.</small></div>`}</div></div></div>`;
+}
+async function majNotifs(){try{const d=await api("/api/notifications");notif={n:d.non_lues,l:d.notifications};if(moi)cadre()}catch(e){}}
+function basculerNotifs(){
+  notifOuvert=!notifOuvert;cadre();if(notifOuvert)majNotifs();
+  if(notifOuvert)setTimeout(async()=>{if(!notif.n)return;try{await api("/api/notifications/lu",{});notif.n=0;const b=$("#clocheBtn");if(b){b.classList.remove("actif");const g=b.querySelector(".badge");if(g)g.remove()}}catch(e){}},1200);
+}
+async function ouvrirNotif(id,lien){try{await api("/api/notifications/lu",{id})}catch(e){}notifOuvert=false;await majNotifs();if(lien&&PAGES[lien])go(lien)}
+async function viderNotifs(){try{await api("/api/notifications/vider",{});notif={n:0,l:[]};cadre()}catch(e){}}
+setInterval(()=>{if(moi)majNotifs()},30000);
 function cadre(){
   const m=moi, pct=m?Math.min(100,Math.round(m.xp/Math.max(1,m.xp_requise)*100)):0;
   $("#topbar").innerHTML=`<button class="marque" onclick="go('accueil')" aria-label="PokéWild — accueil">${BALL}PokéWild</button>`
    +(m?`<div class="hubs">${HUBS.map(h=>`<button class="hub" data-hub="${h.k}" style="--hc:${h.c}" onclick="go('${h.p[0][0]}')">${svg(h.ic)}<span>${h.l}</span></button>`).join("")}</div><div class="sp"></div>
-   <div class="puces"><button class="puce or" onclick="go('quetes')" title="Missions">${svg("scroll")}<span class="lib">Missions</span></button>
+   <div class="puces">${cloche()}<button class="puce or" onclick="go('quetes')" title="Missions">${svg("scroll")}<span class="lib">Missions</span></button>
    <div class="puce or" style="cursor:default" title="Poké Dollars">${svg("coin")}<b>${Number(m.poke_dollars).toLocaleString("fr-FR")}</b></div>
    <div class="niveau" title="${m.xp} / ${m.xp_requise} XP"><div class="anneau" style="--p:${pct}"><span>${m.niveau}</span></div><small>Niveau ${m.niveau}</small></div>
    <div class="profil"><button id="profilBtn" aria-haspopup="menu" aria-expanded="false">${m.avatar?`<img src="${esc(m.avatar)}" alt="">`:`<i class="ini">${esc(m.pseudo.slice(0,1).toUpperCase())}</i>`}<span>${esc(m.pseudo)}</span></button>
     <div class="menu" id="menuProfil" hidden role="menu"><div class="nom">Connecté en tant que <b>${esc(m.pseudo)}</b></div>
-    <button onclick="go('classements')">${svg("trophy")}Classements</button><button onclick="go('quetes')">${svg("scroll")}Missions</button>
+    <button onclick="voirProfil()">${svg("grid")}Mon profil</button><button onclick="go('classements')">${svg("trophy")}Classements</button><button onclick="go('quetes')">${svg("scroll")}Missions</button>
     <a href="/auth/logout">${svg("out")}Déconnexion</a></div></div></div>`:"");
   $("#dock").innerHTML=m?HUBS.map(h=>`<button data-hub="${h.k}" onclick="go('${h.p[0][0]}')">${svg(h.ic)}${h.l}</button>`).join(""):"";
+  const cb2=$("#clocheBtn"); if(cb2)cb2.onclick=e=>{e.stopPropagation();basculerNotifs()};
   const bp=$("#profilBtn"); if(bp)bp.onclick=e=>{e.stopPropagation();const mn=$("#menuProfil");mn.hidden=!mn.hidden;bp.setAttribute("aria-expanded",String(!mn.hidden))};
   marquerHub();
 }
-document.addEventListener("click",e=>{const mn=$("#menuProfil");if(mn&&!mn.hidden&&!e.target.closest(".profil")){mn.hidden=true}});
+document.addEventListener("click",e=>{if(notifOuvert&&!e.target.closest(".cloche")){notifOuvert=false;const pn=$("#panneauNotifs");if(pn)pn.hidden=true;const bt=$("#clocheBtn");if(bt)bt.setAttribute("aria-expanded","false")}const mn=$("#menuProfil");if(mn&&!mn.hidden&&!e.target.closest(".profil")){mn.hidden=true}});
 function flash(t,err){const m=$("#msg");if(m)m.innerHTML=t?`<div class="msg ${err?"err":""}">${esc(t)}</div>`:""}
 async function act(f){try{await f()}catch(e){if(e.code===401)return connexion();flash(e.message,true)}}
 const sel=(id)=>{const e=document.getElementById(id);return e?e.value:""};
@@ -321,7 +338,7 @@ function listeDex(){
 
 /* ===== Explorer : apparitions, capture, PokéStop ===== */
 let ballChoisie="pokeball";
-async function majEntete(){try{moi=await api("/api/moi");cadre()}catch(e){}}
+async function majEntete(){try{moi=await api("/api/moi");cadre();majNotifs()}catch(e){}}
 async function pageExplorer(){
   clearInterval(minuteur);
   H=[];
@@ -514,6 +531,83 @@ async function pageSaison(){
   <div class="card"><h2>Récompenses</h2><div class="paliers">${d.paliers.map(p=>`<div class="palier ${p.atteint?"ok":""} ${p.palier===s.palier+1?"next":""}"><span class="pn">${p.palier}</span><span class="chip gold">${svg("coin")} ${p.dollars}</span>${objs(p.objets)}${p.atteint?`<span class="pv">✓</span>`:""}</div>`).join("")}</div></div>
   <div class="card"><h2>Parrainage</h2><p>Invite des amis sur le serveur Discord : tous les <b>${pa.palier}</b> amis restés au moins ${pa.delai_jours} jours, tu gagnes ${pa.recompense_dollars} PD et ${objs(pa.recompense_objets)}.</p><div class="ligne"><b>${pa.confirmes}</b> invitation(s) confirmée(s)<span class="sp"></span><span class="chip">Encore ${pa.avant_prochain} avant la prochaine récompense</span></div></div>`;
 }
+/* ===== Maître des Types ===== */
+let mt={onglet:"attaques",q:"",ct:{type:"tous",cat:"tous",q:"",page:0},objet:null};
+async function pageMaitre(msgInitial,erreur){
+  clearInterval(minuteur); H=[];
+  const T=[["attaques","Attaques"],["ct","Boutique CT"],["objets","Objets tenus"]];
+  app.innerHTML=nav("maitre")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${esc(msgInitial)}</div>`:""}</div>
+  <div class="maitre-h"><span class="maitre-i">${svg("star")}</span><p>« Tes Pokémon apprennent gratuitement les attaques que leur niveau permet. Pour le reste, achète la CT une seule fois : elle est à toi pour toujours et sert à tous tes Pokémon. Chacun ne retient que 4 attaques à la fois. »</p></div>
+  <div class="card"><div class="cmd-tabs rayons">${T.map(([k,l])=>`<button class="${k===mt.onglet?"on":""}" onclick="${cb(()=>{mt.onglet=k;mt.objet=null;pageMaitre()})}">${l}</button>`).join("")}</div><div id="mz">Chargement…</div></div>`;
+  await majMaitre();
+}
+async function majMaitre(){
+  const z=$("#mz"); if(!z)return;
+  try{
+    if(mt.onglet==="ct"){
+      const c=mt.ct,d=await api(`/api/maitre/ct?type=${encodeURIComponent(c.type)}&categorie=${c.cat}&q=${encodeURIComponent(c.q)}&page=${c.page}`);
+      if(!$("#mz"))return; c.page=d.page;
+      const o=(v,l,cur)=>`<option value="${v}" ${v===cur?"selected":""}>${l}</option>`;
+      z.innerHTML=`<div class="filtres"><input id="ct_q" placeholder="Rechercher une attaque" value="${esc(c.q)}" oninput="mt.ct.q=this.value;mt.ct.page=0;clearTimeout(window._tct);window._tct=setTimeout(majMaitre,300)"><select onchange="mt.ct.type=this.value;mt.ct.page=0;majMaitre()">${o("tous","Tous les types",c.type)}${d.types.map(t=>o(t,t[0].toUpperCase()+t.slice(1),c.type)).join("")}</select><select onchange="mt.ct.cat=this.value;mt.ct.page=0;majMaitre()">${[["tous","Toutes catégories"],["physical","Physique"],["special","Spécial"],["status","Statut"]].map(([v,l])=>o(v,l,c.cat)).join("")}</select><span class="chip gold">${svg("coin")} ${Number(d.poke_dollars).toLocaleString("fr-FR")}</span></div>
+      <div class="ctgrid">${d.attaques.map(a=>`<div class="ctc" style="--tc:${typeCol(a.type)}"><div class="ctc-t">${a.type?icoType(a.type):""}<b>${esc(a.nom)}</b></div><small class="mut">${a.puissance?a.puissance+" puissance":"Statut"} · ${a.precision?a.precision+" % précision":"infaillible"}</small><div class="ctc-p">${a.possedee?`<span class="chip ok">Possédée</span>`:`<span class="prix">${svg("coin")}${a.prix}</span><button ${d.poke_dollars<a.prix?"disabled":""} onclick="${cb(()=>acheterCTMaitre(a.nom))}">Acheter</button>`}</div></div>`).join("")||`<div class="vide-ill"><b>Aucune attaque</b><small>Change les filtres.</small></div>`}</div>
+      <div class="pager"><button ${d.page<=0?"disabled":""} onclick="${cb(()=>{mt.ct.page--;majMaitre()})}">Précédent</button><span class="mut">Page ${d.page+1} / ${d.pages} · ${d.total} attaques</span><button ${d.page>=d.pages-1?"disabled":""} onclick="${cb(()=>{mt.ct.page++;majMaitre()})}">Suivant</button></div>`;
+      return;
+    }
+    if(mt.onglet==="objets"&&mt.objet){
+      const d=await api("/api/maitre/objets/"+encodeURIComponent(mt.objet));
+      if(!$("#mz"))return;
+      z.innerHTML=`<div class="sect-h"><h2>Objet tenu par ${esc(d.nom)}</h2><button onclick="${cb(()=>{mt.objet=null;majMaitre()})}">Changer de Pokémon</button></div>
+      <div class="tenu">${d.tenu?`${ico(d.tenu.cle,"xl")}<div><b>${esc(d.tenu.nom)}</b><small class="mut">${esc(d.tenu.description)}</small></div><button class="danger" onclick="${cb(()=>retirerObjetMaitre(d.nom))}">Retirer</button>`:`<div><b>Aucun objet tenu</b><small class="mut">Choisis un objet de ton sac ci-dessous.</small></div>`}</div>
+      <h2 style="margin-top:16px">Ton sac</h2><div class="prods">${d.sac.map(x=>`<div class="prod">${ico(x.cle,"xl")}<b>${esc(x.nom)}</b><small class="mut">${esc(x.description)}</small><div class="prod-p"><span class="chip">×${x.quantite}</span></div><div class="prod-a"><button class="primary" onclick="${cb(()=>equiperObjetMaitre(d.nom,x.cle))}">Équiper</button></div></div>`).join("")||`<div class="vide-ill"><b>Aucun objet tenu dans ton sac</b><small>Tu en trouveras à la boutique, onglet Objets tenus.</small></div>`}</div>`;
+      return;
+    }
+    const d=await api("/api/maitre/pokemon?q="+encodeURIComponent(mt.q));
+    if(!$("#mz"))return;
+    const objets=mt.onglet==="objets";
+    if(!$("#mt_q"))z.innerHTML=`<div class="filtres"><input id="mt_q" placeholder="Rechercher un Pokémon" value="${esc(mt.q)}" oninput="mt.q=this.value;clearTimeout(window._tmt);window._tmt=setTimeout(majMaitre,300)"><span class="mut">${objets?"Choisis le Pokémon qui portera l'objet.":"Choisis le Pokémon dont tu veux gérer les attaques."}</span></div><div id="mt_l"></div>`;
+    $("#mt_l").innerHTML=`<div class="mtgrid">${d.pokemon.map(p=>`<button class="mtp" onclick="${cb(()=>{if(objets){mt.objet=p.nom;majMaitre()}else pageAttaques(p.nom)})}"><span class="pad s"><img class="spr" src="${esc(p.sprite||"")}" alt=""></span><span class="mtp-i"><b>${esc(p.nom)}</b><small class="mut">Nv.${p.niveau}</small>${objets&&p.tenu?`<span class="chip">${ico(p.tenu.cle)} ${esc(p.tenu.nom)}</span>`:typesHTML(p.types)}</span></button>`).join("")||`<div class="vide-ill"><b>Aucun Pokémon trouvé</b></div>`}</div>${d.total>d.pokemon.length?`<p class="mut"><small>${d.total-d.pokemon.length} autres : affine la recherche.</small></p>`:""}`;
+  }catch(e){if(e.code===401)return connexion();flash(e.message,true)}
+}
+const acheterCTMaitre=a=>act(async()=>{const r=await api("/api/gestion/ct/acheter",{attaque:a});await majEntete();await majMaitre();flash(`CT de ${a} achetée (${r.cout} PD).`)});
+const equiperObjetMaitre=(n,c)=>act(async()=>{await api("/api/maitre/objets/equiper",{nom:n,cle:c});await majMaitre();flash(n+" porte maintenant cet objet.")});
+const retirerObjetMaitre=n=>act(async()=>{await api("/api/maitre/objets/retirer",{nom:n});await majMaitre();flash("Objet rendu au sac.")});
+
+/* ===== Profil joueur ===== */
+let profilCible=null, profilEdition=null, vitrineSel=[], vitrineQ="";
+const voirProfil=id=>{profilCible=id||null;profilEdition=null;go("profil")};
+async function pageProfil(msgInitial,erreur){
+  clearInterval(minuteur); H=[];
+  app.innerHTML=nav("profil")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${esc(msgInitial)}</div>`:""}</div><div id="pf">Chargement…</div>`;
+  let d; try{d=await api(profilCible?"/api/profil/"+encodeURIComponent(profilCible):"/api/profil")}catch(e){if(e.code===401)return connexion();profilCible=null;return flash(e.message,true)}
+  if(!$("#pf"))return;
+  const pct=Math.min(100,Math.round(d.xp/Math.max(1,d.xp_requise)*100));
+  const slots=[];for(let i=0;i<6;i++){const m=d.vitrine[i];slots.push(m?`<div class="vit-c ${m.shiny?"shiny":""} r-${esc(m.rarete||"commun")}"><span class="pad"><img class="spr" src="${esc(m.sprite||"")}" alt=""></span><b>${m.shiny?"✨ ":""}${esc(m.surnom||m.nom)}</b>${m.surnom?`<small class="mut">${esc(m.nom)}</small>`:""}<div class="rc-types">${typesHTML(m.types)}</div><span class="chip">${m.pc} PC</span></div>`:`<div class="vit-c vide"><small class="mut">${d.moi?"Emplacement libre":"—"}</small></div>`)}
+  let h=`<section class="pf-hero"><div class="pf-av">${d.avatar?`<img src="${esc(d.avatar)}" alt="">`:`<i>${esc(d.pseudo.slice(0,1).toUpperCase())}</i>`}</div>
+   <div class="pf-id"><h1>${esc(d.pseudo)}</h1>${d.titre?`<span class="pf-titre">${svg("star")} ${esc(d.titre)}</span>`:""}${d.devise?`<p class="pf-devise">« ${esc(d.devise)} »</p>`:""}
+   <div class="pf-badges">${d.clan?`<span class="chip">${emo(d.clan.emoji)} Clan ${esc(d.clan.nom)}</span>`:""}${d.race?`<span class="chip">${esc(d.race)}</span>`:""}</div></div>
+   <div class="pf-niv"><div class="anneau grand" style="--p:${pct}"><span>${d.niveau}</span></div><small class="mut">Niveau</small><small class="mut">${d.xp} / ${d.xp_requise} XP</small></div></section>`;
+  if(d.moi)h+=`<div class="pf-outils"><button onclick="${cb(()=>{profilEdition=profilEdition==="devise"?null:"devise";pageProfil()})}">Modifier ma devise</button><button onclick="${cb(()=>{profilEdition=profilEdition==="titre"?null:"titre";pageProfil()})}">Choisir mon titre</button><button class="primary" onclick="${cb(()=>ouvrirVitrine(d))}">Modifier ma vitrine</button></div>`;
+  if(d.moi&&profilEdition==="devise")h+=`<div class="card"><h2>Ma devise</h2><div class="ligne"><input id="pf_dev" maxlength="80" style="flex:1" placeholder="Une phrase qui te résume (80 caractères max)" value="${esc(d.devise)}"><button class="primary" onclick="${cb(()=>enregistrerDevise())}">Enregistrer</button></div></div>`;
+  if(d.moi&&profilEdition==="titre")h+=`<div class="card"><h2>Mon titre</h2>${d.titres.length?`<div class="pf-titres">${d.titres.map(t=>`<button class="${t.actif?"primary":""}" onclick="${cb(()=>choisirTitreProfil(t.cle))}">${esc(t.titre)}</button>`).join("")}</div><small class="mut">Les titres se débloquent avec les accomplissements (Missions › Accomplissements).</small>`:`<div class="vide-ill"><b>Aucun titre débloqué</b><small>Capture, combats et niveaux en débloquent.</small></div>`}</div>`;
+  if(d.moi&&profilEdition==="vitrine")h+=`<div class="card" id="vt_zone"></div>`;
+  h+=`<div class="card"><h2>Vitrine</h2><div class="vitrine-pf">${slots.join("")}</div></div>
+  <div class="card"><h2>Statistiques</h2><div class="pf-stats">${d.stats.map(x=>`<div class="pf-st"><b>${esc(String(x.valeur))}</b><small class="mut">${esc(x.nom)}</small></div>`).join("")}</div></div>`;
+  $("#pf").innerHTML=h;
+  if(d.moi&&profilEdition==="vitrine")dessVitrine();
+}
+const enregistrerDevise=()=>act(async()=>{await api("/api/profil/devise",{texte:sel("pf_dev")});profilEdition=null;pageProfil("Devise enregistrée.")});
+const choisirTitreProfil=c=>act(async()=>{await api("/api/quetes/titre",{categorie:c});profilEdition=null;pageProfil("Titre mis à jour.")});
+function ouvrirVitrine(d){profilEdition="vitrine";vitrineSel=d.vitrine.map(m=>m.capture_id);vitrineQ="";pageProfil()}
+async function dessVitrine(){
+  const z=$("#vt_zone"); if(!z)return;
+  let r; try{r=await api("/api/profil/candidats?q="+encodeURIComponent(vitrineQ))}catch(e){return flash(e.message,true)}
+  if(!$("#vt_zone"))return;
+  if(!$("#vt_q"))z.innerHTML=`<div class="sect-h"><h2>Ma vitrine</h2><small class="mut" id="vt_n"></small></div><div class="filtres"><input id="vt_q" placeholder="Rechercher un Pokémon" value="${esc(vitrineQ)}" oninput="vitrineQ=this.value;clearTimeout(window._tvt);window._tvt=setTimeout(dessVitrine,300)"><button class="primary" onclick="${cb(()=>sauverVitrine())}">Enregistrer la vitrine</button><button onclick="${cb(()=>{profilEdition=null;pageProfil()})}">Annuler</button></div><div id="vt_l"></div>`;
+  $("#vt_n").textContent=`${vitrineSel.length} / 6 choisis`;
+  $("#vt_l").innerHTML=`<div class="mtgrid">${r.candidats.map(c=>`<button class="mtp ${vitrineSel.includes(c.capture_id)?"choisi":""}" onclick="${cb(()=>{const i=vitrineSel.indexOf(c.capture_id);if(i>=0)vitrineSel.splice(i,1);else if(vitrineSel.length<6)vitrineSel.push(c.capture_id);else flash("6 Pokémon au maximum.",true);dessVitrine()})}"><span class="pad s"><img class="spr" src="${esc(c.sprite||"")}" alt=""></span><span class="mtp-i"><b>${c.shiny?"✨ ":""}${esc(c.surnom||c.nom)}</b><small class="mut">${c.pc} PC${c.favori?" · favori":""}</small></span></button>`).join("")||`<div class="vide-ill"><b>Aucun Pokémon trouvé</b></div>`}</div>`;
+}
+const sauverVitrine=()=>act(async()=>{await api("/api/profil/vitrine",{capture_ids:vitrineSel});profilEdition=null;pageProfil("Vitrine enregistrée.")});
+
 async function pageQuetes(msgInitial,erreur){
   clearInterval(minuteur); H=[];
   app.innerHTML=nav("quetes")+`<div id="msg">${msgInitial?`<div class="msg ${erreur?"err":""}">${msgInitial}</div>`:""}</div><div class="card" id="cx"></div><div class="card"><div class="nav">${ONGLETS_Q.map(([k,l])=>`<button class="${k===ongletQuetes?"primary":""}" onclick="${cb(()=>{ongletQuetes=k;pageQuetes()})}">${l}</button>`).join("")}</div><div id="qt">Chargement…</div></div>`;
@@ -601,7 +695,7 @@ async function pageDefis(msgInitial,erreur){
     h+=`<div class="card"><h2>Joueurs</h2><div class="ligne"><input id="pv_q" placeholder="🔍 Rechercher un joueur" value="${esc(rechPvp)}" oninput="rechPvp=this.value;majPvpListe()"><label><small>Mise (PD)</small> <input id="pv_mise" type="number" min="0" value="0" style="width:80px"></label><small>Solde : ${d.solde}</small></div><div id="pv_liste"></div></div>`;
     $("#pv").innerHTML=h; majListe(d);
   };
-  const majListe=d=>{const z=$("#pv_liste");if(z)z.innerHTML=d.joueurs.map(j=>`<div class="ligne"><b>${j.en_ligne?"🟢":"⚪"} ${esc(j.pseudo)}</b><span class="sp"></span><button onclick="${cb(()=>defierPvp(j.id))}">Défier 1v1</button><button title="Chacun contrôle 2 Pokémon" onclick="${cb(()=>defierDuoPvp(j.id))}">Défier 2v2</button></div>`).join("")||"<small>Aucun joueur trouvé (il doit s'être connecté au site au moins une fois).</small>"};
+  const majListe=d=>{const z=$("#pv_liste");if(z)z.innerHTML=d.joueurs.map(j=>`<div class="ligne"><b>${j.en_ligne?"🟢":"⚪"} ${esc(j.pseudo)}</b><span class="sp"></span><button onclick="${cb(()=>voirProfil(j.id))}">Profil</button><button onclick="${cb(()=>defierPvp(j.id))}">Défier 1v1</button><button title="Chacun contrôle 2 Pokémon" onclick="${cb(()=>defierDuoPvp(j.id))}">Défier 2v2</button></div>`).join("")||"<small>Aucun joueur trouvé (il doit s'être connecté au site au moins une fois).</small>"};
   window.majPvpListe=()=>{clearTimeout(window._tPvp);window._tPvp=setTimeout(maj,250)};
   await maj(); minuteur=setInterval(maj,3000);
 }
@@ -707,7 +801,7 @@ async function majEchanges(){
   if(!e){
     ex.echange=null; ex.edit=false;
     if(d.dernier)h+=`<div class="msg ${d.dernier.issue==="conclu"?"":"err"}">${d.dernier.issue==="conclu"?"✅ Ton dernier échange a été conclu !":"❌ Dernier échange annulé"+(d.dernier.detail?" : "+esc(d.dernier.detail):"")}</div>`;
-    h+=`<div class="card"><h2>Proposer un échange</h2><small>Les deux joueurs choisissent leur offre (Pokémon, objets, Poké Dollars) puis valident. Toute modification remet les validations à zéro. Seuls les joueurs connectés au site au moins une fois sont listés.</small>`+(d.joueurs.map(j=>`<div class="ligne"><b>${esc(j.pseudo)}</b><span class="sp"></span><button onclick="${cb(()=>proposerEch(j.id))}">Proposer</button></div>`).join("")||"<p><small>Aucun autre joueur connu.</small></p>")+`</div>`;
+    h+=`<div class="card"><h2>Proposer un échange</h2><small>Les deux joueurs choisissent leur offre (Pokémon, objets, Poké Dollars) puis valident. Toute modification remet les validations à zéro. Seuls les joueurs connectés au site au moins une fois sont listés.</small>`+(d.joueurs.map(j=>`<div class="ligne"><b>${esc(j.pseudo)}</b><span class="sp"></span><button onclick="${cb(()=>voirProfil(j.id))}">Profil</button><button onclick="${cb(()=>proposerEch(j.id))}">Proposer</button></div>`).join("")||"<p><small>Aucun autre joueur connu.</small></p>")+`</div>`;
     z.innerHTML=h; return;
   }
   if(ex.edit){return}

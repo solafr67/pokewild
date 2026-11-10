@@ -672,6 +672,7 @@ async def purger_annonces_expirees(bot):
             continue
 
         database.marquer_annonce_marketplace(annonce["id"], "expiree")
+        database.notifier(annonce["vendeur_id"], "marche", "Annonce expirée", "Ton Pokémon reste dans ta collection.", "marche")
         if channel is None or not annonce["message_id"]:
             continue
         try:

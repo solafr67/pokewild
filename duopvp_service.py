@@ -62,6 +62,7 @@ def defier(uid: int, pseudo: str, cible_id: int) -> dict:
     conn.execute("INSERT INTO duo_web_defis (de_id, de_pseudo, a_id, a_pseudo, cree_a) VALUES (?,?,?,?,?)", (uid, pseudo, cible_id, cible["pseudo"], int(time.time())))
     conn.commit()
     conn.close()
+    database.notifier(cible_id, "defi", f"{pseudo} te défie en double combat", f"Duel 2v2, valable {DUREE_DEFI // 60} min.", "pvp")
     return {"message": f"Défi 2v2 envoyé à {cible['pseudo']} (valable {DUREE_DEFI // 60} min)."}
 
 
