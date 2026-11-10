@@ -236,7 +236,7 @@ def etat_echange(user_id: int) -> dict:
         if r and r["issue"]:
             out["dernier"] = {"issue": r["issue"], "detail": r["detail"]}
     conn = database.get_connexion()
-    out["joueurs"] = [{"id": j["user_id"], "pseudo": j["pseudo"]} for j in conn.execute(
+    out["joueurs"] = [{"id": str(j["user_id"]), "pseudo": j["pseudo"]} for j in conn.execute(
         "SELECT user_id, pseudo FROM web_joueurs WHERE user_id != ? ORDER BY vu_a DESC LIMIT 40", (user_id,))]
     conn.close()
     return out
@@ -255,7 +255,9 @@ def proposer_echange(user_id: int, cible_id: int) -> dict:
         raise ErreurCombatWeb("Tu as déjà un échange en cours.")
     if database.echange_en_cours_pour_joueur(cible_id):
         raise ErreurCombatWeb("Ce joueur a déjà un échange en cours.")
-    return {"echange_id": database.creer_echange(user_id, cible_id)}
+    eid = database.creer_echange(user_id, cible_id)
+    database.notifier(cible_id, "echange", "Échange proposé", f"{_nom(_pseudos(), user_id)} veut échanger avec toi.", "echanges")
+    return {"echange_id": eid}
 
 
 def _echange_participant(user_id: int, echange_id: int):
@@ -306,6 +308,9 @@ def valider_echange(user_id: int, echange_id: int) -> dict:
     ok, err = database.executer_echange(echange_id)
     if ok:
         _issue(echange_id, "conclu")
+        e = database.obtenir_echange(echange_id)
+        for u in (e["joueur1_id"], e["joueur2_id"]) if e and "joueur1_id" in e.keys() else ():
+            database.notifier(u, "echange", "Échange conclu", "Les Pokémon et objets ont changé de propriétaire.", "collection")
         return {"fini": True, "succes": True, "message": "Échange conclu ! Les Pokémon, objets et Poké Dollars ont changé de propriétaire."}
     database.annuler_echange(echange_id)
     detail = (err or "").replace("<@", "").replace(">", "")

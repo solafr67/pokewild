@@ -6023,6 +6023,7 @@ from .plus_ou_moins import *  # noqa: F401,F403
 from .raids import *  # noqa: F401,F403
 from .codes_promo import *  # noqa: F401,F403
 from .parrainage import *  # noqa: F401,F403
+from .notifications import *  # noqa: F401,F403
 from .echanges_marketplace import *  # noqa: F401,F403
 from .exploration import *  # noqa: F401,F403
 from .clan import *  # noqa: F401,F403

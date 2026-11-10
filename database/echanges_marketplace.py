@@ -247,6 +247,11 @@ def executer_echange(echange_id: int) -> tuple:
 # dans database/roguelike.py — voir le `from .roguelike import *` en fin de fichier.
 
 
+def _notif(user_id, type_, titre, texte, lien):
+    from .notifications import notifier
+    notifier(user_id, type_, titre, texte, lien)
+
+
 def creer_annonce_marketplace(vendeur_id: int, capture_id: int, prix: int, duree_secondes: int) -> int:
     conn = get_connexion()
     cur = conn.cursor()
@@ -337,6 +342,9 @@ def placer_enchere(annonce_id: int, encherisseur_id: int, montant: int) -> tuple
     ajouter_poke_dollars(encherisseur_id, -montant)
     if ancien_enchereur_id is not None:
         ajouter_poke_dollars(ancien_enchereur_id, ancien_montant)
+        _notif(ancien_enchereur_id, "marche", "Tu as été surenchéri",
+               f"Quelqu'un a offert {montant} PD. Tes {ancien_montant} PD t'ont été rendus.", "marche")
+    _notif(annonce["vendeur_id"], "marche", "Nouvelle enchère sur ton annonce", f"Offre actuelle : {montant} PD.", "marche")
     return True, None
 
 
@@ -369,6 +377,7 @@ def resoudre_enchere_expiree(annonce_id: int) -> dict:
         conn.commit()
         conn.close()
         resultat["vendu"] = False
+        _notif(annonce["vendeur_id"], "marche", "Enchère terminée sans offre", f"{annonce['pokemon_nom']} reste dans ta collection.", "marche")
         return resultat
 
     cur.execute("UPDATE captures SET user_id = ? WHERE id = ?", (annonce["enchereur_actuel_id"], annonce["capture_id"]))
@@ -383,6 +392,8 @@ def resoudre_enchere_expiree(annonce_id: int) -> dict:
     # seulement à créditer le vendeur.
     ajouter_poke_dollars(annonce["vendeur_id"], annonce["prix_actuel"])
     resultat["vendu"] = True
+    _notif(annonce["vendeur_id"], "marche", "Enchère vendue", f"{annonce['pokemon_nom']} part pour {annonce['prix_actuel']} PD.", "marche")
+    _notif(annonce["enchereur_actuel_id"], "marche", "Enchère remportée", f"{annonce['pokemon_nom']} est maintenant dans ta collection !", "collection")
     return resultat
 
 
@@ -495,6 +506,7 @@ def executer_achat_marketplace(annonce_id: int, acheteur_id: int) -> tuple:
 
     ajouter_poke_dollars(acheteur_id, -annonce["prix"])
     ajouter_poke_dollars(annonce["vendeur_id"], annonce["prix"])
+    _notif(annonce["vendeur_id"], "marche", "Pokémon vendu", f"Ton annonce a été achetée pour {annonce['prix']} PD.", "marche")
     return True, None
 
 

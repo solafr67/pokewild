@@ -51,6 +51,9 @@ import casino_service  # noqa: E402
 import collection_service  # noqa: E402
 import duo_service  # noqa: E402
 import duopvp_service  # noqa: E402
+import maitre_service  # noqa: E402
+import notifications_service  # noqa: E402
+import profil_service  # noqa: E402
 import echanges_service  # noqa: E402
 import gestion_service  # noqa: E402
 import leveling  # noqa: E402
@@ -224,6 +227,7 @@ def _combat_courant(user_id: int) -> dict:
 async def api_moi(request: Request):
     joueur = joueur_connecte(request)
     pvp_service.noter_joueur(joueur["id"], joueur["pseudo"])
+    profil_service.noter_avatar(joueur["id"], joueur.get("avatar"))
     xp = database.obtenir_xp(joueur["id"])
     niveau, xp_dans_niveau, xp_requise = leveling.progression_niveau(xp)
     return {
@@ -477,6 +481,103 @@ async def api_attaque_alea(d: DemandeNom, request: Request):
 @app.post("/api/gestion/ct/acheter")
 async def api_ct_acheter(d: DemandeCT, request: Request):
     return gestion_service.acheter_ct(joueur_connecte(request)["id"], d.attaque)
+
+
+class DemandeObjetTenu(BaseModel):
+    nom: str
+    cle: str = ""
+
+
+class DemandeNotif(BaseModel):
+    id: int | None = None
+
+
+class DemandeDevise(BaseModel):
+    texte: str = ""
+
+
+class DemandeVitrine(BaseModel):
+    capture_ids: list[int] = []
+
+
+def _profil_sprites(p: dict) -> dict:
+    for m in p["vitrine"]:
+        m.update(_sprites(m["nom"], m["shiny"]))
+    return p
+
+
+@app.get("/api/profil")
+async def api_profil_moi(request: Request):
+    uid = joueur_connecte(request)["id"]
+    return _profil_sprites(profil_service.profil(uid, uid))
+
+
+@app.get("/api/profil/candidats")
+async def api_profil_candidats(request: Request, q: str = ""):
+    res = profil_service.candidats(joueur_connecte(request)["id"], q)
+    for c in res["candidats"]:
+        c["sprite"] = _sprites(c["nom"], c["shiny"])["sprite"]
+    return res
+
+
+@app.get("/api/profil/{cible}")
+async def api_profil(cible: int, request: Request):
+    return _profil_sprites(profil_service.profil(cible, joueur_connecte(request)["id"]))
+
+
+@app.post("/api/profil/devise")
+async def api_profil_devise(d: DemandeDevise, request: Request):
+    uid = joueur_connecte(request)["id"]
+    return _profil_sprites(profil_service.definir_devise(uid, d.texte))
+
+
+@app.post("/api/profil/vitrine")
+async def api_profil_vitrine(d: DemandeVitrine, request: Request):
+    uid = joueur_connecte(request)["id"]
+    return _profil_sprites(profil_service.definir_vitrine(uid, d.capture_ids))
+
+
+@app.get("/api/notifications")
+async def api_notifications(request: Request, liste: int = 1):
+    return notifications_service.etat(joueur_connecte(request)["id"], bool(liste))
+
+
+@app.post("/api/notifications/lu")
+async def api_notifications_lu(d: DemandeNotif, request: Request):
+    return notifications_service.marquer_lu(joueur_connecte(request)["id"], d.id)
+
+
+@app.post("/api/notifications/vider")
+async def api_notifications_vider(request: Request):
+    return notifications_service.vider(joueur_connecte(request)["id"])
+
+
+@app.get("/api/maitre/pokemon")
+async def api_maitre_pokemon(request: Request, q: str = ""):
+    res = maitre_service.pokemon(joueur_connecte(request)["id"], q)
+    for p in res["pokemon"]:
+        p["sprite"] = _sprites(p["nom"])["sprite"]
+    return res
+
+
+@app.get("/api/maitre/ct")
+async def api_maitre_ct(request: Request, type: str = "tous", categorie: str = "tous", q: str = "", page: int = 0):
+    return maitre_service.boutique_ct(joueur_connecte(request)["id"], type, categorie, q, page)
+
+
+@app.get("/api/maitre/objets/{nom}")
+async def api_maitre_objets(nom: str, request: Request):
+    return maitre_service.objets_pokemon(joueur_connecte(request)["id"], nom)
+
+
+@app.post("/api/maitre/objets/equiper")
+async def api_maitre_equiper(d: DemandeObjetTenu, request: Request):
+    return maitre_service.equiper_objet(joueur_connecte(request)["id"], d.nom, d.cle)
+
+
+@app.post("/api/maitre/objets/retirer")
+async def api_maitre_retirer(d: DemandeObjetTenu, request: Request):
+    return maitre_service.retirer_objet(joueur_connecte(request)["id"], d.nom)
 
 
 @app.get("/api/gestion/inventaire")

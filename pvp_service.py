@@ -84,7 +84,7 @@ def etat(user_id: int, recherche: str = "") -> dict:
     return {
         "recus": [_fiche_defi(d) for d in defis if d["a_id"] == user_id],
         "envoyes": [_fiche_defi(d) for d in defis if d["de_id"] == user_id],
-        "joueurs": [{"id": j["user_id"], "pseudo": j["pseudo"], "en_ligne": maintenant - j["vu_a"] < 300} for j in joueurs[:30]],
+        "joueurs": [{"id": str(j["user_id"]), "pseudo": j["pseudo"], "en_ligne": maintenant - j["vu_a"] < 300} for j in joueurs[:30]],
         "combat_en_cours": _combat_id_en_cours(user_id),
         "solde": database.obtenir_poke_dollars(user_id),
     }
@@ -93,6 +93,13 @@ def etat(user_id: int, recherche: str = "") -> dict:
 def _combat_id_en_cours(user_id: int):
     c = database.combat_en_cours_pour_joueur(user_id)
     return c["id"] if c else None
+
+
+def cree_defi_id(de_id: int, a_id: int) -> int:
+    conn = database.get_connexion()
+    r = conn.execute("SELECT MAX(id) AS i FROM pvp_web_defis WHERE de_id = ? AND a_id = ?", (de_id, a_id)).fetchone()
+    conn.close()
+    return r["i"] or 0
 
 
 def defier(user_id: int, pseudo: str, cible_id: int, mise: int = 0) -> dict:
@@ -133,6 +140,7 @@ def defier(user_id: int, pseudo: str, cible_id: int, mise: int = 0) -> dict:
     )
     conn.commit()
     conn.close()
+    database.notifier(cible_id, "defi", f"{pseudo} te défie en duel", f"Mise : {mise} PD. Valable {DUREE_DEFI // 60} min." if mise else f"Valable {DUREE_DEFI // 60} min.", "pvp", cle=f"defi:{cree_defi_id(user_id, cible_id)}")
     return {"message": f"Défi envoyé à {cible['pseudo']} (valable {DUREE_DEFI // 60} min)."}
 
 
