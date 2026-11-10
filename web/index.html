@@ -364,14 +364,14 @@ async function lancer_ball(id){
     const d=await api("/api/explorer/capturer",{spawn_id:id,ball:ballChoisie});
     if(!d.reussite){r.innerHTML=`<div class="msg">${esc(d.message)}</div>`}
     else{
-      let t=`<div class="msg ${d.shiny?"shiny":""}"><img src="${esc(d.sprite||"")}" style="height:56px;vertical-align:middle"> ${d.shiny?"✨ <b>SHINY !</b> ":"🎉 "}Tu as capturé <b>${esc(d.nom)}</b> (${d.pc} PC) ! +${d.dollars} ₽ · +${d.xp} XP`;
+      let t=`<div class="msg ${d.shiny?"shiny":""}"><img src="${esc(d.sprite||"")}" style="height:56px;vertical-align:middle"><div>${d.shiny?"✨ <b>SHINY !</b> ":"🎉 "}Tu as capturé <b>${esc(d.nom)}</b> (${d.pc} PC) ! +${d.dollars} ₽ · +${d.xp} XP`;
       if(d.deguise_en)t+=`<br>🎭 Ce « ${esc(d.deguise_en)} » était en fait un ${esc(d.nom)} !`;
       if(d.nouvelle_entree)t+=`<br>📖 Nouvelle entrée dans ton Pokédex !`;
       if(d.trouvaille)t+=`<br>🎁 Trouvaille : ${esc(d.trouvaille)}`;
       for(const p of d.paliers)t+=`<br>🆙 Palier ${p.palier} : +${p.dollars} ₽ et ${esc(p.ball)}`;
       if(d.montees_niveau)t+=`<br>📈 ${fmt(d.montees_niveau).replace(/\n/g,'<br>')}`;
       for(const q of d.quetes_completees)t+=`<br>✅ Quête : ${esc(q.nom||"")}`;
-      r.innerHTML=t+"</div>";
+      r.innerHTML=t+"</div></div>";
     }
   }catch(e){if(e.code===401)return connexion();r.innerHTML=`<div class="msg err">${esc(e.message)}</div>`}
   majExplorer();majEntete();
@@ -910,14 +910,14 @@ async function combatDuo(id){
   clearInterval(minuteur); H=[]; dd={attaque:null,cle:null,mode:null};
   app.innerHTML=nav("duo")+`<div id="msg"></div><div id="dc">Chargement…</div>`;
   let derniere="";
-  const maj=async()=>{try{const e=await api("/api/duo/"+id);const sig=JSON.stringify(e)+JSON.stringify(dd);if(sig!==derniere){derniere=sig;dessDuo(id,e)}if(!e.actif)clearInterval(minuteur)}catch(e){if(e.code===401)connexion()}};
+  const maj=async()=>{try{const e=await api("/api/duo/"+id);const {secondes:_s,...reste}=e;const sig=JSON.stringify(reste)+JSON.stringify(dd);if(sig!==derniere){derniere=sig;dessDuo(id,e)}else{const c=$("#dc [data-sec]");if(c){c.textContent=e.secondes+"s";c.classList.toggle("warn",e.secondes<=10)}}if(!e.actif)clearInterval(minuteur)}catch(e){if(e.code===401)connexion()}};
   await maj(); minuteur=setInterval(maj,1500);
 }
 const pvBarre=(a,b)=>`<div class="bar ${classePV(a,b)}"><i style="width:${b?Math.round(a/b*100):0}%"></i></div>`;
 const hudDuo=(p,adv)=>p?`<div class="dpk ${p.pv<=0?"ko":""}"><span class="pad s"><img class="spr" src="${esc(p.sprite||"")}" alt=""></span><div class="dpk-i"><b>${esc(p.nom)} <small>Nv.${p.niveau}</small></b>${p.statut?statutHTML(p.statut):""}${barre(p.pv,p.pv_max)}<small class="mut">${adv?Math.round(p.pv/p.pv_max*100)+" %":p.pv+" / "+p.pv_max+" PV"}</small></div></div>`:`<div class="dpk vide"><small class="mut">Hors combat</small></div>`;
 function dessDuo(id,e){
   const z=$("#dc"); if(!z)return;
-  let h=`<div class="duel-t"><b>${esc(e.archetype)}</b>${e.actif?`<span class="chip">Tour ${e.tour}</span><span class="chip ${e.secondes<=10?"warn":""}">${e.secondes}s</span>`:""}</div>`;
+  let h=`<div class="duel-t"><b>${esc(e.archetype)}</b>${e.actif?`<span class="chip">Tour ${e.tour}</span><span data-sec class="chip ${e.secondes<=10?"warn":""}">${e.secondes}s</span>`:""}</div>`;
   if(e.actif){
     h+=`<div class="duo-terrain"><div class="duo-cote adv">${e.adverses.map(a=>`<div><small class="mut">${esc(a.nom)} · ${a.restants}/${a.total}</small>${hudDuo(a.actif,true)}</div>`).join("")}</div><div class="duo-vs">VS</div><div class="duo-cote moi">${e.sieges.map(s=>hudDuo(s.actif,false)).join("")}</div></div><div class="duo-cmds">`;
     for(const s of e.sieges){
